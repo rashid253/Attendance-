@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>School Attendance App</title>
-  <!-- Minimal styling for demonstration -->
+  <!-- Include your stylesheets here -->
   <style>
+    /* Minimal styling for demonstration */
     .action-buttons button,
     .attendance-buttons button,
     button { margin: 5px; }
@@ -54,6 +55,7 @@
 
   <!-- Report & Sharing Section -->
   <h2>Reports & Sharing</h2>
+  <!-- Report type: Daily or Monthly -->
   <select id="reportType">
     <option value="daily">Daily Report</option>
     <option value="monthly">Monthly Report</option>
@@ -63,10 +65,10 @@
   <button id="sendParents">Send to Parents</button>
   <textarea id="specialNote" placeholder="Special note"></textarea>
 
-  <!-- Include jsPDF and autoTable plugin libraries -->
+  <!-- Include jsPDF and the autoTable plugin -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
+  
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       // Allowed classes list
@@ -113,7 +115,7 @@
       const saveAttendanceBtn = document.getElementById('saveAttendance');
 
       // Report Elements
-      const reportTypeSelect = document.getElementById('reportType');
+      const reportTypeSelect = document.getElementById('reportType'); // daily or monthly
       const exportPdfBtn = document.getElementById('exportPdf');
       const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
       const sendParentsBtn = document.getElementById('sendParents');
@@ -344,7 +346,7 @@
             body.push(row);
           });
           doc.text(`Monthly Attendance Report for ${dateObj.toLocaleString('default', { month: 'long' })} ${year} (Class: ${teacherClass})`, 10, 10);
-          // Use autoTable plugin for table rendering
+          // Use autoTable if available for table rendering
           if (doc.autoTable) {
             doc.autoTable({
               head: head,
