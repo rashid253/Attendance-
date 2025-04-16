@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Elements for Teacher Setup
+  // ================= Teacher Setup Elements =================
   const teacherClassSelect = document.getElementById("teacherClassSelect");
   const saveTeacherClassBtn = document.getElementById("saveTeacherClass");
   const teacherClassDisplay = document.getElementById("teacherClassDisplay");
@@ -24,32 +24,62 @@ document.addEventListener("DOMContentLoaded", function() {
   const teacherClassDisplayAttendance = document.getElementById("teacherClassDisplayAttendance");
   const teacherClassHeader = document.getElementById("teacherClassHeader");
 
-  // Elements for Student Registration
+  // ================= Student Registration Elements =================
   const studentNameInput = document.getElementById('studentName');
   const parentContactInput = document.getElementById('parentContact');
   const addStudentBtn = document.getElementById('addStudent');
   const studentsListEl = document.getElementById('students');
 
-  // Attendance Elements
+  // ================= Attendance Elements =================
   const dateInput = document.getElementById('dateInput');
   const loadAttendanceBtn = document.getElementById('loadAttendance');
   const attendanceListEl = document.getElementById('attendanceList');
   const saveAttendanceBtn = document.getElementById('saveAttendance');
 
-  // Report Elements
+  // ================= Report Elements =================
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
   const specialNoteInput = document.getElementById('specialNote');
   const monthInputElement = document.getElementById('monthInput'); // For monthly report
 
-  // Modal Elements for PDF Options
+  // ================= PDF Options Modal =================
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report button
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
 
-  // Retrieve teacher class from localStorage if exists
+  // ================= WhatsApp Sharing Modal Creation =================
+  // We'll create a new modal for WhatsApp sharing instead of using prompt.
+  const whatsappOptionsModal = document.createElement("div");
+  whatsappOptionsModal.id = "whatsappOptionsModal";
+  whatsappOptionsModal.innerHTML = `
+    <div class="modal-content">
+      <h3>Select Report Type for WhatsApp Sharing</h3>
+      <button id="whatsappCurrentBtn">Current Attendance Report</button>
+      <button id="whatsappDailyBtn">Daily Attendance Report</button>
+      <button id="whatsappMonthlyBtn">Monthly Attendance Report</button>
+      <button id="closeWhatsappModalBtn">Cancel</button>
+    </div>
+  `;
+  // Apply basic styling similar to the PDF modal
+  whatsappOptionsModal.style.display = "none";
+  whatsappOptionsModal.style.position = "fixed";
+  whatsappOptionsModal.style.zIndex = "1000";
+  whatsappOptionsModal.style.left = "0";
+  whatsappOptionsModal.style.top = "0";
+  whatsappOptionsModal.style.width = "100%";
+  whatsappOptionsModal.style.height = "100%";
+  whatsappOptionsModal.style.overflow = "auto";
+  whatsappOptionsModal.style.backgroundColor = "rgba(0,0,0,0.4)";
+  document.body.appendChild(whatsappOptionsModal);
+
+  const whatsappCurrentBtn = document.getElementById("whatsappCurrentBtn");
+  const whatsappDailyBtn = document.getElementById("whatsappDailyBtn");
+  const whatsappMonthlyBtn = document.getElementById("whatsappMonthlyBtn");
+  const closeWhatsappModalBtn = document.getElementById("closeWhatsappModalBtn");
+
+  // ================= Retrieve Stored Data =================
   let teacherClass = localStorage.getItem('teacherClass') || "";
   updateTeacherClassDisplays();
 
@@ -72,7 +102,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Retrieve stored students/attendance data
   let students = JSON.parse(localStorage.getItem('students')) || [];
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
 
@@ -142,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Render attendance with quick-tap buttons
+  // ================= Attendance Rendering =================
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -236,19 +265,16 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // -----------------------------------------------------------
-  // PDF and WhatsApp Report Generation Logic
-
+  // ================= PDF Report Generation =================
   // Show PDF options modal when "Download PDF" is clicked
   exportPdfBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "block";
   });
 
-  // 1. Current Attendance Report – use attendance from current (or default) date
+  // (1) Current Attendance Report – if no date selected, default to today's date
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
-      // Default to today's date if none is selected for current attendance
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -267,10 +293,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – must use the date from the date picker (no default)
+  // (2) Daily Attendance Report – require a date to be chosen (do not default)
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
+      alert("Please select a date using the date picker for the daily report.");
       if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
@@ -294,10 +321,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 3. Monthly Attendance Report – using the month picker (no prompt)
+  // (3) Monthly Attendance Report – using the month picker (no prompt)
   pdfMonthlyReportBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value; // expected "YYYY-MM"
     if (!monthValue) {
+      alert("Please select a month using the month picker for the monthly report.");
       if (typeof monthInputElement.showPicker === "function") {
         monthInputElement.showPicker();
       } else {
@@ -336,77 +364,95 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // Close PDF modal when Cancel button is clicked
   closePdfModalBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // WhatsApp Sharing – using date picker for daily and month picker for monthly (current remains unchanged)
+  // ================= WhatsApp Sharing =================
+  // When the teacher clicks the WhatsApp sharing button, show the WhatsApp Options Modal
   shareWhatsAppBtn.addEventListener('click', function() {
-    let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
-    if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
-      return;
-    }
-    let message = "";
-    if (reportType === "current") {
-      let date = dateInput.value;
-      if (!date) { date = new Date().toISOString().split("T")[0]; }
-      let attendanceForDate = attendanceData[date] || {};
-      message = `Current Attendance Report for ${date} (Class: ${teacherClass})\n\n`;
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        message += `${student.roll} - ${student.name}: ${statusText}\n`;
-      });
-    } else if (reportType === "daily") {
-      const chosenDate = dateInput.value;
-      if (!chosenDate) {
-        if (typeof dateInput.showPicker === "function") {
-          dateInput.showPicker();
-        } else {
-          dateInput.focus();
-        }
-        return;
-      }
-      let attendanceForDate = attendanceData[chosenDate] || {};
-      message = `Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})\n\n`;
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        message += `${student.roll} - ${student.name}: ${statusText}\n`;
-      });
-    } else if (reportType === "monthly") {
-      const monthValue = monthInputElement.value;
-      if (!monthValue) {
-        if (typeof monthInputElement.showPicker === "function") {
-          monthInputElement.showPicker();
-        } else {
-          monthInputElement.focus();
-        }
-        return;
-      }
-      message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
-      for (let day = 1; day <= 31; day++) {
-        message += ` | ${day}`;
-      }
-      message += "\n";
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        message += `${student.roll} - ${student.name}`;
-        for (let day = 1; day <= 31; day++) {
-          let dayStr = day.toString().padStart(2, '0');
-          let dateStr = `${monthValue}-${dayStr}`;
-          let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "";
-          message += ` | ${status}`;
-        }
-        message += "\n";
-      });
-    }
-    const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
-    window.open(whatsappUrl, '_blank');
+    whatsappOptionsModal.style.display = "block";
   });
 
+  whatsappCurrentBtn.addEventListener('click', function() {
+    let date = dateInput.value;
+    if (!date) {
+      // For current, if no date is selected, default to today's date
+      date = new Date().toISOString().split("T")[0];
+    }
+    let attendanceForDate = attendanceData[date] || {};
+    let message = `Current Attendance Report for ${date} (Class: ${teacherClass})\n\n`;
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
+      const status = attendanceForDate[student.roll] || "Not Marked";
+      const statusText = getStatusText(status);
+      message += `${student.roll} - ${student.name}: ${statusText}\n`;
+    });
+    const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+    window.open(whatsappUrl, '_blank');
+    whatsappOptionsModal.style.display = "none";
+  });
+
+  whatsappDailyBtn.addEventListener('click', function() {
+    const chosenDate = dateInput.value;
+    if (!chosenDate) {
+      alert("Please select a date using the date picker for the daily WhatsApp report.");
+      if (typeof dateInput.showPicker === "function") {
+        dateInput.showPicker();
+      } else {
+        dateInput.focus();
+      }
+      return;
+    }
+    let attendanceForDate = attendanceData[chosenDate] || {};
+    let message = `Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})\n\n`;
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
+      const status = attendanceForDate[student.roll] || "Not Marked";
+      const statusText = getStatusText(status);
+      message += `${student.roll} - ${student.name}: ${statusText}\n`;
+    });
+    const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+    window.open(whatsappUrl, '_blank');
+    whatsappOptionsModal.style.display = "none";
+  });
+
+  whatsappMonthlyBtn.addEventListener('click', function() {
+    const monthValue = monthInputElement.value;
+    if (!monthValue) {
+      alert("Please select a month using the month picker for the monthly WhatsApp report.");
+      if (typeof monthInputElement.showPicker === "function") {
+        monthInputElement.showPicker();
+      } else {
+        monthInputElement.focus();
+      }
+      return;
+    }
+    let message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
+    for (let day = 1; day <= 31; day++) {
+      message += ` | ${day}`;
+    }
+    message += "\n";
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
+      message += `${student.roll} - ${student.name}`;
+      for (let day = 1; day <= 31; day++) {
+        let dayStr = day.toString().padStart(2, '0');
+        let dateStr = `${monthValue}-${dayStr}`;
+        let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "";
+        message += ` | ${status}`;
+      }
+      message += "\n";
+    });
+    const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+    window.open(whatsappUrl, '_blank');
+    whatsappOptionsModal.style.display = "none";
+  });
+
+  closeWhatsappModalBtn.addEventListener('click', function() {
+    whatsappOptionsModal.style.display = "none";
+  });
+
+  // ================= End of Code =================
   renderStudents();
 });
