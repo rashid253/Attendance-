@@ -10,7 +10,7 @@
   <!-- jsPDF AutoTable Plugin for Monthly Reports -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <style>
-    /* Basic modal styling – you may adjust as needed */
+    /* Basic modal styling – adjust as needed */
     #pdfOptionsModal {
       display: none;
       position: fixed;
@@ -40,7 +40,6 @@
 <body>
   <header>
     <h1>Attendance Management System</h1>
-    <!-- Selected class is shown here -->
     <p class="current-class">Class: <span id="teacherClassHeader">None</span></p>
   </header>
   <main>
@@ -73,7 +72,6 @@
     <section id="student-registration">
       <h2>Add Student</h2>
       <p>Your Class: <span id="teacherClassDisplayRegistration">None</span></p>
-      <!-- Only enter student name and parent's contact -->
       <input type="text" id="studentName" placeholder="Student Name">
       <input type="text" id="parentContact" placeholder="Parent Contact (e.g. +923XXXXXXXXX)">
       <button id="addStudent">Add Student</button>
@@ -101,7 +99,7 @@
         <label for="specialNote">Special Note (if any):</label>
         <textarea id="specialNote" rows="2" placeholder="Enter any special note for parents..."></textarea>
       </div>
-      <!-- New input for monthly report selection -->
+      <!-- Month picker for monthly report -->
       <div style="margin-top:15px;">
         <label for="monthInput">Select Month for Monthly Report:</label>
         <input type="month" id="monthInput">
