@@ -6,21 +6,12 @@ document.addEventListener("DOMContentLoaded", function() {
     "Six", "Seven", "Eight", "Nine", "Ten"
   ];
 
-  // Check if teacher's class is already set in localStorage; if not, prompt teacher to enter one
-  let teacherClass = localStorage.getItem('teacherClass');
-  if (!teacherClass) {
-    teacherClass = prompt("Enter your Class (" + allowedClasses.join(", ") + "):", "");
-    if (!teacherClass || !allowedClasses.includes(teacherClass)) {
-      alert("Invalid Class! Please reload and enter a valid class.");
-      return;
-    }
-    localStorage.setItem('teacherClass', teacherClass);
-  }
-
-  // Update teacher class display in various sections
-  document.getElementById('teacherClassDisplay').textContent = teacherClass;
-  document.getElementById('teacherClassDisplayRegistration').textContent = teacherClass;
-  document.getElementById('teacherClassDisplayAttendance').textContent = teacherClass;
+  // Teacher Setup Elements
+  const teacherClassSelect = document.getElementById("teacherClassSelect");
+  const saveTeacherClassBtn = document.getElementById("saveTeacherClass");
+  const teacherClassDisplay = document.getElementById("teacherClassDisplay");
+  const teacherClassDisplayRegistration = document.getElementById("teacherClassDisplayRegistration");
+  const teacherClassDisplayAttendance = document.getElementById("teacherClassDisplayAttendance");
 
   // Student Registration Elements
   const studentNameInput = document.getElementById('studentName');
@@ -36,13 +27,37 @@ document.addEventListener("DOMContentLoaded", function() {
   // Report Elements
   const exportPdfBtn = document.getElementById('exportPdf');
 
-  // Retrieve data from localStorage or initialize new data structures
-  let students = JSON.parse(localStorage.getItem('students')) || [];
-  // students: array of objects: { roll, name, class }
-  let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
-  // attendanceData structure: { date: { roll: status } }
+  // Retrieve teacher class from localStorage if set
+  let teacherClass = localStorage.getItem('teacherClass') || "";
+  updateTeacherClassDisplays();
 
-  // Function: Generate Roll Number automatically for teacher's class
+  // Function to update teacher class displays in UI
+  function updateTeacherClassDisplays() {
+    teacherClassDisplay.textContent = teacherClass || "None";
+    teacherClassDisplayRegistration.textContent = teacherClass || "None";
+    teacherClassDisplayAttendance.textContent = teacherClass || "None";
+  }
+
+  // Save Teacher Class button event
+  saveTeacherClassBtn.addEventListener('click', function() {
+    const selectedClass = teacherClassSelect.value;
+    if (allowedClasses.includes(selectedClass)) {
+      teacherClass = selectedClass;
+      localStorage.setItem('teacherClass', teacherClass);
+      updateTeacherClassDisplays();
+      renderStudents();
+    } else {
+      alert("Please select a valid class.");
+    }
+  });
+
+  // Retrieve data from localStorage or initialize new structures
+  let students = JSON.parse(localStorage.getItem('students')) || [];
+  // students: array of objects { roll, name, class }
+  let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
+  // attendanceData: { date: { roll: status } }
+
+  // Generate Roll Number automatically for teacher's class
   function generateRollNumber(cls) {
     const classStudents = students.filter(student => student.class === cls);
     if(classStudents.length === 0) {
@@ -52,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
     return maxRoll + 1;
   }
 
-  // Render student list (only showing students from teacher's class)
+  // Render student list (only for teacher's class)
   function renderStudents() {
     studentsListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -60,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const li = document.createElement('li');
       li.textContent = `${student.roll} - ${student.name} (${student.class})`;
 
-      // Action Buttons for Edit/Delete
+      // Action Buttons: Edit and Delete
       const actionsDiv = document.createElement('div');
       actionsDiv.classList.add("action-buttons");
 
@@ -69,10 +84,9 @@ document.addEventListener("DOMContentLoaded", function() {
       editBtn.textContent = "Edit";
       editBtn.addEventListener('click', function() {
         let newName = prompt("Enter new name:", student.name);
-        if(newName !== null && newName.trim() !== "") {
-          // Update student name in overall students array (find by roll and class)
+        if (newName && newName.trim() !== "") {
           const idx = students.findIndex(s => s.roll === student.roll && s.class === teacherClass);
-          if(idx !== -1) {
+          if (idx !== -1) {
             students[idx].name = newName.trim();
             localStorage.setItem('students', JSON.stringify(students));
             renderStudents();
@@ -84,8 +98,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = "Delete";
       deleteBtn.addEventListener('click', function() {
-        if(confirm(`Delete ${student.name}?`)) {
-          // Remove student from overall students array
+        if (confirm(`Delete ${student.name}?`)) {
           students = students.filter(s => !(s.roll === student.roll && s.class === teacherClass));
           localStorage.setItem('students', JSON.stringify(students));
           renderStudents();
@@ -99,10 +112,14 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // Add Student button event: teacher can only add students to his/her class
+  // Add Student event: only for teacher's class
   addStudentBtn.addEventListener('click', function() {
+    if (!teacherClass) {
+      alert("Please select your class from the Teacher Setup section.");
+      return;
+    }
     const name = studentNameInput.value.trim();
-    if(name) {
+    if (name) {
       const roll = generateRollNumber(teacherClass);
       students.push({ roll, name, class: teacherClass });
       localStorage.setItem('students', JSON.stringify(students));
@@ -116,7 +133,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // Render attendance for the selected date for teacher's class only
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
-    // Filter students: only teacher's class
     const classStudents = students.filter(student => student.class === teacherClass);
     let attendanceForDate = attendanceData[date] || {};
 
@@ -129,13 +145,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
       // Dropdown for attendance status options
       const select = document.createElement('select');
-      // Default option
       const defaultOpt = document.createElement('option');
       defaultOpt.value = "";
       defaultOpt.textContent = "--Select--";
       select.appendChild(defaultOpt);
 
-      // Options: P (Present), A (Absent), L (Late), Le (Leave)
       const statuses = [
         { value: "P", text: "Present" },
         { value: "A", text: "Absent" },
@@ -149,8 +163,7 @@ document.addEventListener("DOMContentLoaded", function() {
         select.appendChild(opt);
       });
 
-      // Set previously saved status if exists
-      if(attendanceForDate[student.roll]) {
+      if (attendanceForDate[student.roll]) {
         select.value = attendanceForDate[student.roll];
       }
 
@@ -165,20 +178,20 @@ document.addEventListener("DOMContentLoaded", function() {
     attendanceData[date] = attendanceForDate;
   }
 
-  // Load Attendance button event
+  // Load Attendance event
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
-    if(!date) {
+    if (!date) {
       alert("Please select a date.");
       return;
     }
     renderAttendanceForDate(date);
   });
 
-  // Save Attendance button event
+  // Save Attendance event
   saveAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
-    if(!date) {
+    if (!date) {
       alert("Please select a date.");
       return;
     }
@@ -186,16 +199,16 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // PDF Export button event (Report contains only teacher's class students)
+  // PDF Export event (Report contains only teacher's class students)
   exportPdfBtn.addEventListener('click', function() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const date = dateInput.value;
-    if(!date) {
+    if (!date) {
       alert("Please select a date for the report.");
       return;
     }
-    doc.text("Attendance Report for " + date + " (Class " + teacherClass + ")", 10, 10);
+    doc.text(`Attendance Report for ${date} (Class: ${teacherClass})`, 10, 10);
     let y = 20;
     let attendanceForDate = attendanceData[date] || {};
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -204,9 +217,9 @@ document.addEventListener("DOMContentLoaded", function() {
       doc.text(`${student.roll} - ${student.name}: ${status}`, 10, y);
       y += 10;
     });
-    doc.save("attendance_" + date + ".pdf");
+    doc.save(`attendance_${date}.pdf`);
   });
 
-  // Initial render
+  // Initial render for student list
   renderStudents();
 });
