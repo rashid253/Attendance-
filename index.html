@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Student Attendance App</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Student Attendance App</h1>
+  </header>
+  <main>
+    <!-- طلباء کی فہرست کی سیکشن -->
+    <section id="student-list">
+      <h2>Students</h2>
+      <ul id="students"></ul>
+      <input type="text" id="studentName" placeholder="Enter student name">
+      <button id="addStudent">Add Student</button>
+    </section>
+    <!-- اٹینڈنس مارک کرنے کی سیکشن -->
+    <section id="attendance">
+      <h2>Mark Attendance</h2>
+      <label for="dateInput">Select Date: </label>
+      <input type="date" id="dateInput">
+      <button id="loadAttendance">Load Attendance</button>
+      <div id="attendanceList"></div>
+      <button id="saveAttendance">Save Attendance</button>
+    </section>
+    <!-- رپورٹس کی سیکشن -->
+    <section id="reports">
+      <h2>Reports</h2>
+      <button id="exportPdf">Export as PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
+      <div id="reportOutput"></div>
+    </section>
+  </main>
+  <!-- jsPDF لائبریری براۓ PDF ایکسپورٹ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Service Worker رجسٹریشن برائے آف لائن سپورٹ
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+      .then(function() {
+        console.log('Service Worker Registered');
+      });
+    }
+  </script>
+</body>
+</html>
