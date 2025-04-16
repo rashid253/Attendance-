@@ -211,8 +211,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
-    if (!date) { 
-      dateInput.focus();
+    if (!date) {
+      // Attempt to trigger the native date picker
+      if(dateInput.showPicker){
+        dateInput.showPicker();
+      } else {
+        dateInput.focus();
+      }
       return;
     }
     renderAttendanceForDate(date);
@@ -221,7 +226,11 @@ document.addEventListener("DOMContentLoaded", function() {
   saveAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) { 
-      dateInput.focus();
+      if(dateInput.showPicker){
+        dateInput.showPicker();
+      } else {
+        dateInput.focus();
+      }
       return;
     }
     localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
@@ -262,7 +271,11 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
-      dateInput.focus();
+      if(dateInput.showPicker){
+        dateInput.showPicker();
+      } else {
+        dateInput.focus();
+      }
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -285,7 +298,11 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfMonthlyReportBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value; // expected "YYYY-MM"
     if (!monthValue) {
-      monthInputElement.focus();
+      if(monthInputElement.showPicker){
+        monthInputElement.showPicker();
+      } else {
+        monthInputElement.focus();
+      }
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -345,7 +362,11 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "daily") {
       const chosenDate = dateInput.value;
       if (!chosenDate) {
-        dateInput.focus();
+        if(dateInput.showPicker){
+          dateInput.showPicker();
+        } else {
+          dateInput.focus();
+        }
         return;
       }
       let attendanceForDate = attendanceData[chosenDate] || {};
@@ -359,7 +380,11 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "monthly") {
       const monthValue = monthInputElement.value;
       if (!monthValue) {
-        monthInputElement.focus();
+        if(monthInputElement.showPicker){
+          monthInputElement.showPicker();
+        } else {
+          monthInputElement.focus();
+        }
         return;
       }
       message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
