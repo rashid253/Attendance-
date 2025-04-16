@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css">
+  <!-- jsPDF Library for PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF AutoTable Plugin for Monthly Reports -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <style>
-    /* PDF Modal */
-    #pdfOptionsModal, #whatsappOptionsModal {
+    /* Basic modal styling – adjust as needed */
+    #pdfOptionsModal {
       display: none;
       position: fixed;
       z-index: 1000;
@@ -18,58 +19,106 @@
       top: 0;
       width: 100%;
       height: 100%;
+      overflow: auto;
       background-color: rgba(0,0,0,0.4);
     }
-
-    .modal-content {
-      background: white;
+    #pdfOptionsModal .modal-content {
+      background-color: #fefefe;
       margin: 15% auto;
       padding: 20px;
+      border: 1px solid #888;
       width: 80%;
       max-width: 400px;
-      border-radius: 8px;
       text-align: center;
     }
-
-    .whatsapp-option-btn {
-      margin: 10px;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 5px;
-      width: 80%;
-      font-size: 16px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .whatsapp-option-btn:hover {
-      transform: scale(1.05);
+    #pdfOptionsModal button {
+      margin: 5px;
+      padding: 10px 20px;
     }
   </style>
 </head>
 <body>
-  <!-- Existing header and main content... -->
+  <header>
+    <h1>Attendance Management System</h1>
+    <p class="current-class">Class: <span id="teacherClassHeader">None</span></p>
+  </header>
+  <main>
+    <!-- Teacher Setup Section -->
+    <section id="teacher-setup">
+      <h2>Teacher Setup</h2>
+      <label for="teacherClassSelect">Select Your Class:</label>
+      <select id="teacherClassSelect">
+        <option value="">--Select Class--</option>
+        <option value="Play Group">Play Group</option>
+        <option value="Nursery">Nursery</option>
+        <option value="Prep">Prep</option>
+        <option value="Pre One">Pre One</option>
+        <option value="One">One</option>
+        <option value="Two">Two</option>
+        <option value="Three">Three</option>
+        <option value="Four">Four</option>
+        <option value="Five">Five</option>
+        <option value="Six">Six</option>
+        <option value="Seven">Seven</option>
+        <option value="Eight">Eight</option>
+        <option value="Nine">Nine</option>
+        <option value="Ten">Ten</option>
+      </select>
+      <button id="saveTeacherClass">Save Class</button>
+      <p>Your current class is: <span id="teacherClassDisplay">None</span></p>
+    </section>
+    
+    <!-- Student Registration Section -->
+    <section id="student-registration">
+      <h2>Add Student</h2>
+      <p>Your Class: <span id="teacherClassDisplayRegistration">None</span></p>
+      <input type="text" id="studentName" placeholder="Student Name">
+      <input type="text" id="parentContact" placeholder="Parent Contact (e.g. +923XXXXXXXXX)">
+      <button id="addStudent">Add Student</button>
+      <h3>Student List</h3>
+      <ul id="students"></ul>
+    </section>
+    
+    <!-- Attendance Marking Section -->
+    <section id="attendance-section">
+      <h2>Mark Attendance</h2>
+      <p>Your Class: <span id="teacherClassDisplayAttendance">None</span></p>
+      <label for="dateInput">Select Date: </label>
+      <input type="date" id="dateInput">
+      <button id="loadAttendance">Load Attendance</button>
+      <div id="attendanceList"></div>
+      <button id="saveAttendance">Save Attendance</button>
+    </section>
+    
+    <!-- Reports Section -->
+    <section id="reports">
+      <h2>Reports</h2>
+      <button id="exportPdf">Download PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
+      <div style="margin-top:15px;">
+        <label for="specialNote">Special Note (if any):</label>
+        <textarea id="specialNote" rows="2" placeholder="Enter any special note for parents..."></textarea>
+      </div>
+      <!-- Month picker for monthly report -->
+      <div style="margin-top:15px;">
+        <label for="monthInput">Select Month for Monthly Report:</label>
+        <input type="month" id="monthInput">
+      </div>
+      <div id="reportOutput"></div>
+    </section>
+  </main>
 
-  <!-- WhatsApp Options Modal -->
-  <div id="whatsappOptionsModal">
+  <!-- Modal for PDF Options -->
+  <div id="pdfOptionsModal">
     <div class="modal-content">
-      <h3 style="color: #2196F3; margin-bottom: 15px;">Select Report Type</h3>
-      <button class="whatsapp-option-btn" data-type="current" style="background: #4CAF50; color: white;">
-        📅 Current Report
-      </button>
-      <button class="whatsapp-option-btn" data-type="daily" style="background: #2196F3; color: white;">
-        📆 Daily Report
-      </button>
-      <button class="whatsapp-option-btn" data-type="monthly" style="background: #9C27B0; color: white;">
-        📊 Monthly Report
-      </button>
-      <button onclick="document.getElementById('whatsappOptionsModal').style.display = 'none'" 
-              style="background: #ff4444; color: white; margin-top: 15px; padding: 10px 20px;">
-        Cancel
-      </button>
+      <h3>Select Report Type</h3>
+      <button id="pdfCurrentReportBtn">Current Attendance Report</button>
+      <button id="pdfDailyReportBtn">Daily Attendance Report</button>
+      <button id="pdfMonthlyReportBtn">Monthly Attendance Report</button>
+      <button id="closePdfModalBtn">Cancel</button>
     </div>
   </div>
-
+  
   <script src="app.js"></script>
 </body>
 </html>
