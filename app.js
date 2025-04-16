@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Render attendance using quick-tap buttons
+  // Render attendance with quick-tap buttons
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       div.appendChild(buttonsContainer);
       
-      // "Send" button for WhatsApp message per student
+      // "Send" button for WhatsApp per student
       const sendBtn = document.createElement('button');
       sendBtn.textContent = "Send";
       sendBtn.classList.add('send-btn');
@@ -211,13 +211,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
-    if (!date) { alert("Please select a date."); return; }
+    if (!date) { 
+      dateInput.focus();
+      return;
+    }
     renderAttendanceForDate(date);
   });
 
   saveAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
-    if (!date) { alert("Please select a date."); return; }
+    if (!date) { 
+      dateInput.focus();
+      return;
+    }
     localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
     alert(`Attendance saved for ${date}`);
   });
@@ -252,11 +258,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – using the date picker (no manual prompt)
+  // 2. Daily Attendance Report – using the date picker (no prompt)
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
-      alert("Please select a date using the calendar for the daily report.");
+      dateInput.focus();
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -275,11 +281,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 3. Monthly Attendance Report – using the month picker (type="month")
+  // 3. Monthly Attendance Report – using the month picker (no prompt)
   pdfMonthlyReportBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value; // expected "YYYY-MM"
     if (!monthValue) {
-      alert("Please select a month using the month picker for the monthly report.");
+      monthInputElement.focus();
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -318,11 +324,10 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // WhatsApp Sharing – using the date picker for daily and month picker for monthly
+  // WhatsApp Sharing – using date picker for daily and month picker for monthly (current remains unchanged)
   shareWhatsAppBtn.addEventListener('click', function() {
     let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
     if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
-      alert("Please enter a valid report type (current, daily, or monthly).");
       return;
     }
     let message = "";
@@ -340,7 +345,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "daily") {
       const chosenDate = dateInput.value;
       if (!chosenDate) {
-        alert("Please select a date using the calendar for the daily report sharing.");
+        dateInput.focus();
         return;
       }
       let attendanceForDate = attendanceData[chosenDate] || {};
@@ -354,7 +359,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "monthly") {
       const monthValue = monthInputElement.value;
       if (!monthValue) {
-        alert("Please select a month using the month picker for monthly report sharing.");
+        monthInputElement.focus();
         return;
       }
       message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
