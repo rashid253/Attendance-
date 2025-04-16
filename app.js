@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const classStudents = students.filter(student => student.class === teacherClass);
     classStudents.forEach((student, index) => {
       const li = document.createElement('li');
-      // صرف roll اور name ظاہر کریں، کلاس نام اب ہیڈر میں دکھایا جائے گا
+      // Display only roll and name; class name is shown at the header
       li.textContent = `${student.roll} - ${student.name}`;
       
       // Action Buttons: Edit and Delete
@@ -150,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function() {
       div.classList.add('attendance-item');
 
       const label = document.createElement('label');
-      // صرف roll اور name ظاہر کریں، کلاس نام اوپر ہی دکھایا جائے گا
+      // Display only roll and name; class name is shown at the header
       label.textContent = `${student.roll} - ${student.name}`;
 
       // Dropdown for attendance status options
@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", function() {
       alert("Please select a date for the report.");
       return;
     }
-    // Header with class name
+    // Header with class name and date
     doc.text(`Attendance Report for ${date} (Class: ${teacherClass})`, 10, 10);
     let y = 20;
     let attendanceForDate = attendanceData[date] || {};
@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", function() {
     doc.save(`attendance_${date}.pdf`);
   });
 
-  // Share on WhatsApp event: Opens WhatsApp web with prefilled text of overall attendance
+  // Share on WhatsApp event: Open WhatsApp web with prefilled text of overall attendance
   shareWhatsAppBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
@@ -245,12 +245,13 @@ document.addEventListener("DOMContentLoaded", function() {
       const status = attendanceForDate[student.roll] || "Not Marked";
       message += `${student.roll} - ${student.name}: ${status}\n`;
     });
-    // WhatsApp share URL (Note: prefilled message must be URL-encoded)
     const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
     window.open(whatsappUrl, '_blank');
   });
 
-  // Send Attendance To All Parents: For each student, send individual WhatsApp messages
+  // Send Attendance To All Parents event:
+  // This iterates through each student in teacher's class that has a parent contact.
+  // It uses setTimeout to open each WhatsApp link sequentially with a delay.
   sendParentsBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
@@ -261,8 +262,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const classStudents = students.filter(student => student.class === teacherClass);
     const specialNote = specialNoteInput.value.trim();
     
-    classStudents.forEach(student => {
-      // صرف اُن طالب علموں کے لیے جن کا والدین کا نمبر موجود ہو
+    classStudents.forEach((student, index) => {
       if (student.parentContact) {
         const status = attendanceForDate[student.roll] || "Not Marked";
         let message = `Dear Parent,\n\nAttendance for your child (${student.name}, Roll: ${student.roll}) on ${date} (Class: ${teacherClass}) is: ${status}.\n`;
@@ -272,11 +272,12 @@ document.addEventListener("DOMContentLoaded", function() {
         message += `\n\nRegards,\nSchool`;
         const whatsappUrl = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(student.parentContact) +
                               "&text=" + encodeURIComponent(message);
-        // کھولنے کی کوشش – ممکن ہے براؤزر پاپ اپ بلاک کرے
-        window.open(whatsappUrl, '_blank');
+        // Open each WhatsApp link sequentially with a 1.5-second delay per student
+        setTimeout(() => {
+          window.open(whatsappUrl, '_blank');
+        }, index * 1500);
       }
     });
-    alert("WhatsApp messages initiated. Please check pop-ups and send messages via WhatsApp.");
   });
 
   // Initial render for student list
