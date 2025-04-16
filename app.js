@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function renderStudents() {
     studentsListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
-    classStudents.forEach((student, index) => {
+    classStudents.forEach((student) => {
       const li = document.createElement('li');
       // Display only roll and name; class name is shown at the header
       li.textContent = `${student.roll} - ${student.name}`;
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Render attendance for the selected date for teacher's class only
+  // Render attendance for the selected date for teacher's class only using quick-tap buttons
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -150,39 +150,67 @@ document.addEventListener("DOMContentLoaded", function() {
       div.classList.add('attendance-item');
 
       const label = document.createElement('label');
-      // Display only roll and name; class name is shown at the header
+      // Display only roll and name
       label.textContent = `${student.roll} - ${student.name}`;
-
-      // Dropdown for attendance status options
-      const select = document.createElement('select');
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = "";
-      defaultOpt.textContent = "--Select--";
-      select.appendChild(defaultOpt);
-
-      const statuses = [
-        { value: "P", text: "Present" },
-        { value: "A", text: "Absent" },
-        { value: "L", text: "Late" },
-        { value: "Le", text: "Leave" }
-      ];
-      statuses.forEach(status => {
-        const opt = document.createElement('option');
-        opt.value = status.value;
-        opt.textContent = status.text;
-        select.appendChild(opt);
-      });
-
-      if (attendanceForDate[student.roll]) {
-        select.value = attendanceForDate[student.roll];
-      }
-
-      select.addEventListener('change', function() {
-        attendanceForDate[student.roll] = this.value;
-      });
-
       div.appendChild(label);
-      div.appendChild(select);
+
+      // Create a container for the quick-tap buttons
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.classList.add('attendance-buttons');
+
+      const options = [
+        { value: "P", text: "P" },
+        { value: "A", text: "A" },
+        { value: "L", text: "L" },
+        { value: "Le", text: "Le" }
+      ];
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.textContent = opt.text;
+        btn.classList.add('att-btn');
+
+        // If this option is selected, highlight it
+        if (attendanceForDate[student.roll] === opt.value) {
+          btn.classList.add('selected');
+        }
+
+        btn.addEventListener('click', function() {
+          attendanceForDate[student.roll] = opt.value;
+          // Update UI: remove 'selected' from all buttons in this container and add to this one
+          const siblingBtns = buttonsContainer.querySelectorAll('.att-btn');
+          siblingBtns.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+
+        buttonsContainer.appendChild(btn);
+      });
+
+      div.appendChild(buttonsContainer);
+
+      // Create an individual "Send" button for WhatsApp
+      const sendBtn = document.createElement('button');
+      sendBtn.textContent = "Send";
+      sendBtn.classList.add('send-btn');
+      sendBtn.addEventListener('click', function() {
+        // Get current attendance status
+        const status = attendanceForDate[student.roll] || "Not Marked";
+        if (!dateInput.value) {
+          alert("Please select a date first.");
+          return;
+        }
+        const selectedDate = dateInput.value;
+        let message = `Dear Parent,\n\nAttendance for your child (${student.name}, Roll: ${student.roll}) on ${selectedDate} (Class: ${teacherClass}) is: ${status}.\n\nRegards,\nSchool`;
+        if (!student.parentContact) {
+          alert("Parent contact is not available for " + student.name);
+          return;
+        }
+        const whatsappUrl = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(student.parentContact) +
+                              "&text=" + encodeURIComponent(message);
+        window.open(whatsappUrl, '_blank');
+      });
+
+      div.appendChild(sendBtn);
       attendanceListEl.appendChild(div);
     });
     attendanceData[date] = attendanceForDate;
@@ -209,7 +237,7 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // PDF Export event (Report contains teacher's class attendance)
+  // PDF Export event (generates overall class attendance report)
   exportPdfBtn.addEventListener('click', function() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -231,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function() {
     doc.save(`attendance_${date}.pdf`);
   });
 
-  // Share on WhatsApp event: Open WhatsApp web with prefilled text of overall attendance
+  // Share on WhatsApp event (sends overall attendance report)
   shareWhatsAppBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
@@ -249,9 +277,7 @@ document.addEventListener("DOMContentLoaded", function() {
     window.open(whatsappUrl, '_blank');
   });
 
-  // Send Attendance To All Parents event:
-  // This iterates through each student in teacher's class that has a parent contact.
-  // It uses setTimeout to open each WhatsApp link sequentially with a delay.
+  // Optionally, the existing "Send Attendance To All Parents" event remains (if needed)
   sendParentsBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
@@ -266,13 +292,12 @@ document.addEventListener("DOMContentLoaded", function() {
       if (student.parentContact) {
         const status = attendanceForDate[student.roll] || "Not Marked";
         let message = `Dear Parent,\n\nAttendance for your child (${student.name}, Roll: ${student.roll}) on ${date} (Class: ${teacherClass}) is: ${status}.\n`;
-        if(specialNote) {
+        if (specialNote) {
           message += `\nNote: ${specialNote}`;
         }
         message += `\n\nRegards,\nSchool`;
         const whatsappUrl = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(student.parentContact) +
                               "&text=" + encodeURIComponent(message);
-        // Open each WhatsApp link sequentially with a 1.5-second delay per student
         setTimeout(() => {
           window.open(whatsappUrl, '_blank');
         }, index * 1500);
