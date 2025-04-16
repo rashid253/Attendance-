@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Classwise Attendance App</title>
+  <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css">
   <!-- jsPDF Library for PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -16,9 +16,26 @@
     <!-- طلباء کے اندراج کی سیکشن -->
     <section id="student-registration">
       <h2>Add Student</h2>
-      <input type="text" id="rollNumber" placeholder="Roll Number">
+      <!-- Roll Number اب خودکار جاری ہوگا، لہٰذا اسے ان پٹ کی ضرورت نہیں -->
       <input type="text" id="studentName" placeholder="Student Name">
-      <input type="text" id="studentClass" placeholder="Class">
+      <!-- کلاس منتخب کرنے کے لیے ڈراپ ڈاؤن -->
+      <select id="studentClass">
+        <option value="">--Select Class--</option>
+        <option value="Play Group">Play Group</option>
+        <option value="Nursery">Nursery</option>
+        <option value="Prep">Prep</option>
+        <option value="Pre One">Pre One</option>
+        <option value="One">One</option>
+        <option value="Two">Two</option>
+        <option value="Three">Three</option>
+        <option value="Four">Four</option>
+        <option value="Five">Five</option>
+        <option value="Six">Six</option>
+        <option value="Seven">Seven</option>
+        <option value="Eight">Eight</option>
+        <option value="Nine">Nine</option>
+        <option value="Ten">Ten</option>
+      </select>
       <button id="addStudent">Add Student</button>
       <h3>Student List</h3>
       <ul id="students"></ul>
@@ -29,9 +46,24 @@
       <label for="dateInput">Select Date: </label>
       <input type="date" id="dateInput">
       <br>
+      <!-- کلاس فلٹر: استاد اپنی کلاس منتخب کرے گا -->
       <label for="filterClass">Filter by Class: </label>
       <select id="filterClass">
-        <option value="all">All</option>
+        <option value="">--Select Class--</option>
+        <option value="Play Group">Play Group</option>
+        <option value="Nursery">Nursery</option>
+        <option value="Prep">Prep</option>
+        <option value="Pre One">Pre One</option>
+        <option value="One">One</option>
+        <option value="Two">Two</option>
+        <option value="Three">Three</option>
+        <option value="Four">Four</option>
+        <option value="Five">Five</option>
+        <option value="Six">Six</option>
+        <option value="Seven">Seven</option>
+        <option value="Eight">Eight</option>
+        <option value="Nine">Nine</option>
+        <option value="Ten">Ten</option>
       </select>
       <button id="loadAttendance">Load Attendance</button>
       <div id="attendanceList"></div>
