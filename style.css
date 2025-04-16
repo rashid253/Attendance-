@@ -3,31 +3,37 @@ body {
   margin: 0;
   padding: 0;
 }
+
 header {
   background-color: #2196F3;
   color: white;
   padding: 15px 0;
   text-align: center;
 }
+
 main {
   padding: 20px;
 }
+
 section {
   margin-bottom: 25px;
   padding: 15px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
-input, button {
+
+input, select, button {
   padding: 8px;
   margin: 5px 0;
   width: 100%;
   max-width: 300px;
 }
+
 ul {
   list-style-type: none;
   padding-left: 0;
 }
+
 li {
   margin: 8px 0;
   padding: 8px;
@@ -37,6 +43,7 @@ li {
   justify-content: space-between;
   align-items: center;
 }
+
 .attendance-item {
   display: flex;
   justify-content: space-between;
@@ -46,12 +53,15 @@ li {
   background: #e7f3fe;
   border-radius: 4px;
 }
+
 .attendance-item label {
   flex: 1;
 }
+
 .attendance-item select {
   margin-left: 10px;
 }
+
 .action-buttons button {
   margin-left: 5px;
 }
