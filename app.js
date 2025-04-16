@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Modal Elements for PDF Options
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
@@ -212,8 +212,8 @@ document.addEventListener("DOMContentLoaded", function() {
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
-      // Attempt to trigger the native date picker
-      if(dateInput.showPicker){
+      // Trigger native date picker if available; otherwise, focus.
+      if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
         dateInput.focus();
@@ -226,7 +226,7 @@ document.addEventListener("DOMContentLoaded", function() {
   saveAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) { 
-      if(dateInput.showPicker){
+      if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
         dateInput.focus();
@@ -271,7 +271,8 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
-      if(dateInput.showPicker){
+      // Trigger native date picker or focus
+      if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
         dateInput.focus();
@@ -298,7 +299,7 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfMonthlyReportBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value; // expected "YYYY-MM"
     if (!monthValue) {
-      if(monthInputElement.showPicker){
+      if (typeof monthInputElement.showPicker === "function") {
         monthInputElement.showPicker();
       } else {
         monthInputElement.focus();
@@ -362,7 +363,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "daily") {
       const chosenDate = dateInput.value;
       if (!chosenDate) {
-        if(dateInput.showPicker){
+        if (typeof dateInput.showPicker === "function") {
           dateInput.showPicker();
         } else {
           dateInput.focus();
@@ -380,7 +381,7 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "monthly") {
       const monthValue = monthInputElement.value;
       if (!monthValue) {
-        if(monthInputElement.showPicker){
+        if (typeof monthInputElement.showPicker === "function") {
           monthInputElement.showPicker();
         } else {
           monthInputElement.focus();
