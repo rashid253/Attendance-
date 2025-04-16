@@ -3,27 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Student Attendance App</title>
-  <link rel="manifest" href="manifest.json">
+  <title>Advanced Classwise Attendance App</title>
   <link rel="stylesheet" href="style.css">
+  <!-- jsPDF Library for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header>
-    <h1>Student Attendance App</h1>
+    <h1>Attendance Management System</h1>
   </header>
   <main>
-    <!-- طلباء کی فہرست کی سیکشن -->
-    <section id="student-list">
-      <h2>Students</h2>
-      <ul id="students"></ul>
-      <input type="text" id="studentName" placeholder="Enter student name">
+    <!-- طلباء کے اندراج کی سیکشن -->
+    <section id="student-registration">
+      <h2>Add Student</h2>
+      <input type="text" id="rollNumber" placeholder="Roll Number">
+      <input type="text" id="studentName" placeholder="Student Name">
+      <input type="text" id="studentClass" placeholder="Class">
       <button id="addStudent">Add Student</button>
+      <h3>Student List</h3>
+      <ul id="students"></ul>
     </section>
     <!-- اٹینڈنس مارک کرنے کی سیکشن -->
-    <section id="attendance">
+    <section id="attendance-section">
       <h2>Mark Attendance</h2>
       <label for="dateInput">Select Date: </label>
       <input type="date" id="dateInput">
+      <br>
+      <label for="filterClass">Filter by Class: </label>
+      <select id="filterClass">
+        <option value="all">All</option>
+      </select>
       <button id="loadAttendance">Load Attendance</button>
       <div id="attendanceList"></div>
       <button id="saveAttendance">Save Attendance</button>
@@ -32,21 +41,9 @@
     <section id="reports">
       <h2>Reports</h2>
       <button id="exportPdf">Export as PDF</button>
-      <button id="shareWhatsApp">Share on WhatsApp</button>
       <div id="reportOutput"></div>
     </section>
   </main>
-  <!-- jsPDF لائبریری براۓ PDF ایکسپورٹ -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Service Worker رجسٹریشن برائے آف لائن سپورٹ
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-      .then(function() {
-        console.log('Service Worker Registered');
-      });
-    }
-  </script>
 </body>
 </html>
