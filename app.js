@@ -48,14 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let students       = JSON.parse(localStorage.getItem("students"))       || [];
   let attendanceData = JSON.parse(localStorage.getItem("attendanceData")) || {};
 
-  // === Initialization ===
+  // === Init ===
   updateClassDisplays();
   renderStudents();
 
   // === Teacher Setup ===
   saveTeacherClassBtn.addEventListener("click", () => {
     const c = teacherClassSelect.value;
-    if (!c) return alert("Select a class.");
+    if (!c) return alert("Please select a class.");
     teacherClass = c;
     localStorage.setItem("teacherClass", c);
     updateClassDisplays();
@@ -64,10 +64,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === Student Registration ===
   addStudentBtn.addEventListener("click", () => {
-    if (!teacherClass) return alert("Select a class first.");
+    if (!teacherClass) return alert("Please select your class first.");
     const name = studentNameInput.value.trim();
     const pc   = parentContactInput.value.trim();
-    if (!name) return alert("Enter a student name.");
+    if (!name) return alert("Please enter a student name.");
     const roll = generateRoll(teacherClass);
     students.push({ roll, name, class: teacherClass, parentContact: pc });
     localStorage.setItem("students", JSON.stringify(students));
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     localStorage.setItem("attendanceData", JSON.stringify(attendanceData));
-    alert("Saved attendance for " + d);
+    alert("Attendance saved for " + d);
   });
 
   // === PDF Modal ===
@@ -107,14 +107,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   pdfDayBtn.addEventListener("click", () => {
     const d = dateInput.value;
-    if (!d) { alert("Pick a date."); dateInput.showPicker?.() ?? dateInput.focus(); return; }
+    if (!d) {
+      alert("Please select a date for Daily Attendance.");
+      dateInput.showPicker?.() ?? dateInput.focus();
+      return;
+    }
     generatePdf("Daily Attendance", d);
     closeModal(pdfModal);
   });
 
   pdfMonBtn.addEventListener("click", () => {
     const m = monthInput.value;
-    if (!m) { alert("Pick a month."); monthInput.showPicker?.() ?? monthInput.focus(); return; }
+    if (!m) {
+      alert("Please select a month for Monthly Attendance.");
+      monthInput.showPicker?.() ?? monthInput.focus();
+      return;
+    }
     generateMonthlyPdf(m);
     closeModal(pdfModal);
   });
@@ -131,20 +139,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   waDayBtn.addEventListener("click", () => {
     const d = dateInput.value;
-    if (!d) { alert("Pick a date."); dateInput.showPicker?.() ?? dateInput.focus(); return; }
+    if (!d) {
+      alert("Please select a date for Daily WhatsApp report.");
+      dateInput.showPicker?.() ?? dateInput.focus();
+      return;
+    }
     sendWhatsApp("Daily Attendance", d);
     closeModal(waModal);
   });
 
   waMonBtn.addEventListener("click", () => {
     const m = monthInput.value;
-    if (!m) { alert("Pick a month."); monthInput.showPicker?.() ?? monthInput.focus(); return; }
+    if (!m) {
+      alert("Please select a month for Monthly WhatsApp report.");
+      monthInput.showPicker?.() ?? monthInput.focus();
+      return;
+    }
     sendWhatsAppMonthly(m);
     closeModal(waModal);
   });
 
   // === Functions ===
-
   function updateClassDisplays() {
     teacherClassDisplay.textContent = teacherClass || "None";
     teacherClassHeader.textContent  = teacherClass || "None";
@@ -195,6 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     attendanceListEl.innerHTML = "";
     const clsStud = students.filter(s => s.class === teacherClass);
     const ad = attendanceData[date] || {};
+
     clsStud.forEach(s => {
       const div = document.createElement("div");
       div.className = "attendance-item";
@@ -230,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
       div.append(lbl, bc, send);
       attendanceListEl.append(div);
     });
+
     attendanceData[date] = ad;
   }
 
@@ -260,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const row = [s.roll, s.name];
         for (let i=1; i<=31; i++) {
           const key = `${m}-${String(i).padStart(2,"0")}`;
-          row.push(attendanceData[key]?.[s.roll]||"");
+          row.push(attendanceData[key]?.[s.roll] || "");
         }
         return row;
       });
@@ -269,9 +286,9 @@ document.addEventListener("DOMContentLoaded", () => {
       head: [cols],
       body: rows,
       startY: 50,
-      theme:"grid",
-      styles:{fontSize:8},
-      headStyles:{fillColor:[33,150,243]}
+      theme: "grid",
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [33,150,243] }
     });
 
     doc.save(`Monthly_Attendance_${m}.pdf`);
@@ -279,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function sendWhatsApp(title, d) {
     let msg = `${title} for ${d} (Class:${teacherClass})\n\n`;
-    const ad = attendanceData[d]||{};
+    const ad = attendanceData[d] || {};
     students
       .filter(s => s.class === teacherClass)
       .forEach(s => {
@@ -298,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
         msg += `${s.roll}-${s.name}`;
         for (let i=1; i<=31; i++) {
           const key = `${m}-${String(i).padStart(2,"0")}`;
-          msg += ` | ${attendanceData[key]?.[s.roll]||""}`;
+          msg += ` | ${attendanceData[key]?.[s.roll] || ""}`;
         }
         msg += "\n";
       });
