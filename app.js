@@ -212,7 +212,6 @@ document.addEventListener("DOMContentLoaded", function() {
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
     if (!date) {
-      // Trigger native date picker if available; otherwise, focus.
       if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
@@ -249,6 +248,7 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
+      // Default to today's date if none is selected for current attendance
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -267,11 +267,10 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – using the date picker (no prompt)
+  // 2. Daily Attendance Report – must use the date from the date picker (no default)
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
-      // Trigger native date picker or focus
       if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
