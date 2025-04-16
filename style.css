@@ -11,6 +11,11 @@ header {
   text-align: center;
 }
 
+.current-class {
+  font-size: 1.1em;
+  margin-top: 5px;
+}
+
 main {
   padding: 20px;
 }
@@ -22,11 +27,16 @@ section {
   border-radius: 5px;
 }
 
-input, select, button {
+input, select, button, textarea {
   padding: 8px;
   margin: 5px 0;
   width: 100%;
   max-width: 300px;
+  box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
 }
 
 ul {
