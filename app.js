@@ -39,8 +39,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Report Elements
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
-  const sendParentsBtn = document.getElementById('sendParents');
-  const specialNoteInput = document.getElementById('specialNote');
+  // Removed sendParentsBtn and its related code
 
   // Retrieve teacher class from localStorage if set
   let teacherClass = localStorage.getItem('teacherClass') || "";
@@ -71,7 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function generateRollNumber(cls) {
     const classStudents = students.filter(student => student.class === cls);
-    if(classStudents.length === 0) { return 1; }
+    if (classStudents.length === 0) { return 1; }
     let maxRoll = Math.max(...classStudents.map(s => parseInt(s.roll, 10)));
     return maxRoll + 1;
   }
@@ -265,7 +264,6 @@ document.addEventListener("DOMContentLoaded", function() {
         let row = [student.roll, student.name];
         attendanceDates.forEach(date => {
           let status = (attendanceData[date] && attendanceData[date][student.roll]) || "";
-          // For compact display, use the short codes (or blank if not marked)
           row.push(status);
         });
         tableRows.push(row);
@@ -347,28 +345,6 @@ document.addEventListener("DOMContentLoaded", function() {
       const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
       window.open(whatsappUrl, '_blank');
     }
-  });
-
-  sendParentsBtn.addEventListener('click', function() {
-    const date = dateInput.value;
-    if (!date) { alert("Please select a date before sending to parents."); return; }
-    let attendanceForDate = attendanceData[date] || {};
-    const classStudents = students.filter(student => student.class === teacherClass);
-    const specialNote = specialNoteInput.value.trim();
-    classStudents.forEach((student, index) => {
-      if (student.parentContact) {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        let message = `Dear Parent,\n\nAttendance for your child, ${student.name} (Roll: ${student.roll}) on ${date} (Class: ${teacherClass}) is as follows:\n\n${statusText}\n`;
-        if (specialNote) { message += `\nNote: ${specialNote}`; }
-        message += `\n\nRegards,\nSchool Administration`;
-        const whatsappUrl = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(student.parentContact) +
-                              "&text=" + encodeURIComponent(message);
-        setTimeout(() => {
-          window.open(whatsappUrl, '_blank');
-        }, index * 1500);
-      }
-    });
   });
 
   renderStudents();
