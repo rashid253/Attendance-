@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function() {
     "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"
   ];
 
-  // Helper function to convert status code into professional English message
+  // Helper: Convert status code into professional text
   function getStatusText(status) {
     switch(status) {
       case "P": return "Present. Thank you for ensuring your child’s punctuality.";
@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Teacher Setup Elements
+  // Elements for Teacher Setup
   const teacherClassSelect = document.getElementById("teacherClassSelect");
   const saveTeacherClassBtn = document.getElementById("saveTeacherClass");
   const teacherClassDisplay = document.getElementById("teacherClassDisplay");
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const teacherClassDisplayAttendance = document.getElementById("teacherClassDisplayAttendance");
   const teacherClassHeader = document.getElementById("teacherClassHeader");
 
-  // Student Registration Elements
+  // Elements for Student Registration
   const studentNameInput = document.getElementById('studentName');
   const parentContactInput = document.getElementById('parentContact');
   const addStudentBtn = document.getElementById('addStudent');
@@ -40,16 +40,16 @@ document.addEventListener("DOMContentLoaded", function() {
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
   const specialNoteInput = document.getElementById('specialNote');
-  const monthInputElement = document.getElementById('monthInput'); // For monthly reports
+  const monthInputElement = document.getElementById('monthInput'); // For monthly report
 
-  // Modal Elements for PDF options
+  // Modal Elements for PDF Options
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance button
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
 
-  // Retrieve teacher class from localStorage if set
+  // Retrieve teacher class from localStorage if exists
   let teacherClass = localStorage.getItem('teacherClass') || "";
   updateTeacherClassDisplays();
 
@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Retrieve stored data or initialize new structures
+  // Retrieve stored students/attendance data
   let students = JSON.parse(localStorage.getItem('students')) || [];
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
 
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       div.appendChild(buttonsContainer);
       
-      // Individual "Send" button for WhatsApp message per student
+      // "Send" button for WhatsApp message per student
       const sendBtn = document.createElement('button');
       sendBtn.textContent = "Send";
       sendBtn.classList.add('send-btn');
@@ -230,11 +230,10 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "block";
   });
 
-  // 1. Current Attendance Report – use attendance from the current (or default) date
+  // 1. Current Attendance Report – use attendance from current (or default) date
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
-      // Default to today if no date is selected (format: YYYY-MM-DD)
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -253,11 +252,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – use the value from the date picker (no manual prompt)
+  // 2. Daily Attendance Report – using the date picker (no manual prompt)
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
-      alert("Please select a date using the calendar above for the daily report.");
+      alert("Please select a date using the calendar for the daily report.");
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -276,19 +275,16 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 3. Monthly Attendance Report – use the month input (type="month") and generate a register-style report
+  // 3. Monthly Attendance Report – using the month picker (type="month")
   pdfMonthlyReportBtn.addEventListener('click', function() {
-    const monthValue = monthInputElement.value; // expects "YYYY-MM"
+    const monthValue = monthInputElement.value; // expected "YYYY-MM"
     if (!monthValue) {
       alert("Please select a month using the month picker for the monthly report.");
       return;
     }
-    // Create a landscape PDF to better accommodate 31 columns.
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'pt', 'a4');
-    // Header for the report
+    const doc = new jsPDF('l', 'pt', 'a4'); // landscape mode
     doc.text(`Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})`, 20, 30);
-    // Build table headers: Roll, Name, then days 1 to 31
     let tableColumnHeaders = ["Roll", "Name"];
     for (let day = 1; day <= 31; day++) {
       tableColumnHeaders.push(day.toString());
@@ -305,7 +301,6 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       tableRows.push(row);
     });
-    // Use autoTable in landscape mode
     doc.autoTable({
       head: [tableColumnHeaders],
       body: tableRows,
@@ -323,7 +318,7 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // WhatsApp Sharing – allow selection between current, daily, or monthly reports using the page inputs
+  // WhatsApp Sharing – using the date picker for daily and month picker for monthly
   shareWhatsAppBtn.addEventListener('click', function() {
     let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
     if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
@@ -333,9 +328,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let message = "";
     if (reportType === "current") {
       let date = dateInput.value;
-      if (!date) {
-        date = new Date().toISOString().split("T")[0];
-      }
+      if (!date) { date = new Date().toISOString().split("T")[0]; }
       let attendanceForDate = attendanceData[date] || {};
       message = `Current Attendance Report for ${date} (Class: ${teacherClass})\n\n`;
       const classStudents = students.filter(student => student.class === teacherClass);
