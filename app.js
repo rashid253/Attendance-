@@ -44,13 +44,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // ================= PDF Options Modal =================
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report button
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
 
-  // ================= WhatsApp Sharing Modal Creation =================
-  // We'll create a new modal for WhatsApp sharing instead of using prompt.
+  // ================= WhatsApp Sharing Modal =================
+  // Create a modal similar to the PDF modal
   const whatsappOptionsModal = document.createElement("div");
   whatsappOptionsModal.id = "whatsappOptionsModal";
   whatsappOptionsModal.innerHTML = `
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <button id="closeWhatsappModalBtn">Cancel</button>
     </div>
   `;
-  // Apply basic styling similar to the PDF modal
+  // Apply similar styling as PDF modal
   whatsappOptionsModal.style.display = "none";
   whatsappOptionsModal.style.position = "fixed";
   whatsappOptionsModal.style.zIndex = "1000";
@@ -275,6 +275,7 @@ document.addEventListener("DOMContentLoaded", function() {
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
+      // For current, we still default to today's date
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -293,7 +294,7 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // (2) Daily Attendance Report – require a date to be chosen (do not default)
+  // (2) Daily Attendance Report – require explicit date selection (do not auto-default)
   pdfDailyReportBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
@@ -321,9 +322,9 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // (3) Monthly Attendance Report – using the month picker (no prompt)
+  // (3) Monthly Attendance Report – using the month picker (explicit selection required)
   pdfMonthlyReportBtn.addEventListener('click', function() {
-    const monthValue = monthInputElement.value; // expected "YYYY-MM"
+    const monthValue = monthInputElement.value; // expected format "YYYY-MM"
     if (!monthValue) {
       alert("Please select a month using the month picker for the monthly report.");
       if (typeof monthInputElement.showPicker === "function") {
@@ -334,7 +335,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'pt', 'a4'); // landscape mode
+    const doc = new jsPDF('l', 'pt', 'a4'); // landscape mode for many columns
     doc.text(`Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})`, 20, 30);
     let tableColumnHeaders = ["Roll", "Name"];
     for (let day = 1; day <= 31; day++) {
@@ -369,15 +370,16 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   // ================= WhatsApp Sharing =================
-  // When the teacher clicks the WhatsApp sharing button, show the WhatsApp Options Modal
+  // Show WhatsApp options modal when "Share on WhatsApp" is clicked
   shareWhatsAppBtn.addEventListener('click', function() {
     whatsappOptionsModal.style.display = "block";
   });
 
+  // WhatsApp sharing - Current Attendance Report
   whatsappCurrentBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
-      // For current, if no date is selected, default to today's date
+      // For current, if no date, default to today's date
       date = new Date().toISOString().split("T")[0];
     }
     let attendanceForDate = attendanceData[date] || {};
@@ -393,6 +395,7 @@ document.addEventListener("DOMContentLoaded", function() {
     whatsappOptionsModal.style.display = "none";
   });
 
+  // WhatsApp sharing - Daily Attendance Report (explicit date required)
   whatsappDailyBtn.addEventListener('click', function() {
     const chosenDate = dateInput.value;
     if (!chosenDate) {
@@ -417,6 +420,7 @@ document.addEventListener("DOMContentLoaded", function() {
     whatsappOptionsModal.style.display = "none";
   });
 
+  // WhatsApp sharing - Monthly Attendance Report
   whatsappMonthlyBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value;
     if (!monthValue) {
