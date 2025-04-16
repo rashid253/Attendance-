@@ -12,9 +12,11 @@ document.addEventListener("DOMContentLoaded", function() {
   const teacherClassDisplay = document.getElementById("teacherClassDisplay");
   const teacherClassDisplayRegistration = document.getElementById("teacherClassDisplayRegistration");
   const teacherClassDisplayAttendance = document.getElementById("teacherClassDisplayAttendance");
+  const teacherClassHeader = document.getElementById("teacherClassHeader");
 
   // Student Registration Elements
   const studentNameInput = document.getElementById('studentName');
+  const parentContactInput = document.getElementById('parentContact');
   const addStudentBtn = document.getElementById('addStudent');
   const studentsListEl = document.getElementById('students');
 
@@ -26,6 +28,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Report Elements
   const exportPdfBtn = document.getElementById('exportPdf');
+  const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
+  const sendParentsBtn = document.getElementById('sendParents');
+  const specialNoteInput = document.getElementById('specialNote');
 
   // Retrieve teacher class from localStorage if set
   let teacherClass = localStorage.getItem('teacherClass') || "";
@@ -36,6 +41,7 @@ document.addEventListener("DOMContentLoaded", function() {
     teacherClassDisplay.textContent = teacherClass || "None";
     teacherClassDisplayRegistration.textContent = teacherClass || "None";
     teacherClassDisplayAttendance.textContent = teacherClass || "None";
+    teacherClassHeader.textContent = teacherClass || "None";
   }
 
   // Save Teacher Class button event
@@ -53,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Retrieve data from localStorage or initialize new structures
   let students = JSON.parse(localStorage.getItem('students')) || [];
-  // students: array of objects { roll, name, class }
+  // Each student: { roll, name, class, parentContact }
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
   // attendanceData: { date: { roll: status } }
 
@@ -73,8 +79,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const classStudents = students.filter(student => student.class === teacherClass);
     classStudents.forEach((student, index) => {
       const li = document.createElement('li');
-      li.textContent = `${student.roll} - ${student.name} (${student.class})`;
-
+      // صرف roll اور name ظاہر کریں، کلاس نام اب ہیڈر میں دکھایا جائے گا
+      li.textContent = `${student.roll} - ${student.name}`;
+      
       // Action Buttons: Edit and Delete
       const actionsDiv = document.createElement('div');
       actionsDiv.classList.add("action-buttons");
@@ -119,11 +126,13 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     const name = studentNameInput.value.trim();
+    const parentContact = parentContactInput.value.trim();
     if (name) {
       const roll = generateRollNumber(teacherClass);
-      students.push({ roll, name, class: teacherClass });
+      students.push({ roll, name, class: teacherClass, parentContact });
       localStorage.setItem('students', JSON.stringify(students));
       studentNameInput.value = "";
+      parentContactInput.value = "";
       renderStudents();
     } else {
       alert("Please enter student name.");
@@ -141,7 +150,8 @@ document.addEventListener("DOMContentLoaded", function() {
       div.classList.add('attendance-item');
 
       const label = document.createElement('label');
-      label.textContent = `${student.roll} - ${student.name} (${student.class})`;
+      // صرف roll اور name ظاہر کریں، کلاس نام اوپر ہی دکھایا جائے گا
+      label.textContent = `${student.roll} - ${student.name}`;
 
       // Dropdown for attendance status options
       const select = document.createElement('select');
@@ -199,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // PDF Export event (Report contains only teacher's class students)
+  // PDF Export event (Report contains teacher's class attendance)
   exportPdfBtn.addEventListener('click', function() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -208,6 +218,7 @@ document.addEventListener("DOMContentLoaded", function() {
       alert("Please select a date for the report.");
       return;
     }
+    // Header with class name
     doc.text(`Attendance Report for ${date} (Class: ${teacherClass})`, 10, 10);
     let y = 20;
     let attendanceForDate = attendanceData[date] || {};
@@ -218,6 +229,54 @@ document.addEventListener("DOMContentLoaded", function() {
       y += 10;
     });
     doc.save(`attendance_${date}.pdf`);
+  });
+
+  // Share on WhatsApp event: Opens WhatsApp web with prefilled text of overall attendance
+  shareWhatsAppBtn.addEventListener('click', function() {
+    const date = dateInput.value;
+    if (!date) {
+      alert("Please select a date for sharing.");
+      return;
+    }
+    let attendanceForDate = attendanceData[date] || {};
+    const classStudents = students.filter(student => student.class === teacherClass);
+    let message = `Attendance Report for ${date} (Class: ${teacherClass})\n\n`;
+    classStudents.forEach(student => {
+      const status = attendanceForDate[student.roll] || "Not Marked";
+      message += `${student.roll} - ${student.name}: ${status}\n`;
+    });
+    // WhatsApp share URL (Note: prefilled message must be URL-encoded)
+    const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+    window.open(whatsappUrl, '_blank');
+  });
+
+  // Send Attendance To All Parents: For each student, send individual WhatsApp messages
+  sendParentsBtn.addEventListener('click', function() {
+    const date = dateInput.value;
+    if (!date) {
+      alert("Please select a date before sending to parents.");
+      return;
+    }
+    let attendanceForDate = attendanceData[date] || {};
+    const classStudents = students.filter(student => student.class === teacherClass);
+    const specialNote = specialNoteInput.value.trim();
+    
+    classStudents.forEach(student => {
+      // صرف اُن طالب علموں کے لیے جن کا والدین کا نمبر موجود ہو
+      if (student.parentContact) {
+        const status = attendanceForDate[student.roll] || "Not Marked";
+        let message = `Dear Parent,\n\nAttendance for your child (${student.name}, Roll: ${student.roll}) on ${date} (Class: ${teacherClass}) is: ${status}.\n`;
+        if(specialNote) {
+          message += `\nNote: ${specialNote}`;
+        }
+        message += `\n\nRegards,\nSchool`;
+        const whatsappUrl = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(student.parentContact) +
+                              "&text=" + encodeURIComponent(message);
+        // کھولنے کی کوشش – ممکن ہے براؤزر پاپ اپ بلاک کرے
+        window.open(whatsappUrl, '_blank');
+      }
+    });
+    alert("WhatsApp messages initiated. Please check pop-ups and send messages via WhatsApp.");
   });
 
   // Initial render for student list
