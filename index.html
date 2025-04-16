@@ -11,6 +11,8 @@
 <body>
   <header>
     <h1>Attendance Management System</h1>
+    <!-- صفحے کے اوپر ایک جگہ کلاس کا نام ظاہر ہوگا -->
+    <p class="current-class">Class: <span id="teacherClassHeader">None</span></p>
   </header>
   <main>
     <!-- Teacher Setup Section -->
@@ -42,7 +44,10 @@
     <section id="student-registration">
       <h2>Add Student</h2>
       <p>Your Class: <span id="teacherClassDisplayRegistration">None</span></p>
+      <!-- صرف نام انٹر کیا جائے گا، رول نمبر خودکار اور کلاس اوپر ظاہر ہوگی -->
       <input type="text" id="studentName" placeholder="Student Name">
+      <!-- Parent Contact (فون نمبر): optional input -->
+      <input type="text" id="parentContact" placeholder="Parent Contact (e.g. +923XXXXXXXXX)">
       <button id="addStudent">Add Student</button>
       <h3>Student List</h3>
       <ul id="students"></ul>
@@ -62,7 +67,13 @@
     <!-- Reports Section -->
     <section id="reports">
       <h2>Reports</h2>
-      <button id="exportPdf">Export as PDF</button>
+      <button id="exportPdf">Download PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
+      <div style="margin-top:15px;">
+        <label for="specialNote">Special Note (if any):</label>
+        <textarea id="specialNote" rows="2" placeholder="Enter any special note for parents..."></textarea>
+      </div>
+      <button id="sendParents">Send Attendance To All Parents</button>
       <div id="reportOutput"></div>
     </section>
   </main>
