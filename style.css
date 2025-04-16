@@ -52,3 +52,6 @@ li {
 .attendance-item select {
   margin-left: 10px;
 }
+.action-buttons button {
+  margin-left: 5px;
+}
