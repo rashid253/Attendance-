@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Helper: Convert status code into professional text
   function getStatusText(status) {
     switch(status) {
-      case "P": return "Present. Thank you for ensuring your child’s punctuality.";
+      case "P": return "Present. Thank you for ensuring your child's punctuality.";
       case "A": return "Absent. Please contact the school for further details regarding your child's absence.";
       case "L": return "Late. Kindly ensure your child arrives on time. Thank you.";
       case "Le": return "Leave. Your child's leave request has been approved.";
@@ -48,6 +48,13 @@ document.addEventListener("DOMContentLoaded", function() {
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
+
+  // WhatsApp Modal Elements
+  const whatsappOptionsModal = document.getElementById('whatsappOptionsModal');
+  const whatsappCurrentReportBtn = document.getElementById('whatsappCurrentReportBtn');
+  const whatsappDailyReportBtn = document.getElementById('whatsappDailyReportBtn');
+  const whatsappMonthlyReportBtn = document.getElementById('whatsappMonthlyReportBtn');
+  const closeWhatsappModalBtn = document.getElementById('closeWhatsappModalBtn');
 
   // Retrieve teacher class from localStorage if exists
   let teacherClass = localStorage.getItem('teacherClass') || "";
@@ -142,6 +149,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
+  // Render attendance with quick-tap buttons
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -181,6 +189,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       div.appendChild(buttonsContainer);
       
+      // "Send" button for WhatsApp per student
       const sendBtn = document.createElement('button');
       sendBtn.textContent = "Send";
       sendBtn.classList.add('send-btn');
@@ -234,14 +243,19 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // PDF Report Handling
+  // -----------------------------------------------------------
+  // PDF Report Generation Logic
+
+  // Show PDF options modal when "Download PDF" is clicked
   exportPdfBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "block";
   });
 
+  // 1. Current Attendance Report – use attendance from current (or default) date
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
+      // Default to today's date if none is selected for current attendance
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -260,56 +274,40 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // Fixed Daily Report with Date Picker
-  pdfDailyReportBtn.addEventListener('click', async function() {
-    pdfOptionsModal.style.display = "none";
-    
-    const showDatePicker = () => {
-      return new Promise((resolve) => {
-        if (typeof dateInput.showPicker === "function") {
-          dateInput.showPicker();
-        } else {
-          dateInput.focus();
-        }
-        
-        const handleDateSelect = () => {
-          resolve(dateInput.value);
-          dateInput.removeEventListener('input', handleDateSelect);
-        };
-        
-        dateInput.addEventListener('input', handleDateSelect);
-      });
-    };
-
-    let selectedDate = dateInput.value;
-    
-    if (!selectedDate) {
-      try {
-        selectedDate = await showDatePicker();
-        if (!selectedDate) return;
-      } catch (error) {
-        console.error("Date selection error:", error);
-        return;
-      }
+  // 2. Daily Attendance Report – must use the date from the date picker (no default)
+  pdfDailyReportBtn.addEventListener('click', function() {
+    // Clear the date input to force selection
+    dateInput.value = "";
+    if (typeof dateInput.showPicker === "function") {
+        dateInput.showPicker();
+    } else {
+        dateInput.focus();
     }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text(`Daily Attendance Report for ${selectedDate} (Class: ${teacherClass})`, 10, 10);
-    let y = 20;
-    let attendanceForDate = attendanceData[selectedDate] || {};
-    const classStudents = students.filter(student => student.class === teacherClass);
-    
-    classStudents.forEach(student => {
-      const status = attendanceForDate[student.roll] || "Not Marked";
-      const statusText = getStatusText(status);
-      doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
-      y += 10;
-    });
-    
-    doc.save(`daily_attendance_${selectedDate}.pdf`);
+    // Add event listener for when date is selected
+    const handleDateChange = () => {
+        const chosenDate = dateInput.value;
+        if (chosenDate) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})`, 10, 10);
+            let y = 20;
+            let attendanceForDate = attendanceData[chosenDate] || {};
+            const classStudents = students.filter(student => student.class === teacherClass);
+            classStudents.forEach(student => {
+                const status = attendanceForDate[student.roll] || "Not Marked";
+                const statusText = getStatusText(status);
+                doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
+                y += 10;
+            });
+            doc.save(`daily_attendance_${chosenDate}.pdf`);
+            pdfOptionsModal.style.display = "none";
+            dateInput.removeEventListener('change', handleDateChange);
+        }
+    };
+    dateInput.addEventListener('change', handleDateChange);
   });
 
+  // 3. Monthly Attendance Report – using the month picker (no prompt)
   pdfMonthlyReportBtn.addEventListener('click', function() {
     const monthValue = monthInputElement.value;
     if (!monthValue) {
@@ -321,7 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'pt', 'a4');
+    const doc = new jsPDF('l', 'pt', 'a4'); // landscape mode
     doc.text(`Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})`, 20, 30);
     let tableColumnHeaders = ["Roll", "Name"];
     for (let day = 1; day <= 31; day++) {
@@ -351,74 +349,146 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
+  // Close PDF modal when Cancel button is clicked
   closePdfModalBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "none";
   });
 
+  // -----------------------------------------------------------
+  // WhatsApp Sharing Logic
+
+  // Show WhatsApp options modal when "Share on WhatsApp" is clicked
   shareWhatsAppBtn.addEventListener('click', function() {
-    let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
-    if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
-      return;
-    }
-    let message = "";
-    if (reportType === "current") {
-      let date = dateInput.value;
-      if (!date) { date = new Date().toISOString().split("T")[0]; }
-      let attendanceForDate = attendanceData[date] || {};
-      message = `Current Attendance Report for ${date} (Class: ${teacherClass})\n\n`;
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
+    whatsappOptionsModal.style.display = "block";
+  });
+
+  // WhatsApp Current Report
+  whatsappCurrentReportBtn.addEventListener('click', function() {
+    let date = dateInput.value;
+    if (!date) { date = new Date().toISOString().split("T")[0]; }
+    let attendanceForDate = attendanceData[date] || {};
+    let message = `📅 *Current Attendance Report*\n`;
+    message += `🏫 Class: ${teacherClass}\n`;
+    message += `📅 Date: ${date}\n\n`;
+    message += `📋 *Attendance Summary*\n\n`;
+    
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
         const status = attendanceForDate[student.roll] || "Not Marked";
         const statusText = getStatusText(status);
-        message += `${student.roll} - ${student.name}: ${statusText}\n`;
-      });
-    } else if (reportType === "daily") {
-      const chosenDate = dateInput.value;
-      if (!chosenDate) {
-        if (typeof dateInput.showPicker === "function") {
-          dateInput.showPicker();
-        } else {
-          dateInput.focus();
-        }
-        return;
-      }
-      let attendanceForDate = attendanceData[chosenDate] || {};
-      message = `Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})\n\n`;
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        message += `${student.roll} - ${student.name}: ${statusText}\n`;
-      });
-    } else if (reportType === "monthly") {
-      const monthValue = monthInputElement.value;
-      if (!monthValue) {
-        if (typeof monthInputElement.showPicker === "function") {
-          monthInputElement.showPicker();
-        } else {
-          monthInputElement.focus();
-        }
-        return;
-      }
-      message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
-      for (let day = 1; day <= 31; day++) {
-        message += ` | ${day}`;
-      }
-      message += "\n";
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        message += `${student.roll} - ${student.name}`;
-        for (let day = 1; day <= 31; day++) {
-          let dayStr = day.toString().padStart(2, '0');
-          let dateStr = `${monthValue}-${dayStr}`;
-          let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "";
-          message += ` | ${status}`;
-        }
-        message += "\n";
-      });
+        message += `👦 *${student.roll} - ${student.name}*: ${statusText}\n`;
+    });
+    
+    const specialNote = specialNoteInput.value.trim();
+    if (specialNote) {
+        message += `\n📝 *Special Note*: ${specialNote}\n`;
     }
+    
+    message += `\nBest regards,\nSchool Administration`;
+    
     const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
     window.open(whatsappUrl, '_blank');
+    whatsappOptionsModal.style.display = "none";
+  });
+
+  // WhatsApp Daily Report
+  whatsappDailyReportBtn.addEventListener('click', function() {
+    // Clear the date input to force selection
+    dateInput.value = "";
+    if (typeof dateInput.showPicker === "function") {
+        dateInput.showPicker();
+    } else {
+        dateInput.focus();
+    }
+    
+    const handleDateChange = () => {
+        const chosenDate = dateInput.value;
+        if (chosenDate) {
+            let attendanceForDate = attendanceData[chosenDate] || {};
+            let message = `📅 *Daily Attendance Report*\n`;
+            message += `🏫 Class: ${teacherClass}\n`;
+            message += `📅 Date: ${chosenDate}\n\n`;
+            message += `📋 *Attendance Summary*\n\n`;
+            
+            const classStudents = students.filter(student => student.class === teacherClass);
+            classStudents.forEach(student => {
+                const status = attendanceForDate[student.roll] || "Not Marked";
+                const statusText = getStatusText(status);
+                message += `👦 *${student.roll} - ${student.name}*: ${statusText}\n`;
+            });
+            
+            const specialNote = specialNoteInput.value.trim();
+            if (specialNote) {
+                message += `\n📝 *Special Note*: ${specialNote}\n`;
+            }
+            
+            message += `\nBest regards,\nSchool Administration`;
+            
+            const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+            window.open(whatsappUrl, '_blank');
+            whatsappOptionsModal.style.display = "none";
+            dateInput.removeEventListener('change', handleDateChange);
+        }
+    };
+    dateInput.addEventListener('change', handleDateChange);
+  });
+
+  // WhatsApp Monthly Report
+  whatsappMonthlyReportBtn.addEventListener('click', function() {
+    // Clear the month input to force selection
+    monthInputElement.value = "";
+    if (typeof monthInputElement.showPicker === "function") {
+        monthInputElement.showPicker();
+    } else {
+        monthInputElement.focus();
+    }
+    
+    const handleMonthChange = () => {
+        const monthValue = monthInputElement.value;
+        if (monthValue) {
+            let message = `📅 *Monthly Attendance Report*\n`;
+            message += `🏫 Class: ${teacherClass}\n`;
+            message += `📅 Month: ${monthValue}\n\n`;
+            message += `📋 *Attendance Summary*\n\n`;
+            
+            // Create a table-like structure
+            message += "Roll - Name";
+            for (let day = 1; day <= 31; day++) {
+                message += ` | ${day}`;
+            }
+            message += "\n";
+            
+            const classStudents = students.filter(student => student.class === teacherClass);
+            classStudents.forEach(student => {
+                message += `${student.roll} - ${student.name}`;
+                for (let day = 1; day <= 31; day++) {
+                    let dayStr = day.toString().padStart(2, '0');
+                    let dateStr = `${monthValue}-${dayStr}`;
+                    let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "-";
+                    message += ` | ${status}`;
+                }
+                message += "\n";
+            });
+            
+            const specialNote = specialNoteInput.value.trim();
+            if (specialNote) {
+                message += `\n📝 *Special Note*: ${specialNote}\n`;
+            }
+            
+            message += `\nBest regards,\nSchool Administration`;
+            
+            const whatsappUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(message);
+            window.open(whatsappUrl, '_blank');
+            whatsappOptionsModal.style.display = "none";
+            monthInputElement.removeEventListener('change', handleMonthChange);
+        }
+    };
+    monthInputElement.addEventListener('change', handleMonthChange);
+  });
+
+  // Close WhatsApp modal when Cancel button is clicked
+  closeWhatsappModalBtn.addEventListener('click', function() {
+    whatsappOptionsModal.style.display = "none";
   });
 
   renderStudents();
