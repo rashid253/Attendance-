@@ -18,7 +18,7 @@ section {
   border: 1px solid #ccc;
   border-radius: 5px;
 }
-input, select, button {
+input, button {
   padding: 8px;
   margin: 5px 0;
   width: 100%;
