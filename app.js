@@ -1,154 +1,155 @@
 document.addEventListener("DOMContentLoaded", function() {
   // Student Registration Elements
-  const rollNumberInput = document.getElementById('rollNumber');
   const studentNameInput = document.getElementById('studentName');
-  const studentClassInput = document.getElementById('studentClass');
+  const studentClassSelect = document.getElementById('studentClass');
   const addStudentBtn = document.getElementById('addStudent');
   const studentsListEl = document.getElementById('students');
-  
+
   // Attendance Elements
   const dateInput = document.getElementById('dateInput');
   const filterClassSelect = document.getElementById('filterClass');
   const loadAttendanceBtn = document.getElementById('loadAttendance');
   const attendanceListEl = document.getElementById('attendanceList');
   const saveAttendanceBtn = document.getElementById('saveAttendance');
-  
+
   // Report Elements
   const exportPdfBtn = document.getElementById('exportPdf');
-  
+
   // Retrieve data from localStorage or initialize new data structures
-  let students = JSON.parse(localStorage.getItem('students')) || []; 
+  let students = JSON.parse(localStorage.getItem('students')) || [];
   // students: array of objects: { roll, name, class }
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
-  // attendanceData structure: { date: { rollNumber: status } }
-  
-  // Function to update the student list UI and update filter dropdown with classes
+  // attendanceData structure: { date: { roll: status } }
+
+  // Function: Roll Number خودکار جاری کرنے کے لیے –
+  // ہر کلاس کے لیے موجودہ زیادہ سے زیادہ roll number دیکھ کر اگلا نمبر دیا جائے گا
+  function generateRollNumber(cls) {
+    const classStudents = students.filter(student => student.class === cls);
+    if(classStudents.length === 0) {
+      return 1;
+    }
+    let maxRoll = Math.max(...classStudents.map(s => parseInt(s.roll, 10)));
+    return maxRoll + 1;
+  }
+
+  // Function to render student list with editing option
   function renderStudents() {
     studentsListEl.innerHTML = "";
-    let classesSet = new Set();
-    
     students.forEach((student, index) => {
-      classesSet.add(student.class);
-      
       const li = document.createElement('li');
-      li.textContent = `${student.roll} - ${student.name} (${student.class}) `;
+      li.textContent = `${student.roll} - ${student.name} (${student.class})`;
+      
+      // Container for Edit/Delete buttons
+      const actionsDiv = document.createElement('div');
+      actionsDiv.classList.add("action-buttons");
+
+      // Edit button: change student name
+      const editBtn = document.createElement('button');
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener('click', function() {
+        let newName = prompt("Enter new name:", student.name);
+        if(newName !== null && newName.trim() !== "") {
+          student.name = newName.trim();
+          localStorage.setItem('students', JSON.stringify(students));
+          renderStudents();
+        }
+      });
+      
+      // Delete button: remove student
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = "Delete";
-      deleteBtn.onclick = function() {
-        students.splice(index, 1);
-        localStorage.setItem('students', JSON.stringify(students));
-        renderStudents();
-        populateFilterClasses();
-      };
-      li.appendChild(deleteBtn);
+      deleteBtn.addEventListener('click', function() {
+        if(confirm(`Delete ${student.name}?`)) {
+          students.splice(index, 1);
+          localStorage.setItem('students', JSON.stringify(students));
+          renderStudents();
+        }
+      });
+
+      actionsDiv.appendChild(editBtn);
+      actionsDiv.appendChild(deleteBtn);
+      li.appendChild(actionsDiv);
       studentsListEl.appendChild(li);
     });
-    populateFilterClasses();
-    // populateFilterClasses uses the classesSet from current students.
   }
-  
-  // Populate filter dropdown based on available classes
-  function populateFilterClasses() {
-    // Start with All option
-    let classes = ["all"];
-    students.forEach(student => {
-      if(!classes.includes(student.class)) {
-        classes.push(student.class);
-      }
-    });
-    // Clear and update select element
-    filterClassSelect.innerHTML = "";
-    classes.forEach(cls => {
-      const option = document.createElement('option');
-      option.value = cls;
-      option.textContent = cls;
-      filterClassSelect.appendChild(option);
-    });
-  }
-  
-  // Add Student button click event
+
+  // Add Student button event
   addStudentBtn.addEventListener('click', function() {
-    const roll = rollNumberInput.value.trim();
     const name = studentNameInput.value.trim();
-    const cls = studentClassInput.value.trim();
+    const cls = studentClassSelect.value;
     
-    if(roll && name && cls) {
-      // Check for duplicate roll number (optional)
-      if(students.find(student => student.roll === roll)) {
-        alert("Roll Number already exists!");
-        return;
-      }
+    if(name && cls) {
+      // Roll Number automatic generation per class
+      const roll = generateRollNumber(cls);
       students.push({ roll, name, class: cls });
       localStorage.setItem('students', JSON.stringify(students));
-      rollNumberInput.value = "";
       studentNameInput.value = "";
-      studentClassInput.value = "";
+      studentClassSelect.selectedIndex = 0;
       renderStudents();
     } else {
-      alert("Please fill all fields.");
+      alert("Please enter student name and select a class.");
     }
   });
-  
+
   // Render attendance for the selected date and class filter
   function renderAttendanceForDate(date, filterClass) {
     attendanceListEl.innerHTML = "";
-    // Filter the students list if a particular class is selected
+    // Filter students by selected class; اگر کوئی کلاس منتخب نہ ہو تو تمام طلباء دکھائیں
     let filteredStudents = students;
-    if(filterClass !== "all") {
+    if(filterClass) {
       filteredStudents = students.filter(student => student.class === filterClass);
     }
-    // Get attendance for date if exists, else initialize a new object
+    // Get attendance for the date; اگر موجود نہ ہو تو نیا object بنائیں
     let attendanceForDate = attendanceData[date] || {};
-    
+
     filteredStudents.forEach(student => {
       const div = document.createElement('div');
       div.classList.add('attendance-item');
-      
-      // Label showing roll, name & class
+
+      // Label: roll - name (class)
       const label = document.createElement('label');
       label.textContent = `${student.roll} - ${student.name} (${student.class})`;
-      
-      // Dropdown to select attendance status
+
+      // Dropdown: attendance status options
       const select = document.createElement('select');
-      // Add default blank option
-      let defaultOpt = document.createElement('option');
+      // Default option
+      const defaultOpt = document.createElement('option');
       defaultOpt.value = "";
       defaultOpt.textContent = "--Select--";
       select.appendChild(defaultOpt);
-      
-      // Options: Present, Absent, Late, Leave
+
+      // Status options: P (Present), A (Absent), L (Late), Le (Leave)
       const statuses = [
         { value: "P", text: "Present" },
         { value: "A", text: "Absent" },
         { value: "L", text: "Late" },
         { value: "Le", text: "Leave" }
       ];
-      
       statuses.forEach(status => {
         const opt = document.createElement('option');
         opt.value = status.value;
         opt.textContent = status.text;
         select.appendChild(opt);
       });
-      
-      // Preselect value if attendance already exists
+
+      // اگر پہلے سے کوئی status موجود ہو تو اسے سیٹ کریں
       if(attendanceForDate[student.roll]) {
         select.value = attendanceForDate[student.roll];
       }
-      
-      // When selection changes, update attendance object
+
+      // تبدیلی پر attendance object اپڈیٹ کریں
       select.addEventListener('change', function() {
         attendanceForDate[student.roll] = this.value;
       });
-      
+
       div.appendChild(label);
       div.appendChild(select);
       attendanceListEl.appendChild(div);
     });
-    // Update attendanceData object for the date
+    // Update the global attendanceData object for that date
     attendanceData[date] = attendanceForDate;
   }
-  
+
   // Load Attendance button event
   loadAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
@@ -159,7 +160,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const filterClass = filterClassSelect.value;
     renderAttendanceForDate(date, filterClass);
   });
-  
+
   // Save Attendance button event
   saveAttendanceBtn.addEventListener('click', function() {
     const date = dateInput.value;
@@ -170,8 +171,8 @@ document.addEventListener("DOMContentLoaded", function() {
     localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
     alert(`Attendance saved for ${date}`);
   });
-  
-  // PDF Export button event
+
+  // PDF Export button event (رپورٹ میں تمام طلباء شامل ہیں)
   exportPdfBtn.addEventListener('click', function() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -183,8 +184,8 @@ document.addEventListener("DOMContentLoaded", function() {
     doc.text("Attendance Report for " + date, 10, 10);
     let y = 20;
     let attendanceForDate = attendanceData[date] || {};
-    
-    // List all students (not applying class filter in report; can adjust if needed)
+
+    // تمام طلباء کی فہرست رپورٹ میں شامل کریں (ضرورت کے مطابق کلاس کے لحاظ سے بھی فلٹر کیا جا سکتا ہے)
     students.forEach(student => {
       const status = attendanceForDate[student.roll] || "Not Marked";
       doc.text(`${student.roll} - ${student.name} (${student.class}): ${status}`, 10, y);
@@ -192,7 +193,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     doc.save("attendance_" + date + ".pdf");
   });
-  
+
   // ابتدائی رینڈر
   renderStudents();
 });
