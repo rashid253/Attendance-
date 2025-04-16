@@ -13,63 +13,35 @@
     <h1>Attendance Management System</h1>
   </header>
   <main>
-    <!-- طلباء کے اندراج کی سیکشن -->
+    <!-- Teacher Class Setup Section (Only once) -->
+    <section id="teacher-setup">
+      <h2>Teacher Setup</h2>
+      <p>Your Class: <span id="teacherClassDisplay"></span></p>
+    </section>
+    
+    <!-- Student Registration Section -->
     <section id="student-registration">
       <h2>Add Student</h2>
-      <!-- Roll Number اب خودکار جاری ہوگا، لہٰذا اسے ان پٹ کی ضرورت نہیں -->
+      <!-- استاد کی کلاس خودکار سیٹ ہو جائے گی، ان پٹ کی ضرورت نہیں -->
+      <p>Your Class: <span id="teacherClassDisplayRegistration"></span></p>
       <input type="text" id="studentName" placeholder="Student Name">
-      <!-- کلاس منتخب کرنے کے لیے ڈراپ ڈاؤن -->
-      <select id="studentClass">
-        <option value="">--Select Class--</option>
-        <option value="Play Group">Play Group</option>
-        <option value="Nursery">Nursery</option>
-        <option value="Prep">Prep</option>
-        <option value="Pre One">Pre One</option>
-        <option value="One">One</option>
-        <option value="Two">Two</option>
-        <option value="Three">Three</option>
-        <option value="Four">Four</option>
-        <option value="Five">Five</option>
-        <option value="Six">Six</option>
-        <option value="Seven">Seven</option>
-        <option value="Eight">Eight</option>
-        <option value="Nine">Nine</option>
-        <option value="Ten">Ten</option>
-      </select>
       <button id="addStudent">Add Student</button>
       <h3>Student List</h3>
       <ul id="students"></ul>
     </section>
-    <!-- اٹینڈنس مارک کرنے کی سیکشن -->
+    
+    <!-- Attendance Marking Section -->
     <section id="attendance-section">
       <h2>Mark Attendance</h2>
+      <p>Your Class: <span id="teacherClassDisplayAttendance"></span></p>
       <label for="dateInput">Select Date: </label>
       <input type="date" id="dateInput">
-      <br>
-      <!-- کلاس فلٹر: استاد اپنی کلاس منتخب کرے گا -->
-      <label for="filterClass">Filter by Class: </label>
-      <select id="filterClass">
-        <option value="">--Select Class--</option>
-        <option value="Play Group">Play Group</option>
-        <option value="Nursery">Nursery</option>
-        <option value="Prep">Prep</option>
-        <option value="Pre One">Pre One</option>
-        <option value="One">One</option>
-        <option value="Two">Two</option>
-        <option value="Three">Three</option>
-        <option value="Four">Four</option>
-        <option value="Five">Five</option>
-        <option value="Six">Six</option>
-        <option value="Seven">Seven</option>
-        <option value="Eight">Eight</option>
-        <option value="Nine">Nine</option>
-        <option value="Ten">Ten</option>
-      </select>
       <button id="loadAttendance">Load Attendance</button>
       <div id="attendanceList"></div>
       <button id="saveAttendance">Save Attendance</button>
     </section>
-    <!-- رپورٹس کی سیکشن -->
+    
+    <!-- Reports Section -->
     <section id="reports">
       <h2>Reports</h2>
       <button id="exportPdf">Export as PDF</button>
