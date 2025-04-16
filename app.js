@@ -40,11 +40,11 @@ document.addEventListener("DOMContentLoaded", function() {
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
   const specialNoteInput = document.getElementById('specialNote');
-  const monthInputElement = document.getElementById('monthInput'); // For monthly report
+  const monthInputElement = document.getElementById('monthInput');
 
   // Modal Elements for PDF Options
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance report
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
@@ -142,7 +142,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Render attendance with quick-tap buttons
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -182,7 +181,6 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       div.appendChild(buttonsContainer);
       
-      // "Send" button for WhatsApp per student
       const sendBtn = document.createElement('button');
       sendBtn.textContent = "Send";
       sendBtn.classList.add('send-btn');
@@ -236,19 +234,14 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // -----------------------------------------------------------
-  // PDF and WhatsApp Report Generation Logic
-
-  // Show PDF options modal when "Download PDF" is clicked
+  // PDF Report Handling
   exportPdfBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "block";
   });
 
-  // 1. Current Attendance Report – use attendance from current (or default) date
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
-      // Default to today's date if none is selected for current attendance
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -267,36 +260,46 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – must use the date from the date picker (no default)
+  // Fixed Daily Report Handling
   pdfDailyReportBtn.addEventListener('click', function() {
-    const chosenDate = dateInput.value;
-    if (!chosenDate) {
+    pdfOptionsModal.style.display = "none";
+    
+    const handleDateSelection = () => {
+      const chosenDate = dateInput.value;
+      if (!chosenDate) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text(`Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})`, 10, 10);
+      let y = 20;
+      let attendanceForDate = attendanceData[chosenDate] || {};
+      const classStudents = students.filter(student => student.class === teacherClass);
+      
+      classStudents.forEach(student => {
+        const status = attendanceForDate[student.roll] || "Not Marked";
+        const statusText = getStatusText(status);
+        doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
+        y += 10;
+      });
+      
+      doc.save(`daily_attendance_${chosenDate}.pdf`);
+      dateInput.removeEventListener('change', handleDateSelection);
+    };
+
+    if (!dateInput.value) {
       if (typeof dateInput.showPicker === "function") {
         dateInput.showPicker();
       } else {
         dateInput.focus();
       }
-      return;
+      dateInput.addEventListener('change', handleDateSelection);
+    } else {
+      handleDateSelection();
     }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text(`Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})`, 10, 10);
-    let y = 20;
-    let attendanceForDate = attendanceData[chosenDate] || {};
-    const classStudents = students.filter(student => student.class === teacherClass);
-    classStudents.forEach(student => {
-      const status = attendanceForDate[student.roll] || "Not Marked";
-      const statusText = getStatusText(status);
-      doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
-      y += 10;
-    });
-    doc.save(`daily_attendance_${chosenDate}.pdf`);
-    pdfOptionsModal.style.display = "none";
   });
 
-  // 3. Monthly Attendance Report – using the month picker (no prompt)
   pdfMonthlyReportBtn.addEventListener('click', function() {
-    const monthValue = monthInputElement.value; // expected "YYYY-MM"
+    const monthValue = monthInputElement.value;
     if (!monthValue) {
       if (typeof monthInputElement.showPicker === "function") {
         monthInputElement.showPicker();
@@ -306,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function() {
       return;
     }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'pt', 'a4'); // landscape mode
+    const doc = new jsPDF('l', 'pt', 'a4');
     doc.text(`Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})`, 20, 30);
     let tableColumnHeaders = ["Roll", "Name"];
     for (let day = 1; day <= 31; day++) {
@@ -336,12 +339,10 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // Close PDF modal when Cancel button is clicked
   closePdfModalBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // WhatsApp Sharing – using date picker for daily and month picker for monthly (current remains unchanged)
   shareWhatsAppBtn.addEventListener('click', function() {
     let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
     if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
