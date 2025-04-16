@@ -40,10 +40,11 @@ document.addEventListener("DOMContentLoaded", function() {
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
   const specialNoteInput = document.getElementById('specialNote');
+  const monthInputElement = document.getElementById('monthInput'); // For monthly reports
 
   // Modal Elements for PDF options
   const pdfOptionsModal = document.getElementById('pdfOptionsModal');
-  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // New button for current attendance
+  const pdfCurrentReportBtn = document.getElementById('pdfCurrentReportBtn');  // Current attendance button
   const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
   const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
   const closePdfModalBtn = document.getElementById('closePdfModalBtn');
@@ -141,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Replace dropdown with quick-tap buttons for faster attendance input
+  // Render attendance using quick-tap buttons
   function renderAttendanceForDate(date) {
     attendanceListEl.innerHTML = "";
     const classStudents = students.filter(student => student.class === teacherClass);
@@ -223,16 +224,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // -----------------------------------------------------------
   // PDF and WhatsApp Report Generation Logic
+
   // Show PDF options modal when "Download PDF" is clicked
   exportPdfBtn.addEventListener('click', function() {
     pdfOptionsModal.style.display = "block";
   });
 
-  // 1. Current Attendance Report – use attendance from the currently loaded date (or default to today)
+  // 1. Current Attendance Report – use attendance from the current (or default) date
   pdfCurrentReportBtn.addEventListener('click', function() {
     let date = dateInput.value;
     if (!date) {
-      // Default to today if no date provided (YYYY-MM-DD format)
+      // Default to today if no date is selected (format: YYYY-MM-DD)
       date = new Date().toISOString().split("T")[0];
     }
     const { jsPDF } = window.jspdf;
@@ -251,11 +253,11 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 2. Daily Attendance Report – prompt for a date and generate its report
+  // 2. Daily Attendance Report – use the value from the date picker (no manual prompt)
   pdfDailyReportBtn.addEventListener('click', function() {
-    let chosenDate = prompt("Please enter the date for the daily report (YYYY-MM-DD):");
+    const chosenDate = dateInput.value;
     if (!chosenDate) {
-      alert("You must enter a valid date.");
+      alert("Please select a date using the calendar above for the daily report.");
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -274,18 +276,19 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // 3. Monthly Attendance Report – generate a register-style report
+  // 3. Monthly Attendance Report – use the month input (type="month") and generate a register-style report
   pdfMonthlyReportBtn.addEventListener('click', function() {
-    let monthInput = prompt("Enter month (YYYY-MM) for the monthly report:");
-    if (!monthInput) {
-      alert("Month is required for monthly report.");
+    const monthValue = monthInputElement.value; // expects "YYYY-MM"
+    if (!monthValue) {
+      alert("Please select a month using the month picker for the monthly report.");
       return;
     }
+    // Create a landscape PDF to better accommodate 31 columns.
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF('l', 'pt', 'a4');
     // Header for the report
-    doc.text(`Monthly Attendance Report for ${monthInput} (Class: ${teacherClass})`, 10, 10);
-    // Build table headers: Roll, Name, then days 1..31
+    doc.text(`Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})`, 20, 30);
+    // Build table headers: Roll, Name, then days 1 to 31
     let tableColumnHeaders = ["Roll", "Name"];
     for (let day = 1; day <= 31; day++) {
       tableColumnHeaders.push(day.toString());
@@ -296,28 +299,22 @@ document.addEventListener("DOMContentLoaded", function() {
       let row = [student.roll, student.name];
       for (let day = 1; day <= 31; day++) {
         let dayStr = day.toString().padStart(2, '0');
-        let dateStr = `${monthInput}-${dayStr}`;
+        let dateStr = `${monthValue}-${dayStr}`;
         let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "";
         row.push(status);
       }
       tableRows.push(row);
     });
-    if (doc.autoTable) {
-      doc.autoTable({
-        head: [tableColumnHeaders],
-        body: tableRows,
-        startY: 20
-      });
-    } else {
-      let y = 20;
-      doc.text(tableColumnHeaders.join(" | "), 10, y);
-      y += 10;
-      tableRows.forEach(row => {
-        doc.text(row.join(" | "), 10, y);
-        y += 10;
-      });
-    }
-    doc.save(`monthly_attendance_${monthInput}.pdf`);
+    // Use autoTable in landscape mode
+    doc.autoTable({
+      head: [tableColumnHeaders],
+      body: tableRows,
+      startY: 50,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [33, 150, 243] }
+    });
+    doc.save(`monthly_attendance_${monthValue}.pdf`);
     pdfOptionsModal.style.display = "none";
   });
 
@@ -326,7 +323,7 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // WhatsApp Sharing – include options for current, daily, or monthly reports
+  // WhatsApp Sharing – allow selection between current, daily, or monthly reports using the page inputs
   shareWhatsAppBtn.addEventListener('click', function() {
     let reportType = prompt("Enter report type for WhatsApp sharing: current, daily OR monthly").toLowerCase();
     if (!reportType || (reportType !== "current" && reportType !== "daily" && reportType !== "monthly")) {
@@ -348,9 +345,9 @@ document.addEventListener("DOMContentLoaded", function() {
         message += `${student.roll} - ${student.name}: ${statusText}\n`;
       });
     } else if (reportType === "daily") {
-      let chosenDate = prompt("Please enter the date for the daily report (YYYY-MM-DD):");
+      const chosenDate = dateInput.value;
       if (!chosenDate) {
-        alert("You must enter a valid date.");
+        alert("Please select a date using the calendar for the daily report sharing.");
         return;
       }
       let attendanceForDate = attendanceData[chosenDate] || {};
@@ -362,12 +359,12 @@ document.addEventListener("DOMContentLoaded", function() {
         message += `${student.roll} - ${student.name}: ${statusText}\n`;
       });
     } else if (reportType === "monthly") {
-      let monthInput = prompt("Enter month (YYYY-MM) for the monthly report:");
-      if (!monthInput) { 
-        alert("Month is required for monthly sharing.");
+      const monthValue = monthInputElement.value;
+      if (!monthValue) {
+        alert("Please select a month using the month picker for monthly report sharing.");
         return;
       }
-      message = `Monthly Attendance Report for ${monthInput} (Class: ${teacherClass})\n\nRoll - Name`;
+      message = `Monthly Attendance Report for ${monthValue} (Class: ${teacherClass})\n\nRoll - Name`;
       for (let day = 1; day <= 31; day++) {
         message += ` | ${day}`;
       }
@@ -377,7 +374,7 @@ document.addEventListener("DOMContentLoaded", function() {
         message += `${student.roll} - ${student.name}`;
         for (let day = 1; day <= 31; day++) {
           let dayStr = day.toString().padStart(2, '0');
-          let dateStr = `${monthInput}-${dayStr}`;
+          let dateStr = `${monthValue}-${dayStr}`;
           let status = (attendanceData[dateStr] && attendanceData[dateStr][student.roll]) || "";
           message += ` | ${status}`;
         }
