@@ -39,7 +39,13 @@ document.addEventListener("DOMContentLoaded", function() {
   // Report Elements
   const exportPdfBtn = document.getElementById('exportPdf');
   const shareWhatsAppBtn = document.getElementById('shareWhatsApp');
-  // Removed sendParentsBtn and its related code
+  const specialNoteInput = document.getElementById('specialNote');
+
+  // Modal Elements for PDF options
+  const pdfOptionsModal = document.getElementById('pdfOptionsModal');
+  const pdfDailyReportBtn = document.getElementById('pdfDailyReportBtn');
+  const pdfMonthlyReportBtn = document.getElementById('pdfMonthlyReportBtn');
+  const closePdfModalBtn = document.getElementById('closePdfModalBtn');
 
   // Retrieve teacher class from localStorage if set
   let teacherClass = localStorage.getItem('teacherClass') || "";
@@ -214,83 +220,91 @@ document.addEventListener("DOMContentLoaded", function() {
     alert(`Attendance saved for ${date}`);
   });
 
-  // Export PDF event handler with Daily and Monthly options
+  // Show PDF options modal when "Download PDF" is clicked
   exportPdfBtn.addEventListener('click', function() {
+    pdfOptionsModal.style.display = "block";
+  });
+
+  // Daily PDF Report logic
+  pdfDailyReportBtn.addEventListener('click', function() {
     const { jsPDF } = window.jspdf;
-    let reportType = prompt("Enter report type for PDF report: daily OR monthly").toLowerCase();
-    if (!reportType || (reportType !== "daily" && reportType !== "monthly")) {
-      alert("Please enter a valid report type (daily or monthly).");
+    const date = dateInput.value;
+    if (!date) {
+      alert("Please select a date for the daily report.");
       return;
     }
     const doc = new jsPDF();
-    if (reportType === "daily") {
-      const date = dateInput.value;
-      if (!date) { alert("Please select a date for the report."); return; }
-      doc.text(`Attendance Report for ${date} (Class: ${teacherClass})`, 10, 10);
-      let y = 20;
-      let attendanceForDate = attendanceData[date] || {};
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
-        y += 10;
-      });
-      doc.save(`attendance_${date}.pdf`);
-    } else if (reportType === "monthly") {
-      // Ask user to enter the month in YYYY-MM format
-      let monthInput = prompt("Enter month (YYYY-MM) for the monthly report:");
-      if (!monthInput) { alert("Month is required for monthly report."); return; }
-      doc.text(`Monthly Attendance Report for ${monthInput} (Class: ${teacherClass})`, 10, 10);
-      
-      // Gather all dates from attendanceData that start with the given month
-      let attendanceDates = [];
-      for (let date in attendanceData) {
-        if (date.startsWith(monthInput)) {
-          attendanceDates.push(date);
-        }
-      }
-      if (attendanceDates.length === 0) {
-        alert("No attendance data found for the entered month.");
-        return;
-      }
-      attendanceDates.sort(); // Sort dates chronologically
-      
-      // Build table header and rows
-      let tableColumnHeaders = ["Roll", "Name"].concat(attendanceDates);
-      let tableRows = [];
-      const classStudents = students.filter(student => student.class === teacherClass);
-      classStudents.forEach(student => {
-        let row = [student.roll, student.name];
-        attendanceDates.forEach(date => {
-          let status = (attendanceData[date] && attendanceData[date][student.roll]) || "";
-          row.push(status);
-        });
-        tableRows.push(row);
-      });
-      
-      // Using autoTable plugin to render table in PDF (ensure autoTable is included)
-      if (doc.autoTable) {
-        doc.autoTable({
-          head: [tableColumnHeaders],
-          body: tableRows,
-          startY: 20
-        });
-      } else {
-        // Fallback: manually write rows (less formatted)
-        let y = 20;
-        doc.text(tableColumnHeaders.join("  |  "), 10, y);
-        y += 10;
-        tableRows.forEach(row => {
-          doc.text(row.join("  |  "), 10, y);
-          y += 10;
-        });
-      }
-      doc.save(`attendance_month_${monthInput}.pdf`);
-    }
+    doc.text(`Attendance Report for ${date} (Class: ${teacherClass})`, 10, 10);
+    let y = 20;
+    let attendanceForDate = attendanceData[date] || {};
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
+      const status = attendanceForDate[student.roll] || "Not Marked";
+      const statusText = getStatusText(status);
+      doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
+      y += 10;
+    });
+    doc.save(`attendance_${date}.pdf`);
+    pdfOptionsModal.style.display = "none";
   });
 
-  // Share on WhatsApp event handler with Daily and Monthly options
+  // Monthly PDF Report logic
+  pdfMonthlyReportBtn.addEventListener('click', function() {
+    const { jsPDF } = window.jspdf;
+    let monthInput = prompt("Enter month (YYYY-MM) for the monthly report:");
+    if (!monthInput) {
+      alert("Month is required for monthly report.");
+      return;
+    }
+    const doc = new jsPDF();
+    doc.text(`Monthly Attendance Report for ${monthInput} (Class: ${teacherClass})`, 10, 10);
+    let attendanceDates = [];
+    for (let date in attendanceData) {
+      if (date.startsWith(monthInput)) {
+        attendanceDates.push(date);
+      }
+    }
+    if (attendanceDates.length === 0) {
+      alert("No attendance data found for the entered month.");
+      return;
+    }
+    attendanceDates.sort();
+    let tableColumnHeaders = ["Roll", "Name"].concat(attendanceDates);
+    let tableRows = [];
+    const classStudents = students.filter(student => student.class === teacherClass);
+    classStudents.forEach(student => {
+      let row = [student.roll, student.name];
+      attendanceDates.forEach(date => {
+        let status = (attendanceData[date] && attendanceData[date][student.roll]) || "";
+        row.push(status);
+      });
+      tableRows.push(row);
+    });
+    if (doc.autoTable) {
+      doc.autoTable({
+        head: [tableColumnHeaders],
+        body: tableRows,
+        startY: 20
+      });
+    } else {
+      let y = 20;
+      doc.text(tableColumnHeaders.join("  |  "), 10, y);
+      y += 10;
+      tableRows.forEach(row => {
+        doc.text(row.join("  |  "), 10, y);
+        y += 10;
+      });
+    }
+    doc.save(`attendance_month_${monthInput}.pdf`);
+    pdfOptionsModal.style.display = "none";
+  });
+
+  // Close PDF modal when cancel button is clicked
+  closePdfModalBtn.addEventListener('click', function() {
+    pdfOptionsModal.style.display = "none";
+  });
+
+  // WhatsApp Sharing – using the same prompt method as before
   shareWhatsAppBtn.addEventListener('click', function() {
     let reportType = prompt("Enter report type for WhatsApp sharing: daily OR monthly").toLowerCase();
     if (!reportType || (reportType !== "daily" && reportType !== "monthly")) {
@@ -313,7 +327,6 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (reportType === "monthly") {
       let monthInput = prompt("Enter month (YYYY-MM) for sharing the monthly report:");
       if (!monthInput) { alert("Month is required for monthly sharing."); return; }
-      // Gather and sort dates for the month
       let attendanceDates = [];
       for (let date in attendanceData) {
         if (date.startsWith(monthInput)) { attendanceDates.push(date); }
@@ -323,16 +336,12 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       attendanceDates.sort();
-      
       let message = `Monthly Attendance Report for ${monthInput} (Class: ${teacherClass})\n\n`;
-      // Create header row (limited to text formatting)
       message += `Roll - Name`;
       attendanceDates.forEach(date => {
-        message += ` | ${date.substr(8,2)}`; // show only day part
+        message += ` | ${date.substr(8,2)}`;
       });
       message += "\n";
-      
-      // Append each student's attendance for the month
       const classStudents = students.filter(student => student.class === teacherClass);
       classStudents.forEach(student => {
         message += `${student.roll} - ${student.name}`;
