@@ -9,6 +9,33 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- jsPDF AutoTable Plugin for Monthly Reports -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    /* Basic modal styling – you may adjust as needed */
+    #pdfOptionsModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    #pdfOptionsModal .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+    }
+    #pdfOptionsModal button {
+      margin: 5px;
+      padding: 10px 20px;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -74,10 +101,21 @@
         <label for="specialNote">Special Note (if any):</label>
         <textarea id="specialNote" rows="2" placeholder="Enter any special note for parents..."></textarea>
       </div>
-      <!-- Removed the "Send Attendance To All Parents" button as per requirements -->
+      <!-- The "Send Attendance To All Parents" button has been removed as per requirements -->
       <div id="reportOutput"></div>
     </section>
   </main>
+
+  <!-- Modal for PDF Options -->
+  <div id="pdfOptionsModal">
+    <div class="modal-content">
+      <h3>Select Report Type</h3>
+      <button id="pdfDailyReportBtn">Daily Attendance Report</button>
+      <button id="pdfMonthlyReportBtn">Monthly Attendance Report</button>
+      <button id="closePdfModalBtn">Cancel</button>
+    </div>
+  </div>
+  
   <script src="app.js"></script>
 </body>
 </html>
