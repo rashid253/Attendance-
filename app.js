@@ -260,42 +260,54 @@ document.addEventListener("DOMContentLoaded", function() {
     pdfOptionsModal.style.display = "none";
   });
 
-  // Fixed Daily Report Handling
-  pdfDailyReportBtn.addEventListener('click', function() {
+  // Fixed Daily Report with Date Picker
+  pdfDailyReportBtn.addEventListener('click', async function() {
     pdfOptionsModal.style.display = "none";
     
-    const handleDateSelection = () => {
-      const chosenDate = dateInput.value;
-      if (!chosenDate) return;
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text(`Daily Attendance Report for ${chosenDate} (Class: ${teacherClass})`, 10, 10);
-      let y = 20;
-      let attendanceForDate = attendanceData[chosenDate] || {};
-      const classStudents = students.filter(student => student.class === teacherClass);
-      
-      classStudents.forEach(student => {
-        const status = attendanceForDate[student.roll] || "Not Marked";
-        const statusText = getStatusText(status);
-        doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
-        y += 10;
+    const showDatePicker = () => {
+      return new Promise((resolve) => {
+        if (typeof dateInput.showPicker === "function") {
+          dateInput.showPicker();
+        } else {
+          dateInput.focus();
+        }
+        
+        const handleDateSelect = () => {
+          resolve(dateInput.value);
+          dateInput.removeEventListener('input', handleDateSelect);
+        };
+        
+        dateInput.addEventListener('input', handleDateSelect);
       });
-      
-      doc.save(`daily_attendance_${chosenDate}.pdf`);
-      dateInput.removeEventListener('change', handleDateSelection);
     };
 
-    if (!dateInput.value) {
-      if (typeof dateInput.showPicker === "function") {
-        dateInput.showPicker();
-      } else {
-        dateInput.focus();
+    let selectedDate = dateInput.value;
+    
+    if (!selectedDate) {
+      try {
+        selectedDate = await showDatePicker();
+        if (!selectedDate) return;
+      } catch (error) {
+        console.error("Date selection error:", error);
+        return;
       }
-      dateInput.addEventListener('change', handleDateSelection);
-    } else {
-      handleDateSelection();
     }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(`Daily Attendance Report for ${selectedDate} (Class: ${teacherClass})`, 10, 10);
+    let y = 20;
+    let attendanceForDate = attendanceData[selectedDate] || {};
+    const classStudents = students.filter(student => student.class === teacherClass);
+    
+    classStudents.forEach(student => {
+      const status = attendanceForDate[student.roll] || "Not Marked";
+      const statusText = getStatusText(status);
+      doc.text(`${student.roll} - ${student.name}: ${statusText}`, 10, y);
+      y += 10;
+    });
+    
+    doc.save(`daily_attendance_${selectedDate}.pdf`);
   });
 
   pdfMonthlyReportBtn.addEventListener('click', function() {
