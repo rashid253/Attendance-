@@ -103,13 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
       tbl.border = 1; tbl.style.width = '100%';
 
       if (type === 'date') {
-        // single-date table
         tbl.innerHTML = `<tr><th>Name</th><th>Status</th></tr>` +
           data.map(r => `<tr><td>${r.name}</td><td>${
             Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked'
           }</td></tr>`).join('');
       } else {
-        // multi-date summary table
         tbl.innerHTML = `<tr><th>Name</th><th>Present</th><th>Late</th><th>Half Day</th><th>Leave</th><th>Absent</th><th>%</th></tr>` +
           data.map(r => `<tr><td>${r.name}</td><td>${r.cnt.P}</td><td>${r.cnt.Lt}</td><td>${r.cnt.HD}</td><td>${r.cnt.L}</td><td>${r.cnt.A}</td><td>${r.pct}%</td></tr>`).join('');
       }
@@ -160,50 +158,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // share
     const shareBtn = document.createElement('button');
-    shareBtn.className = 'small'; shareBtn.textContent = 'Share';
+    shareBtn.className = 'small';
+    shareBtn.textContent = 'Share';
     shareBtn.onclick = () => {
       let text = `📊 ${schoolName}\nClass‑Section: ${cls}-${sec}\nPeriod: ${type} ${period}\n\n`;
 
-      if (repType.value === 'table') {
-        // reconstruct table text
+      if (repType.value === 'table' || repType.value === 'all') {
         if (type === 'date') {
+          text += 'Name | Status\n';
           data.forEach(r => {
             const status = Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked';
-            text += `${r.name}: ${status}\n`;
+            text += `${r.name} | ${status}\n`;
           });
         } else {
+          text += 'Name | P | Lt | HD | L | A | %\n';
           data.forEach(r => {
-            text += `${r.name}: P:${r.cnt.P}, Lt:${r.cnt.Lt}, HD:${r.cnt.HD}, L:${r.cnt.L}, A:${r.cnt.A}, %:${r.pct}%\n`;
+            text += `${r.name} | ${r.cnt.P} | ${r.cnt.Lt} | ${r.cnt.HD} | ${r.cnt.L} | ${r.cnt.A} | ${r.pct}%\n`;
           });
         }
-      } else if (repType.value === 'summary') {
-        // same as summary above
-        // reuse same logic
-        if (type === 'date') {
-          data.forEach(r => {
+        text += '\n';
+      }
+
+      if (repType.value === 'summary' || repType.value === 'all') {
+        text += 'Summary:\n';
+        data.forEach(r => {
+          if (type === 'date') {
             const status = Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked';
             text += `${r.name}: ${status}\n`;
-          });
-        } else {
-          data.forEach(r => {
+          } else {
             text += `${r.name}: P:${r.cnt.P}, Lt:${r.cnt.Lt}, HD:${r.cnt.HD}, L:${r.cnt.L}, A:${r.cnt.A}, %:${r.pct}%\n`;
-          });
-        }
-      } else if (repType.value === 'graph') {
-        text += 'Percent Present:\n';
+          }
+        });
+        text += '\n';
+      }
+
+      if (repType.value === 'graph' || repType.value === 'all') {
+        text += 'Percent Present (Graph Data):\n';
         data.forEach(r => text += `${r.name}: ${r.pct}%\n`);
-      } else { // all
-        // combine table + summary
-        if (type === 'date') {
-          data.forEach(r => {
-            const status = Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked';
-            text += `${r.name}: ${status}\n`;
-          });
-        } else {
-          data.forEach(r => {
-            text += `${r.name}: P:${r.cnt.P}, Lt:${r.cnt.Lt}, HD:${r.cnt.HD}, L:${r.cnt.L}, A:${r.cnt.A}, %:${r.pct}%\n`;
-          });
-        }
       }
 
       if (navigator.share) {
@@ -216,41 +207,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // download
     const dlBtn = document.createElement('button');
-    dlBtn.className = 'small'; dlBtn.textContent = 'Download';
+    dlBtn.className = 'small';
+    dlBtn.textContent = 'Download';
     dlBtn.onclick = () => {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF(repType.value === 'table' && type === 'month' ? 'l' : 'p', 'pt', 'a4');
+      const doc = new jsPDF(
+        repType.value === 'table' && type === 'month' ? 'l' : 'p',
+        'pt', 'a4'
+      );
       doc.text(schoolName, 20, 20);
       doc.text(`Class‑Section: ${cls}-${sec}`, 20, 40);
       doc.text(`Period: ${type} ${period}`, 20, 60);
 
       if (repType.value === 'table') {
-        if (type === 'date') {
-          const rows = data.map(r => [r.name, Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked']);
-          doc.autoTable({ head: [['Name','Status']], body: rows, startY: 80 });
-        } else {
-          const rows = data.map(r => [r.name, r.cnt.P, r.cnt.Lt, r.cnt.HD, r.cnt.L, r.cnt.A, r.pct+'%']);
-          doc.autoTable({ head: [['Name','P','Lt','HD','L','A','%']], body: rows, startY: 80 });
-        }
-      } else if (repType.value === 'summary' || repType.value === 'all') {
-        const rows = data.map(r => {
-          if (type === 'date') {
-            return [r.name, Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked'];
-          } else {
-            return [r.name, `P:${r.cnt.P}`, `Lt:${r.cnt.Lt}`, `HD:${r.cnt.HD}`, `L:${r.cnt.L}`, `A:${r.cnt.A}`, `${r.pct}%`];
-          }
-        });
         const head = type === 'date'
           ? ['Name','Status']
           : ['Name','P','Lt','HD','L','A','%'];
+        const rows = data.map(r => (
+          type === 'date'
+            ? [r.name, Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked']
+            : [r.name, r.cnt.P, r.cnt.Lt, r.cnt.HD, r.cnt.L, r.cnt.A, `${r.pct}%`]
+        ));
         doc.autoTable({ head: [head], body: rows, startY: 80 });
-      } else {
-        // graph only downloads via separate button
-        if (repType.value === 'graph' && analyticsChart) {
-          const url = analyticsChart.toBase64Image();
-          const a = document.createElement('a');
-          a.href = url; a.download = `Chart_${period}.png`; a.click();
-          return;
+      } else if (repType.value === 'summary') {
+        const head = type === 'date'
+          ? ['Name','Status']
+          : ['Name','P','Lt','HD','L','A','%'];
+        const rows = data.map(r => (
+          type === 'date'
+            ? [r.name, Object.entries(r.cnt).find(([k,v])=>v>0)?.[0] || 'Not marked']
+            : [r.name, `P:${r.cnt.P}`, `Lt:${r.cnt.Lt}`, `HD:${r.cnt.HD}`, `L:${r.cnt.L}`, `A:${r.cnt.A}`, `${r.pct}%`]
+        ));
+        doc.autoTable({ head: [head], body: rows, startY: 80 });
+      } else if (repType.value === 'graph') {
+        if (analyticsChart) {
+          const img = analyticsChart.toBase64Image();
+          doc.addImage(img, 'PNG', 20, 80, doc.internal.pageSize.getWidth() - 40, 150);
+        }
+      } else if (repType.value === 'all') {
+        // table
+        const head1 = ['Name','P','Lt','HD','L','A','%'];
+        const rows1 = data.map(r => [r.name, r.cnt.P, r.cnt.Lt, r.cnt.HD, r.cnt.L, r.cnt.A, `${r.pct}%`]);
+        doc.autoTable({ head: [head1], body: rows1, startY: 80 });
+        // graph on new page
+        if (analyticsChart) {
+          doc.addPage();
+          const imgAll = analyticsChart.toBase64Image();
+          doc.addImage(imgAll, 'PNG', 20, 80, doc.internal.pageSize.getWidth() - 40, 150);
         }
       }
 
