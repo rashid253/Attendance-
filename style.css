@@ -1,4 +1,5 @@
 /* style.css */
+
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -81,9 +82,19 @@ li {
   border-radius: 4px;
   margin-bottom: 6px;
   padding: 8px;
+}
+
+/* Student list fix */
+section#student-registration ul li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+}
+section#student-registration ul li span {
+  flex: 1;
+}
+.button-group {
+  display: flex;
+  gap: 6px;
 }
 
 /* Attendance Item */
