@@ -20,12 +20,19 @@
     <!-- Teacher Setup -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
-      <label for="teacherClassSelect">Select Class/Section:</label>
+      <label for="teacherClassSelect">Select Class:</label>
       <select id="teacherClassSelect">
-        <option value="">--Select--</option>
-        <option>One-A</option><option>One-B</option>
-        <option>Two-A</option><option>Two-B</option>
-        <!-- add more sections as needed -->
+        <option value="">--Select Class--</option>
+        <option>Play Group</option><option>Nursery</option><option>Prep</option>
+        <option>Pre One</option><option>One</option><option>Two</option>
+        <option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option>
+        <option>Nine</option><option>Ten</option>
+      </select>
+      <label for="teacherSectionSelect">Select Section:</label>
+      <select id="teacherSectionSelect">
+        <option value="">--Select Section--</option>
+        <option>A</option><option>B</option><option>C</option>
       </select>
       <button id="saveTeacherClass">Save</button>
     </section>
@@ -56,20 +63,48 @@
       <h2>Monthly View & Summary</h2>
       <input type="month" id="monthInput" />
       <button id="loadMonth">Show</button>
-      <div id="monthTable"></div>
+      <div class="table-container" id="monthTable"></div>
       <h3>Summary</h3>
       <div id="summaryReport"></div>
     </section>
 
-    <!-- Reports & Sharing -->
+    <!-- Reports & Share -->
     <section id="reports">
       <h2>Reports & Share</h2>
-      <button id="exportPdf">PDF Report</button>
-      <button id="shareWhatsApp">WhatsApp</button>
+      <button id="exportPdf">Download PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
     </section>
   </main>
 
-  <!-- Modals could go here if needed -->
+  <!-- PDF Options Modal -->
+  <div id="pdfOptionsModal" class="modal">
+    <div class="modal-content">
+      <h3>Select PDF Report</h3>
+      <button id="pdfCurrentReportBtn">Current Attendance</button>
+      <button id="pdfDailyReportBtn">Daily Attendance</button>
+      <button id="pdfMonthlyReportBtn">Monthly Attendance</button>
+      <button id="closePdfModalBtn" class="cancel">Cancel</button>
+      <div style="margin-top:10px;">
+        <label for="pdfMonthInput">For Month:</label>
+        <input type="month" id="pdfMonthInput" />
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp Options Modal -->
+  <div id="whatsappOptionsModal" class="modal">
+    <div class="modal-content">
+      <h3>Select WhatsApp Report</h3>
+      <button id="waCurrentBtn">Current Attendance</button>
+      <button id="waDailyBtn">Daily Attendance</button>
+      <button id="waMonthlyBtn">Monthly Attendance</button>
+      <button id="closeWaModalBtn" class="cancel">Cancel</button>
+      <div style="margin-top:10px;">
+        <label for="waMonthInput">For Month:</label>
+        <input type="month" id="waMonthInput" />
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
