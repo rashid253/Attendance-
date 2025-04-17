@@ -26,12 +26,12 @@
       <div id="teacherSetupForm" class="row-inline">
         <select id="teacherClassSelect">
           <option value="">--Class--</option>
+          <!-- Add classes here -->
           <option>One</option><option>Two</option><option>Three</option>
-          <!-- add others -->
         </select>
         <select id="teacherSectionSelect">
           <option value="">--Section--</option>
-          <option>A</option><option>B</option>
+          <option>A</option><option>B</option><option>C</option>
         </select>
         <button id="saveTeacherClass">Save</button>
       </div>
@@ -69,9 +69,11 @@
     <section id="attendance-result" class="hidden">
       <h2>Attendance Summary</h2>
       <ul id="attendanceResultList"></ul>
-      <button id="editAttendanceBtn">Edit</button>
-      <button id="shareAttendanceBtn">Share</button>
-      <button id="downloadAttendanceBtn">Download PDF</button>
+      <div class="row-inline">
+        <button id="editAttendanceBtn">Edit</button>
+        <button id="shareAttendanceBtn">Share All</button>
+        <button id="downloadAttendanceBtn">Download PDF</button>
+      </div>
     </section>
 
     <!-- Analytics -->
@@ -92,6 +94,7 @@
           <option value="table">Table</option>
           <option value="summary">Summary</option>
           <option value="graph">Graph</option>
+          <option value="all">All</option>
         </select>
         <button id="loadAnalytics">Load</button>
       </div>
