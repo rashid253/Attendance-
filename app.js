@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', function() {
   // Allowed classes
   const allowedClasses = [
     "Play Group","Nursery","Prep","Pre One",
@@ -6,104 +6,101 @@ document.addEventListener("DOMContentLoaded", () => {
     "Six","Seven","Eight","Nine","Ten"
   ];
 
-  // Concise status text for reports
-  function getConciseStatus(code) {
+  // Map code to full status
+  function getStatusText(code) {
     switch(code) {
-      case "P": return "Present";
-      case "A": return "Absent";
-      case "L": return "Late";
+      case "P":  return "Present";
+      case "A":  return "Absent";
+      case "L":  return "Late";
       case "Le": return "Leave";
       default:   return "Not Marked";
     }
   }
 
-  // Elements
-  const teacherClassSelect = $("#teacherClassSelect");
-  const saveTeacherClassBtn = $("#saveTeacherClass");
-  const teacherClassDisplay        = $("#teacherClassDisplay");
-  const teacherClassDisplayReg     = $("#teacherClassDisplayRegistration");
-  const teacherClassDisplayAtt     = $("#teacherClassDisplayAttendance");
-  const teacherClassHeader         = $("#teacherClassHeader");
+  // DOM elements
+  const teacherClassSelect        = document.getElementById('teacherClassSelect');
+  const saveTeacherClassBtn       = document.getElementById('saveTeacherClass');
+  const teacherClassDisplay       = document.getElementById('teacherClassDisplay');
+  const teacherClassDisplayReg    = document.getElementById('teacherClassDisplayRegistration');
+  const teacherClassDisplayAtt    = document.getElementById('teacherClassDisplayAttendance');
+  const teacherClassHeader        = document.getElementById('teacherClassHeader');
 
-  const studentNameInput   = $("#studentName");
-  const parentContactInput = $("#parentContact");
-  const addStudentBtn      = $("#addStudent");
-  const studentsListEl     = $("#students");
+  const studentNameInput   = document.getElementById('studentName');
+  const parentContactInput = document.getElementById('parentContact');
+  const addStudentBtn      = document.getElementById('addStudent');
+  const studentsListEl     = document.getElementById('students');
 
-  const dateInput        = $("#dateInput");
-  const loadAttendanceBtn = $("#loadAttendance");
-  const attendanceListEl = $("#attendanceList");
-  const saveAttendanceBtn = $("#saveAttendance");
+  const dateInput           = document.getElementById('dateInput');
+  const loadAttendanceBtn   = document.getElementById('loadAttendance');
+  const attendanceListEl    = document.getElementById('attendanceList');
+  const saveAttendanceBtn   = document.getElementById('saveAttendance');
 
-  const downloadDailyPdfBtn    = $("#downloadDailyPdf");
-  const shareDailyWhatsAppBtn  = $("#shareDailyWhatsApp");
-  const sendParentsBtn         = $("#sendParents");
+  const downloadDailyPdfBtn   = document.getElementById('downloadDailyPdf');
+  const shareDailyWhatsAppBtn = document.getElementById('shareDailyWhatsApp');
+  const sendParentsBtn        = document.getElementById('sendParents');
 
-  // Load from localStorage
-  let teacherClass = localStorage.getItem('teacherClass') || "";
-  let students     = JSON.parse(localStorage.getItem('students')) || [];
-  let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
+  // Load stored data
+  let teacherClass   = localStorage.getItem('teacherClass') || '';
+  let students       = JSON.parse(localStorage.getItem('students') || '[]');
+  let attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
 
-  // Utility to get element by ID
-  function $(id) { return document.getElementById(id); }
-
-  // Update class displays
-  function updateClassDisplays() {
-    teacherClassDisplay.textContent = teacherClass || "None";
-    teacherClassDisplayReg.textContent = teacherClass || "None";
-    teacherClassDisplayAtt.textContent = teacherClass || "None";
-    teacherClassHeader.textContent = teacherClass || "None";
+  // Update all class displays
+  function updateDisplays() {
+    teacherClassDisplay.textContent    = teacherClass || 'None';
+    teacherClassDisplayReg.textContent = teacherClass || 'None';
+    teacherClassDisplayAtt.textContent = teacherClass || 'None';
+    teacherClassHeader.textContent     = teacherClass || 'None';
   }
 
-  saveTeacherClassBtn.addEventListener('click', () => {
-    const cls = teacherClassSelect.value;
-    if (!allowedClasses.includes(cls)) {
-      return alert("Please select a valid class.");
-    }
-    teacherClass = cls;
-    localStorage.setItem('teacherClass', cls);
-    updateClassDisplays();
-    renderStudents();
-  });
+  // Save helpers
+  function saveStudents() {
+    localStorage.setItem('students', JSON.stringify(students));
+  }
+  function saveAttendance() {
+    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+  }
 
-  updateClassDisplays();
-
-  // Roll number generator
+  // Generate next roll number for the class
   function generateRoll() {
-    const clsSt = students.filter(s=>s.class===teacherClass);
-    return clsSt.length === 0
-      ? 1
-      : Math.max(...clsSt.map(s=>+s.roll)) + 1;
+    const cls = students.filter(s => s.class === teacherClass);
+    return cls.length
+      ? Math.max(...cls.map(s => +s.roll)) + 1
+      : 1;
   }
 
   // Render student list
   function renderStudents() {
-    studentsListEl.innerHTML = "";
+    studentsListEl.innerHTML = '';
     students
-      .filter(s=>s.class===teacherClass)
+      .filter(s => s.class === teacherClass)
       .forEach(student => {
         const li = document.createElement('li');
         li.textContent = `${student.roll} - ${student.name}`;
+
         const actions = document.createElement('div');
-        actions.className = "action-buttons";
+        actions.className = 'action-buttons';
 
         const editBtn = document.createElement('button');
-        editBtn.textContent = "Edit";
+        editBtn.textContent = 'Edit';
         editBtn.onclick = () => {
-          const n = prompt("New name:", student.name);
-          if (!n) return;
-          student.name = n.trim();
-          localStorage.setItem('students', JSON.stringify(students));
-          renderStudents();
+          const newName = prompt('Enter new name:', student.name);
+          if (newName) {
+            student.name = newName.trim();
+            saveStudents();
+            renderStudents();
+          }
         };
 
         const delBtn = document.createElement('button');
-        delBtn.textContent = "Delete";
+        delBtn.textContent = 'Delete';
         delBtn.onclick = () => {
-          if (!confirm(`Delete ${student.name}?`)) return;
-          students = students.filter(s=>!(s.roll===student.roll && s.class===teacherClass));
-          localStorage.setItem('students', JSON.stringify(students));
-          renderStudents();
+          if (confirm(`Delete ${student.name}?`)) {
+            students = students.filter(s =>
+              !(s.roll === student.roll && s.class === teacherClass)
+            );
+            saveStudents();
+            renderStudents();
+          }
         };
 
         actions.append(editBtn, delBtn);
@@ -112,139 +109,174 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  // Add student
+  // Add a new student
   addStudentBtn.onclick = () => {
-    if (!teacherClass) return alert("Please select your class first.");
+    if (!teacherClass) {
+      return alert('Please select your class first.');
+    }
     const name = studentNameInput.value.trim();
-    if (!name) return alert("Enter student name.");
+    if (!name) {
+      return alert('Enter student name.');
+    }
     const contact = parentContactInput.value.trim();
     const roll = generateRoll();
     students.push({ roll, name, class: teacherClass, parentContact: contact });
-    localStorage.setItem('students', JSON.stringify(students));
-    studentNameInput.value = parentContactInput.value = "";
+    saveStudents();
+    studentNameInput.value = parentContactInput.value = '';
     renderStudents();
   };
 
-  // Render attendance
-  function renderAttendanceForDate(date) {
-    attendanceListEl.innerHTML = "";
-    const clsSt = students.filter(s=>s.class===teacherClass);
-    const attForDate = attendanceData[date] || {};
+  // Render attendance entry for a given date
+  function renderAttendance(date) {
+    attendanceListEl.innerHTML = '';
+    const clsStudents = students.filter(s => s.class === teacherClass);
+    const dayData = attendanceData[date] || {};
 
-    clsSt.forEach(student => {
+    clsStudents.forEach(student => {
       const row = document.createElement('div');
-      row.className = "attendance-item";
-      const lbl = document.createElement('label');
-      lbl.textContent = `${student.roll} - ${student.name}`;
-      row.append(lbl);
+      row.className = 'attendance-item';
 
-      const btns = document.createElement('div');
-      btns.className = "attendance-buttons";
-      ["P","A","L","Le"].forEach(code => {
-        const b = document.createElement('button');
-        b.textContent = code;
-        b.className = "att-btn";
-        if (attForDate[student.roll] === code) b.classList.add('selected');
-        b.onclick = () => {
-          attForDate[student.roll] = code;
-          btns.querySelectorAll('.att-btn').forEach(x=>x.classList.remove('selected'));
-          b.classList.add('selected');
+      const label = document.createElement('label');
+      label.textContent = `${student.roll} - ${student.name}`;
+      row.append(label);
+
+      // Quick-tap buttons
+      const btnContainer = document.createElement('div');
+      btnContainer.className = 'attendance-buttons';
+
+      ['P','A','L','Le'].forEach(code => {
+        const btn = document.createElement('button');
+        btn.textContent = code;
+        btn.className = 'att-btn';
+        if (dayData[student.roll] === code) {
+          btn.classList.add('selected');
+        }
+        btn.onclick = () => {
+          dayData[student.roll] = code;
+          btnContainer.querySelectorAll('.att-btn')
+            .forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
         };
-        btns.append(b);
+        btnContainer.append(btn);
       });
-      row.append(btns);
+      row.append(btnContainer);
 
-      const send = document.createElement('button');
-      send.textContent = "Send";
-      send.className = "send-btn";
-      send.onclick = () => {
-        if (!dateInput.value) return alert("Select date first.");
-        const code = attForDate[student.roll] || "";
-        const status = getConciseStatus(code);
+      // Individual Send button
+      const sendBtn = document.createElement('button');
+      sendBtn.textContent = 'Send';
+      sendBtn.className = 'send-btn';
+      sendBtn.onclick = () => {
+        if (!dateInput.value) {
+          return alert('Select a date first.');
+        }
+        const code = dayData[student.roll] || '';
+        const status = getStatusText(code);
+        if (!student.parentContact) {
+          return alert(`No contact for ${student.name}.`);
+        }
         const msg = 
-          `Dear Parent,\n\n` +
-          `Attendance for ${student.name} (Roll: ${student.roll}) on ${date} is: ${status}.\n\n` +
-          `Regards,\nSchool Administration`;
-        if (!student.parentContact) return alert(`No contact for ${student.name}`);
-        const url = 
-          "https://api.whatsapp.com/send?phone=" +
+          `Dear Parent,\\n\\n` +
+          `Attendance for ${student.name} (Roll: ${student.roll}) on ${date} is: ${status}.\\n\\n` +
+          `Regards,\\nSchool Administration`;
+        const url =
+          'https://api.whatsapp.com/send?phone=' +
           encodeURIComponent(student.parentContact) +
-          "&text=" +
+          '&text=' +
           encodeURIComponent(msg);
         window.open(url, '_blank');
       };
-      row.append(send);
+      row.append(sendBtn);
 
       attendanceListEl.append(row);
-      attendanceData[date] = attForDate;
+      attendanceData[date] = dayData;
     });
+
+    saveAttendance();
   }
 
+  // Load attendance
   loadAttendanceBtn.onclick = () => {
     const d = dateInput.value;
-    if (!d) return alert("Select date.");
-    renderAttendanceForDate(d);
+    if (!d) {
+      return alert('Select a date.');
+    }
+    renderAttendance(d);
   };
 
+  // Save attendance
   saveAttendanceBtn.onclick = () => {
     const d = dateInput.value;
-    if (!d) return alert("Select date.");
-    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
-    alert(`Attendance saved for ${d}`);
+    if (!d) {
+      return alert('Select a date.');
+    }
+    saveAttendance();
+    alert(`Attendance saved for ${d}.`);
   };
 
-  // Daily PDF report
+  // Download daily PDF report
   downloadDailyPdfBtn.onclick = () => {
     const d = dateInput.value;
-    if (!d) return alert("Select date for report.");
+    if (!d) {
+      return alert('Select a date for report.');
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.text(`Daily Attendance for ${d} (Class: ${teacherClass})`, 10, 10);
     let y = 20;
-    const att = attendanceData[d] || {};
-    students.filter(s=>s.class===teacherClass).forEach(stu => {
-      doc.text(
-        `${stu.roll} - ${stu.name}: ${getConciseStatus(att[stu.roll])}`, 
-        10, y
-      );
-      y += 10;
-    });
+    const dayData = attendanceData[d] || {};
+    students.filter(s => s.class === teacherClass)
+      .forEach(stu => {
+        doc.text(
+          `${stu.roll} - ${stu.name}: ${getStatusText(dayData[stu.roll])}`,
+          10, y
+        );
+        y += 10;
+      });
     doc.save(`Daily_Attendance_${d}.pdf`);
   };
 
-  // Share daily via WhatsApp
+  // Share daily on WhatsApp
   shareDailyWhatsAppBtn.onclick = () => {
     const d = dateInput.value;
-    if (!d) return alert("Select date for report.");
-    let msg = `Daily Attendance for ${d} (Class: ${teacherClass})\n\n`;
-    const att = attendanceData[d] || {};
-    students.filter(s=>s.class===teacherClass).forEach(stu => {
-      msg += `${stu.roll} - ${stu.name}: ${getConciseStatus(att[stu.roll])}\n`;
-    });
-    const url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
-    window.open(url, '_blank');
+    if (!d) {
+      return alert('Select a date for report.');
+    }
+    let msg = `Daily Attendance for ${d} (Class: ${teacherClass})\\n\\n`;
+    const dayData = attendanceData[d] || {};
+    students.filter(s => s.class === teacherClass)
+      .forEach(stu => {
+        msg += `${stu.roll} - ${stu.name}: ${getStatusText(dayData[stu.roll])}\\n`;
+      });
+    window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
   };
 
-  // Bulk send to parents
+  // Bulk send to all parents
   sendParentsBtn.onclick = () => {
     const d = dateInput.value;
-    if (!d) return alert("Select date.");
-    const att = attendanceData[d] || {};
-    students.filter(s=>s.class===teacherClass).forEach((stu, i) => {
-      if (!stu.parentContact) return;
-      const msg = 
-        `Dear Parent,\n\n` +
-        `Attendance for ${stu.name} (Roll: ${stu.roll}) on ${d} is: ${getConciseStatus(att[stu.roll])}.\n\n` +
-        `Regards,\nSchool Administration`;
-      const url = 
-        "https://api.whatsapp.com/send?phone=" +
-        encodeURIComponent(stu.parentContact) +
-        "&text=" +
-        encodeURIComponent(msg);
-      setTimeout(() => window.open(url, '_blank'), i * 1500);
-    });
+    if (!d) {
+      return alert('Select a date.');
+    }
+    const dayData = attendanceData[d] || {};
+    students.filter(s => s.class === teacherClass)
+      .forEach((stu, i) => {
+        if (!stu.parentContact) return;
+        const msg =
+          `Dear Parent,\\n\\n` +
+          `Attendance for ${stu.name} (Roll: ${stu.roll}) on ${d} is: ${getStatusText(dayData[stu.roll])}.\\n\\n` +
+          `Regards,\\nSchool Administration`;
+        setTimeout(() => {
+          window.open(
+            'https://api.whatsapp.com/send?phone=' +
+            encodeURIComponent(stu.parentContact) +
+            '&text=' +
+            encodeURIComponent(msg),
+            '_blank'
+          );
+        }, i * 1500);
+      });
   };
 
-  // Initial render
+  // Initial setup
+  updateDisplays();
   renderStudents();
 });
