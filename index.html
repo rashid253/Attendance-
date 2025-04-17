@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classwise Attendance Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classwise Attendance Management</title>
   <link rel="stylesheet" href="style.css">
+  <!-- jsPDF for PDF generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -19,25 +20,25 @@
       <label for="teacherClassSelect">Select Your Class:</label>
       <select id="teacherClassSelect">
         <option value="">--Select Class--</option>
-        <option value="Play Group">Play Group</option>
-        <option value="Nursery">Nursery</option>
-        <option value="Prep">Prep</option>
-        <option value="Pre One">Pre One</option>
-        <option value="One">One</option>
-        <option value="Two">Two</option>
-        <option value="Three">Three</option>
-        <option value="Four">Four</option>
-        <option value="Five">Five</option>
-        <option value="Six">Six</option>
-        <option value="Seven">Seven</option>
-        <option value="Eight">Eight</option>
-        <option value="Nine">Nine</option>
-        <option value="Ten">Ten</option>
+        <option>Play Group</option>
+        <option>Nursery</option>
+        <option>Prep</option>
+        <option>Pre One</option>
+        <option>One</option>
+        <option>Two</option>
+        <option>Three</option>
+        <option>Four</option>
+        <option>Five</option>
+        <option>Six</option>
+        <option>Seven</option>
+        <option>Eight</option>
+        <option>Nine</option>
+        <option>Ten</option>
       </select>
       <button id="saveTeacherClass">Save Class</button>
       <p>Your current class is: <span id="teacherClassDisplay">None</span></p>
     </section>
-    
+
     <!-- Student Registration -->
     <section id="student-registration">
       <h2>Add Student</h2>
@@ -48,7 +49,7 @@
       <h3>Student List</h3>
       <ul id="students"></ul>
     </section>
-    
+
     <!-- Attendance Marking -->
     <section id="attendance-section">
       <h2>Mark Attendance</h2>
@@ -59,7 +60,7 @@
       <div id="attendanceList"></div>
       <button id="saveAttendance">Save Attendance</button>
     </section>
-    
+
     <!-- Reports -->
     <section id="reports">
       <h2>Reports</h2>
