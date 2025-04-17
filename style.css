@@ -10,8 +10,7 @@
 }
 
 * {
-  box-sizing: border-box;
-  margin: 0; padding: 0;
+  box-sizing: border-box; margin: 0; padding: 0;
 }
 
 body {
@@ -94,15 +93,19 @@ section#student-registration ul li span {
   border-radius: 4px;
   margin: 6px 0; padding: 8px;
 }
+
 .attendance-item .att-name {
   font-weight: bold; margin-bottom: 6px;
 }
+
 .attendance-actions {
   display: flex; justify-content: space-between; align-items: center;
 }
+
 .attendance-buttons {
   display: flex; gap: 6px;
 }
+
 .att-btn {
   padding: 8px; font-size: 1em;
   border: 1px solid var(--primary);
@@ -110,6 +113,7 @@ section#student-registration ul li span {
   color: var(--dark);
   font-weight: bold;
 }
+
 .att-btn.selected.P  { background: var(--success); color: #fff; }
 .att-btn.selected.A  { background: var(--danger);  color: #fff; }
 .att-btn.selected.Lt { background: var(--info);    color: #fff; }
@@ -124,7 +128,7 @@ section#student-registration ul li span {
   padding: 8px 12px;
 }
 
-/* Attendance summary — plain text, no colors */
+/* Summary — no colors */
 .attendance-summary li {
   font-weight: bold;
   margin: 4px 0;
