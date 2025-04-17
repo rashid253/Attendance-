@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,14 +58,6 @@
       <h2>Reports</h2>
       <button id="exportPdf">Download PDF</button>
       <button id="shareWhatsApp">Share on WhatsApp</button>
-      <div>
-        <label for="specialNote">Special Note:</label>
-        <textarea id="specialNote" rows="2" placeholder="Enter any special note..."></textarea>
-      </div>
-      <div>
-        <label for="monthInput">Select Month for Monthly Report:</label>
-        <input type="month" id="monthInput" />
-      </div>
     </section>
   </main>
 
@@ -86,6 +79,11 @@
       <button id="waCurrentBtn">Current Attendance Report</button>
       <button id="waDailyBtn">Daily Attendance Report</button>
       <button id="waMonthlyBtn">Monthly Attendance Report</button>
+      <!-- Moved month picker into modal -->
+      <div style="margin-top:10px;">
+        <label for="waMonthInput">Select Month:</label>
+        <input type="month" id="waMonthInput" />
+      </div>
       <button id="closeWaModalBtn">Cancel</button>
     </div>
   </div>
