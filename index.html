@@ -6,6 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- inline styles for WhatsApp modal buttons -->
+  <style>
+    #whatsappOptionsModal .modal-content button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    #whatsappOptionsModal .modal-content button.active-btn {
+      background: #4CAF50 !important;
+      color: white !important;
+    }
+  </style>
   <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -77,9 +88,8 @@
     <div class="modal-content">
       <h3>Select WhatsApp Report Type</h3>
       <button id="waCurrentBtn">Current Attendance Report</button>
-      <button id="waDailyBtn">Daily Attendance Report</button>
-      <button id="waMonthlyBtn">Monthly Attendance Report</button>
-      <!-- Moved month picker into modal -->
+      <button id="waDailyBtn" disabled>Daily Attendance Report</button>
+      <button id="waMonthlyBtn" disabled>Monthly Attendance Report</button>
       <div style="margin-top:10px;">
         <label for="waMonthInput">Select Month:</label>
         <input type="month" id="waMonthInput" />
