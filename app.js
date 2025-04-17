@@ -1,7 +1,8 @@
+// app.js
 document.addEventListener("DOMContentLoaded", () => {
   // === Helpers ===
   function getStatusText(s) {
-    return { 
+    return {
       P: "Present. Thank you for ensuring your child’s punctuality.",
       A: "Absent. Please contact the school for further details.",
       L: "Late. Kindly ensure your child arrives on time.",
@@ -10,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showModal(modal) { modal.style.display = "block"; }
-  function closeModal(modal){ modal.style.display = "none";  }
+  function closeModal(modal){ modal.style.display = "none"; }
 
   // === Refs ===
   const teacherClassSelect = document.getElementById("teacherClassSelect");
@@ -30,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const exportPdfBtn     = document.getElementById("exportPdf");
   const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
-  const monthInput       = document.getElementById("monthInput");
 
   const pdfModal     = document.getElementById("pdfOptionsModal");
   const pdfCurBtn    = document.getElementById("pdfCurrentReportBtn");
@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const waDayBtn     = document.getElementById("waDailyBtn");
   const waMonBtn     = document.getElementById("waMonthlyBtn");
   const waCloseBtn   = document.getElementById("closeWaModalBtn");
+  const waMonthInput = document.getElementById("waMonthInput");
 
   // === Storage ===
   let teacherClass   = localStorage.getItem("teacherClass")   || "";
@@ -114,11 +115,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   pdfMonBtn.addEventListener("click", () => {
-    if (!monthInput.value) {
-      monthInput.showPicker?.() ?? monthInput.focus();
+    const m = waMonthInput.value;
+    if (!m) {
+      waMonthInput.showPicker?.() ?? waMonthInput.focus();
       return;
     }
-    generateMonthlyPdf(monthInput.value);
+    generateMonthlyPdf(m);
     closeModal(pdfModal);
   });
 
@@ -142,11 +144,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   waMonBtn.addEventListener("click", () => {
-    if (!monthInput.value) {
-      monthInput.showPicker?.() ?? monthInput.focus();
+    const m = waMonthInput.value;
+    if (!m) {
+      waMonthInput.showPicker?.() ?? waMonthInput.focus();
       return;
     }
-    sendWhatsAppMonthly(monthInput.value);
+    sendWhatsAppMonthly(m);
     closeModal(waModal);
   });
 
@@ -158,8 +161,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function generateRoll(cls) {
     const clsStud = students.filter(s => s.class === cls);
-    if (!clsStud.length) return 1;
-    return Math.max(...clsStud.map(s => +s.roll)) + 1;
+    return clsStud.length
+      ? Math.max(...clsStud.map(s => +s.roll)) + 1
+      : 1;
   }
 
   function renderStudents() {
@@ -240,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.text(`${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}`,10,y);
       y+=10;
     });
-    doc.save(`${title.replace(" ","_")}_${d}.pdf`);
+    doc.save(`${title.replace(/\s+/g,"_")}_${d}.pdf`);
   }
 
   function generateMonthlyPdf(m) {
