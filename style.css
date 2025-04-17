@@ -7,6 +7,7 @@
   --dark:    #333;
 }
 * { box-sizing: border-box; margin:0; padding:0; }
+.hidden { display: none; }
 body { font-family: Arial, sans-serif; color: var(--dark); }
 header {
   background: var(--primary); color: #fff;
@@ -20,7 +21,6 @@ section {
   margin-bottom: 20px;
   padding: 15px;
 }
-h2 { margin-bottom: 10px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 input, select, button {
@@ -31,6 +31,9 @@ button {
   transition: opacity .2s;
 }
 button:hover { opacity: .9; }
+button.small {
+  background: var(--success); padding: 4px 8px; font-size: 0.9em;
+}
 button.cancel { background: var(--danger); }
 ul { list-style: none; margin-top:10px; }
 li {
@@ -38,21 +41,6 @@ li {
   border-radius: 4px;
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 6px; padding: 8px;
-}
-.attendance-item {
-  align-items: center;
-  border-bottom: 1px solid #ddd;
-  display: flex; justify-content: space-between;
-  margin: 6px 0; padding: 6px;
-}
-.attendance-buttons { display:flex; gap:4px; }
-.att-btn {
-  background: #fff; border: 1px solid var(--primary);
-  border-radius: 4px; color: var(--primary); padding: 4px 8px;
-  cursor: pointer; transition: background .2s, color .2s;
-}
-.att-btn.selected {
-  background: var(--primary); color: #fff;
 }
 .table-container {
   overflow-x: auto; margin-top: 10px;
@@ -70,9 +58,11 @@ li {
 }
 /* Modals */
 .modal {
-  align-items: center; background: rgba(0,0,0,0.4);
-  display: none; height:100vh; justify-content: center;
-  left:0; position: fixed; top:0; width:100vw; z-index:1000;
+  display: none;
+  position: fixed; top:0; left:0;
+  width:100vw; height:100vh;
+  background: rgba(0,0,0,0.4);
+  align-items: center; justify-content: center;
 }
 .modal-content {
   background: #fff; border-radius: 6px; padding: 20px;
