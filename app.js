@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareBtn          = $('shareAnalytics');
   const downloadBtn       = $('downloadAnalytics');
 
-  const THRESHOLD = 75;
+  const THRESHOLD = 75; // exam eligibility % cut-off
 
   let schoolName = localStorage.getItem('schoolName') || '';
   let cls        = localStorage.getItem('teacherClass') || '';
@@ -26,11 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let attendance = JSON.parse(localStorage.getItem('attendanceData')) || {};
   let chart;
 
-  // Toggle inputs
-  analyticsType.addEventListener('change', e => {
-    [analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn]
-      .forEach(el => el.classList.add('hidden'));
-    const v = e.target.value;
+  // Toggle inputs based on period
+  analyticsType.addEventListener('change', () => {
+    [analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn].forEach(el => el.classList.add('hidden'));
+    const v = analyticsType.value;
     if (v==='date')     analyticsDateIn.classList.remove('hidden');
     if (v==='month')    analyticsMonthIn.classList.remove('hidden');
     if (v==='semester') analyticsSemester.classList.remove('hidden');
@@ -47,30 +46,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function getBlocks(type) {
-    const year = new Date().getFullYear();
+    const yearNow = new Date().getFullYear();
     const blocks = [];
     if (type==='date') {
       const d = analyticsDateIn.value;
-      blocks.push({ label: d, dates: [d] });
+      if (d) blocks.push({ label: `Date: ${d}`, dates: [d] });
     }
     if (type==='month') {
       const [y,m] = analyticsMonthIn.value.split('-');
       const days = new Date(y,m,0).getDate();
-      blocks.push({
-        label: `${y}-${m}`,
-        dates: Array.from({length:days},(_,i)=>`${y}-${m}-${String(i+1).padStart(2,'0')}`)
-      });
+      const dates = Array.from({length:days},(_,i)=>`${y}-${m}-${String(i+1).padStart(2,'0')}`);
+      blocks.push({ label: `Month: ${y}-${m}`, dates });
     }
     if (type==='semester') {
       const sem = analyticsSemester.value;
       const start = sem==='1'?1:7, end = sem==='1'?6:12;
       for (let mo=start; mo<=end; mo++) {
         const mm = String(mo).padStart(2,'0');
-        const days = new Date(year,mo,0).getDate();
-        blocks.push({
-          label: mm,
-          dates: Array.from({length:days},(_,i)=>`${year}-${mm}-${String(i+1).padStart(2,'0')}`)
-        });
+        const days = new Date(yearNow,mo,0).getDate();
+        const dates = Array.from({length:days},(_,i)=>`${yearNow}-${mm}-${String(i+1).padStart(2,'0')}`);
+        blocks.push({ label: `Sem ${sem}: Month ${mm}`, dates });
       }
     }
     if (type==='year') {
@@ -78,10 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let mo=1; mo<=12; mo++) {
         const mm = String(mo).padStart(2,'0');
         const days = new Date(y,mo,0).getDate();
-        blocks.push({
-          label: mm,
-          dates: Array.from({length:days},(_,i)=>`${y}-${mm}-${String(i+1).padStart(2,'0')}`)
-        });
+        const dates = Array.from({length:days},(_,i)=>`${y}-${mm}-${String(i+1).padStart(2,'0')}`);
+        blocks.push({ label: `Year ${y}: Month ${mm}`, dates });
       }
     }
     return blocks;
@@ -89,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderAnalytics() {
     const type = analyticsType.value;
-    if (!type) return alert('Select a period');
+    if (!type) return alert('Please select a period');
+
     [analyticsType, analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn, studentFilter, repType, loadBtn]
       .forEach(el => el.disabled = true);
     resetBtn.classList.remove('hidden');
@@ -97,27 +91,37 @@ document.addEventListener('DOMContentLoaded', () => {
     container.innerHTML = '';
 
     const blocks = getBlocks(type);
+    if (!blocks.length) return alert('Invalid period selection');
+
     const roster = students.filter(s => s.class===cls && s.section===sec)
                            .filter(s => !studentFilter.value || s.roll==studentFilter.value);
 
-    // For overall summary accumulation
-    const overall = roster.map(s => ({ roll: s.roll, name: s.name, cnt:{P:0,A:0,Lt:0,HD:0,L:0} }));
+    // Prepare overall summary counts
+    const overall = roster.map(s => ({
+      name: s.name,
+      cnt: { P:0, A:0, Lt:0, HD:0, L:0 }
+    }));
 
-    blocks.forEach((blk, idx) => {
-      // Block heading
-      const h3 = document.createElement('h3');
-      h3.textContent = type==='date'?`Date: ${blk.label}`:(type==='month'?`Month: ${blk.label}`:`Period: ${blk.label}`);
-      container.appendChild(h3);
+    // Legend
+    const legend = document.createElement('p');
+    legend.textContent = 'Legend: P=Present, Lt=Late, HD=Half Day, L=Leave, A=Absent';
+    container.appendChild(legend);
 
-      // Table
+    // Render each block
+    blocks.forEach((blk, bi) => {
+      const heading = document.createElement('h3');
+      heading.textContent = blk.label;
+      container.appendChild(heading);
+
+      // Table view
       if (repType.value==='table' || repType.value==='all') {
         const tbl = document.createElement('table');
-        tbl.border=1; tbl.style.width='100%';
+        tbl.border = 1; tbl.style.width = '100%';
         const hdr = ['Roll','Name', ...blk.dates.map(d=>d.split('-')[2])];
         tbl.innerHTML = `<tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-        roster.forEach((s,i) => {
-          const row = [s.roll, s.name, ...blk.dates.map(d=>{
-            const st = attendance[d]?.[s.roll]||'';
+        roster.forEach((s, i) => {
+          const row = [s.roll, s.name, ...blk.dates.map(d => {
+            const st = attendance[d]?.[s.roll] || '';
             if (st) overall[i].cnt[st]++;
             return st;
           })];
@@ -126,87 +130,96 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(tbl);
       }
 
-      // Summary per block
+      // Summary for this block
       if (repType.value==='summary' || repType.value==='all') {
-        const div = document.createElement('div');
-        div.className='summary-block';
-        div.innerHTML = `<h4>Summary (${blk.label})</h4>` +
-          roster.map((s,i) => {
-            const cnt = blk.dates.reduce((acc,d)=>{
+        const sumDiv = document.createElement('div');
+        sumDiv.className = 'summary-block';
+        sumDiv.innerHTML = `<h4>Summary for ${blk.label}</h4>` +
+          roster.map((s, i) => {
+            const cnt = blk.dates.reduce((a, d) => {
               const st = attendance[d]?.[s.roll];
-              if (st) acc[st] = (acc[st]||0)+1;
-              return acc;
-            },{P:0,A:0,Lt:0,HD:0,L:0});
+              if (st) a[st] = (a[st]||0)+1;
+              return a;
+            }, {P:0,A:0,Lt:0,HD:0,L:0});
             const pct = Math.round((cnt.P+cnt.Lt+cnt.HD)/blk.dates.length*100);
-            const elig = pct>=THRESHOLD?'Eligible':'Not Eligible';
-            return `<p>${s.name}: P:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A} — ${pct}%<span class="eligibility">${elig}</span></p>`;
+            const elig = pct>=THRESHOLD ? 'Eligible' : 'Not Eligible';
+            return `<p>${s.name}: P:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A} — ${pct}%` +
+                   `<span class="eligibility">${elig}</span></p>`;
           }).join('');
-        container.appendChild(div);
+        container.appendChild(sumDiv);
       }
 
-      // Graph per block
+      // Graph for this block
       if (repType.value==='graph' || repType.value==='all') {
-        const c = document.createElement('canvas');
-        container.appendChild(c);
+        const cvs = document.createElement('canvas');
+        container.appendChild(cvs);
         if (chart) chart.destroy();
-        const data = roster.map((s,i)=>{
-          const cnt = blk.dates.reduce((a,d)=>{
-            const st=attendance[d]?.[s.roll]; if(st)a[st]=(a[st]||0)+1; return a;
-          },{P:0,Lt:0,HD:0});
+        const data = roster.map((s, i) => {
+          const cnt = blk.dates.reduce((a, d) => {
+            const st = attendance[d]?.[s.roll];
+            if (st) a[st] = (a[st]||0)+1;
+            return a;
+          }, {P:0, Lt:0, HD:0});
           return Math.round((cnt.P+cnt.Lt+cnt.HD)/blk.dates.length*100);
         });
-        chart = new Chart(c.getContext('2d'), {
-          type:'bar',
-          data:{labels:roster.map(s=>s.name),datasets:[{label:'% Present',data}]},
-          options:{responsive:true}
+        chart = new Chart(cvs.getContext('2d'), {
+          type: 'bar',
+          data: { labels: roster.map(s=>s.name), datasets: [{ label: '% Present', data }] },
+          options: { responsive: true }
         });
       }
     });
 
-    // Overall summary at end
-    const sumDiv = document.createElement('div');
-    sumDiv.className='summary-block';
-    sumDiv.innerHTML = '<h3>Overall Summary</h3>' +
-      overall.map(o=>{
-        const totalDates = blocks.reduce((sum,b)=>sum+b.dates.length,0);
-        const pct = Math.round((o.cnt.P+o.cnt.Lt+o.cnt.HD)/totalDates*100);
-        const elig = pct>=THRESHOLD?'Eligible for Exams':'Not Eligible';
-        return `<p>${o.name}: P:${o.cnt.P}, Lt:${o.cnt.Lt}, HD:${o.cnt.HD}, L:${o.cnt.L}, A:${o.cnt.A} — ${pct}%<span class="eligibility">${elig}</span></p>`;
+    // Overall summary
+    const totalDays = blocks.reduce((sum, b) => sum + b.dates.length, 0);
+    const ovDiv = document.createElement('div');
+    ovDiv.className = 'summary-block';
+    ovDiv.innerHTML = '<h3>Overall Summary & Exam Eligibility</h3>' +
+      overall.map(o => {
+        const pct = Math.round((o.cnt.P+o.cnt.Lt+o.cnt.HD)/totalDays*100);
+        const eligText = pct>=THRESHOLD
+          ? '⚑ Eligible for Exams'
+          : '✗ Not Eligible for Exams';
+        return `<p>${o.name}: P:${o.cnt.P}, Lt:${o.cnt.Lt}, HD:${o.cnt.HD}, L:${o.cnt.L}, A:${o.cnt.A} — ${pct}% ` +
+               `<span class="eligibility">${eligText}</span></p>`;
       }).join('');
-    container.appendChild(sumDiv);
+    container.appendChild(ovDiv);
 
-    // Share handler
+    // Share Summary only
     shareBtn.onclick = () => {
-      let text = `${schoolName} | ${cls}-${sec}\n`;
-      text += blocks.map(b=>`Period: ${b.label}`).join('\n') + '\n\n';
-      text += sumDiv.innerText;
-      if (navigator.share) navigator.share({ title:'Attendance Summary', text });
+      let text = `${schoolName} | Class-Section: ${cls}-${sec}\n`;
+      text += blocks.map(b=>b.label).join(' | ') + '\n\n';
+      text += ovDiv.innerText;
+      if (navigator.share) navigator.share({ title: 'Attendance Summary', text });
       else alert('Share not supported');
     };
 
-    // Download handler
+    // Download full report
     downloadBtn.onclick = () => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF('p','pt','a4');
       let y = 20;
-      doc.text(`${schoolName} | ${cls}-${sec}`, 20, y); y += 20;
-      blocks.forEach(b=>{
-        doc.text(`Period: ${b.label}`, 20, y); y += 20;
-        // include first table only if visible
+      doc.setFontSize(12);
+      doc.text(`${schoolName} | Class-Section: ${cls}-${sec}`, 20, y); y += 20;
+      blocks.forEach(b => {
+        doc.text(b.label, 20, y); y += 15;
         if (repType.value==='table' || repType.value==='all') {
           const tbl = container.querySelector('table');
-          doc.autoTable({ html: tbl, startY: y });
+          doc.autoTable({ html: tbl, startY: y, margin:{left:20,right:20} });
           y = doc.lastAutoTable.finalY + 10;
         }
+        if (repType.value==='summary' || repType.value==='all') {
+          const sums = Array.from(container.querySelectorAll('.summary-block:nth-of-type(' + (blocks.length+1) + ') p'));
+          sums.forEach(p => { doc.text(p.innerText, 20, y); y += 12; });
+          y += 5;
+        }
       });
-      // Overall summary
-      doc.text('Overall Summary', 20, y); y += 20;
-      overall.forEach(o=>{
-        const totalDates = blocks.reduce((sum,b)=>sum+b.dates.length,0);
-        const pct = Math.round((o.cnt.P+o.cnt.Lt+o.cnt.HD)/totalDates*100);
-        doc.text(`${o.name}: ${pct}%`, 20, y); y += 15;
+      // overall
+      doc.text('Overall Summary & Exam Eligibility', 20, y); y += 15;
+      ovDiv.querySelectorAll('p').forEach(p => {
+        doc.text(p.innerText, 20, y); y += 12;
       });
-      doc.save(`Analytics_${analyticsType.value}.pdf`);
+      doc.save(`Attendance_Report_${type}.pdf`);
     };
   }
 });
