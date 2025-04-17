@@ -2,69 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Classwise Attendance Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css">
+  <!-- jsPDF Library for PDF Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header>
     <h1>Attendance Management System</h1>
+    <!-- Selected class is shown here -->
     <p class="current-class">Class: <span id="teacherClassHeader">None</span></p>
   </header>
   <main>
-    <!-- Teacher Setup -->
+    <!-- Teacher Setup Section -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
       <label for="teacherClassSelect">Select Your Class:</label>
       <select id="teacherClassSelect">
         <option value="">--Select Class--</option>
-        <option>Play Group</option>
-        <option>Nursery</option>
-        <option>Prep</option>
-        <option>Pre One</option>
-        <option>One</option>
-        <option>Two</option>
-        <option>Three</option>
-        <option>Four</option>
-        <option>Five</option>
-        <option>Six</option>
-        <option>Seven</option>
-        <option>Eight</option>
-        <option>Nine</option>
-        <option>Ten</option>
+        <option value="Play Group">Play Group</option>
+        <option value="Nursery">Nursery</option>
+        <option value="Prep">Prep</option>
+        <option value="Pre One">Pre One</option>
+        <option value="One">One</option>
+        <option value="Two">Two</option>
+        <option value="Three">Three</option>
+        <option value="Four">Four</option>
+        <option value="Five">Five</option>
+        <option value="Six">Six</option>
+        <option value="Seven">Seven</option>
+        <option value="Eight">Eight</option>
+        <option value="Nine">Nine</option>
+        <option value="Ten">Ten</option>
       </select>
       <button id="saveTeacherClass">Save Class</button>
       <p>Your current class is: <span id="teacherClassDisplay">None</span></p>
     </section>
-
-    <!-- Student Registration -->
+    
+    <!-- Student Registration Section -->
     <section id="student-registration">
       <h2>Add Student</h2>
       <p>Your Class: <span id="teacherClassDisplayRegistration">None</span></p>
+      <!-- Only enter student name and parent's contact -->
       <input type="text" id="studentName" placeholder="Student Name">
       <input type="text" id="parentContact" placeholder="Parent Contact (e.g. +923XXXXXXXXX)">
       <button id="addStudent">Add Student</button>
       <h3>Student List</h3>
       <ul id="students"></ul>
     </section>
-
-    <!-- Attendance Marking -->
+    
+    <!-- Attendance Marking Section -->
     <section id="attendance-section">
       <h2>Mark Attendance</h2>
       <p>Your Class: <span id="teacherClassDisplayAttendance">None</span></p>
-      <label for="dateInput">Select Date:</label>
+      <label for="dateInput">Select Date: </label>
       <input type="date" id="dateInput">
       <button id="loadAttendance">Load Attendance</button>
       <div id="attendanceList"></div>
       <button id="saveAttendance">Save Attendance</button>
     </section>
-
-    <!-- Reports -->
+    
+    <!-- Reports Section -->
     <section id="reports">
       <h2>Reports</h2>
-      <button id="downloadDailyPdf">Download Daily PDF</button>
-      <button id="shareDailyWhatsApp">Share Daily on WhatsApp</button>
+      <button id="exportPdf">Download PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
+      <div style="margin-top:15px;">
+        <label for="specialNote">Special Note (if any):</label>
+        <textarea id="specialNote" rows="2" placeholder="Enter any special note for parents..."></textarea>
+      </div>
       <button id="sendParents">Send Attendance To All Parents</button>
       <div id="reportOutput"></div>
     </section>
