@@ -1,80 +1,83 @@
 /* style.css */
-body {
-  font-family: Arial, sans-serif;
-  margin: 0; padding: 0;
+:root {
+  --primary: #2196F3;
+  --success: #4CAF50;
+  --danger:  #f44336;
+  --light:   #f2f2f2;
+  --dark:    #333;
 }
+* { box-sizing: border-box; margin:0; padding:0; }
+body { font-family: Arial, sans-serif; color: var(--dark); }
 header {
-  background: #2E7D32;
-  color: #fff;
-  padding: 15px;
-  text-align: center;
+  background: var(--primary); color: #fff;
+  padding: 15px; text-align: center;
 }
-main {
-  padding: 20px;
-}
+main { padding: 20px; }
 section {
-  margin-bottom: 20px;
-  padding: 15px;
+  background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 15px;
 }
+h2 { margin-bottom: 10px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 input, select, button {
-  display: block;
-  width: 100%;
-  max-width: 300px;
-  margin: 5px 0;
-  padding: 8px;
-  box-sizing: border-box;
+  padding: 8px; border: 1px solid #ccc; border-radius: 4px;
 }
-ul {
-  list-style: none;
-  padding: 0;
+button {
+  background: var(--primary); color: #fff; cursor: pointer;
+  transition: opacity .2s;
 }
+button:hover { opacity: .9; }
+button.cancel { background: var(--danger); }
+ul { list-style: none; margin-top:10px; }
 li {
-  padding: 6px;
-  background: #f9f9f9;
-  margin: 4px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: var(--light);
+  border-radius: 4px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; padding: 8px;
 }
 .attendance-item {
-  display: flex;
   align-items: center;
-  padding: 6px;
   border-bottom: 1px solid #ddd;
+  display: flex; justify-content: space-between;
+  margin: 6px 0; padding: 6px;
 }
-.attendance-buttons {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
+.attendance-buttons { display:flex; gap:4px; }
 .att-btn {
-  padding: 4px 8px;
-  border: 1px solid #2E7D32;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
+  background: #fff; border: 1px solid var(--primary);
+  border-radius: 4px; color: var(--primary); padding: 4px 8px;
+  cursor: pointer; transition: background .2s, color .2s;
 }
 .att-btn.selected {
-  background: #2E7D32;
-  color: #fff;
+  background: var(--primary); color: #fff;
+}
+.table-container {
+  overflow-x: auto; margin-top: 10px;
 }
 #monthTable table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+  border-collapse: collapse; width: 100%;
 }
-#monthTable th,
-#monthTable td {
-  border: 1px solid #bbb;
-  padding: 4px;
-  text-align: center;
+#monthTable th, #monthTable td {
+  border: 1px solid #bbb; padding: 4px; text-align: center;
   font-size: 0.9em;
 }
 #summaryReport {
-  background: #e8f5e9;
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 10px;
+  background: #e8f5e9; border-radius:4px;
+  margin-top:10px; padding:10px;
+}
+/* Modals */
+.modal {
+  align-items: center; background: rgba(0,0,0,0.4);
+  display: none; height:100vh; justify-content: center;
+  left:0; position: fixed; top:0; width:100vw; z-index:1000;
+}
+.modal-content {
+  background: #fff; border-radius: 6px; padding: 20px;
+  text-align: center; width: 90%; max-width: 380px;
+}
+.modal-content button {
+  margin: 8px 0; width: 80%;
 }
