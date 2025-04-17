@@ -17,9 +17,17 @@ button { background:var(--primary); color:#fff; cursor:pointer; transition:opaci
 button:hover{opacity:.9;}
 button.small{background:var(--success);padding:4px 8px;font-size:.9em;}
 .hidden{display:none;}
+ul{list-style:none;margin-top:10px;}
+li{background:var(--light);border-radius:4px;margin-bottom:6px;padding:8px;}
+.att-btn.selected.P{background:var(--success);color:#fff;}
+.att-btn.selected.A{background:var(--danger);color:#fff;}
+.att-btn.selected.Lt,
+.att-btn.selected.HD,
+.att-btn.selected.L{background:var(--info);color:#fff;}
 .table-container { overflow-x:auto; margin-top:15px; }
 .summary-block { margin-top:15px; }
-.summary-block h3 { color:var(--primary); margin-bottom:8px; }
+.summary-block h3,
+.summary-block h4 { color:var(--primary); margin-bottom:8px; }
 .eligibility { font-weight:bold; margin-left:8px; color:var(--dark); }
 #analyticsActions { margin-top:15px; }
 @media(max-width:600px){.row-inline input,.row-inline select,.row-inline button{flex:1 1 100%;}}
