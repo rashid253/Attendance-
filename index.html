@@ -3,63 +3,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css" />
+
   <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
-    <h1>Attendance Management System</h1>
-    <p>Class/Section: <span id="teacherClassHeader">None</span></p>
+    <h1>Attendance Management</h1>
+    <p>Class/Section: <strong id="teacherClassHeader">None</strong></p>
   </header>
 
   <main>
     <!-- Teacher Setup -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
-      <div id="teacherSetupForm" class="row">
-        <div>
-          <label for="teacherClassSelect">Class:</label>
-          <select id="teacherClassSelect">
-            <option value="">--Select Class--</option>
-            <option>Play Group</option><option>Nursery</option><option>Prep</option>
-            <option>Pre One</option><option>One</option><option>Two</option>
-            <option>Three</option><option>Four</option><option>Five</option>
-            <option>Six</option><option>Seven</option><option>Eight</option>
-            <option>Nine</option><option>Ten</option>
-          </select>
-        </div>
-        <div>
-          <label for="teacherSectionSelect">Section:</label>
-          <select id="teacherSectionSelect">
-            <option value="">--Select Section--</option>
-            <option>A</option><option>B</option><option>C</option>
-          </select>
-        </div>
-        <div>
-          <button id="saveTeacherClass">Save</button>
-        </div>
+      <div id="teacherSetupForm" class="row-inline">
+        <select id="teacherClassSelect">
+          <option value="">--Class--</option>
+          <option>One</option><option>Two</option><option>Three</option>
+          <!-- add others -->
+        </select>
+        <select id="teacherSectionSelect">
+          <option value="">--Section--</option>
+          <option>A</option><option>B</option>
+        </select>
+        <button id="saveTeacherClass">Save</button>
       </div>
       <div id="teacherSetupDisplay" class="hidden">
-        <p>
-          <strong>Class:</strong> <span id="dispClass"></span>
-          &nbsp; <strong>Section:</strong> <span id="dispSection"></span>
-          <button id="editTeacherSetup" class="small">Edit</button>
-        </p>
+        <span><strong>Class:</strong> <span id="dispClass"></span></span>
+        <span><strong>Section:</strong> <span id="dispSection"></span></span>
+        <button id="editTeacherSetup" class="small">Edit</button>
       </div>
     </section>
 
     <!-- Student Registration -->
     <section id="student-registration">
       <h2>Student Registration</h2>
-      <input type="text" id="studentName" placeholder="Student Name" />
-      <input type="text" id="admissionNo" placeholder="Admission No (optional)" />
-      <input type="text" id="parentContact" placeholder="Parent Contact (+923...)" />
-      <button id="addStudent">Add Student</button>
-      <h3>Student List</h3>
+      <div class="row-inline">
+        <input type="text" id="studentName" placeholder="Name" />
+        <input type="text" id="admissionNo" placeholder="Admission No (opt)" />
+        <input type="text" id="parentContact" placeholder="Parent Contact" />
+        <button id="addStudent">Add</button>
+      </div>
       <ul id="students"></ul>
     </section>
 
@@ -67,7 +58,6 @@
     <section id="attendance-section">
       <h2>Mark Attendance</h2>
       <div class="row-inline">
-        <label for="dateInput">Date:</label>
         <input type="date" id="dateInput" />
         <button id="loadAttendance">Load</button>
       </div>
@@ -75,56 +65,39 @@
       <button id="saveAttendance">Save Attendance</button>
     </section>
 
-    <!-- Monthly View & Summary -->
-    <section id="monthly-summary">
-      <h2>Monthly View &amp; Summary</h2>
-      <div class="row-inline">
-        <label for="monthInput">Month:</label>
-        <input type="month" id="monthInput" />
-        <button id="loadMonth">Show</button>
-      </div>
-      <div class="table-container" id="monthTable"></div>
-      <h3>Summary</h3>
-      <div id="summaryReport"></div>
+    <!-- Attendance Result -->
+    <section id="attendance-result" class="hidden">
+      <h2>Attendance Summary</h2>
+      <ul id="attendanceResultList"></ul>
+      <button id="editAttendanceBtn">Edit</button>
+      <button id="shareAttendanceBtn">Share</button>
+      <button id="downloadAttendanceBtn">Download PDF</button>
     </section>
 
-    <!-- Reports & Share -->
-    <section id="reports">
-      <h2>Reports &amp; Share</h2>
-      <button id="exportPdf">Download PDF</button>
-      <button id="shareWhatsApp">Share on WhatsApp</button>
+    <!-- Analytics -->
+    <section id="analytics-section">
+      <h2>Analytics</h2>
+      <div class="row-inline">
+        <select id="analyticsType">
+          <option value="month">Month</option>
+          <option value="semester">Semester</option>
+          <option value="sixmonths">6 Months</option>
+          <option value="year">Year</option>
+        </select>
+        <input type="month" id="analyticsMonth" />
+        <select id="studentFilter">
+          <option value="">All Students</option>
+        </select>
+        <select id="representationType">
+          <option value="table">Table</option>
+          <option value="summary">Summary</option>
+          <option value="graph">Graph</option>
+        </select>
+        <button id="loadAnalytics">Load</button>
+      </div>
+      <div id="analyticsContainer"></div>
     </section>
   </main>
-
-  <!-- PDF Options Modal -->
-  <div id="pdfOptionsModal" class="modal">
-    <div class="modal-content">
-      <h3>PDF Report</h3>
-      <button id="pdfCurrentReportBtn">Current Attendance</button>
-      <button id="pdfDailyReportBtn">Daily Attendance</button>
-      <button id="pdfMonthlyReportBtn">Monthly Attendance</button>
-      <div class="row-inline">
-        <label for="pdfMonthInput">For Month:</label>
-        <input type="month" id="pdfMonthInput" />
-      </div>
-      <button id="closePdfModalBtn" class="cancel">Cancel</button>
-    </div>
-  </div>
-
-  <!-- WhatsApp Options Modal -->
-  <div id="whatsappOptionsModal" class="modal">
-    <div class="modal-content">
-      <h3>WhatsApp Report</h3>
-      <button id="waCurrentBtn">Current Attendance</button>
-      <button id="waDailyBtn">Daily Attendance</button>
-      <button id="waMonthlyBtn">Monthly Attendance</button>
-      <div class="row-inline">
-        <label for="waMonthInput">For Month:</label>
-        <input type="month" id="waMonthInput" />
-      </div>
-      <button id="closeWaModalBtn" class="cancel">Cancel</button>
-    </div>
-  </div>
 
   <script src="app.js"></script>
 </body>
