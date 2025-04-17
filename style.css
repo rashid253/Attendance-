@@ -30,9 +30,9 @@ button {
   background: var(--primary); color: #fff; cursor: pointer;
   transition: opacity .2s;
 }
-button:hover { opacity: .9; }
+button:hover { opacity:.9; }
 button.small {
-  background: var(--success); padding: 4px 8px; font-size: 0.9em;
+  background: var(--success); padding: 4px 8px; font-size: .9em;
 }
 button.cancel { background: var(--danger); }
 ul { list-style: none; margin-top:10px; }
@@ -42,6 +42,29 @@ li {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 6px; padding: 8px;
 }
+
+/* Attendance buttons */
+.attendance-item { display: flex; align-items: center; margin:6px 0; }
+.attendance-item span { flex: 1; }
+.attendance-buttons {
+  display: flex; gap: 6px; width: 100%;
+}
+.att-btn {
+  flex: 1;
+  font-size: 1.1em;
+  padding: 10px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--primary);
+  text-align: center;
+}
+.att-btn.selected {
+  background: var(--success);
+  color: #fff;
+}
+
+/* Table scroll */
 .table-container {
   overflow-x: auto; margin-top: 10px;
 }
@@ -56,12 +79,16 @@ li {
   background: #e8f5e9; border-radius:4px;
   margin-top:10px; padding:10px;
 }
+
+/* Highlight for modal buttons */
+.highlight {
+  background: var(--success) !important;
+}
+
 /* Modals */
 .modal {
-  display: none;
-  position: fixed; top:0; left:0;
-  width:100vw; height:100vh;
-  background: rgba(0,0,0,0.4);
+  display: none; position: fixed; top:0; left:0;
+  width:100vw; height:100vh; background: rgba(0,0,0,0.4);
   align-items: center; justify-content: center;
 }
 .modal-content {
