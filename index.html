@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Classwise Attendance Management System</title>
+  <title>Professional Attendance System</title>
   <link rel="stylesheet" href="style.css" />
   <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -12,34 +12,32 @@
 </head>
 <body>
   <header>
-    <h1>Attendance Management System</h1>
-    <p>Class: <span id="teacherClassHeader">None</span></p>
+    <h1>Attendance Management</h1>
+    <p>Class/Section: <span id="teacherClassHeader">None</span></p>
   </header>
 
   <main>
     <!-- Teacher Setup -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
-      <label for="teacherClassSelect">Select Your Class:</label>
+      <label for="teacherClassSelect">Select Class/Section:</label>
       <select id="teacherClassSelect">
-        <option value="">--Select Class--</option>
-        <option>Play Group</option><option>Nursery</option><option>Prep</option>
-        <option>Pre One</option><option>One</option><option>Two</option>
-        <option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option>
-        <option>Nine</option><option>Ten</option>
+        <option value="">--Select--</option>
+        <option>One-A</option><option>One-B</option>
+        <option>Two-A</option><option>Two-B</option>
+        <!-- add more sections as needed -->
       </select>
-      <button id="saveTeacherClass">Save Class</button>
-      <p>Your class: <span id="teacherClassDisplay">None</span></p>
+      <button id="saveTeacherClass">Save</button>
     </section>
 
     <!-- Student Registration -->
     <section id="student-registration">
-      <h2>Add Student</h2>
+      <h2>Student Registration</h2>
       <input type="text" id="studentName" placeholder="Student Name" />
-      <input type="text" id="parentContact" placeholder="Parent Contact (+923...)" />
+      <input type="text" id="admissionNo" placeholder="Admission No (optional)" />
+      <input type="text" id="parentContact" placeholder="Parent Contact" />
       <button id="addStudent">Add Student</button>
-      <h3>Student List</h3>
+      <h3>Students List</h3>
       <ul id="students"></ul>
     </section>
 
@@ -48,45 +46,30 @@
       <h2>Mark Attendance</h2>
       <label for="dateInput">Select Date:</label>
       <input type="date" id="dateInput" />
-      <button id="loadAttendance">Load Attendance</button>
+      <button id="loadAttendance">Load</button>
       <div id="attendanceList"></div>
-      <button id="saveAttendance">Save Attendance</button>
+      <button id="saveAttendance">Save</button>
     </section>
 
-    <!-- Reports -->
+    <!-- Monthly View & Summary -->
+    <section id="monthly-summary">
+      <h2>Monthly View & Summary</h2>
+      <input type="month" id="monthInput" />
+      <button id="loadMonth">Show</button>
+      <div id="monthTable"></div>
+      <h3>Summary</h3>
+      <div id="summaryReport"></div>
+    </section>
+
+    <!-- Reports & Sharing -->
     <section id="reports">
-      <h2>Reports</h2>
-      <button id="exportPdf">Download PDF</button>
-      <button id="shareWhatsApp">Share on WhatsApp</button>
+      <h2>Reports & Share</h2>
+      <button id="exportPdf">PDF Report</button>
+      <button id="shareWhatsApp">WhatsApp</button>
     </section>
   </main>
 
-  <!-- PDF Options Modal -->
-  <div id="pdfOptionsModal">
-    <div class="modal-content">
-      <h3>Select PDF Report Type</h3>
-      <button id="pdfCurrentReportBtn">Current Attendance Report</button>
-      <button id="pdfDailyReportBtn">Daily Attendance Report</button>
-      <button id="pdfMonthlyReportBtn">Monthly Attendance Report</button>
-      <button id="closePdfModalBtn">Cancel</button>
-    </div>
-  </div>
-
-  <!-- WhatsApp Options Modal -->
-  <div id="whatsappOptionsModal">
-    <div class="modal-content">
-      <h3>Select WhatsApp Report Type</h3>
-      <button id="waCurrentBtn">Current Attendance Report</button>
-      <button id="waDailyBtn">Daily Attendance Report</button>
-      <button id="waMonthlyBtn">Monthly Attendance Report</button>
-      <!-- Moved month picker into modal -->
-      <div style="margin-top:10px;">
-        <label for="waMonthInput">Select Month:</label>
-        <input type="month" id="waMonthInput" />
-      </div>
-      <button id="closeWaModalBtn">Cancel</button>
-    </div>
-  </div>
+  <!-- Modals could go here if needed -->
 
   <script src="app.js"></script>
 </body>
