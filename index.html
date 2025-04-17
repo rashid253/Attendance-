@@ -6,56 +6,106 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- inline styles for WhatsApp modal buttons -->
+  <style>
+    /* Modal base (should also be in style.css) */
+    #whatsappOptionsModal,
+    #pdfOptionsModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+    }
+    /* WhatsApp modal button states */
+    #whatsappOptionsModal .modal-content button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #whatsappOptionsModal .modal-content button.active {
+      background: #4CAF50;
+      color: white;
+    }
+  </style>
   <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <style>
-    /* Highlight selected report type */
-    #whatsappOptionsModal .types label {
-      margin-right: 10px;
-      padding: 5px 10px;
-      border: 1px solid #2196F3;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #whatsappOptionsModal .types input:checked + label {
-      background: #2196F3;
-      color: #fff;
-    }
-    #waSendBtn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  </style>
 </head>
 <body>
-  <!-- ... header, main, PDF modal stay unchanged ... -->
+  <header>
+    <h1>Attendance Management System</h1>
+    <p>Class: <span id="teacherClassHeader">None</span></p>
+  </header>
+
+  <main>
+    <!-- Teacher Setup -->
+    <section id="teacher-setup">
+      <h2>Teacher Setup</h2>
+      <label for="teacherClassSelect">Select Your Class:</label>
+      <select id="teacherClassSelect">
+        <option value="">--Select Class--</option>
+        <option>Play Group</option><option>Nursery</option><option>Prep</option>
+        <option>Pre One</option><option>One</option><option>Two</option>
+        <option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option>
+        <option>Nine</option><option>Ten</option>
+      </select>
+      <button id="saveTeacherClass">Save Class</button>
+      <p>Your class: <span id="teacherClassDisplay">None</span></p>
+    </section>
+
+    <!-- Student Registration -->
+    <section id="student-registration">
+      <h2>Add Student</h2>
+      <input type="text" id="studentName" placeholder="Student Name" />
+      <input type="text" id="parentContact" placeholder="Parent Contact (+923...)" />
+      <button id="addStudent">Add Student</button>
+      <h3>Student List</h3>
+      <ul id="students"></ul>
+    </section>
+
+    <!-- Attendance Marking -->
+    <section id="attendance-section">
+      <h2>Mark Attendance</h2>
+      <label for="dateInput">Select Date:</label>
+      <input type="date" id="dateInput" />
+      <button id="loadAttendance">Load Attendance</button>
+      <div id="attendanceList"></div>
+      <button id="saveAttendance">Save Attendance</button>
+    </section>
+
+    <!-- Reports -->
+    <section id="reports">
+      <h2>Reports</h2>
+      <button id="exportPdf">Download PDF</button>
+      <button id="shareWhatsApp">Share on WhatsApp</button>
+    </section>
+  </main>
+
+  <!-- PDF Options Modal -->
+  <div id="pdfOptionsModal">
+    <div class="modal-content">
+      <h3>Select PDF Report Type</h3>
+      <button id="pdfCurrentReportBtn">Current Attendance Report</button>
+      <button id="pdfDailyReportBtn">Daily Attendance Report</button>
+      <button id="pdfMonthlyReportBtn">Monthly Attendance Report</button>
+      <button id="closePdfModalBtn">Cancel</button>
+    </div>
+  </div>
 
   <!-- WhatsApp Options Modal -->
   <div id="whatsappOptionsModal">
     <div class="modal-content">
-      <h3>Share on WhatsApp</h3>
-      <div class="types">
-        <input type="radio" name="waType" id="waTypeCur" value="current" checked>
-        <label for="waTypeCur">Current</label>
-        <input type="radio" name="waType" id="waTypeDay" value="daily">
-        <label for="waTypeDay">Daily</label>
-        <input type="radio" name="waType" id="waTypeMon" value="monthly">
-        <label for="waTypeMon">Monthly</label>
-      </div>
-
-      <div id="waDateContainer" style="margin-top:10px;">
-        <label for="waDateInput">Select Date:</label>
-        <input type="date" id="waDateInput" />
-      </div>
-
-      <div id="waMonthContainer" style="margin-top:10px; display:none;">
-        <label for="waMonthInput">Select Month:</label>
+      <h3>Select WhatsApp Report Type</h3>
+      <button id="waCurrentBtn" class="active">Current Attendance Report</button>
+      <button id="waDailyBtn" class="disabled">Daily Attendance Report</button>
+      <button id="waMonthlyBtn" class="disabled">Monthly Attendance Report</button>
+      <div style="margin-top:10px;">
+        <label for="waMonthInput">Select Month (for monthly):</label>
         <input type="month" id="waMonthInput" />
       </div>
-
-      <button id="waSendBtn" disabled>Send WhatsApp</button>
-      <button id="closeWaModalBtn" style="margin-left:10px;">Cancel</button>
+      <button id="closeWaModalBtn">Cancel</button>
     </div>
   </div>
 
