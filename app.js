@@ -1,4 +1,5 @@
 // app.js
+
 const $ = id => document.getElementById(id),
       getText = s => ({P:'Present', A:'Absent', Lt:'Late', L:'Leave', HD:'Half Day'}[s]||'Not Marked');
 
@@ -21,6 +22,7 @@ function initSetup(){
   renderStudents();
   populateFilter();
 }
+
 $('saveTeacherClass').addEventListener('click', ()=>{
   const c = $('teacherClassSelect').value,
         s = $('teacherSectionSelect').value;
@@ -30,6 +32,7 @@ $('saveTeacherClass').addEventListener('click', ()=>{
   localStorage.setItem('teacherSection', s);
   initSetup();
 });
+
 $('editTeacherSetup').addEventListener('click', ()=>{
   $('teacherSetupForm').classList.remove('hidden');
   $('teacherSetupDisplay').classList.add('hidden');
@@ -39,13 +42,17 @@ $('editTeacherSetup').addEventListener('click', ()=>{
 function renderStudents(){
   const ul = $('students');
   ul.innerHTML = '';
+
   students
     .filter(s=>s.class===cls && s.section===sec)
     .forEach(s=>{
       const li = document.createElement('li');
+
       const nameSpan = document.createElement('span');
       nameSpan.textContent = `${s.roll} - ${s.name}`;
-      li.append(nameSpan);
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'button-group';
 
       const editBtn = document.createElement('button');
       editBtn.className='small';
@@ -58,7 +65,6 @@ function renderStudents(){
         $('parentContact').value    = s.parentContact;
         $('addStudent').textContent = 'Update';
       };
-      li.append(editBtn);
 
       const delBtn = document.createElement('button');
       delBtn.className='small';
@@ -69,11 +75,13 @@ function renderStudents(){
         localStorage.setItem('students', JSON.stringify(students));
         initSetup();
       };
-      li.append(delBtn);
 
+      btnGroup.append(editBtn, delBtn);
+      li.append(nameSpan, btnGroup);
       ul.append(li);
     });
 }
+
 $('addStudent').addEventListener('click', ()=>{
   const name = $('studentName').value.trim();
   if(!name||!cls) return alert('Enter name & save class');
@@ -99,6 +107,7 @@ $('addStudent').addEventListener('click', ()=>{
   $('studentName').value = $('admissionNo').value = $('parentContact').value = '';
   initSetup();
 });
+
 $('deleteAllStudents').addEventListener('click', ()=>{
   if(!cls) return alert('Save class first');
   if(!confirm('Delete all students?')) return;
@@ -126,6 +135,7 @@ $('loadAttendance').addEventListener('click', ()=>{
   if(!d) return alert('Pick date');
   renderAttendance(d);
 });
+
 function renderAttendance(d){
   $('attendanceList').innerHTML = '';
   attendance[d] = attendance[d] || {};
@@ -163,8 +173,8 @@ function renderAttendance(d){
       sendBtn.className = 'send-btn';
       sendBtn.textContent = 'Send';
       sendBtn.onclick = ()=>{
-        const code = day[s.roll] || '',
-              status = getText(code);
+        const code = day[s.roll] || '';
+        const status = getText(code);
         const instr = {
           Lt:`Your child was late on ${d}. Please ensure punctuality.`,
           A:`Your child was absent on ${d}. Please submit leave.`,
@@ -271,9 +281,7 @@ function renderAnalytics(){
         rep   = $('representationType').value;
 
   if(!period) return alert('Select period');
-  const dates = type==='date'
-    ? [period]
-    : getPeriodDates(type, period);
+  const dates = type==='date' ? [period] : getPeriodDates(type, period);
 
   const data = students
     .filter(s=>s.class===cls && s.section===sec)
@@ -353,8 +361,20 @@ function renderAnalytics(){
     share.className = 'small';
     share.textContent = 'Share';
     share.onclick = ()=>{
-      let msg = `*${schoolName}*\nClass-Section: ${cls}-${sec}\nPeriod: ${type} ${period}\n\n`;
-      data.forEach(r=> msg += `${r.name}: ${r.pct}%\n`);
+      let msg = `*${schoolName}*\nClass-Section: ${cls}-${sec}\n`;
+      if(type==='date'){
+        msg += `Date: ${period}\n\n`;
+        data.forEach(r=> msg += `${r.name}: ${r.cnt[r.status] || 0} on ${period}\n`);
+      } else if(type==='month'){
+        msg += `Attendance Register for ${period}\n\n`;
+        data.forEach(r=>{
+          const codes = dates.map(d=>attendance[d]?.[students.find(x=>x.name===r.name).roll]||'–').join(' ');
+          msg += `${r.name}: ${codes}\n`;
+        });
+      } else {
+        msg += `Period: ${type} ${period}\n\n`;
+        data.forEach(r=> msg += `${r.name}: ${r.pct}% (${r.cnt.P}P, ${r.cnt.Lt}L, ${r.cnt.HD}H, ${r.cnt.L}Lv, ${r.cnt.A}A)\n`);
+      }
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`);
     };
 
@@ -363,15 +383,40 @@ function renderAnalytics(){
     dl.textContent = 'Download';
     dl.onclick = ()=>{
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const rows = data.map(r=>[r.name, r.pct + '%']);
-      doc.text('Report', 10, 10);
-      doc.autoTable({ head: [['Name','%']], body: rows, startY: 20 });
-      doc.save('Report.pdf');
+      const doc = new jsPDF(type==='month' ? 'l' : 'p', 'pt', 'a4');
+      const title = type==='month'
+        ? `Attendance Register: ${period}`
+        : `Report: ${type} ${period}`;
+
+      doc.text(title, 20, 20);
+
+      if(type==='month'){
+        const days = dates.map(d=>d.split('-')[2]);
+        const header = ['Name', ...days];
+        const body = students.map(s=>
+          [s.name, ...dates.map(d=>attendance[d]?.[s.roll]||'–')]
+        );
+        doc.autoTable({
+          head: [header],
+          body,
+          startY: 40,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [33,150,243] }
+        });
+        doc.save(`Attendance_${period}.pdf`);
+      } else {
+        const rows = data.map(r=>[r.name, r.pct+'%']);
+        doc.autoTable({
+          head: [['Name','%']],
+          body: rows,
+          startY: 40
+        });
+        doc.save(`Report_${period}.pdf`);
+      }
     };
 
     btns.append(share, dl);
-    cont.append(btns);
+    $('analyticsContainer').append(btns);
   }
 }
 
