@@ -1,5 +1,4 @@
 /* style.css */
-
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -8,118 +7,38 @@
   --light:   #f2f2f2;
   --dark:    #333;
 }
-
-* { box-sizing: border-box; margin:0; padding:0; }
-body { font-family: Arial, sans-serif; color:var(--dark); padding:10px; }
-
-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 15px;
-  text-align: center;
-}
-
-section {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  padding: 15px;
-}
-
-.row-inline {
-  display: flex; gap:10px;
-  align-items:center; flex-wrap:wrap;
-}
-
-input, select, button {
-  padding:8px;
-  border:1px solid #ccc;
-  border-radius:4px;
-}
-
-button {
-  background: var(--primary);
-  color:#fff;
-  cursor:pointer;
-  transition:opacity .2s;
-}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:Arial,sans-serif; color:var(--dark); padding:10px; }
+header { background:var(--primary); color:#fff; padding:15px; text-align:center; }
+section { background:#fff; border:1px solid #ccc; border-radius:6px; margin-bottom:20px; padding:15px; }
+.row-inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+input,select,button { padding:8px; border:1px solid #ccc; border-radius:4px; }
+button { background:var(--primary); color:#fff; cursor:pointer; transition:opacity .2s; }
 button:hover { opacity:.9; }
-
-button.small {
-  background: var(--success);
-  padding:4px 8px;
-  font-size:.9em;
-}
-
+button.small { background:var(--success); padding:4px 8px; font-size:.9em; }
 .hidden { display:none; }
-
 ul { list-style:none; margin-top:10px; }
-li {
-  background: var(--light);
-  border-radius:4px;
-  margin-bottom:6px;
-  padding:8px;
-}
-
-/* Student list fix */
-section#student-registration ul li {
-  display:flex; align-items:center;
-}
-section#student-registration ul li span {
-  flex:1;
-}
-.button-group {
-  display:flex; gap:6px;
-}
-
-/* Attendance items */
-.attendance-item {
-  display:flex; flex-direction:column;
-  background:#e7f3fe; border-radius:4px;
-  margin:6px 0; padding:8px;
-}
-.attendance-item .att-name {
-  font-weight:bold; margin-bottom:6px;
-}
-.attendance-actions {
-  display:flex; justify-content:space-between; align-items:center;
-}
+li { background:var(--light); border-radius:4px; margin-bottom:6px; padding:8px; }
+/* student list */
+section#student-registration ul li { display:flex; align-items:center; }
+section#student-registration ul li span { flex:1; }
+.button-group { display:flex; gap:6px; }
+/* attendance items */
+.attendance-item { display:flex; flex-direction:column; background:#e7f3fe; border-radius:4px; margin:6px 0; padding:8px; }
+.attendance-item .att-name { font-weight:bold; margin-bottom:6px; }
+.attendance-actions { display:flex; justify-content:space-between; align-items:center; }
 .attendance-buttons { display:flex; gap:6px; }
-.att-btn {
-  padding:8px; font-size:1em;
-  border:1px solid var(--primary);
-  background:transparent; color:var(--dark);
-  font-weight:bold;
-}
+.att-btn { padding:8px; font-size:1em; border:1px solid var(--primary); background:transparent; color:var(--dark); font-weight:bold; }
 .att-btn.selected.P  { background:var(--success); color:#fff; }
 .att-btn.selected.A  { background:var(--danger);  color:#fff; }
 .att-btn.selected.Lt { background:var(--info);    color:#fff; }
 .att-btn.selected.HD { background:var(--info);    color:#fff; }
 .att-btn.selected.L  { background:var(--info);    color:#fff; }
-
-.send-btn {
-  background:var(--success);
-  color:#fff;
-  border:none;
-  border-radius:6px;
-  padding:8px 12px;
-}
-
-/* Summary — plain text */
-.attendance-summary li {
-  font-weight:bold; margin:4px 0;
-}
-
-/* Analytics */
-.table-container {
-  overflow-x:auto; margin-top:10px;
-}
-
+.send-btn { background:var(--success); color:#fff; border:none; border-radius:6px; padding:8px 12px; }
+/* summary */
+.attendance-summary li { font-weight:bold; margin:4px 0; }
+/* analytics */
+.table-container { overflow-x:auto; margin-top:10px; }
 @media (max-width:600px) {
-  .row-inline input,
-  .row-inline select,
-  .row-inline button {
-    flex:1 1 100%;
-  }
+  .row-inline input, .row-inline select, .row-inline button { flex:1 1 100%; }
 }
