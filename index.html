@@ -20,7 +20,7 @@
     <!-- Teacher Setup -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
-      <div class="row">
+      <div id="teacherSetupForm" class="row">
         <div>
           <label for="teacherClassSelect">Class:</label>
           <select id="teacherClassSelect">
@@ -39,8 +39,16 @@
             <option>A</option><option>B</option><option>C</option>
           </select>
         </div>
+        <div>
+          <button id="saveTeacherClass">Save</button>
+        </div>
       </div>
-      <button id="saveTeacherClass">Save Class &amp; Section</button>
+      <div id="teacherSetupDisplay" class="hidden">
+        <p><strong>Class:</strong> <span id="dispClass"></span> &nbsp; 
+           <strong>Section:</strong> <span id="dispSection"></span>
+          <button id="editTeacherSetup" class="small">Edit</button>
+        </p>
+      </div>
     </section>
 
     <!-- Student Registration -->
