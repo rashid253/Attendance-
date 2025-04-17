@@ -1,193 +1,180 @@
-document.addEventListener("DOMContentLoaded", () => {
-  // === Helpers ===
-  function getStatusText(s) {
-    return {
-      P:  "Present. Thank you for ensuring your child’s punctuality.",
-      A:  "Absent. Please contact the school for further details.",
-      L:  "Late. Kindly ensure your child arrives on time.",
-      Le: "Leave. Your child's leave request has been approved."
-    }[s] || "Not Marked";
+document.addEventListener("DOMContentLoaded", function() {
+  const allowedClasses = [
+    "Play Group","Nursery","Prep","Pre One",
+    "One","Two","Three","Four","Five",
+    "Six","Seven","Eight","Nine","Ten"
+  ];
+
+  // Helper: concise status text
+  function getConciseStatus(status) {
+    switch(status) {
+      case "P": return "Present";
+      case "A": return "Absent";
+      case "L": return "Late";
+      case "Le": return "Leave";
+      default: return "Not Marked";
+    }
   }
-  function showModal(m){ m.style.display = "block"; }
-  function closeModal(m){ m.style.display = "none"; }
 
-  // === Element refs ===
-  const dateInput   = document.getElementById("dateInput");
-  const monthInput  = document.getElementById("monthInput");
+  // Elements
+  const teacherClassSelect = document.getElementById("teacherClassSelect");
+  const saveTeacherClassBtn = document.getElementById("saveTeacherClass");
+  const teacherClassDisplay = document.getElementById("teacherClassDisplay");
+  const teacherClassDisplayRegistration = document.getElementById("teacherClassDisplayRegistration");
+  const teacherClassDisplayAttendance = document.getElementById("teacherClassDisplayAttendance");
+  const teacherClassHeader = document.getElementById("teacherClassHeader");
 
-  const exportPdfBtn     = document.getElementById("exportPdf");
-  const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
+  const studentNameInput = document.getElementById('studentName');
+  const parentContactInput = document.getElementById('parentContact');
+  const addStudentBtn = document.getElementById('addStudent');
+  const studentsListEl = document.getElementById('students');
 
-  const pdfModal     = document.getElementById("pdfOptionsModal");
-  const pdfCurBtn    = document.getElementById("pdfCurrentReportBtn");
-  const pdfDayBtn    = document.getElementById("pdfDailyReportBtn");
-  const pdfMonBtn    = document.getElementById("pdfMonthlyReportBtn");
-  const pdfCloseBtn  = document.getElementById("closePdfModalBtn");
+  const dateInput = document.getElementById('dateInput');
+  const loadAttendanceBtn = document.getElementById('loadAttendance');
+  const attendanceListEl = document.getElementById('attendanceList');
+  const saveAttendanceBtn = document.getElementById('saveAttendance');
 
-  const waModal      = document.getElementById("whatsappOptionsModal");
-  const waCurBtn     = document.getElementById("waCurrentBtn");
-  const waDayBtn     = document.getElementById("waDailyBtn");
-  const waMonBtn     = document.getElementById("waMonthlyBtn");
-  const waCloseBtn   = document.getElementById("closeWaModalBtn");
+  const downloadDailyPdfBtn = document.getElementById('downloadDailyPdf');
+  const shareDailyWhatsAppBtn = document.getElementById('shareDailyWhatsApp');
+  const sendParentsBtn = document.getElementById('sendParents');
 
-  // === Storage ===
-  let teacherClass   = localStorage.getItem("teacherClass")   || "";
-  let students       = JSON.parse(localStorage.getItem("students"))       || [];
-  let attendanceData = JSON.parse(localStorage.getItem("attendanceData")) || {};
+  let teacherClass = localStorage.getItem('teacherClass') || "";
+  updateTeacherClassDisplays();
 
-  // === PDF Modal Wiring ===
-  exportPdfBtn.onclick = () => showModal(pdfModal);
-  pdfCloseBtn.onclick  = () => closeModal(pdfModal);
+  function updateTeacherClassDisplays() {
+    teacherClassDisplay.textContent = teacherClass || "None";
+    teacherClassDisplayRegistration.textContent = teacherClass || "None";
+    teacherClassDisplayAttendance.textContent = teacherClass || "None";
+    teacherClassHeader.textContent = teacherClass || "None";
+  }
 
-  pdfCurBtn.onclick = () => {
-    const d = dateInput.value || new Date().toISOString().slice(0,10);
-    generatePdf("Current Attendance", d);
-    closeModal(pdfModal);
-  };
-
-  pdfDayBtn.onclick = () => {
-    if (!dateInput.value) {
-      dateInput.showPicker?.() ?? dateInput.focus();
-      dateInput.onchange = () => {
-        generatePdf("Daily Attendance", dateInput.value);
-        dateInput.onchange = null;
-        closeModal(pdfModal);
-      };
-      return;
+  saveTeacherClassBtn.addEventListener('click', function() {
+    const selectedClass = teacherClassSelect.value;
+    if (allowedClasses.includes(selectedClass)) {
+      teacherClass = selectedClass;
+      localStorage.setItem('teacherClass', teacherClass);
+      updateTeacherClassDisplays();
+      renderStudents();
+    } else {
+      alert("Please select a valid class.");
     }
-    generatePdf("Daily Attendance", dateInput.value);
-    closeModal(pdfModal);
-  };
+  });
 
-  pdfMonBtn.onclick = () => {
-    if (!monthInput.value) {
-      monthInput.showPicker?.() ?? monthInput.focus();
-      monthInput.onchange = () => {
-        generateMonthlyPdf(monthInput.value);
-        monthInput.onchange = null;
-        closeModal(pdfModal);
-      };
-      return;
-    }
-    generateMonthlyPdf(monthInput.value);
-    closeModal(pdfModal);
-  };
+  let students = JSON.parse(localStorage.getItem('students')) || [];
+  let attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};
 
-  // === WhatsApp Modal Wiring ===
-  shareWhatsAppBtn.onclick = () => showModal(waModal);
-  waCloseBtn.onclick       = () => closeModal(waModal);
+  function generateRollNumber(cls) {
+    const clsSt = students.filter(s=>s.class===cls);
+    return clsSt.length===0 ? 1 : Math.max(...clsSt.map(s=>+s.roll))+1;
+  }
 
-  waCurBtn.onclick = () => {
-    const d = dateInput.value || new Date().toISOString().slice(0,10);
-    sendWhatsApp("Current Attendance", d);
-    closeModal(waModal);
-  };
-
-  waDayBtn.onclick = () => {
-    if (!dateInput.value) {
-      dateInput.showPicker?.() ?? dateInput.focus();
-      dateInput.onchange = () => {
-        sendWhatsApp("Daily Attendance", dateInput.value);
-        dateInput.onchange = null;
-        closeModal(waModal);
-      };
-      return;
-    }
-    sendWhatsApp("Daily Attendance", dateInput.value);
-    closeModal(waModal);
-  };
-
-  waMonBtn.onclick = () => {
-    if (!monthInput.value) {
-      monthInput.showPicker?.() ?? monthInput.focus();
-      monthInput.onchange = () => {
-        sendWhatsAppMonthly(monthInput.value);
-        monthInput.onchange = null;
-        closeModal(waModal);
-      };
-      return;
-    }
-    sendWhatsAppMonthly(monthInput.value);
-    closeModal(waModal);
-  };
-
-  // === Report Generation Functions ===
-  function generatePdf(title, d) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text(`${title} for ${d} (Class: ${teacherClass})`, 10, 10);
-    let y = 20;
-    const ad = attendanceData[d] || {};
-    students.filter(s => s.class === teacherClass).forEach(s => {
-      doc.text(`${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}`, 10, y);
-      y += 10;
+  function renderStudents() {
+    studentsListEl.innerHTML = "";
+    students.filter(s=>s.class===teacherClass).forEach(student=>{
+      const li = document.createElement('li');
+      li.textContent = `${student.roll} - ${student.name}`;
+      const act = document.createElement('div'); act.className="action-buttons";
+      const e = document.createElement('button'); e.textContent="Edit";
+      e.onclick=()=>{ let n=prompt("New name:",student.name); if(n){ student.name=n; localStorage.setItem('students',JSON.stringify(students)); renderStudents(); } };
+      const d = document.createElement('button'); d.textContent="Delete";
+      d.onclick=()=>{ if(confirm(`Delete ${student.name}?`)){ students=students.filter(x=>x.roll!==student.roll||x.class!==teacherClass); localStorage.setItem('students',JSON.stringify(students)); renderStudents(); } };
+      act.append(e,d); li.append(act); studentsListEl.append(li);
     });
-    doc.save(`${title.replace(/ /g,"_")}_${d}.pdf`);
   }
 
-  function generateMonthlyPdf(m) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("l","pt","a4");
-    doc.text(`Monthly Attendance for ${m} (Class: ${teacherClass})`, 20, 30);
-    const cols = ["Roll","Name",...Array.from({length:31},(_,i)=>""+(i+1))];
-    const rows = students
-      .filter(s=>s.class===teacherClass)
-      .map(s => {
-        return [s.roll, s.name,
-          ...Array.from({length:31},(_,i)=>{
-            const key = `${m}-${String(i+1).padStart(2,"0")}`;
-            return attendanceData[key]?.[s.roll] || "";
-          })
-        ];
+  addStudentBtn.onclick = ()=>{
+    if(!teacherClass){ alert("Select class first."); return; }
+    const name=studentNameInput.value.trim(), pc=parentContactInput.value.trim();
+    if(!name){ alert("Enter student name."); return; }
+    const roll=generateRollNumber(teacherClass);
+    students.push({roll,name,class:teacherClass,parentContact:pc});
+    localStorage.setItem('students',JSON.stringify(students));
+    studentNameInput.value=parentContactInput.value="";
+    renderStudents();
+  };
+
+  function renderAttendanceForDate(date) {
+    attendanceListEl.innerHTML="";
+    const classStudents=students.filter(s=>s.class===teacherClass);
+    let attForDate=attendanceData[date]||{};
+    classStudents.forEach(student=>{
+      const div=document.createElement('div'); div.className="attendance-item";
+      const lbl=document.createElement('label');
+      lbl.textContent=`${student.roll} - ${student.name}`; div.append(lbl);
+
+      const btns=document.createElement('div'); btns.className="attendance-buttons";
+      ["P","A","L","Le"].forEach(code=>{
+        const b=document.createElement('button'); b.textContent=code; b.className="att-btn";
+        if(attForDate[student.roll]===code) b.classList.add('selected');
+        b.onclick=()=>{
+          attForDate[student.roll]=code;
+          btns.querySelectorAll('.att-btn').forEach(x=>x.classList.remove('selected'));
+          b.classList.add('selected');
+        };
+        btns.append(b);
       });
-    doc.autoTable({
-      head: [cols],
-      body: rows,
-      startY: 50,
-      theme: "grid",
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [33,150,243] }
+      div.append(btns);
+
+      const send=document.createElement('button');
+      send.textContent="Send"; send.className="send-btn";
+      send.onclick=()=>{
+        if(!dateInput.value){ alert("Select date first."); return; }
+        const st=attForDate[student.roll]||"Not Marked";
+        const msg=`Dear Parent,\n\nAttendance for your child (${student.name}, Roll: ${student.roll}) on ${date} (Class: ${teacherClass}) is: ${getConciseStatus(st)}.\n\nRegards,\nSchool Administration`;
+        if(!student.parentContact){ alert(`No contact for ${student.name}`); return; }
+        window.open("https://api.whatsapp.com/send?phone="+encodeURIComponent(student.parentContact)+
+                    "&text="+encodeURIComponent(msg), '_blank');
+      };
+      div.append(send);
+      attendanceListEl.append(div);
     });
-    doc.save(`Monthly_Attendance_${m}.pdf`);
+    attendanceData[date]=attForDate;
   }
 
-  // === WhatsApp Sharing Functions ===
-  function sendWhatsApp(title, d) {
-    let msg = `${title} for ${d} (Class: ${teacherClass})\n\n`;
-    const ad = attendanceData[d] || {};
-    students.filter(s=>s.class===teacherClass).forEach(s => {
-      msg += `${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}\n`;
+  loadAttendanceBtn.onclick=()=>{
+    const d=dateInput.value||alert("Select date."),_d=dateInput.value;
+    if(_d) renderAttendanceForDate(_d);
+  };
+  saveAttendanceBtn.onclick=()=>{
+    const d=dateInput.value||alert("Select date.");
+    if(d) { localStorage.setItem('attendanceData',JSON.stringify(attendanceData)); alert(`Attendance saved for ${d}`); }
+  };
+
+  // Daily PDF
+  downloadDailyPdfBtn.onclick=()=>{
+    const { jsPDF }=window.jspdf; const d=dateInput.value||alert("Select date.");
+    if(!d) return;
+    const doc=new jsPDF();
+    doc.text(`Daily Attendance for ${d} (Class: ${teacherClass})`,10,10);
+    let y=20; (attendanceData[d]||{}) && students.filter(s=>s.class===teacherClass).forEach(stu=>{
+      doc.text(`${stu.roll} - ${stu.name}: ${getConciseStatus((attendanceData[d]||{})[stu.roll])}`,10,y);
+      y+=10;
     });
-    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msg), "_blank");
-  }
+    doc.save(`Daily_Attendance_${d}.pdf`);
+  };
 
-  function sendWhatsAppMonthly(month) {
-    // Make month human‐readable
-    const [yr, mo] = month.split("-");
-    const monthName = new Date(yr, mo - 1)
-      .toLocaleString("default", { month: "long", year: "numeric" });
+  shareDailyWhatsAppBtn.onclick=()=>{
+    const d=dateInput.value||alert("Select date."); if(!d) return;
+    let msg=`Daily Attendance for ${d} (Class: ${teacherClass})\n\n`;
+    students.filter(s=>s.class===teacherClass).forEach(stu=>{
+      msg+=`${stu.roll} - ${stu.name}: ${getConciseStatus((attendanceData[d]||{})[stu.roll])}\n`;
+    });
+    window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg), '_blank');
+  };
 
-    let msg = `Monthly Attendance Report for ${monthName} (Class: ${teacherClass})\n\n`;
-
-    students.filter(s=>s.class===teacherClass).forEach(s => {
-      const presents = [], absents = [], lates = [], leaves = [];
-      for (let day = 1; day <= 31; day++) {
-        const dd = String(day).padStart(2,"0");
-        const key = `${month}-${dd}`;
-        const st  = attendanceData[key]?.[s.roll];
-        if (st === "P")  presents.push(dd);
-        if (st === "A")  absents.push(dd);
-        if (st === "L")  lates.push(dd);
-        if (st === "Le") leaves.push(dd);
+  // Bulk send to parents (unchanged)
+  sendParentsBtn.onclick=()=>{
+    const d=dateInput.value||alert("Select date."); if(!d) return;
+    let att=attendanceData[d]||{};
+    students.filter(s=>s.class===teacherClass).forEach((stu,i)=>{
+      if(stu.parentContact){
+        const st=att[stu.roll]||"Not Marked";
+        const msg=`Dear Parent,\n\nAttendance for your child (${stu.name}, Roll: ${stu.roll}) on ${d} (Class: ${teacherClass}) is: ${getConciseStatus(st)}.\n\nRegards,\nSchool Administration`;
+        setTimeout(()=>window.open("https://api.whatsapp.com/send?phone="+encodeURIComponent(stu.parentContact)+
+          "&text="+encodeURIComponent(msg),'_blank'), i*1500);
       }
-      msg += `${s.roll}. ${s.name}\n`;
-      if (presents .length) msg += `  Present: ${presents.join(", ")}\n`;
-      if (absents  .length) msg += `  Absent:  ${absents.join(", ")}\n`;
-      if (lates    .length) msg += `  Late:    ${lates.join(", ")}\n`;
-      if (leaves   .length) msg += `  Leave:   ${leaves.join(", ")}\n`;
-      msg += "\n";
     });
+  };
 
-    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msg), "_blank");
-  }
+  renderStudents();
 });
