@@ -43,11 +43,23 @@ li {
   margin-bottom: 6px; padding: 8px;
 }
 
-/* Attendance buttons */
-.attendance-item { display: flex; align-items: center; margin:6px 0; }
-.attendance-item span { flex: 1; }
+/* Attendance Buttons & Send */
+.attendance-item {
+  background: #e7f3fe;
+  border-radius: 4px;
+  margin: 6px 0;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.attendance-item span {
+  flex: 1 1 100%;
+  font-weight: bold;
+}
 .attendance-buttons {
-  display: flex; gap: 6px; width: 100%;
+  display: flex; gap: 6px; flex: 1 1 60%;
+  margin-top: 6px;
 }
 .att-btn {
   flex: 1;
@@ -60,8 +72,19 @@ li {
   text-align: center;
 }
 .att-btn.selected {
+  background: var(--primary);
+  color: #fff;
+}
+.send-btn {
+  flex: 1 1 30%;
+  margin-top: 6px;
+  padding: 10px;
   background: var(--success);
   color: #fff;
+  border: none;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
 }
 
 /* Table scroll */
