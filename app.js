@@ -15,11 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const dateInput   = document.getElementById("dateInput");
   const monthInput  = document.getElementById("monthInput");
 
-  const waModal     = document.getElementById("whatsappOptionsModal");
-  const waCurBtn    = document.getElementById("waCurrentBtn");
-  const waDayBtn    = document.getElementById("waDailyBtn");
-  const waMonBtn    = document.getElementById("waMonthlyBtn");
-  const waCloseBtn  = document.getElementById("closeWaModalBtn");
+  const exportPdfBtn     = document.getElementById("exportPdf");
+  const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
 
   const pdfModal     = document.getElementById("pdfOptionsModal");
   const pdfCurBtn    = document.getElementById("pdfCurrentReportBtn");
@@ -27,130 +24,105 @@ document.addEventListener("DOMContentLoaded", () => {
   const pdfMonBtn    = document.getElementById("pdfMonthlyReportBtn");
   const pdfCloseBtn  = document.getElementById("closePdfModalBtn");
 
-  const exportPdfBtn     = document.getElementById("exportPdf");
-  const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
+  const waModal      = document.getElementById("whatsappOptionsModal");
+  const waCurBtn     = document.getElementById("waCurrentBtn");
+  const waDayBtn     = document.getElementById("waDailyBtn");
+  const waMonBtn     = document.getElementById("waMonthlyBtn");
+  const waCloseBtn   = document.getElementById("closeWaModalBtn");
 
+  // === Storage ===
   let teacherClass   = localStorage.getItem("teacherClass")   || "";
   let students       = JSON.parse(localStorage.getItem("students"))       || [];
   let attendanceData = JSON.parse(localStorage.getItem("attendanceData")) || {};
 
-  // === WhatsApp handlers ===
-
-  // 1) Current
-  waCurBtn.onclick = () => {
-    const d = dateInput.value || new Date().toISOString().slice(0,10);
-    sendWhatsApp("Current Attendance", d);
-    closeModal(waModal);
-  };
-
-  // 2) Daily: open picker & auto-send on change
-  waDayBtn.onclick = () => {
-    if (!dateInput.value) {
-      dateInput.showPicker?.() ?? dateInput.focus();
-      const handler = () => {
-        sendWhatsApp("Daily Attendance", dateInput.value);
-        dateInput.removeEventListener("change", handler);
-        closeModal(waModal);
-      };
-      dateInput.addEventListener("change", handler);
-      return;
-    }
-    sendWhatsApp("Daily Attendance", dateInput.value);
-    closeModal(waModal);
-  };
-
-  // 3) Monthly: open month picker & auto-send on change
-  waMonBtn.onclick = () => {
-    if (!monthInput.value) {
-      monthInput.showPicker?.() ?? monthInput.focus();
-      const handler = () => {
-        sendWhatsAppMonthly(monthInput.value);
-        monthInput.removeEventListener("change", handler);
-        closeModal(waModal);
-      };
-      monthInput.addEventListener("change", handler);
-      return;
-    }
-    sendWhatsAppMonthly(monthInput.value);
-    closeModal(waModal);
-  };
-
-  waCloseBtn.onclick = () => closeModal(waModal);
-  shareWhatsAppBtn.onclick = () => showModal(waModal);
-
-  // === PDF modal wiring (similar pattern could be added there if desired) ===
+  // === PDF Modal Wiring ===
   exportPdfBtn.onclick = () => showModal(pdfModal);
   pdfCloseBtn.onclick  = () => closeModal(pdfModal);
-  pdfCurBtn.onclick    = () => {
+
+  pdfCurBtn.onclick = () => {
     const d = dateInput.value || new Date().toISOString().slice(0,10);
     generatePdf("Current Attendance", d);
     closeModal(pdfModal);
   };
-  pdfDayBtn.onclick    = () => {
+
+  pdfDayBtn.onclick = () => {
     if (!dateInput.value) {
       dateInput.showPicker?.() ?? dateInput.focus();
-      const h = () => {
+      dateInput.onchange = () => {
         generatePdf("Daily Attendance", dateInput.value);
-        dateInput.removeEventListener("change", h);
+        dateInput.onchange = null;
         closeModal(pdfModal);
       };
-      dateInput.addEventListener("change", h);
       return;
     }
     generatePdf("Daily Attendance", dateInput.value);
     closeModal(pdfModal);
   };
-  pdfMonBtn.onclick    = () => {
+
+  pdfMonBtn.onclick = () => {
     if (!monthInput.value) {
       monthInput.showPicker?.() ?? monthInput.focus();
-      const h = () => {
+      monthInput.onchange = () => {
         generateMonthlyPdf(monthInput.value);
-        monthInput.removeEventListener("change", h);
+        monthInput.onchange = null;
         closeModal(pdfModal);
       };
-      monthInput.addEventListener("change", h);
       return;
     }
     generateMonthlyPdf(monthInput.value);
     closeModal(pdfModal);
   };
 
-  // === Sharing functions ===
-  function sendWhatsApp(title, d) {
-    let msg = `${title} for ${d} (Class: ${teacherClass})\n\n`;
-    const ad = attendanceData[d] || {};
-    students.filter(s=>s.class===teacherClass).forEach(s=>{
-      msg += `${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}\n`;
-    });
-    window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg), "_blank");
-  }
+  // === WhatsApp Modal Wiring ===
+  shareWhatsAppBtn.onclick = () => showModal(waModal);
+  waCloseBtn.onclick       = () => closeModal(waModal);
 
-  function sendWhatsAppMonthly(m) {
-    let msg = `Monthly Attendance for ${m} (Class: ${teacherClass})\nRoll-Name`;
-    for(let i=1;i<=31;i++) msg+=` | ${i}`; msg+="\n";
-    students.filter(s=>s.class===teacherClass).forEach(s=>{
-      msg += `${s.roll}-${s.name}`;
-      for(let i=1;i<=31;i++){
-        const key = `${m}-${String(i).padStart(2,"0")}`;
-        msg += ` | ${attendanceData[key]?.[s.roll]||""}`;
-      }
-      msg += "\n";
-    });
-    window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg), "_blank");
-  }
+  waCurBtn.onclick = () => {
+    const d = dateInput.value || new Date().toISOString().slice(0,10);
+    sendWhatsApp("Current Attendance", d);
+    closeModal(waModal);
+  };
 
-  // === PDF generation functions ===
+  waDayBtn.onclick = () => {
+    if (!dateInput.value) {
+      dateInput.showPicker?.() ?? dateInput.focus();
+      dateInput.onchange = () => {
+        sendWhatsApp("Daily Attendance", dateInput.value);
+        dateInput.onchange = null;
+        closeModal(waModal);
+      };
+      return;
+    }
+    sendWhatsApp("Daily Attendance", dateInput.value);
+    closeModal(waModal);
+  };
+
+  waMonBtn.onclick = () => {
+    if (!monthInput.value) {
+      monthInput.showPicker?.() ?? monthInput.focus();
+      monthInput.onchange = () => {
+        sendWhatsAppMonthly(monthInput.value);
+        monthInput.onchange = null;
+        closeModal(waModal);
+      };
+      return;
+    }
+    sendWhatsAppMonthly(monthInput.value);
+    closeModal(waModal);
+  };
+
+  // === Report Generation Functions ===
   function generatePdf(title, d) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.text(`${title} for ${d} (Class: ${teacherClass})`, 10, 10);
     let y = 20;
-    const ad = attendanceData[d]||{};
-    students.filter(s=>s.class===teacherClass).forEach(s=>{
-      doc.text(`${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}`,10,y);
-      y+=10;
+    const ad = attendanceData[d] || {};
+    students.filter(s => s.class === teacherClass).forEach(s => {
+      doc.text(`${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}`, 10, y);
+      y += 10;
     });
-    doc.save(`${title.replace(" ","_")}_${d}.pdf`);
+    doc.save(`${title.replace(/ /g,"_")}_${d}.pdf`);
   }
 
   function generateMonthlyPdf(m) {
@@ -158,22 +130,64 @@ document.addEventListener("DOMContentLoaded", () => {
     const doc = new jsPDF("l","pt","a4");
     doc.text(`Monthly Attendance for ${m} (Class: ${teacherClass})`, 20, 30);
     const cols = ["Roll","Name",...Array.from({length:31},(_,i)=>""+(i+1))];
-    const rows = students.filter(s=>s.class===teacherClass).map(s=>{
-      return [s.roll, s.name,
-        ...Array.from({length:31},(_,i)=>{
-          const key = `${m}-${String(i+1).padStart(2,"0")}`;
-          return attendanceData[key]?.[s.roll]||"";
-        })
-      ];
-    });
+    const rows = students
+      .filter(s=>s.class===teacherClass)
+      .map(s => {
+        return [s.roll, s.name,
+          ...Array.from({length:31},(_,i)=>{
+            const key = `${m}-${String(i+1).padStart(2,"0")}`;
+            return attendanceData[key]?.[s.roll] || "";
+          })
+        ];
+      });
     doc.autoTable({
-      head:[cols],
-      body:rows,
-      startY:50,
-      theme:"grid",
-      styles:{fontSize:8},
-      headStyles:{fillColor:[33,150,243]}
+      head: [cols],
+      body: rows,
+      startY: 50,
+      theme: "grid",
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [33,150,243] }
     });
     doc.save(`Monthly_Attendance_${m}.pdf`);
+  }
+
+  // === WhatsApp Sharing Functions ===
+  function sendWhatsApp(title, d) {
+    let msg = `${title} for ${d} (Class: ${teacherClass})\n\n`;
+    const ad = attendanceData[d] || {};
+    students.filter(s=>s.class===teacherClass).forEach(s => {
+      msg += `${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"")}\n`;
+    });
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msg), "_blank");
+  }
+
+  function sendWhatsAppMonthly(month) {
+    // Make month human‐readable
+    const [yr, mo] = month.split("-");
+    const monthName = new Date(yr, mo - 1)
+      .toLocaleString("default", { month: "long", year: "numeric" });
+
+    let msg = `Monthly Attendance Report for ${monthName} (Class: ${teacherClass})\n\n`;
+
+    students.filter(s=>s.class===teacherClass).forEach(s => {
+      const presents = [], absents = [], lates = [], leaves = [];
+      for (let day = 1; day <= 31; day++) {
+        const dd = String(day).padStart(2,"0");
+        const key = `${month}-${dd}`;
+        const st  = attendanceData[key]?.[s.roll];
+        if (st === "P")  presents.push(dd);
+        if (st === "A")  absents.push(dd);
+        if (st === "L")  lates.push(dd);
+        if (st === "Le") leaves.push(dd);
+      }
+      msg += `${s.roll}. ${s.name}\n`;
+      if (presents .length) msg += `  Present: ${presents.join(", ")}\n`;
+      if (absents  .length) msg += `  Absent:  ${absents.join(", ")}\n`;
+      if (lates    .length) msg += `  Late:    ${lates.join(", ")}\n`;
+      if (leaves   .length) msg += `  Leave:   ${leaves.join(", ")}\n`;
+      msg += "\n";
+    });
+
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msg), "_blank");
   }
 });
