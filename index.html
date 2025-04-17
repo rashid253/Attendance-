@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Professional Attendance System</title>
+  <title>Classwise Attendance Management System</title>
   <link rel="stylesheet" href="style.css" />
   <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -12,7 +12,7 @@
 </head>
 <body>
   <header>
-    <h1>Attendance Management</h1>
+    <h1>Attendance Management System</h1>
     <p>Class/Section: <span id="teacherClassHeader">None</span></p>
   </header>
 
@@ -20,21 +20,27 @@
     <!-- Teacher Setup -->
     <section id="teacher-setup">
       <h2>Teacher Setup</h2>
-      <label for="teacherClassSelect">Select Class:</label>
-      <select id="teacherClassSelect">
-        <option value="">--Select Class--</option>
-        <option>Play Group</option><option>Nursery</option><option>Prep</option>
-        <option>Pre One</option><option>One</option><option>Two</option>
-        <option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option>
-        <option>Nine</option><option>Ten</option>
-      </select>
-      <label for="teacherSectionSelect">Select Section:</label>
-      <select id="teacherSectionSelect">
-        <option value="">--Select Section--</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <button id="saveTeacherClass">Save</button>
+      <div class="row">
+        <div>
+          <label for="teacherClassSelect">Class:</label>
+          <select id="teacherClassSelect">
+            <option value="">--Select Class--</option>
+            <option>Play Group</option><option>Nursery</option><option>Prep</option>
+            <option>Pre One</option><option>One</option><option>Two</option>
+            <option>Three</option><option>Four</option><option>Five</option>
+            <option>Six</option><option>Seven</option><option>Eight</option>
+            <option>Nine</option><option>Ten</option>
+          </select>
+        </div>
+        <div>
+          <label for="teacherSectionSelect">Section:</label>
+          <select id="teacherSectionSelect">
+            <option value="">--Select Section--</option>
+            <option>A</option><option>B</option><option>C</option>
+          </select>
+        </div>
+      </div>
+      <button id="saveTeacherClass">Save Class &amp; Section</button>
     </section>
 
     <!-- Student Registration -->
@@ -42,27 +48,32 @@
       <h2>Student Registration</h2>
       <input type="text" id="studentName" placeholder="Student Name" />
       <input type="text" id="admissionNo" placeholder="Admission No (optional)" />
-      <input type="text" id="parentContact" placeholder="Parent Contact" />
+      <input type="text" id="parentContact" placeholder="Parent Contact (+923...)" />
       <button id="addStudent">Add Student</button>
-      <h3>Students List</h3>
+      <h3>Student List</h3>
       <ul id="students"></ul>
     </section>
 
     <!-- Attendance Marking -->
     <section id="attendance-section">
       <h2>Mark Attendance</h2>
-      <label for="dateInput">Select Date:</label>
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance">Load</button>
+      <div class="row-inline">
+        <label for="dateInput">Date:</label>
+        <input type="date" id="dateInput" />
+        <button id="loadAttendance">Load</button>
+      </div>
       <div id="attendanceList"></div>
-      <button id="saveAttendance">Save</button>
+      <button id="saveAttendance">Save Attendance</button>
     </section>
 
     <!-- Monthly View & Summary -->
     <section id="monthly-summary">
-      <h2>Monthly View & Summary</h2>
-      <input type="month" id="monthInput" />
-      <button id="loadMonth">Show</button>
+      <h2>Monthly View &amp; Summary</h2>
+      <div class="row-inline">
+        <label for="monthInput">Month:</label>
+        <input type="month" id="monthInput" />
+        <button id="loadMonth">Show</button>
+      </div>
       <div class="table-container" id="monthTable"></div>
       <h3>Summary</h3>
       <div id="summaryReport"></div>
@@ -70,7 +81,7 @@
 
     <!-- Reports & Share -->
     <section id="reports">
-      <h2>Reports & Share</h2>
+      <h2>Reports &amp; Share</h2>
       <button id="exportPdf">Download PDF</button>
       <button id="shareWhatsApp">Share on WhatsApp</button>
     </section>
@@ -79,30 +90,30 @@
   <!-- PDF Options Modal -->
   <div id="pdfOptionsModal" class="modal">
     <div class="modal-content">
-      <h3>Select PDF Report</h3>
+      <h3>PDF Report</h3>
       <button id="pdfCurrentReportBtn">Current Attendance</button>
       <button id="pdfDailyReportBtn">Daily Attendance</button>
       <button id="pdfMonthlyReportBtn">Monthly Attendance</button>
-      <button id="closePdfModalBtn" class="cancel">Cancel</button>
-      <div style="margin-top:10px;">
+      <div class="row-inline">
         <label for="pdfMonthInput">For Month:</label>
         <input type="month" id="pdfMonthInput" />
       </div>
+      <button id="closePdfModalBtn" class="cancel">Cancel</button>
     </div>
   </div>
 
   <!-- WhatsApp Options Modal -->
   <div id="whatsappOptionsModal" class="modal">
     <div class="modal-content">
-      <h3>Select WhatsApp Report</h3>
+      <h3>WhatsApp Report</h3>
       <button id="waCurrentBtn">Current Attendance</button>
       <button id="waDailyBtn">Daily Attendance</button>
       <button id="waMonthlyBtn">Monthly Attendance</button>
-      <button id="closeWaModalBtn" class="cancel">Cancel</button>
-      <div style="margin-top:10px;">
+      <div class="row-inline">
         <label for="waMonthInput">For Month:</label>
         <input type="month" id="waMonthInput" />
       </div>
+      <button id="closeWaModalBtn" class="cancel">Cancel</button>
     </div>
   </div>
 
