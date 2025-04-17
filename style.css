@@ -1,11 +1,19 @@
 body {
   font-family: Arial, sans-serif;
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 header {
-  background: #2196F3; color: white;
-  padding: 15px; text-align: center;
+  background-color: #2196F3;
+  color: white;
+  padding: 15px 0;
+  text-align: center;
+}
+
+.current-class {
+  font-size: 1.1em;
+  margin-top: 5px;
 }
 
 main {
@@ -20,16 +28,19 @@ section {
 }
 
 input, select, button, textarea {
-  display: block;
-  margin: 5px 0;
   padding: 8px;
+  margin: 5px 0;
   width: 100%;
   max-width: 300px;
   box-sizing: border-box;
 }
 
+textarea {
+  resize: vertical;
+}
+
 ul {
-  list-style: none;
+  list-style-type: none;
   padding-left: 0;
 }
 
@@ -44,10 +55,18 @@ li {
 }
 
 .attendance-item {
-  background: #e7f3fe;
-  padding: 8px;
-  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
   margin: 8px 0;
+  padding: 8px;
+  background: #e7f3fe;
+  border-radius: 4px;
+}
+
+.attendance-item label {
+  font-weight: bold;
 }
 
 .attendance-buttons {
@@ -58,58 +77,28 @@ li {
 
 .att-btn {
   flex: 1;
-  padding: 5px;
+  padding: 5px 8px;
+  font-size: 0.9em;
   border: 1px solid #2196F3;
+  background-color: #fff;
   border-radius: 3px;
-  background: white;
-  cursor: pointer;
 }
 
 .att-btn.selected {
-  background: #2196F3;
-  color: white;
+  background-color: #2196F3;
+  color: #fff;
 }
 
 .send-btn {
   margin-top: 5px;
-  padding: 5px;
-  background: #4CAF50;
-  color: white;
+  padding: 5px 10px;
+  font-size: 0.9em;
+  background-color: #4CAF50;
+  color: #fff;
   border: none;
   border-radius: 3px;
-  cursor: pointer;
 }
 
 .action-buttons button {
   margin-left: 5px;
-}
-
-/* Modal – shared by PDF and WhatsApp */
-#pdfOptionsModal,
-#whatsappOptionsModal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  overflow: auto;
-  background: rgba(0,0,0,0.4);
-}
-
-#pdfOptionsModal .modal-content,
-#whatsappOptionsModal .modal-content {
-  background: #fefefe;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%;
-  max-width: 400px;
-  text-align: center;
-}
-
-#pdfOptionsModal .modal-content button,
-#whatsappOptionsModal .modal-content button {
-  margin: 5px;
-  padding: 10px 20px;
-  cursor: pointer;
 }
