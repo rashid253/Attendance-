@@ -4,17 +4,14 @@
   --primary: #2196F3;
   --success: #4CAF50;
   --danger:  #f44336;
-  --warning: #ffeb3b;
   --info:    #03a9f4;
-  --leave:   #ff9800;
   --light:   #f2f2f2;
   --dark:    #333;
 }
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  margin: 0; padding: 0;
 }
 
 body {
@@ -39,10 +36,8 @@ section {
 }
 
 .row-inline {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+  display: flex; gap: 10px;
+  align-items: center; flex-wrap: wrap;
 }
 
 input, select, button {
@@ -58,9 +53,7 @@ button {
   transition: opacity .2s;
 }
 
-button:hover {
-  opacity: .9;
-}
+button:hover { opacity: .9; }
 
 button.small {
   background: var(--success);
@@ -68,9 +61,7 @@ button.small {
   font-size: .9em;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 ul {
   list-style: none;
@@ -93,50 +84,37 @@ section#student-registration ul li span {
   flex: 1;
 }
 .button-group {
-  display: flex;
-  gap: 6px;
+  display: flex; gap: 6px;
 }
 
-/* Attendance Item */
+/* Attendance items */
 .attendance-item {
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   background: #e7f3fe;
   border-radius: 4px;
-  margin: 6px 0;
-  padding: 8px;
+  margin: 6px 0; padding: 8px;
 }
-
 .attendance-item .att-name {
-  font-weight: bold;
-  margin-bottom: 6px;
+  font-weight: bold; margin-bottom: 6px;
 }
-
 .attendance-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
 }
-
 .attendance-buttons {
-  display: flex;
-  gap: 6px;
+  display: flex; gap: 6px;
 }
-
 .att-btn {
-  padding: 8px;
-  font-size: 1em;
+  padding: 8px; font-size: 1em;
   border: 1px solid var(--primary);
   background: transparent;
   color: var(--dark);
   font-weight: bold;
 }
-
 .att-btn.selected.P  { background: var(--success); color: #fff; }
 .att-btn.selected.A  { background: var(--danger);  color: #fff; }
-.att-btn.selected.Lt { background: var(--warning); color: #000; }
-.att-btn.selected.HD { background: orange;        color: #fff; }
-.att-btn.selected.L  { background: blue;          color: #fff; }
+.att-btn.selected.Lt { background: var(--info);    color: #fff; }
+.att-btn.selected.HD { background: var(--info);    color: #fff; }
+.att-btn.selected.L  { background: var(--info);    color: #fff; }
 
 .send-btn {
   background: var(--success);
@@ -146,23 +124,15 @@ section#student-registration ul li span {
   padding: 8px 12px;
 }
 
-/* Attendance Summary */
+/* Attendance summary — plain text, no colors */
 .attendance-summary li {
   font-weight: bold;
-  display: flex;
-  gap: 6px;
+  margin: 4px 0;
 }
 
-.attendance-summary li .status-P  { color: var(--success); }
-.attendance-summary li .status-A  { color: var(--danger);  }
-.attendance-summary li .status-Lt { color: var(--warning); }
-.attendance-summary li .status-HD { color: orange;        }
-.attendance-summary li .status-L  { color: blue;          }
-
-/* Analytics Section */
+/* Analytics */
 .table-container {
-  overflow-x: auto;
-  margin-top: 10px;
+  overflow-x: auto; margin-top: 10px;
 }
 
 @media (max-width: 600px) {
