@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
         today = () => new Date().toISOString().slice(0,10),
         getStatusText = s => ({ P:"Present", A:"Absent", L:"Leave", Lt:"Late", HD:"Half Day" }[s]||"Not Marked");
 
-  // DOM refs
+  // Refs
   const clsSel    = $("teacherClassSelect"),
         secSel    = $("teacherSectionSelect"),
         saveCls   = $("saveTeacherClass"),
@@ -102,16 +102,31 @@ document.addEventListener("DOMContentLoaded", () => {
     students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s => {
         const li = document.createElement("li");
-        li.innerHTML = `${s.roll} - ${s.name} ${s.admissionNo? `(Adm: ${s.admissionNo})`: ""}`;
-        const del = document.createElement("button");
-        del.textContent = "Delete";
-        del.onclick = () => {
+        // Show name, admission no if any, and contact
+        li.innerHTML = `
+          <span>${s.roll} - ${s.name}${s.admissionNo? ` (Adm: ${s.admissionNo})`: ""}</span>
+          <div>
+            <button class="small edit-student">Edit</button>
+            <button class="small" style="background:var(--danger)">Delete</button>
+          </div>`;
+        // Delete
+        li.querySelector("button:nth-child(2)").onclick = () => {
           if (!confirm(`Delete ${s.name}?`)) return;
           students = students.filter(x=>x!==s);
           localStorage.setItem("students", JSON.stringify(students));
           renderStudents();
         };
-        li.append(del);
+        // Edit
+        li.querySelector(".edit-student").onclick = () => {
+          const newName = prompt("Name:", s.name);
+          if (newName !== null) s.name = newName.trim() || s.name;
+          const newAdm = prompt("Admission No (optional):", s.admissionNo);
+          if (newAdm !== null) s.admissionNo = newAdm.trim();
+          const newPc = prompt("Parent Contact:", s.parentContact);
+          if (newPc !== null) s.parentContact = newPc.trim();
+          localStorage.setItem("students", JSON.stringify(students));
+          renderStudents();
+        };
         listStd.append(li);
       });
   }
@@ -124,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
   saveDay.onclick = () => {
     if (!dateIn.value) return dateIn.showPicker?.() ?? dateIn.focus();
     localStorage.setItem("attendanceData", JSON.stringify(attendanceData));
-    // hide setup when saving attendance
     formSetup.classList.add("hidden");
     dispSetup.classList.add("hidden");
     alert("Saved for " + dateIn.value);
@@ -137,7 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
       .forEach(s => {
         const div = document.createElement("div");
         div.className = "attendance-item";
-        div.innerHTML = `<span>${s.roll} - ${s.name}</span>`;
+        // Student label
+        const label = document.createElement("span");
+        label.textContent = `${s.roll} - ${s.name}`;
+        div.append(label);
+        // Status buttons
         const btns = document.createElement("div");
         btns.className = "attendance-buttons";
         ["P","A","Lt","L","HD"].forEach(code => {
@@ -153,6 +171,18 @@ document.addEventListener("DOMContentLoaded", () => {
           btns.append(b);
         });
         div.append(btns);
+        // Send WhatsApp
+        const send = document.createElement("button");
+        send.className = "send-btn";
+        send.textContent = "Send";
+        send.onclick = () => {
+          if (!dateIn.value) return;
+          const status = getStatusText(dayData[s.roll]||"");
+          const msg = `Attendance for ${s.name} (Roll:${s.roll}) on ${d} (Class:${teacherClass}-${teacherSection}): ${status}`;
+          const phone = s.parentContact.replace(/[^0-9]/g,"");
+          window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`);
+        };
+        div.append(send);
         listDay.append(div);
       });
   }
@@ -168,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const [y,mm] = m.split("-"), days = new Date(y,mm,0).getDate();
     let html = `<table><tr><th>Roll</th><th>Name</th>`;
     html += Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join("");
-    html += `</tr>`;
+    html += "</tr>";
     students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s => {
         html += `<tr><td>${s.roll}</td><td>${s.name}</td>`;
@@ -176,9 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const key = `${m}-${String(d).padStart(2,"0")}`;
           html += `<td>${attendanceData[key]?.[s.roll]||""}</td>`;
         }
-        html += `</tr>`;
+        html += "</tr>";
       });
-    monTable.innerHTML = html + `</table>`;
+    monTable.innerHTML = html + "</table>";
   }
 
   function renderSummary(m) {
@@ -190,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let d=1; d<=days; d++){
           const key = `${m}-${String(d).padStart(2,"0")}`;
           const st = attendanceData[key]?.[s.roll];
-          if (cnt[st]!==undefined) cnt[st]++; 
+          if (cnt[st]!==undefined) cnt[st]++;
         }
         const pres = cnt.P + cnt.Lt + cnt.HD,
               pct = Math.round(pres / days * 100);
@@ -199,31 +229,35 @@ document.addEventListener("DOMContentLoaded", () => {
     summary.innerHTML = out;
   }
 
-  // Reports & Share
+  // Reports & Share Modals
   expPdf.onclick = () => pdfModal.style.display = "flex";
   shpWA.onclick  = () => waModal.style.display = "flex";
   pdfClose.onclick = () => pdfModal.style.display = "none";
   waClose.onclick  = () => waModal.style.display = "none";
 
-  // Dynamic button text & color
+  // Dynamic text/color
   dateIn.onchange = () => {
-    const d = dateIn.value;
-    pdfDay.textContent = `Download Daily Report (${d})`;
-    pdfDay.classList.add("highlight");
-    waDay.textContent  = `Share Daily Report (${d})`;
-    waDay.classList.add("highlight");
+    if (dateIn.value) {
+      pdfDay.textContent = `Download Daily Report (${dateIn.value})`;
+      pdfDay.classList.add("highlight");
+      waDay.textContent  = `Share Daily Report (${dateIn.value})`;
+      waDay.classList.add("highlight");
+    }
   };
   pdfMonIn.onchange = () => {
-    const m = pdfMonIn.value;
-    pdfMon.textContent = `Get Monthly Report (${m})`;
-    pdfMon.classList.add("highlight");
+    if (pdfMonIn.value) {
+      pdfMon.textContent = `Get Monthly Report (${pdfMonIn.value})`;
+      pdfMon.classList.add("highlight");
+    }
   };
   waMonIn.onchange = () => {
-    const m = waMonIn.value;
-    waMon.textContent = `Share Monthly Report (${m})`;
-    waMon.classList.add("highlight");
+    if (waMonIn.value) {
+      waMon.textContent = `Share Monthly Report (${waMonIn.value})`;
+      waMon.classList.add("highlight");
+    }
   };
 
+  // PDF & WA actions
   pdfCur.onclick = () => { genPdf("Current Attendance", today()); pdfModal.style.display="none"; };
   pdfDay.onclick = () => { genPdf("Daily Attendance", dateIn.value); pdfModal.style.display="none"; };
   pdfMon.onclick = () => { genMonthlyPdf(pdfMonIn.value); pdfModal.style.display="none"; };
@@ -235,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function genPdf(title,d) {
     const { jsPDF } = window.jspdf, doc = new jsPDF();
     doc.text(`${title} for ${d} (${teacherClass}-${teacherSection})`,10,10);
-    let y=20, dayData = attendanceData[d]||{};
+    let y=20, dayData=attendanceData[d]||{};
     students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{ doc.text(`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}`,10,y); y+=10; });
     doc.save(`${title.replace(/\s+/g,"_")}_${d}.pdf`);
@@ -244,8 +278,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const { jsPDF } = window.jspdf, doc = new jsPDF("l","pt","a4");
     doc.text(`Monthly Attendance for ${m} (${teacherClass}-${teacherSection})`,20,30);
     const [y,mm] = m.split("-"), days = new Date(y,mm,0).getDate();
-    const cols = ["Roll","Name",...Array.from({length:days},(_,i)=>(i+1).toString())];
-    const rows = students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
+    const cols=["Roll","Name",...Array.from({length:days},(_,i)=>(i+1).toString())];
+    const rows=students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .map(s=>[s.roll,s.name,...Array.from({length:days},(_,i)=>{
         const key=`${m}-${String(i+1).padStart(2,"0")}`;
         return attendanceData[key]?.[s.roll]||"";
@@ -256,7 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function sendWA(title,d) {
     let msg=`${title} for ${d} (${teacherClass}-${teacherSection})\n\n`,
-        dayData = attendanceData[d]||{};
+        dayData=attendanceData[d]||{};
     students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=> msg+=`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}\n`);
     window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg),"_blank");
