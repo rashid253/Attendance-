@@ -1,99 +1,117 @@
 // app.js
 document.addEventListener("DOMContentLoaded", () => {
-  // === Helpers ===
-  function getStatusText(s) {
-    return {
-      P: "Present",
-      A: "Absent",
-      L: "Late",
-      Le: "Leave"
-    }[s] || "-";
-  }
+  // ... other refs and code unchanged ...
 
-  function showModal(modal) { modal.style.display = "block"; }
-  function closeModal(modal){ modal.style.display = "none"; }
+  // WhatsApp modal refs
+  const shareWhatsAppBtn = document.getElementById("shareWhatsApp");
+  const waModal         = document.getElementById("whatsappOptionsModal");
+  const waSendBtn       = document.getElementById("waSendBtn");
+  const waCloseBtn      = document.getElementById("closeWaModalBtn");
+  const waTypeInputs    = document.querySelectorAll('input[name="waType"]');
+  const waDateContainer = document.getElementById("waDateContainer");
+  const waMonthContainer= document.getElementById("waMonthContainer");
+  const waDateInput     = document.getElementById("waDateInput");
+  const waMonthInput    = document.getElementById("waMonthInput");
 
-  // === Refs ===
-  const dateInput         = document.getElementById("dateInput");
-  const exportPdfBtn      = document.getElementById("exportPdf");
-  const shareWhatsAppBtn  = document.getElementById("shareWhatsApp");
+  // Show modal
+  shareWhatsAppBtn.addEventListener("click", () => {
+    resetWaModal();
+    waModal.style.display = "block";
+  });
+  waCloseBtn.addEventListener("click", () => waModal.style.display = "none");
 
-  const pdfModal     = document.getElementById("pdfOptionsModal");
-  const pdfCurBtn    = document.getElementById("pdfCurrentReportBtn");
-  const pdfDayBtn    = document.getElementById("pdfDailyReportBtn");
-  const pdfMonBtn    = document.getElementById("pdfMonthlyReportBtn");
-  const pdfCloseBtn  = document.getElementById("closePdfModalBtn");
+  // Switch containers when type changes
+  waTypeInputs.forEach(radio => {
+    radio.addEventListener("change", () => {
+      waDateInput.value = "";
+      waMonthInput.value = "";
+      waSendBtn.disabled = false; // current always ready
+      if (radio.value === "current") {
+        waDateContainer.style.display = "none";
+        waMonthContainer.style.display= "none";
+      } else if (radio.value === "daily") {
+        waDateContainer.style.display = "block";
+        waMonthContainer.style.display= "none";
+        waSendBtn.disabled = true;
+      } else { // monthly
+        waDateContainer.style.display = "none";
+        waMonthContainer.style.display= "block";
+        waSendBtn.disabled = true;
+      }
+    });
+  });
 
-  const waModal      = document.getElementById("whatsappOptionsModal");
-  const waCurBtn     = document.getElementById("waCurrentBtn");
-  const waDayBtn     = document.getElementById("waDailyBtn");
-  const waMonBtn     = document.getElementById("waMonthlyBtn");
-  const waCloseBtn   = document.getElementById("closeWaModalBtn");
-  const waMonthInput = document.getElementById("waMonthInput");
+  // Enable Send when date/month picked
+  waDateInput.addEventListener("input", () => {
+    const dailySelected = document.getElementById("waTypeDay").checked;
+    waSendBtn.disabled = dailySelected ? !waDateInput.value : false;
+  });
+  waMonthInput.addEventListener("input", () => {
+    const monSelected = document.getElementById("waTypeMon").checked;
+    waSendBtn.disabled = monSelected ? !waMonthInput.value : false;
+  });
 
-  // storage & other refs omitted for brevity...
-  let teacherClass   = localStorage.getItem("teacherClass")   || "";
-  let students       = JSON.parse(localStorage.getItem("students"))       || [];
-  let attendanceData = JSON.parse(localStorage.getItem("attendanceData")) || {};
-
-  // === Enable WhatsApp buttons on input ===
-  dateInput.addEventListener("change", () => {
-    if (dateInput.value) {
-      waDayBtn.disabled = false;
-      waDayBtn.classList.add("active-btn");
-    } else {
-      waDayBtn.disabled = true;
-      waDayBtn.classList.remove("active-btn");
+  // On Send click
+  waSendBtn.addEventListener("click", () => {
+    const type = document.querySelector('input[name="waType"]:checked').value;
+    let msg, key, d, m;
+    if (type === "current") {
+      d = new Date().toISOString().slice(0,10);
+      msg = buildMessage("Current Attendance", d);
     }
-  });
-  waMonthInput.addEventListener("change", () => {
-    if (waMonthInput.value) {
-      waMonBtn.disabled = false;
-      waMonBtn.classList.add("active-btn");
-    } else {
-      waMonBtn.disabled = true;
-      waMonBtn.classList.remove("active-btn");
+    else if (type === "daily") {
+      d = waDateInput.value;
+      msg = buildMessage("Daily Attendance", d);
     }
+    else { // monthly
+      m = waMonthInput.value; // YYYY-MM
+      msg = buildMonthlyMessage("Monthly Attendance", m);
+    }
+    window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent(msg), "_blank");
+    waModal.style.display = "none";
   });
 
-  // === WhatsApp Modal Actions ===
-  shareWhatsAppBtn.addEventListener("click", () => showModal(waModal));
-  waCloseBtn.addEventListener("click", () => closeModal(waModal));
-
-  waCurBtn.addEventListener("click", () => {
-    const d = dateInput.value || new Date().toISOString().slice(0,10);
-    sendWhatsApp("Current Attendance", d);
-    closeModal(waModal);
-  });
-
-  waDayBtn.addEventListener("click", () => {
-    // button is disabled until date selected
-    sendWhatsApp("Daily Attendance", dateInput.value);
-    closeModal(waModal);
-  });
-
-  waMonBtn.addEventListener("click", () => {
-    // button is disabled until month selected
-    sendWhatsAppMonthly(waMonthInput.value);
-    closeModal(waModal);
-  });
-
-  // simplified monthly message format
-  function sendWhatsAppMonthly(m) {
-    let msg = `Monthly Attendance for ${m} (Class:${teacherClass})\n`;
+  // Build the standard (current/daily) message
+  function buildMessage(title, date) {
+    let out = `${title} for ${date} (Class:${teacherClass})\n\n`;
+    const ad = attendanceData[date] || {};
     students
       .filter(s => s.class === teacherClass)
       .forEach(s => {
-        const codes = [];
-        for (let d=1; d<=31; d++) {
-          const key = `${m}-${String(d).padStart(2,"0")}`;
-          codes.push(attendanceData[key]?.[s.roll] || "-");
-        }
-        msg += `${s.roll}-${s.name}: ${codes.join(",")}\n`;
+        out += `${s.roll}-${s.name}: ${getStatusText(ad[s.roll]||"-")}\n`;
       });
-    window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg), "_blank");
+    return out;
   }
 
-  // original sendWhatsApp, generatePdf, generateMonthlyPdf, render logic, etc.
-  // ...
+  // Build a clear monthly message: "DD:Status" per day
+  function buildMonthlyMessage(title, month) {
+    let out = `${title} for ${month} (Class:${teacherClass})\n\n`;
+    students
+      .filter(s => s.class === teacherClass)
+      .forEach(s => {
+        let line = `${s.roll}-${s.name}: `;
+        const parts = [];
+        for (let day=1; day<=31; day++) {
+          const dd = String(day).padStart(2,"0");
+          const key = `${month}-${dd}`;
+          const st  = (attendanceData[key]||{})[s.roll] || "-";
+          parts.push(`${dd}:${st}`);
+        }
+        line += parts.join(", ");
+        out += line + "\n";
+      });
+    return out;
+  }
+
+  function resetWaModal() {
+    // reset UI to default (current)
+    document.getElementById("waTypeCur").checked = true;
+    waDateContainer.style.display = "none";
+    waMonthContainer.style.display= "none";
+    waDateInput.value = "";
+    waMonthInput.value= "";
+    waSendBtn.disabled = false;
+  }
+
+  // ... rest of your existing app.js code (student list, attendance, PDF) remains unchanged ...
 });
