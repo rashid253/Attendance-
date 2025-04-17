@@ -1,48 +1,44 @@
 // app.js
 document.addEventListener("DOMContentLoaded", () => {
   // Helpers
-  function getStatusText(s) {
-    return { P:"Present", A:"Absent", L:"Leave", Lt:"Late", HD:"Half Day" }[s]||"-";
-  }
-  function showModal(m){ m.style.display="block"; }
-  function closeModal(m){ m.style.display="none"; }
+  const getStatusText = s => ({ P:"Present", A:"Absent", L:"Leave", Lt:"Late", Le:"Leave", HD:"Half Day" }[s]||"Not Marked");
 
   // Refs
-  const clsSel    = document.getElementById("teacherClassSelect");
-  const secSel    = document.getElementById("teacherSectionSelect");
-  const saveCls   = document.getElementById("saveTeacherClass");
-  const header    = document.getElementById("teacherClassHeader");
+  const clsSel    = $("#teacherClassSelect");
+  const secSel    = $("#teacherSectionSelect");
+  const saveCls   = $("#saveTeacherClass");
+  const header    = $("#teacherClassHeader");
 
-  const nameIn    = document.getElementById("studentName");
-  const admIn     = document.getElementById("admissionNo");
-  const pcIn      = document.getElementById("parentContact");
-  const addStd    = document.getElementById("addStudent");
-  const listStd   = document.getElementById("students");
+  const nameIn    = $("#studentName");
+  const admIn     = $("#admissionNo");
+  const pcIn      = $("#parentContact");
+  const addStd    = $("#addStudent");
+  const listStd   = $("#students");
 
-  const dateIn    = document.getElementById("dateInput");
-  const loadDay   = document.getElementById("loadAttendance");
-  const saveDay   = document.getElementById("saveAttendance");
-  const listDay   = document.getElementById("attendanceList");
+  const dateIn    = $("#dateInput");
+  const loadDay   = $("#loadAttendance");
+  const saveDay   = $("#saveAttendance");
+  const listDay   = $("#attendanceList");
 
-  const monthIn   = document.getElementById("monthInput");
-  const loadMon   = document.getElementById("loadMonth");
-  const monTable  = document.getElementById("monthTable");
-  const summary   = document.getElementById("summaryReport");
+  const monthIn   = $("#monthInput");
+  const loadMon   = $("#loadMonth");
+  const monTable  = $("#monthTable");
+  const summary   = $("#summaryReport");
 
-  const expPdf    = document.getElementById("exportPdf");
-  const shpWA     = document.getElementById("shareWhatsApp");
-  const pdfModal  = document.getElementById("pdfOptionsModal");
-  const waModal   = document.getElementById("whatsappOptionsModal");
-  const pdfClose  = document.getElementById("closePdfModalBtn");
-  const waClose   = document.getElementById("closeWaModalBtn");
-  const pdfCur    = document.getElementById("pdfCurrentReportBtn");
-  const pdfDay    = document.getElementById("pdfDailyReportBtn");
-  const pdfMon    = document.getElementById("pdfMonthlyReportBtn");
-  const pdfMonIn  = document.getElementById("pdfMonthInput");
-  const waCur     = document.getElementById("waCurrentBtn");
-  const waDay     = document.getElementById("waDailyBtn");
-  const waMon     = document.getElementById("waMonthlyBtn");
-  const waMonIn   = document.getElementById("waMonthInput");
+  const expPdf    = $("#exportPdf");
+  const shpWA     = $("#shareWhatsApp");
+  const pdfModal  = $("#pdfOptionsModal");
+  const waModal   = $("#whatsappOptionsModal");
+  const pdfClose  = $("#closePdfModalBtn");
+  const waClose   = $("#closeWaModalBtn");
+  const pdfCur    = $("#pdfCurrentReportBtn");
+  const pdfDay    = $("#pdfDailyReportBtn");
+  const pdfMon    = $("#pdfMonthlyReportBtn");
+  const pdfMonIn  = $("#pdfMonthInput");
+  const waCur     = $("#waCurrentBtn");
+  const waDay     = $("#waDailyBtn");
+  const waMon     = $("#waMonthlyBtn");
+  const waMonIn   = $("#waMonthInput");
 
   // Storage
   let teacherClass   = localStorage.getItem("teacherClass")   || "";
@@ -51,27 +47,27 @@ document.addEventListener("DOMContentLoaded", () => {
   let attendanceData = JSON.parse(localStorage.getItem("attendanceData")) || {};
 
   // Init
-  clsSel.value = teacherClass;
-  secSel.value = teacherSection;
+  clsSel.value   = teacherClass;
+  secSel.value   = teacherSection;
   updateHeader();
   renderStudents();
 
-  // Save class/section
-  saveCls.addEventListener("click", () => {
-    if(!clsSel.value||!secSel.value) return alert("Select both class & section");
+  // Save class & section
+  saveCls.onclick = () => {
+    if (!clsSel.value || !secSel.value) return alert("Select both class & section");
     teacherClass = clsSel.value;
     teacherSection = secSel.value;
     localStorage.setItem("teacherClass", teacherClass);
     localStorage.setItem("teacherSection", teacherSection);
     updateHeader();
     renderStudents();
-  });
+  };
 
   // Add student
-  addStd.addEventListener("click", () => {
-    if(!teacherClass||!teacherSection) return alert("Save class & section first");
+  addStd.onclick = () => {
+    if (!teacherClass||!teacherSection) return alert("Save class & section first");
     const name = nameIn.value.trim();
-    if(!name) return alert("Enter student name");
+    if (!name) return alert("Enter student name");
     const roll = generateRoll();
     students.push({
       roll, name,
@@ -83,62 +79,62 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("students", JSON.stringify(students));
     nameIn.value=admIn.value=pcIn.value="";
     renderStudents();
-  });
+  };
 
-  // Day attendance
-  loadDay.addEventListener("click", () => {
-    if(!dateIn.value) return dateIn.showPicker?.()??dateIn.focus();
+  // Load / Save daily attendance
+  loadDay.onclick = () => {
+    if (!dateIn.value) return dateIn.showPicker?.() ?? dateIn.focus();
     renderAttendance(dateIn.value);
-  });
-  saveDay.addEventListener("click", () => {
-    if(!dateIn.value) return dateIn.showPicker?.()??dateIn.focus();
+  };
+  saveDay.onclick = () => {
+    if (!dateIn.value) return dateIn.showPicker?.() ?? dateIn.focus();
     localStorage.setItem("attendanceData", JSON.stringify(attendanceData));
-    alert("Saved for "+dateIn.value);
-  });
+    alert("Saved for "+ dateIn.value);
+  };
 
   // Monthly view
-  loadMon.addEventListener("click", () => {
-    if(!monthIn.value) return;
+  loadMon.onclick = () => {
+    if (!monthIn.value) return;
     renderMonthTable(monthIn.value);
     renderSummary(monthIn.value);
-  });
+  };
 
-  // Reports modal
-  expPdf.addEventListener("click", ()=>showModal(pdfModal));
-  shpWA.addEventListener("click", ()=>showModal(waModal));
-  pdfClose.addEventListener("click", ()=>closeModal(pdfModal));
-  waClose.addEventListener("click", ()=>closeModal(waModal));
+  // Reports modals
+  expPdf.onclick = () => pdfModal.style.display="flex";
+  shpWA.onclick  = () => waModal.style.display="flex";
+  pdfClose.onclick = () => pdfModal.style.display="none";
+  waClose.onclick  = () => waModal.style.display="none";
 
-  pdfCur.addEventListener("click", ()=>{ generatePdf("Current Attendance", dateIn.value||new Date().toISOString().slice(0,10)); closeModal(pdfModal); });
-  pdfDay.addEventListener("click", ()=>{ if(!dateIn.value) return dateIn.showPicker?.()??dateIn.focus(); generatePdf("Daily Attendance", dateIn.value); closeModal(pdfModal); });
-  pdfMon.addEventListener("click", ()=>{ if(!pdfMonIn.value) return pdfMonIn.showPicker?.()??pdfMonIn.focus(); generateMonthlyPdf(pdfMonIn.value); closeModal(pdfModal); });
+  // PDF buttons
+  pdfCur.onclick = () => { genPdf("Current Attendance", dateIn.value||today()); pdfModal.style.display="none"; };
+  pdfDay.onclick = () => { if(!dateIn.value) return dateIn.showPicker?.() ?? dateIn.focus(); genPdf("Daily Attendance", dateIn.value); pdfModal.style.display="none"; };
+  pdfMon.onclick = () => { if(!pdfMonIn.value) return pdfMonIn.showPicker?.() ?? pdfMonIn.focus(); genMonthlyPdf(pdfMonIn.value); pdfModal.style.display="none"; };
 
-  waCur.addEventListener("click", ()=>{ sendWA("Current Attendance", dateIn.value||new Date().toISOString().slice(0,10)); closeModal(waModal); });
-  waDay.addEventListener("click", ()=>{ if(!dateIn.value) return dateIn.showPicker?.()??dateIn.focus(); sendWA("Daily Attendance", dateIn.value); closeModal(waModal); });
-  waMon.addEventListener("click", ()=>{ if(!waMonIn.value) return waMonIn.showPicker?.()??waMonIn.focus(); sendWAMonthly(waMonIn.value); closeModal(waModal); });
+  // WhatsApp buttons
+  waCur.onclick = () => { sendWA("Current Attendance", dateIn.value||today()); waModal.style.display="none"; };
+  waDay.onclick = () => { if(!dateIn.value) return dateIn.showPicker?.() ?? dateIn.focus(); sendWA("Daily Attendance", dateIn.value); waModal.style.display="none"; };
+  waMon.onclick = () => { if(!waMonIn.value) return waMonIn.showPicker?.() ?? waMonIn.focus(); sendWAMonthly(waMonIn.value); waModal.style.display="none"; };
 
-  // Functions
-  function updateHeader() {
-    header.textContent = teacherClass&&teacherSection
+  // Helpers
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function updateHeader(){
+    header.textContent = teacherClass && teacherSection
       ? `${teacherClass} - ${teacherSection}`
       : "None";
   }
-
-  function generateRoll() {
+  function generateRoll(){
     const list = students.filter(s=>s.class===teacherClass&&s.section===teacherSection);
     return list.length ? Math.max(...list.map(s=>+s.roll))+1 : 1;
   }
-
-  function renderStudents() {
+  function renderStudents(){
     listStd.innerHTML = "";
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{
         const li = document.createElement("li");
         li.textContent = `${s.roll} - ${s.name}`;
         const del = document.createElement("button");
         del.textContent="Delete";
-        del.onclick = ()=>{
+        del.onclick = ()=> {
           if(!confirm(`Delete ${s.name}?`)) return;
           students = students.filter(x=>x!==s);
           localStorage.setItem("students",JSON.stringify(students));
@@ -148,61 +144,49 @@ document.addEventListener("DOMContentLoaded", () => {
         listStd.append(li);
       });
   }
-
-  function renderAttendance(d) {
-    listDay.innerHTML = "";
+  function renderAttendance(d){
+    listDay.innerHTML="";
     const dayData = attendanceData[d] = attendanceData[d]||{};
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{
         const div = document.createElement("div");
         div.className = "attendance-item";
-        div.textContent = `${s.roll} - ${s.name}`;
-        const bc = document.createElement("div");
-        bc.className = "attendance-buttons";
+        div.innerHTML = `<span>${s.roll} - ${s.name}</span>`;
+        const btns = document.createElement("div");
+        btns.className="attendance-buttons";
         ["P","A","Lt","L","HD"].forEach(code=>{
-          const btn = document.createElement("button");
-          btn.className="att-btn";
-          btn.textContent=code;
-          if(dayData[s.roll]===code) btn.classList.add("selected");
-          btn.onclick=()=>{
+          const b = document.createElement("button");
+          b.className="att-btn";
+          b.textContent=code;
+          if(dayData[s.roll]===code) b.classList.add("selected");
+          b.onclick=()=>{
             dayData[s.roll]=code;
-            bc.querySelectorAll("button").forEach(x=>x.classList.remove("selected"));
-            btn.classList.add("selected");
+            btns.querySelectorAll("button").forEach(x=>x.classList.remove("selected"));
+            b.classList.add("selected");
           };
-          bc.append(btn);
+          btns.append(b);
         });
-        div.append(bc);
+        div.append(btns);
         listDay.append(div);
       });
   }
-
-  function renderMonthTable(m) {
-    const [y,mm] = m.split("-");
-    const days = new Date(y,mm,0).getDate();
-    let html = "<table><tr><th>Roll</th><th>Name</th>";
-    for(let d=1;d<=days;d++) html+=`<th>${d}</th>`;
-    html+="</tr>";
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
+  function renderMonthTable(m){
+    const [y,mm]=m.split("-"), days=new Date(y,mm,0).getDate();
+    let html=`<table><tr><th>Roll</th><th>Name</th>`+Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join("")+`</tr>`;
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{
-        html+=`<tr><td>${s.roll}</td><td>${s.name}</td>`;
-        for(let d=1;d<=days;d++){
-          const key=`${m}-${String(d).padStart(2,"0")}`;
-          html+=`<td>${attendanceData[key]?.[s.roll]||""}</td>`;
-        }
-        html+="</tr>";
+        html+=`<tr><td>${s.roll}</td><td>${s.name}</td>`+
+          Array.from({length:days},(_,i)=>{
+            const key=`${m}-${String(i+1).padStart(2,"0")}`;
+            return `<td>${attendanceData[key]?.[s.roll]||""}</td>`;
+          }).join("")+`</tr>`;
       });
-    html+="</table>";
-    monTable.innerHTML = html;
+    monTable.innerHTML=html+"</table>";
   }
-
-  function renderSummary(m) {
-    const [y,mm] = m.split("-");
-    const days = new Date(y,mm,0).getDate();
+  function renderSummary(m){
+    const [y,mm]=m.split("-"), days=new Date(y,mm,0).getDate();
     let out="";
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{
         const cnt={P:0,A:0,Lt:0,L:0,HD:0};
         for(let d=1;d<=days;d++){
@@ -210,76 +194,56 @@ document.addEventListener("DOMContentLoaded", () => {
           const st=attendanceData[key]?.[s.roll];
           if(cnt[st]!==undefined) cnt[st]++;
         }
-        const present=cnt.P+cnt.Lt+cnt.HD;
-        const perc=Math.round((present/days)*100);
-        out+=`<p><strong>${s.roll}-${s.name}:</strong> P:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A} — ${perc}%</p>`;
+        const pres=cnt.P+cnt.Lt+cnt.HD, pct=Math.round(pres/days*100);
+        out+=`<p><strong>${s.roll}-${s.name}:</strong> P:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A} — ${pct}%</p>`;
       });
-    summary.innerHTML = out;
+    summary.innerHTML=out;
   }
-
-  function generatePdf(title,d) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+  function genPdf(title,d){
+    const { jsPDF } = window.jspdf, doc=new jsPDF();
     doc.text(`${title} for ${d} (${teacherClass}-${teacherSection})`,10,10);
-    let y=20;
-    const dayData = attendanceData[d]||{};
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
-      .forEach(s=>{
-        doc.text(`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}`,10,y);
-        y+=10;
-      });
+    let y=20, dayData=attendanceData[d]||{};
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
+      .forEach(s=>{ doc.text(`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}`,10,y); y+=10; });
     doc.save(`${title.replace(/\s+/g,"_")}_${d}.pdf`);
   }
-
-  function generateMonthlyPdf(m) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("l","pt","a4");
+  function genMonthlyPdf(m){
+    const { jsPDF } = window.jspdf, doc=new jsPDF("l","pt","a4");
     doc.text(`Monthly Attendance for ${m} (${teacherClass}-${teacherSection})`,20,30);
-    const [y,mm] = m.split("-");
-    const days = new Date(y,mm,0).getDate();
-    const cols = ["Roll","Name",...Array.from({length:days},(_,i)=>(i+1).toString())];
-    const rows = students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
-      .map(s=>{
-        const row = [s.roll,s.name];
-        for(let d=1;d<=days;d++){
-          const key=`${m}-${String(d).padStart(2,"0")}`;
-          row.push(attendanceData[key]?.[s.roll]||"");
-        }
-        return row;
-      });
+    const [y,mm]=m.split("-"), days=new Date(y,mm,0).getDate();
+    const cols=["Roll","Name",...Array.from({length:days},(_,i)=>(i+1).toString())];
+    const rows=students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
+      .map(s=>[s.roll,s.name,...Array.from({length:days},(_,i)=>{
+        const key=`${m}-${String(i+1).padStart(2,"0")}`;
+        return attendanceData[key]?.[s.roll]||"";
+      })]);
     doc.autoTable({ head:[cols], body:rows, startY:50, theme:"grid",
-      styles:{fontSize:8}, headStyles:{fillColor:[0,123,255]} });
+      styles:{fontSize:8}, headStyles:{fillColor:[33,150,243]} });
     doc.save(`Monthly_Attendance_${m}.pdf`);
   }
-
-  function sendWA(title,d) {
+  function sendWA(title,d){
     let msg=`${title} for ${d} (${teacherClass}-${teacherSection})\n\n`;
     const dayData=attendanceData[d]||{};
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
-      .forEach(s=>{
-        msg+=`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}\n`;
-      });
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
+      .forEach(s=> msg+=`${s.roll}-${s.name}: ${getStatusText(dayData[s.roll]||"")}\n`);
     window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg),"_blank");
   }
-
-  function sendWAMonthly(m) {
+  function sendWAMonthly(m){
     let msg=`Monthly Attendance for ${m} (${teacherClass}-${teacherSection})\n\n`;
-    const [y,mm] = m.split("-");
-    const days = new Date(y,mm,0).getDate();
-    students
-      .filter(s=>s.class===teacherClass&&s.section===teacherSection)
+    const [y,mm]=m.split("-"), days=new Date(y,mm,0).getDate();
+    students.filter(s=>s.class===teacherClass&&s.section===teacherSection)
       .forEach(s=>{
         const cnt={P:0,A:0,Lt:0,L:0,HD:0};
         for(let d=1;d<=days;d++){
           const key=`${m}-${String(d).padStart(2,"0")}`;
-          const st=attendanceData[key]?.[s.roll];
-          if(cnt[st]!==undefined) cnt[st]++;
+          if(cnt[attendanceData[key]?.[s.roll]]!==undefined)
+            cnt[attendanceData[key][s.roll]]++;
         }
         msg+=`${s.roll}-${s.name}\nP:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A}\n\n`;
       });
     window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(msg),"_blank");
   }
+
+  // small helper for querySelector
+  function $(id){ return document.getElementById(id); }
 });
