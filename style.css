@@ -8,10 +8,18 @@
   --light: #f2f2f2;
   --dark: #333;
 }
+/* prevent tap-highlight and focus outlines */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select {
+  outline: none;
+}
+button::-moz-focus-inner {
+  border: 0;
 }
 body {
   font-family: Arial, sans-serif;
@@ -93,6 +101,7 @@ th {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 .attendance-item {
   font-weight: bold;
