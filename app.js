@@ -186,6 +186,7 @@ Address: ${s.address}`;
         resetAttBtn    = $('resetAttendance'),
         shareAttBtn    = $('shareAttendanceSummary'),
         downloadAttBtn = $('downloadAttendancePDF');
+
   loadAttBtn.onclick = ev => {
     ev.preventDefault();
     if (!dateIn.value) return alert('Pick a date');
@@ -213,6 +214,7 @@ Address: ${s.address}`;
     });
     saveAttBtn.classList.remove('hidden');
   };
+
   saveAttBtn.onclick = ev => {
     ev.preventDefault();
     const d = dateIn.value;
@@ -234,7 +236,8 @@ Address: ${s.address}`;
       tr.innerHTML=`<td>${s.name}</td><td>${st}</td><td><button type="button" class="send">Send</button></td>`;
       tr.querySelector('.send').onclick = e2 => {
         e2.preventDefault();
-        const remark={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[st]||'';
+        const remarkMap = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
+        const remark = remarkMap[st] || '';
         const msg=`${setup}
 Name: ${s.name}
 Status: ${st}
@@ -244,17 +247,39 @@ Remark: ${remark}`;
       summaryBody.appendChild(tr);
     });
   };
+
   resetAttBtn.onclick = ev => {
     ev.preventDefault();
     resSec.classList.add('hidden');
     $('attendance-section').classList.remove('hidden');
     attList.innerHTML=''; saveAttBtn.classList.add('hidden'); summaryBody.innerHTML='';
   };
+
   shareAttBtn.onclick = ev => {
     ev.preventDefault();
-    const rows = Array.from(summaryBody.querySelectorAll('tr')).map(r=>r.textContent.trim()).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(rows)}`, '_blank');
+    const d = dateIn.value;
+    const school = localStorage.getItem('schoolName');
+    const cls = localStorage.getItem('teacherClass');
+    const sec = localStorage.getItem('teacherSection');
+    const header = `Date: ${d}\nSchool: ${school}\nClass: ${cls}\nSection: ${sec}`;
+    const remarkMap = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
+    const perf = code => {
+      const pct = code==='P'?100:0;
+      if(pct===100) return 'Best';
+      if(pct>=75) return 'Good';
+      if(pct>=50) return 'Fair';
+      return 'Poor';
+    };
+    const lines = students.map(s => {
+      const code = attendanceData[d][s.roll] || 'A';
+      const status = remarkMap[code] || '';
+      const percent = code==='P'? '100%' : '0%';
+      return `${s.name}: ${status} | ${percent} | ${perf(code)}`;
+    });
+    const msg = [header, '', ...lines].join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
+
   downloadAttBtn.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
