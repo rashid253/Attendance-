@@ -35,4 +35,4 @@ canvas { flex:1 1 300px; max-width:100%; }
 .selected { background: var(--light); }
 .editing { outline: 2px dashed var(--info); }
 .select-col { width: 40px; }
-@media(max-width:600px){ .row-inline input, .row-inline select, .row-inline button { flex:1 1 100%; } }
+@media(max-width:600px){ .row-inline 
