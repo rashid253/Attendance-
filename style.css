@@ -16,6 +16,7 @@ section { background:#fff; border:1px solid #ccc; border-radius:6px; margin-bott
 input,select,button { padding:8px; border:1px solid #ccc; border-radius:4px; }
 button { background:var(--primary); color:#fff; cursor:pointer; }
 button:hover { opacity:.9; }
+button.save { background:var(--success); }
 button.small { background:var(--info); padding:4px 8px; font-size:.9em; }
 .hidden { display:none; }
 .table-wrapper { overflow-x:auto; margin-top:10px; border:1px solid #ccc; border-radius:4px; }
@@ -33,4 +34,5 @@ th { background:var(--light); }
 canvas { flex:1 1 300px; max-width:100%; }
 .selected { background: var(--light); }
 .editing { outline: 2px dashed var(--info); }
+.select-col { width: 40px; }
 @media(max-width:600px){ .row-inline input, .row-inline select, .row-inline button { flex:1 1 100%; } }
