@@ -177,10 +177,10 @@ Address: ${s.address}`;
 
   // ATTENDANCE
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')||'{}');
-  const dateIn     = $('dateInput'),
-        loadAttBtn = $('loadAttendance'),
-        attList    = $('attendanceList'),
-        saveAttBtn = $('saveAttendance');
+  const dateIn        = $('dateInput'),
+        loadAttBtn    = $('loadAttendance'),
+        attList       = $('attendanceList'),
+        saveAttBtn    = $('saveAttendance');
   const resSec         = $('attendance-result'),
         summaryBody    = $('summaryBody'),
         resetAttBtn    = $('resetAttendance'),
@@ -257,26 +257,27 @@ Remark: ${remark}`;
 
   shareAttBtn.onclick = ev => {
     ev.preventDefault();
-    const d = dateIn.value;
+    const d      = dateIn.value;
     const school = localStorage.getItem('schoolName');
-    const cls = localStorage.getItem('teacherClass');
-    const sec = localStorage.getItem('teacherSection');
+    const cls    = localStorage.getItem('teacherClass');
+    const sec    = localStorage.getItem('teacherSection');
     const header = `Date: ${d}\nSchool: ${school}\nClass: ${cls}\nSection: ${sec}`;
     const remarkMap = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
-    const perf = code => {
-      const pct = code==='P'?100:0;
-      if(pct===100) return 'Best';
-      if(pct>=75) return 'Good';
-      if(pct>=50) return 'Fair';
-      return 'Poor';
-    };
+    // build per-student status lines
     const lines = students.map(s => {
       const code = attendanceData[d][s.roll] || 'A';
-      const status = remarkMap[code] || '';
-      const percent = code==='P'? '100%' : '0%';
-      return `${s.name}: ${status} | ${percent} | ${perf(code)}`;
+      return `${s.name}: ${remarkMap[code]}`;
     });
-    const msg = [header, '', ...lines].join('\n');
+    // compute overall class percentage & remark
+    const total = students.length;
+    const presentCount = students.reduce((sum,s) => sum + ((attendanceData[d][s.roll]==='P')?1:0), 0);
+    const pct = total? ((presentCount/total)*100).toFixed(1) : '0.0';
+    const classRemark = pct==100    ? 'Best'
+                      : pct>=75      ? 'Good'
+                      : pct>=50      ? 'Fair'
+                      :               'Poor';
+    const summary = `\nOverall Attendance: ${pct}% | ${classRemark}`;
+    const msg = [header, '', ...lines, summary].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -296,22 +297,22 @@ Remark: ${remark}`;
   };
 
   // ANALYTICS
-  const analyticsType = $('analyticsType'),
-        analyticsDate = $('analyticsDate'),
-        analyticsMonth= $('analyticsMonth'),
-        semesterStart = $('semesterStart'),
-        semesterEnd   = $('semesterEnd'),
-        yearStart     = $('yearStart'),
-        loadAnalyticsBtn   = $('loadAnalytics'),
-        resetAnalyticsBtn  = $('resetAnalytics'),
-        instructionsEl     = $('instructions'),
+  const analyticsType    = $('analyticsType'),
+        analyticsDate    = $('analyticsDate'),
+        analyticsMonth   = $('analyticsMonth'),
+        semesterStart    = $('semesterStart'),
+        semesterEnd      = $('semesterEnd'),
+        yearStart        = $('yearStart'),
+        loadAnalyticsBtn = $('loadAnalytics'),
+        resetAnalyticsBtn= $('resetAnalytics'),
+        instructionsEl   = $('instructions'),
         analyticsContainer = $('analyticsContainer'),
-        graphsEl           = $('graphs'),
-        analyticsActionsEl = $('analyticsActions'),
-        shareAnalyticsBtn  = $('shareAnalytics'),
+        graphsEl         = $('graphs'),
+        analyticsActionsEl= $('analyticsActions'),
+        shareAnalyticsBtn= $('shareAnalytics'),
         downloadAnalyticsBtn= $('downloadAnalytics'),
-        barCtx = document.getElementById('barChart').getContext('2d'),
-        pieCtx = document.getElementById('pieChart').getContext('2d');
+        barCtx           = document.getElementById('barChart').getContext('2d'),
+        pieCtx           = document.getElementById('pieChart').getContext('2d');
   let barChart, pieChart;
 
   analyticsType.onchange = () => {
@@ -383,19 +384,37 @@ Remark: ${remark}`;
     graphsEl.classList.remove('hidden');
     analyticsActionsEl.classList.remove('hidden');
   };
+
   shareAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
     const text=[...analyticsContainer.querySelectorAll('table tr')].map(r=>r.textContent.trim()).join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
+
   downloadAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
-    const { jsPDF } = window.jspdf, doc=new jsPDF('p','pt','a4');
-    doc.text(instructionsEl.textContent,40,40);
-    doc.autoTable({html:'#analyticsContainer table',startY:60,margin:{left:40,right:40},styles:{fontSize:8}});
-    const barImg=barChart.toBase64Image(), pieImg=pieChart.toBase64Image();
-    doc.addPage(); doc.text('Bar Chart',40,40); doc.addImage(barImg,'PNG',40,60,500,200);
-    doc.addPage(); doc.text('Pie Chart',40,40); doc.addImage(pieImg,'PNG',40,60,500,200);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    // add table
+    doc.autoTable({
+      head:[['Name','P','A','Lt','HD','L','Total','%']],
+      body:Array.from(analyticsContainer.querySelectorAll('table tbody tr')).map(r=>{
+        return Array.from(r.querySelectorAll('td')).map(td=>td.textContent);
+      }),
+      startY:40, margin:{left:40, right:40}, styles:{fontSize:8}
+    });
+    // Bar chart on next page, smaller and properly positioned
+    const barImg = barChart.toBase64Image();
+    doc.addPage();
+    doc.setFontSize(12);
+    doc.text('Bar Chart (% Present)', 40, 40);
+    doc.addImage(barImg, 'PNG', 40, 55, 260, 130);
+    // Pie chart on another page
+    const pieImg = pieChart.toBase64Image();
+    doc.addPage();
+    doc.setFontSize(12);
+    doc.text('Pie Chart (Aggregate)', 40, 40);
+    doc.addImage(pieImg, 'PNG', 40, 55, 260, 130);
     doc.save('analytics_report.pdf');
   };
 });
