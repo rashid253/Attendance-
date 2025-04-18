@@ -35,12 +35,12 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input id="studentName" placeholder="Name">
-      <input id="admissionNo" placeholder="Adm#">
-      <input id="parentName" placeholder="Parent Name">
-      <input id="parentContact" placeholder="Parent Contact">
-      <input id="parentOccupation" placeholder="Occupation">
-      <input id="parentAddress" placeholder="Address">
+      <input id="studentName" placeholder="Name" required>
+      <input id="admissionNo" placeholder="Adm#" required>
+      <input id="parentName" placeholder="Parent Name" required>
+      <input id="parentContact" placeholder="Parent Contact" required>
+      <input id="parentOccupation" placeholder="Occupation" required>
+      <input id="parentAddress" placeholder="Address" required>
       <button type="button" id="addStudent">Add</button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
@@ -60,7 +60,7 @@
       <button type="button" id="saveRegistration" class="save">Save Table</button>
       <button type="button" id="shareRegistration" class="hidden">Share Table</button>
       <button type="button" id="editRegistration" class="hidden">Edit Table</button>
-      <button type="button" id="downloadRegistrationPDF">Download PDF</button>
+      <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
     </div>
   </section>
 
@@ -68,8 +68,9 @@
   <section id="attendance-section">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
+      <label for="dateInput">Select Date:</label>
       <input type="date" id="dateInput">
-      <button type="button" id="loadAttendance">Load</button>
+      <button type="button" id="loadAttendance">Load Attendance</button>
     </div>
     <div id="attendanceList"></div>
     <button type="button" id="saveAttendance" class="hidden">Save</button>
@@ -86,7 +87,7 @@
     </div>
     <div class="table-actions">
       <button type="button" id="shareAttendanceSummary">Share</button>
-      <button type="button" id="downloadAttendancePDF">Download Attendance PDF</button>
+      <button type="button" id="downloadAttendancePDF">Download PDF</button>
       <button type="button" id="resetAttendance" class="small">Reset</button>
     </div>
   </section>
@@ -107,7 +108,7 @@
       <input type="month" id="semesterStart" class="hidden">
       <input type="month" id="semesterEnd" class="hidden">
       <input type="number" id="yearStart" class="hidden" placeholder="Year">
-      <button type="button" id="loadAnalytics">Load</button>
+      <button type="button" id="loadAnalytics">Load Analytics</button>
       <button type="button" id="resetAnalytics" class="small hidden">Change</button>
     </div>
     <div id="instructions" class="summary-block hidden"></div>
