@@ -45,8 +45,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // STUDENT REGISTRATION
   let students = JSON.parse(localStorage.getItem('students') || '[]');
-  const fields = ['studentName', 'admissionNo', 'parentName', 'parentContact', 'parentOccupation', 'parentAddress'];
-  const inputs = fields.map(id => $(id));
+  const studentNameIn = $('studentName');
+  const admissionNoIn = $('admissionNo');
+  const parentNameIn = $('parentName');
+  const parentContactIn = $('parentContact');
+  const parentOccupationIn = $('parentOccupation');
+  const parentAddressIn = $('parentAddress');
   const addStudentBtn = $('addStudent');
   const studentsBody = $('studentsBody');
   const selectAllChk = $('selectAllStudents');
@@ -101,15 +105,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
   addStudentBtn.onclick = ev => {
     ev.preventDefault();
-    const vals = inputs.map(inp => inp.value.trim());
-    if (vals.some(v => !v)) return alert('All fields required');
-    if (!/^\d+$/.test(vals[1])) return alert('Adm# numeric');
-    if (!/^\d{7,15}$/.test(vals[3])) return alert('Contact 7–15 digits');
-    const [name, adm, parent, contact, occupation, address] = vals;
+    const name = studentNameIn.value.trim();
+    const adm = admissionNoIn.value.trim();
+    const parent = parentNameIn.value.trim();
+    const contact = parentContactIn.value.trim();
+    const occupation = parentOccupationIn.value.trim();
+    const address = parentAddressIn.value.trim();
+    if (!name || !adm || !parent || !contact || !occupation || !address) return alert('All fields required');
+    if (!/^[0-9]+$/.test(adm)) return alert('Adm# must be numeric');
+    if (!/^\d{7,15}$/.test(contact)) return alert('Contact must be 7–15 digits');
     students.push({ name, adm, parent, contact, occupation, address, roll: Date.now() });
     saveStudents();
     renderStudents();
-    inputs.forEach(i => i.value = '');
+    [studentNameIn, admissionNoIn, parentNameIn, parentContactIn, parentOccupationIn, parentAddressIn].forEach(i => i.value = '');
   };
 
   function onCellBlur(e) {
@@ -117,9 +125,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const tr = td.closest('tr');
     const idx = +tr.querySelector('.sel').dataset.index;
     const ci = Array.from(tr.children).indexOf(td);
-    const keys = ['name','adm','parent','contact','occupation','address'];
+    const keys = ['name', 'adm', 'parent', 'contact', 'occupation', 'address'];
     if (ci >= 1 && ci <= 6) {
-      students[idx][keys[ci-1]] = td.textContent.trim();
+      students[idx][keys[ci - 1]] = td.textContent.trim();
       saveStudents();
     }
   }
@@ -148,15 +156,15 @@ window.addEventListener('DOMContentLoaded', () => {
       .map(cb => +cb.dataset.index)
       .sort((a, b) => b - a)
       .forEach(i => students.splice(i, 1));
-    saveStudents(); renderStudents();
+    saveStudents();
+    renderStudents();
     selectAllChk.checked = false;
   };
 
   saveRegBtn.onclick = ev => {
     ev.preventDefault();
     regSaved = true;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
-      .forEach(id => $(id).classList.add('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id => $(id).classList.add('hidden'));
     shareRegBtn.classList.remove('hidden');
     editRegBtn.classList.remove('hidden');
     downloadRegPDFBtn.classList.remove('hidden');
@@ -167,8 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
   editRegBtn.onclick = ev => {
     ev.preventDefault();
     regSaved = false;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
-      .forEach(id => $(id).classList.remove('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id => $(id).classList.remove('hidden'));
     shareRegBtn.classList.add('hidden');
     editRegBtn.classList.add('hidden');
     downloadRegPDFBtn.classList.add('hidden');
@@ -180,7 +187,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     const hdr = `School: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     const lines = students.map(s =>
-      `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOcc: ${s.occupation}\nAddr: ${s.address}`
+      `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`
     ).join('\n---\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines)}`, '_blank');
   };
@@ -190,9 +197,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','pt','a4');
     doc.autoTable({
-      head: [['Name','Adm#','Parent','Contact','Occ','Addr']],
-      body: students.map(s => [s.name,s.adm,s.parent,s.contact,s.occupation,s.address]),
-      startY: 40, margin: { left:40, right:40 }, styles: { fontSize:10 }
+      head: [['Name','Adm#','Parent','Contact','Occupation','Address']],
+      body: students.map(s => [s.name, s.adm, s.parent, s.contact, s.occupation, s.address]),
+      startY: 40,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 10 }
     });
     doc.save('students_registration.pdf');
   };
@@ -251,12 +260,12 @@ window.addEventListener('DOMContentLoaded', () => {
     resSection.classList.remove('hidden');
     summaryBody.innerHTML = '';
     const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan="3"><em>${hdr}</em></td></tr>`);
+    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan=\"3\"><em>${hdr}</em></td></tr>`);
     students.forEach(s => {
       const code = attendanceData[d][s.roll] || 'A';
       const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
+      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class=\"send-btn\">Send</button></td>`;
       tr.querySelector('.send-btn').onclick = e2 => {
         e2.preventDefault();
         const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
@@ -266,14 +275,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  resetAttBtn.onclick = ev => {
-    ev.preventDefault();
-    resSection.classList.add('hidden');
-    $('attendance-section').classList.remove('hidden');
-    attList.innerHTML = '';
-    saveAttBtn.classList.add('hidden');
-    summaryBody.innerHTML = '';
-  };
+  resetAttBtn.onclick = ev => { ev.preventDefault(); resSection.classList.add('hidden'); $('attendance-section').classList.remove('hidden'); attList.innerHTML=''; saveAttBtn.classList.add('hidden'); summaryBody.innerHTML=''; };
 
   shareAttBtn.onclick = ev => {
     ev.preventDefault();
@@ -290,23 +292,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  downloadAttPDFBtn.onclick = ev => {
-    ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    doc.autoTable({
-      head:[['Name','Status']],
-      body: students.map(s => {
-        const code = attendanceData[dateInput.value][s.roll] || 'A';
-        const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
-        return [s.name, status];
-      }),
-      startY:40,
-      margin:{left:40,right:40},
-      styles:{fontSize:10}
-    });
-    doc.save('attendance_summary.pdf');
-  };
+  downloadAttPDFBtn.onclick = ev => { ev.preventDefault(); const { jsPDF } = window.jspdf; const doc = new jsPDF('p','pt','a4'); doc.autoTable({ head:[['Name','Status']], body: students.map(s=>{ const code=attendanceData[dateInput.value][s.roll]||'A'; return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; }), startY:40, margin:{left:40,right:40}, styles:{fontSize:10} }); doc.save('attendance_summary.pdf'); };
 
   // ANALYTICS
   const analyticsType = $('analyticsType');
@@ -347,15 +333,17 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     let from, to;
     if (analyticsType.value==='date') { if(!analyticsDate.value) return alert('Pick a date'); from = to = analyticsDate.value; }
+
     else if (analyticsType.value==='month') { if(!analyticsMonth.value) return alert('Pick a month'); from=analyticsMonth.value+'-01'; to=analyticsMonth.value+'-31'; }
+
     else if (analyticsType.value==='semester') { if(!semesterStart.value||!semesterEnd.value) return alert('Pick range'); from=semesterStart.value+'-01'; to=semesterEnd.value+'-31'; }
+
     else if (analyticsType.value==='year') { if(!yearStart.value) return alert('Pick a year'); from=yearStart.value+'-01-01'; to=yearStart.value+'-12-31'; }
+
     else return;
 
     const stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    Object.entries(attendanceData).forEach(([d, recs]) => {
-      if (d >= from && d <= to) stats.forEach(st => { const c = recs[st.roll] || 'A'; st[c]++; st.total++; });
-    });
+    Object.entries(attendanceData).forEach(([d, recs]) => { if (d >= from && d <= to) stats.forEach(st => { const c = recs[st.roll] || 'A'; st[c]++; st.total++; }); });
     let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s => { const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0'; html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`; });
     html += '</tbody></table>';
@@ -378,29 +366,31 @@ window.addEventListener('DOMContentLoaded', () => {
 
   shareAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
-    const rows = Array.from(analyticsContainer.querySelectorAll('tr')).map(r => r.textContent.trim()).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(rows)}`, '_blank');
+    const period = instructionsEl.textContent.replace('Report: ','');
+    const hdr = `Date Range: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => {
+      const [name,p,a,lt,hd,l,total,pct] = Array.from(r.querySelectorAll('td')).map(td => td.textContent);
+      return `${name} P:${p} A:${a} Lt:${lt} HD:${hd} L:${l} Total:${total} %:${pct}`;
+    }).join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + rows)}`, '_blank');
   };
 
   downloadAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','pt','a4');
-    // header
     doc.setFontSize(14);
     doc.text(localStorage.getItem('schoolName'), 40, 30);
     doc.setFontSize(12);
     doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`, 40, 45);
     doc.text(instructionsEl.textContent.replace('Report: ', 'Period: '), 40, 60);
-    // table
     doc.autoTable({
       head: [['Name','P','A','Lt','HD','L','Total','%']],
-      body: Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => Array.from(r.querySelectorAll('td')).map(td => td.textContent)),
+      body: Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => Array.from(r.querySelectorAll('td')).map(td=>td.textContent)),
       startY: 75,
       margin: { left:40, right:40 },
       styles: { fontSize:8 }
     });
-    // charts side-by-side
     const y = doc.lastAutoTable.finalY + 10;
     const w = 120, h = 80;
     doc.addImage(barChart.toBase64Image(), 'PNG', 40, y, w, h);
