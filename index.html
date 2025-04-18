@@ -26,7 +26,7 @@
       <button id="saveSetup">Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
-      <p id="setupText"></p>
+      <h3 id="setupText"></h3>
       <button id="editSetup" class="small">Edit</button>
     </div>
   </section>
@@ -47,7 +47,7 @@
       <table>
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents"></th>
+            <th class="select-col"><input type="checkbox" id="selectAllStudents"></th>
             <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
@@ -57,6 +57,9 @@
     <div class="table-actions">
       <button id="editSelected" disabled>Edit Selected</button>
       <button id="deleteSelected" disabled>Delete Selected</button>
+      <button id="saveRegistration" class="save">Save</button>
+      <button id="shareRegistration" class="hidden">Share Table</button>
+      <button id="editRegistration" class="hidden">Edit Table</button>
     </div>
   </section>
 
