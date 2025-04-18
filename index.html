@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Classwise Attendance Management</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
@@ -44,19 +44,17 @@
       <input id="parentAddress" placeholder="Address">
       <button id="addStudent">Add</button>
     </div>
-    <div class="table-wrapper">
-      <table id="studentsTable">
+    <div class="table-wrapper" id="studentTableWrapper">
+      <table>
         <thead>
-          <tr>
-            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
-          </tr>
+          <tr><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th></tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="shareAll"><i class="fas fa-share-alt"></i> Share All</button>
-      <button id="saveAll"><i class="fas fa-save"></i> Save All</button>
+      <button id="shareAll">Share</button>
+      <button id="saveAll">Save</button>
     </div>
   </section>
 
@@ -75,7 +73,7 @@
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
     <div class="table-wrapper">
-      <table id="attendanceSummaryTable">
+      <table>
         <thead><tr><th>Name</th><th>Status</th><th>Share</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
@@ -85,7 +83,33 @@
 
   <!-- 5. Analytics -->
   <section id="analytics-section">
-    <!-- unchanged from your previous version -->
+    <h2>Analytics</h2>
+    <div class="row-inline">
+      <select id="analyticsType">
+        <option value="" disabled selected>Period</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden">
+      <input type="month" id="analyticsMonth" class="hidden">
+      <input type="month" id="semesterStart" class="hidden">
+      <input type="month" id="semesterEnd" class="hidden">
+      <input type="month" id="yearStart" class="hidden">
+      <button id="loadAnalytics">Load</button>
+      <button id="resetAnalytics" class="small hidden">Change</button>
+    </div>
+    <div id="instructions" class="summary-block hidden"></div>
+    <div id="analyticsContainer" class="table-container hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button id="shareAnalytics">Share Summary</button>
+      <button id="downloadAnalytics">Download PDF</button>
+    </div>
   </section>
 
   <script src="app.js"></script>
