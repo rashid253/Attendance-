@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Classwise Attendance Management</title>
   <link rel="stylesheet" href="style.css">
-  <!-- html2canvas for screenshot support -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
@@ -36,6 +34,10 @@
   <!-- 2. Student Registration -->
   <section id="student-registration">
     <h2>Student Registration</h2>
+    <div class="table-actions">
+      <button id="editSelected">Edit Selected</button>
+      <button id="deleteSelected">Delete Selected</button>
+    </div>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name">
       <input id="admissionNo" placeholder="Adm#">
@@ -48,14 +50,13 @@
     <div class="table-wrapper" id="studentTableWrapper">
       <table>
         <thead>
-          <tr><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th></tr>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"></th>
+            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
+          </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
-    </div>
-    <div class="table-actions">
-      <button id="shareAll">Share</button>
-      <button id="saveAll">Save</button>
     </div>
   </section>
 
@@ -73,13 +74,17 @@
   <!-- 4. Attendance Summary -->
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
+    <div class="table-actions">
+      <button id="shareAttendanceSummary">Share</button>
+      <button id="downloadAttendanceSummary">Save PDF</button>
+      <button id="resetAttendance" class="small">Reset</button>
+    </div>
     <div class="table-wrapper">
       <table>
         <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
     </div>
-    <button id="resetAttendance" class="small">Reset</button>
   </section>
 
   <!-- 5. Analytics -->
@@ -110,7 +115,6 @@
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics">Share as Text</button>
       <button id="downloadAnalytics">Download PDF</button>
-      <button id="screenshotAnalytics">Share Screenshot</button>
     </div>
   </section>
 
