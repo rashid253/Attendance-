@@ -4,154 +4,153 @@ document.addEventListener('DOMContentLoaded', () => {
   const THRESHOLD = 75;
 
   // --- Setup ---
-  /* unchanged */
+  // (unchanged from original)
+  const schoolIn  = $('schoolNameInput'), classSel=$('teacherClassSelect'), secSel=$('teacherSectionSelect');
+  const saveSet=$('saveSetup'), formSet=$('setupForm'), dispSet=$('setupDisplay'), txtSet=$('setupText'), editSet=$('editSetup');
+  function loadSetup(){
+    const s=localStorage.getItem('schoolName'),c=localStorage.getItem('teacherClass'),e=localStorage.getItem('teacherSection');
+    if(s&&c&&e){ schoolIn.value=s; classSel.value=c; secSel.value=e;
+      txtSet.textContent=`${s} 🏫 | Class: ${c} | Section: ${e}`;
+      formSet.classList.add('hidden'); dispSet.classList.remove('hidden');
+    }
+  }
+  saveSet.onclick=()=>{ const s=schoolIn.value.trim(),c=classSel.value,e=secSel.value; if(!s||!c||!e) return alert('Complete setup');
+    localStorage.setItem('schoolName',s); localStorage.setItem('teacherClass',c); localStorage.setItem('teacherSection',e); loadSetup(); };
+  editSet.onclick=()=>{ dispSet.classList.add('hidden'); formSet.classList.remove('hidden'); };
+  loadSetup();
 
   // --- Student Registration ---
   let students = JSON.parse(localStorage.getItem('students')||'[]');
-  const sName = $('studentName'), admNo = $('admissionNo');
-  const addStu = $('addStudent');
-  const studentsTableBody = $('studentsTable').querySelector('tbody');
-  const shareAllBtn = $('shareAll'), saveAllBtn = $('saveAll');
+  const sName=$('studentName'), admIn=$('admissionNo'), pNameIn=$('parentName'), pConIn=$('parentContact'), pOccIn=$('parentOccupation'), pAddrIn=$('parentAddress');
+  const addBtn=$('addStudent'), tblBody=$('studentsTable').querySelector('tbody');
+  const shareAll=$('shareAll'), saveAll=$('saveAll');
 
-  function renderStudents() {
-    studentsTableBody.innerHTML = '';
-    students.forEach((s,i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${s.name}</td>
-        <td>${s.adm||'-'}</td>
-        <td>${s.parent||''}</td>
-        <td>${s.contact||''}</td>
-        <td>${s.occupation||''}</td>
-        <td>${s.address||''}</td>
+  function renderStudents(){
+    tblBody.innerHTML='';
+    students.forEach((s,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${s.name}</td><td>${s.adm}</td><td>${s.parent}</td><td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>
         <td class="actions">
-          <button class="edit">✏️</button>
-          <button class="delete">🗑️</button>
-          <button class="share">🔗</button>
-        </td>
-      `;
+          <button class="edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M...edit-icon..."/></svg></button>
+          <button class="delete"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M...trash-icon..."/></svg></button>
+          <button class="share"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M...share-icon..."/></svg></button>
+        </td>`;
       // Edit
       tr.querySelector('.edit').onclick = () => {
-        const name = prompt('Name', s.name);
-        if (name) s.name = name.trim();
-        s.adm = prompt('Adm No', s.adm)||'';
-        s.parent = prompt('Parent Name', s.parent)||'';
-        s.contact = prompt('Parent Contact', s.contact)||'';
-        s.occupation = prompt('Occupation', s.occupation)||'';
-        s.address = prompt('Address', s.address)||'';
-        localStorage.setItem('students', JSON.stringify(students));
-        renderStudents();
+        s.name = prompt('Name', s.name).trim() || s.name;
+        s.adm = prompt('Adm No', s.adm).trim() || s.adm;
+        s.parent = prompt('Parent Name', s.parent).trim() || s.parent;
+        s.contact = prompt('Parent Contact', s.contact).trim() || s.contact;
+        s.occupation = prompt('Occupation', s.occupation).trim() || s.occupation;
+        s.address = prompt('Address', s.address).trim() || s.address;
+        localStorage.setItem('students', JSON.stringify(students)); renderStudents();
       };
       // Delete
       tr.querySelector('.delete').onclick = () => {
-        if (confirm('Delete this student?')) {
-          students.splice(i,1);
-          localStorage.setItem('students', JSON.stringify(students));
-          renderStudents();
-        }
+        if(confirm('Delete this student?')){ students.splice(i,1); localStorage.setItem('students',JSON.stringify(students)); renderStudents(); }
       };
       // Share
       tr.querySelector('.share').onclick = () => {
         const msg = `Student: ${s.name}\nAdm#: ${s.adm}`;
-        const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-        window.open(url,'_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
       };
-      studentsTableBody.appendChild(tr);
+      tblBody.appendChild(tr);
     });
   }
 
-  addStu.onclick = () => {
-    const name = sName.value.trim(), adm = admNo.value.trim();
-    if (!name) return alert('Enter name');
-    // prompt for other info
-    const parent = prompt('Parent Name')||'';
-    const contact = prompt('Parent Contact')||'';
-    const occupation = prompt('Occupation')||'';
-    const address = prompt('Address')||'';
-    students.push({ name, adm, parent, contact, occupation, address, roll: Date.now() });
-    localStorage.setItem('students', JSON.stringify(students));
-    sName.value = admNo.value = '';
+  addBtn.onclick = () => {
+    const name=sName.value.trim(),adm=admIn.value.trim();
+    if(!name||!adm) return alert('Enter name and admission number');
+    const student={ name, adm,
+      parent: pNameIn.value.trim(), contact: pConIn.value.trim(),
+      occupation: pOccIn.value.trim(), address: pAddrIn.value.trim(), roll:Date.now()
+    };
+    students.push(student);
+    localStorage.setItem('students',JSON.stringify(students));
+    sName.value=admIn.value=pNameIn.value=pConIn.value=pOccIn.value=pAddrIn.value='';
     renderStudents();
   };
 
-  shareAllBtn.onclick = () => {
-    let texts = students.map(s => `${s.name} (${s.adm})`).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(texts)}`,'_blank');
+  shareAll.onclick = () => {
+    const text=students.map(s=>`${s.name} (${s.adm})`).join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank');
   };
-  saveAllBtn.onclick = () => {
-    // Example: save to localStorage (already saved on every op) or export
-    alert('All student data is already saved locally.');
-  };
+  saveAll.onclick = () => alert('All student data is saved locally.');
 
   renderStudents();
 
   // --- Attendance Marking ---
-  const dateIn = $('dateInput'), loadAtt = $('loadAttendance');
-  const attList = $('attendanceList'), saveAtt = $('saveAttendance');
-  const attResultSec = $('attendance-result'), attSummaryBody = $('attendanceSummaryTable').querySelector('tbody');
-  const resetAtt = $('resetAttendance');
+  const dateIn=$('dateInput'), loadA=$('loadAttendance'), attList=$('attendanceList'), saveA=$('saveAttendance');
+  const resSec=$('attendance-result'), resBody=$('attendanceSummaryTable').querySelector('tbody'), resetA=$('resetAttendance');
+  let attendanceData=JSON.parse(localStorage.getItem('attendanceData')||'{}');
 
-  let attendanceData = JSON.parse(localStorage.getItem('attendanceData')||'{}');
-
-  loadAtt.onclick = () => {
-    if (!dateIn.value) return alert('Pick date');
-    attList.innerHTML = '';
+  loadA.onclick = () => {
+    if(!dateIn.value) return alert('Pick date');
+    attList.innerHTML='';
     students.forEach(s => {
-      const div = document.createElement('div'); div.className='attendance-item';
+      const div=document.createElement('div'); div.className='attendance-item';
       div.innerHTML = `<span>${s.name}</span><div class="attendance-actions">
-        ${['P','A','Lt','HD','L'].map(code => `<button class="att-btn">${code}</button>`).join('')}
+        ${['P','A','Lt','HD','L'].map(code=>`<button class="att-btn">${code}</button>`).join('')}
       </div>`;
-      // toggle selection
-      div.querySelectorAll('.att-btn').forEach(btn => {
-        btn.onclick = () => {
-          div.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('selected'));
-          btn.classList.add('selected');
-        };
-      });
-      attList.append(div);
+      div.querySelectorAll('.att-btn').forEach(btn=>btn.onclick=()=>{ div.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); });
+      attList.appendChild(div);
     });
-    saveAtt.classList.remove('hidden');
+    saveA.classList.remove('hidden');
   };
 
-  saveAtt.onclick = () => {
-    // hide marking UI
+  saveA.onclick = () => {
     document.getElementById('attendance-section').classList.add('hidden');
-    attResultSec.classList.remove('hidden');
-
-    const d = dateIn.value;
-    attendanceData[d] = {};
-    const rows = attList.querySelectorAll('.attendance-item');
-    rows.forEach((div,i)=>{
-      const sel = div.querySelector('.attendance-actions .selected');
-      const status = sel ? sel.textContent : '';
-      attendanceData[d][students[i].roll] = status;
+    resSec.classList.remove('hidden');
+    const d=dateIn.value; attendanceData[d]={};
+    attList.querySelectorAll('.attendance-item').forEach((div,i)=>{
+      const sel=div.querySelector('.selected'); attendanceData[d][students[i].roll]=sel?sel.textContent:'Not marked';
     });
-    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
-
-    // populate summary table
-    attSummaryBody.innerHTML = '';
-    students.forEach(s => {
-      const status = attendanceData[d][s.roll] || 'Not marked';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${s.name}</td>
-        <td>${status}</td>
-        <td><button class="wa">📱</button></td>
-      `;
-      tr.querySelector('.wa').onclick = () => {
-        const msg = `Attendance for ${s.name} on ${d}: ${status}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
-      };
-      attSummaryBody.appendChild(tr);
+    localStorage.setItem('attendanceData',JSON.stringify(attendanceData));
+    resBody.innerHTML='';
+    students.forEach(s=>{
+      const status=attendanceData[d][s.roll];
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="wa"><i class="fab fa-whatsapp"></i></button></td>`;
+      tr.querySelector('.wa').onclick = () => window.open(`https://wa.me/?text=${encodeURIComponent(`Attendance for ${s.name} on ${d}: ${status}`)}`,'_blank');
+      resBody.appendChild(tr);
     });
   };
-
-  resetAtt.onclick = () => {
-    attResultSec.classList.add('hidden');
-    document.getElementById('attendance-section').classList.remove('hidden');
-    attList.innerHTML = '';
-    saveAtt.classList.add('hidden');
+  resetA.onclick = () => {
+    resSec.classList.add('hidden'); document.getElementById('attendance-section').classList.remove('hidden');
+    attList.innerHTML=''; saveA.classList.add('hidden');
   };
 
-  // --- Analytics (unchanged) ---
+  // --- Analytics ---
+  /* Restored original analytics code unchanged */
+  const typeSel=$('analyticsType'), aDate=$('analyticsDate'), aMonth=$('analyticsMonth'), semStart=$('semesterStart'), semEnd=$('semesterEnd'), yrStart=$('yearStart');
+  const loadAnalytics=$('loadAnalytics'), resetAnalytics=$('resetAnalytics'), instr=$('instructions'), contA=$('analyticsContainer'), graphs=$('graphs');
+  const barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
+  let chartBar, chartPie;
+  function toggleInputs(){ [aDate,aMonth,semStart,semEnd,yrStart].forEach(el=>el.classList.add('hidden')); const v=typeSel.value;
+    if(v==='date') aDate.classList.remove('hidden'); if(v==='month') aMonth.classList.remove('hidden');
+    if(v==='semester'){ semStart.classList.remove('hidden'); semEnd.classList.remove('hidden'); }
+    if(v==='year') yrStart.classList.remove('hidden');
+  }
+  typeSel.onchange=toggleInputs;
+  function buildDates(){ const v=typeSel.value, arr=[], push=(s,e)=>{ let c=new Date(s); while(c<=e){ arr.push(c.toISOString().slice(0,10)); c.setDate(c.getDate()+1);} };
+    if(v==='date'){ const d=new Date(aDate.value); if(!isNaN(d)) arr.push(d.toISOString().slice(0,10)); }
+    if(v==='month'){ const [y,m]=aMonth.value.split('-'); push(new Date(y,m-1,1), new Date(y,m,0)); }
+    if(v==='semester'){ const [ys,ms]=semStart.value.split('-'),[ye,me]=semEnd.value.split('-'); push(new Date(ys,ms-1,1), new Date(ye,me,0)); }
+    if(v==='year'){ const [ys,ms]=yrStart.value.split('-'); const s=new Date(ys,ms-1,1), e=new Date(s); e.setMonth(e.getMonth()+11); e.setDate(0); push(s,e); }
+    return arr;
+  }
+  loadAnalytics.onclick=()=>{
+    const dates=buildDates(); if(!dates.length) return alert('Select period');
+    resetAnalytics.classList.remove('hidden'); instr.classList.remove('hidden'); contA.classList.remove('hidden'); graphs.classList.remove('hidden');
+    instr.innerHTML=`<h3>Instructions</h3><p>Attendance % = (P+Lt+HD)/TotalDays ×100</p><p>Threshold: ${THRESHOLD}% for eligibility</p>`;
+    const dataA=JSON.parse(localStorage.getItem('attendanceData')||'{}');
+    const summary=students.map(s=>{ const cnt={P:0,A:0,Lt:0,HD:0,L:0}; dates.forEach(d=>{ const st=(dataA[d]||{})[s.roll]||''; if(st) cnt[st]++; }); const pct=Math.round((cnt.P+cnt.Lt+cnt.HD)/dates.length*100); return {name:s.name,...cnt,pct}; });
+    contA.innerHTML=''; const tbl=document.createElement('table'); tbl.border=1; tbl.style.width='100%';
+    tbl.innerHTML=`<tr><th>Name</th><th>P</th><th>Lt</th><th>HD</th><th>L</th><th>A</th><th>%</th><th>Elig</th></tr>${summary.map(r=>`<tr><td>${r.name}</td><td>${r.P}</td><td>${r.Lt}</td><td>${r.HD}</td><td>${r.L}</td><td>${r.A}</td><td>${r.pct}%</td><td>${r.pct>=THRESHOLD?'✓':'✗'}</td></tr>`).join('')}`;
+    contA.appendChild(tbl);
+    const labels=summary.map(r=>r.name), data=summary.map(r=>r.pct);
+    if(chartBar) chartBar.destroy(); chartBar=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{label:'%',data}]},options:{responsive:true}});
+    if(chartPie) chartPie.destroy(); chartPie=new Chart(pieCtx,{type:'pie',data:{labels,datasets:[{data}]},options:{responsive:true}});
+  };
+  resetAnalytics.onclick=()=>{ toggleInputs(); typeSel.value=''; resetAnalytics.classList.add('hidden'); instr.classList.add('hidden'); contA.classList.add('hidden'); graphs.classList.add('hidden'); }
 });
