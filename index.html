@@ -13,19 +13,20 @@
   <!-- 1. Teacher Setup -->
   <section id="teacher-setup">
     <h2>Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input type="text" id="schoolNameInput" placeholder="School Name" />
-      <select id="teacherClassSelect">
-        <option value="" disabled selected>--Class--</option>
-        <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
-        <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
-      </select>
-      <select id="teacherSectionSelect">
-        <option value="" disabled selected>--Section--</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <button id="saveSetup">Save</button>
+    <div id="setupForm">
+      <div class="row-inline">
+        <input type="text" id="schoolNameInput" placeholder="School Name" />
+        <select id="teacherClassSelect">
+          <option value="">--Class--</option>
+          <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
+          <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+          <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+        </select>
+        <select id="teacherSectionSelect">
+          <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+        </select>
+        <button id="saveSetup">Save</button>
+      </div>
     </div>
     <div id="setupDisplay" class="hidden">
       <p id="setupText"></p>
@@ -37,23 +38,16 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input type="text" id="studentName"       placeholder="Student Name" />
+      <input type="text" id="studentName"       placeholder="Name" />
       <input type="text" id="admissionNo"       placeholder="Admission No" />
-      <input type="text" id="fatherName"        placeholder="Father's Name" />
-      <input type="text" id="motherName"        placeholder="Mother's Name" />
-      <input type="text" id="contact"           placeholder="Contact" />
+      <input type="text" id="parentName"        placeholder="Parent Name" />
+      <input type="text" id="parentContact"     placeholder="Parent Contact" />
+      <input type="text" id="parentOccupation"  placeholder="Occupation" />
+      <input type="text" id="parentAddress"     placeholder="Address" />
       <button id="addStudent">Add</button>
     </div>
-    <table id="studentsTable" class="table-container hidden">
-      <thead>
-        <tr><th>Name</th><th>Adm #</th><th>Father</th><th>Mother</th><th>Contact</th><th>Actions</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div class="row-inline">
-      <button id="shareAllStudents" class="small">Share All</button>
-      <button id="downloadAllStudents" class="small">Download All</button>
-    </div>
+    <ul id="students" class="list"></ul>
+    <button id="deleteAllStudents" class="small">Delete All</button>
   </section>
 
   <!-- 3. Attendance Marking -->
@@ -63,19 +57,19 @@
       <input type="date" id="dateInput" />
       <button id="loadAttendance">Load</button>
     </div>
-    <table id="attendanceTable" class="table-container hidden">
-      <thead>
-        <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div class="row-inline">
-      <button id="saveAttendance" class="small hidden">Save</button>
-      <button id="shareAllAttendance" class="small hidden">Share All</button>
-    </div>
+    <div id="attendanceList" class="list"></div>
+    <button id="saveAttendance" class="hidden">Save</button>
   </section>
 
-  <!-- 4. Analytics -->
+  <!-- 4. Attendance Summary & WhatsApp Share -->
+  <section id="attendance-result" class="hidden">
+    <h2>Attendance Summary</h2>
+    <ul id="attendanceResultList" class="list"></ul>
+    <button id="shareWhatsApp" class="small">Share via WhatsApp</button>
+    <button id="resetAttendance" class="small">Reset</button>
+  </section>
+
+  <!-- 5. Analytics -->
   <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
@@ -86,29 +80,31 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date"  id="analyticsDate"  class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" placeholder="Semester Start" />
-      <input type="month" id="semesterEnd"   class="hidden" placeholder="Semester End" />
-      <input type="month" id="yearStart"     class="hidden" placeholder="Year Start" />
+      <input type="date"   id="analyticsDate"      class="hidden" />
+      <input type="month"  id="analyticsMonth"     class="hidden" />
+      <input type="month"  id="semesterStart"      class="hidden" placeholder="Start Month" />
+      <input type="month"  id="semesterEnd"        class="hidden" placeholder="End   Month" />
+      <input type="month"  id="yearStart"          class="hidden" placeholder="Start Month" />
       <button id="loadAnalytics">Load</button>
       <button id="resetAnalytics" class="small hidden">Change</button>
     </div>
+
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
     <div id="graphs" class="graph-container hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
+
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics" class="small">Share Summary</button>
       <button id="downloadAnalytics" class="small">Download PDF</button>
     </div>
   </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
