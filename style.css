@@ -1,4 +1,3 @@
-/* style.css */
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -9,7 +8,7 @@
   --light: #f2f2f2;
   --dark: #333;
 }
-* { box-sizing:border-box; margin:0; padding:0; }
+* { box-sizing: border-box; margin:0; padding:0; }
 body { font-family:Arial,sans-serif; color:var(--dark); padding:10px; }
 header { background:var(--primary); color:#fff; padding:15px; text-align:center; margin-bottom:10px; }
 section { background:#fff; border:1px solid #ccc; border-radius:6px; margin-bottom:20px; padding:15px; }
@@ -19,21 +18,13 @@ button { background:var(--primary); color:#fff; cursor:pointer; display:flex; al
 button:hover { opacity:.9; }
 button.small { background:var(--info); padding:4px 8px; font-size:.9em; }
 .hidden { display:none; }
-.list { margin-top:10px; }
-/* Tables */
 .table-wrapper { overflow-x:auto; margin-top:10px; }
 table { width:100%; border-collapse:collapse; }
 th, td { border:1px solid #ccc; padding:8px; white-space:nowrap; text-align:left; }
 th { background:var(--light); }
-td.actions button { background:transparent; border:none; color:var(--primary); font-size:1.1em; }
+.actions button { background:transparent; border:none; color:var(--primary); font-size:1.1em; margin:0 2px; }
 .table-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
-/* Attendance load */
-.attendance-item { display:flex; align-items:center; margin-bottom:10px; }
+#attendanceList .attendance-item { display:flex; align-items:center; margin-bottom:10px; }
 .attendance-item span { flex:1; }
 .attendance-actions { display:flex; gap:5px; flex:2; }
 .att-btn { flex:1; padding:8px; border:1px solid #ccc; background:transparent; }
-/* Summary */
-#attendanceSummaryTable th, #attendanceSummaryTable td { border:1px solid #ccc; padding:8px; }
-#attendanceSummaryTable th { background:var(--light); }
-#attendanceSummaryTable td button { background:transparent; border:none; font-size:1.2em; color:var(--success); }
-@media(max-width:600px){ .row-inline input, .row-inline select, .row-inline button { flex:1 1 100%; } }
