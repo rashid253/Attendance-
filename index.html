@@ -78,20 +78,14 @@
     <h2>Analytics</h2>
     <div class="row-inline">
       <select id="analyticsType">
-        <option value="" selected disabled>Select Period</option>
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
+        <option value="sixmonths">6 Months</option>
         <option value="year">Year</option>
       </select>
       <input type="date" id="analyticsDate" class="hidden" />
       <input type="month" id="analyticsMonth" class="hidden" />
-      <select id="analyticsSemester" class="hidden">
-        <option value="" disabled selected>Select Semester</option>
-        <option value="1">1st Semester (Jan–Jun)</option>
-        <option value="2">2nd Semester (Jul–Dec)</option>
-      </select>
-      <input type="number" id="analyticsYear" class="hidden" placeholder="Year (e.g. 2025)" min="2000" max="2100" />
       <select id="studentFilter"><option value="">All Students</option></select>
       <select id="representationType">
         <option value="table">Table</option>
@@ -103,10 +97,6 @@
       <button id="resetAnalyticsBtn" class="small hidden">Change Period</button>
     </div>
     <div id="analyticsContainer" class="table-container"></div>
-    <div id="analyticsActions" class="row-inline hidden">
-      <button id="shareAnalytics" class="small">Share Summary</button>
-      <button id="downloadAnalytics" class="small">Download Report</button>
-    </div>
   </section>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
