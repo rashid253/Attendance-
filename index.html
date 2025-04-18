@@ -37,7 +37,7 @@
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name">
-      <input id="admissionNo" placeholder="Admission No">
+      <input id="admissionNo" placeholder="Adm#">
       <input id="parentName" placeholder="Parent Name">
       <input id="parentContact" placeholder="Parent Contact">
       <input id="parentOccupation" placeholder="Occupation">
@@ -74,7 +74,7 @@
     <h2>Attendance Summary</h2>
     <div class="table-wrapper">
       <table>
-        <thead><tr><th>Name</th><th>Status</th><th>Share</th></tr></thead>
+        <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
     </div>
@@ -96,7 +96,7 @@
       <input type="month" id="analyticsMonth" class="hidden">
       <input type="month" id="semesterStart" class="hidden">
       <input type="month" id="semesterEnd" class="hidden">
-      <input type="month" id="yearStart" class="hidden">
+      <input type="number" id="yearStart" class="hidden" placeholder="Year">
       <button id="loadAnalytics">Load</button>
       <button id="resetAnalytics" class="small hidden">Change</button>
     </div>
@@ -111,6 +111,11 @@
       <button id="downloadAnalytics">Download PDF</button>
     </div>
   </section>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
   <script src="app.js"></script>
 </body>
