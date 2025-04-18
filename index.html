@@ -51,28 +51,6 @@
     <button id="deleteAllStudents" class="small">Delete All</button>
   </section>
 
-  <!-- Attendance Marking -->
-  <section id="attendance-section">
-    <h2>Mark Attendance</h2>
-    <div class="row-inline">
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance">Load</button>
-    </div>
-    <div id="attendanceList"></div>
-    <button id="saveAttendance">Save Attendance</button>
-  </section>
-
-  <!-- Attendance Summary -->
-  <section id="attendance-result" class="hidden">
-    <h2>Attendance Summary</h2>
-    <ul id="attendanceResultList" class="attendance-summary"></ul>
-    <div class="row-inline">
-      <button id="editAttendanceBtn" class="small">Edit</button>
-      <button id="shareAttendanceBtn" class="small">Share</button>
-      <button id="downloadAttendanceBtn" class="small">Download</button>
-    </div>
-  </section>
-
   <!-- Analytics -->
   <section id="analytics-section">
     <h2>Analytics</h2>
@@ -82,27 +60,33 @@
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
-        <option value="year">Year</option>
+        <option value="year">Academic Year</option>
       </select>
       <input type="date" id="analyticsDate" class="hidden" />
+
       <input type="month" id="analyticsMonth" class="hidden" />
-      <select id="analyticsSemester" class="hidden">
-        <option value="" disabled selected>Select Semester</option>
-        <option value="1">Semester 1 (Jul–Dec)</option>
-        <option value="2">Semester 2 (Jan–Jun)</option>
-      </select>
-      <input type="number" id="analyticsYear" class="hidden" placeholder="Academic Year Start (e.g. 2024)" min="2000" max="2100" />
+
+      <!-- custom semester range -->
+      <input type="month" id="semesterStart" class="hidden" placeholder="Semester Start" />
+      <input type="month" id="semesterEnd"   class="hidden" placeholder="Semester End" />
+
+      <!-- academic year start -->
+      <input type="month" id="yearStart" class="hidden" placeholder="Year Start (e.g. 2024-08)" />
+
       <select id="studentFilter"><option value="">All Students</option></select>
-      <select id="representationType">
-        <option value="table">Table</option>
-        <option value="summary">Summary</option>
-        <option value="graph">Graph</option>
-        <option value="all">All</option>
-      </select>
+
       <button id="loadAnalytics">Load</button>
       <button id="resetAnalyticsBtn" class="small hidden">Change Period</button>
     </div>
+
+    <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container"></div>
+
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics" class="small">Share Summary</button>
       <button id="downloadAnalytics" class="small">Download Report</button>
