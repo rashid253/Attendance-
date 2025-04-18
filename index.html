@@ -86,7 +86,7 @@
       </table>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareAttendanceSummary">Share</button>
+      <button type="button" id="shareAttendanceSummary">Share Table</button>
       <button type="button" id="downloadAttendancePDF">Download PDF</button>
       <button type="button" id="resetAttendance" class="small">Reset</button>
     </div>
@@ -96,8 +96,9 @@
   <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
+      <label for="analyticsType">Period:</label>
       <select id="analyticsType">
-        <option value="" disabled selected>Period</option>
+        <option value="" disabled selected>--Select Period--</option>
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
