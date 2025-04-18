@@ -6,22 +6,44 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Classwise Attendance Management</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Font Awesome for fallback icons (optional) -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
 
-  <!-- 1. Teacher Setup (unchanged) -->
+  <!-- 1. Teacher Setup -->
   <section id="teacher-setup">
     <h2>Setup</h2>
-    <!-- ... same as before ... -->
+    <div id="setupForm">
+      <div class="row-inline">
+        <input type="text" id="schoolNameInput" placeholder="School Name" />
+        <select id="teacherClassSelect">
+          <option value="">--Class--</option>
+          <!-- ... options ... -->
+        </select>
+        <select id="teacherSectionSelect">
+          <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+        </select>
+        <button id="saveSetup">Save</button>
+      </div>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <p id="setupText"></p>
+      <button id="editSetup" class="small">Edit</button>
+    </div>
   </section>
 
   <!-- 2. Student Registration -->
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input type="text" id="studentName" placeholder="Name" />
-      <input type="text" id="admissionNo" placeholder="Admission No" />
+      <input type="text" id="studentName"       placeholder="Name" />
+      <input type="text" id="admissionNo"       placeholder="Admission No" />
+      <input type="text" id="parentName"        placeholder="Parent Name" />
+      <input type="text" id="parentContact"     placeholder="Parent Contact" />
+      <input type="text" id="parentOccupation"  placeholder="Occupation" />
+      <input type="text" id="parentAddress"     placeholder="Address" />
       <button id="addStudent">Add</button>
     </div>
 
@@ -36,8 +58,8 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="shareAll">Share All</button>
-      <button id="saveAll">Save All</button>
+      <button id="shareAll"><i class="fas fa-share-alt"></i> Share All</button>
+      <button id="saveAll"><i class="fas fa-save"></i> Save All</button>
     </div>
   </section>
 
@@ -66,9 +88,37 @@
     <button id="resetAttendance" class="small">Reset</button>
   </section>
 
-  <!-- 5. Analytics (unchanged) -->
+  <!-- 5. Analytics -->
   <section id="analytics-section">
-    <!-- ... same as before ... -->
+    <h2>Analytics</h2>
+    <div class="row-inline">
+      <select id="analyticsType">
+        <option value="" disabled selected>Period</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date"   id="analyticsDate"      class="hidden" />
+      <input type="month"  id="analyticsMonth"     class="hidden" />
+      <input type="month"  id="semesterStart"      class="hidden" />
+      <input type="month"  id="semesterEnd"        class="hidden" />
+      <input type="month"  id="yearStart"          class="hidden" />
+      <button id="loadAnalytics">Load</button>
+      <button id="resetAnalytics" class="small hidden">Change</button>
+    </div>
+
+    <div id="instructions" class="summary-block hidden"></div>
+    <div id="analyticsContainer" class="table-container hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+
+    <div id="analyticsActions" class="row-inline hidden">
+      <button id="shareAnalytics" class="small">Share Summary</button>
+      <button id="downloadAnalytics" class="small">Download PDF</button>
+    </div>
   </section>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
