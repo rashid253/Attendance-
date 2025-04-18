@@ -263,12 +263,10 @@ Remark: ${remark}`;
     const sec    = localStorage.getItem('teacherSection');
     const header = `Date: ${d}\nSchool: ${school}\nClass: ${cls}\nSection: ${sec}`;
     const remarkMap = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
-    // build per-student status lines
     const lines = students.map(s => {
       const code = attendanceData[d][s.roll] || 'A';
       return `${s.name}: ${remarkMap[code]}`;
     });
-    // compute overall class percentage & remark
     const total = students.length;
     const presentCount = students.reduce((sum,s) => sum + ((attendanceData[d][s.roll]==='P')?1:0), 0);
     const pct = total? ((presentCount/total)*100).toFixed(1) : '0.0';
@@ -285,15 +283,37 @@ Remark: ${remark}`;
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','pt','a4');
+    // header
+    const school = localStorage.getItem('schoolName');
+    const cls    = localStorage.getItem('teacherClass');
+    const sec    = localStorage.getItem('teacherSection');
+    const period = instructionsEl.textContent.replace('Analytics from ', 'Period: ');
+    doc.setFontSize(14);
+    doc.text(school, 40, 30);
+    doc.setFontSize(12);
+    doc.text(`Class: ${cls} | Section: ${sec}`, 40, 45);
+    doc.text(period, 40, 60);
+    // table
     doc.autoTable({
-      head:[['Name','Status']],
-      body:Array.from(summaryBody.querySelectorAll('tr')).slice(1).map(r=>{
-        const [n,s] = r.querySelectorAll('td');
-        return [n.textContent, s.textContent];
+      head:[['Name','P','A','Lt','HD','L','Total','%']],
+      body:Array.from(analyticsContainer.querySelectorAll('table tbody tr')).map(r=>{
+        return Array.from(r.querySelectorAll('td')).map(td=>td.textContent);
       }),
-      startY:40,margin:{left:40,right:40},styles:{fontSize:10}
+      startY: 75,
+      margin:{left:40, right:40},
+      styles:{fontSize:8}
     });
-    doc.save('attendance_summary.pdf');
+    // graphs on same page
+    const barImg = barChart.toBase64Image();
+    const pieImg = pieChart.toBase64Image();
+    // position charts below table
+    const tableHeight = doc.previousAutoTable.finalY;
+    const chartY = tableHeight + 20;
+    const chartWidth = 250;
+    const chartHeight = 130;
+    doc.addImage(barImg, 'PNG', 40, chartY, chartWidth, chartHeight);
+    doc.addImage(pieImg, 'PNG', 40 + chartWidth + 20, chartY, chartWidth, chartHeight);
+    doc.save('analytics_report.pdf');
   };
 
   // ANALYTICS
@@ -388,33 +408,6 @@ Remark: ${remark}`;
   shareAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
     const text=[...analyticsContainer.querySelectorAll('table tr')].map(r=>r.textContent.trim()).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  downloadAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    // add table
-    doc.autoTable({
-      head:[['Name','P','A','Lt','HD','L','Total','%']],
-      body:Array.from(analyticsContainer.querySelectorAll('table tbody tr')).map(r=>{
-        return Array.from(r.querySelectorAll('td')).map(td=>td.textContent);
-      }),
-      startY:40, margin:{left:40, right:40}, styles:{fontSize:8}
-    });
-    // Bar chart on next page, smaller and properly positioned
-    const barImg = barChart.toBase64Image();
-    doc.addPage();
-    doc.setFontSize(12);
-    doc.text('Bar Chart (% Present)', 40, 40);
-    doc.addImage(barImg, 'PNG', 40, 55, 260, 130);
-    // Pie chart on another page
-    const pieImg = pieChart.toBase64Image();
-    doc.addPage();
-    doc.setFontSize(12);
-    doc.text('Pie Chart (Aggregate)', 40, 40);
-    doc.addImage(pieImg, 'PNG', 40, 55, 260, 130);
-    doc.save('analytics_report.pdf');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank`);
   };
 });
