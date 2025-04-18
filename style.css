@@ -2,12 +2,12 @@
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
-  --danger:  #f44336;
-  --info:    #03a9f4;
+  --danger: #f44336;
   --warning: #FFEB3B;
-  --orange:  #FF9800;
-  --light:   #f2f2f2;
-  --dark:    #333;
+  --orange: #FF9800;
+  --info: #03a9f4;
+  --light: #f2f2f2;
+  --dark: #333;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:Arial,sans-serif; color:var(--dark); padding:10px; }
@@ -27,12 +27,12 @@ th, td { border:1px solid #ccc; padding:8px; white-space:nowrap; text-align:left
 th { background:var(--light); }
 td.actions button { background:transparent; border:none; color:var(--primary); font-size:1.1em; }
 .table-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
-/* Attendance buttons */
+/* Attendance load */
 .attendance-item { display:flex; align-items:center; margin-bottom:10px; }
 .attendance-item span { flex:1; }
 .attendance-actions { display:flex; gap:5px; flex:2; }
-.att-btn { flex:1; background:transparent; border:1px solid #ccc; }
-/* Attendance summary */
+.att-btn { flex:1; padding:8px; border:1px solid #ccc; background:transparent; }
+/* Summary */
 #attendanceSummaryTable th, #attendanceSummaryTable td { border:1px solid #ccc; padding:8px; }
 #attendanceSummaryTable th { background:var(--light); }
 #attendanceSummaryTable td button { background:transparent; border:none; font-size:1.2em; color:var(--success); }
