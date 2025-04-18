@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,10 +34,6 @@
   <!-- 2. Student Registration -->
   <section id="student-registration">
     <h2>Student Registration</h2>
-    <div class="table-actions">
-      <button id="editSelected" disabled>Edit Selected</button>
-      <button id="deleteSelected" disabled>Delete Selected</button>
-    </div>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name">
       <input id="admissionNo" placeholder="Adm#">
@@ -53,11 +48,15 @@
         <thead>
           <tr>
             <th><input type="checkbox" id="selectAllStudents"></th>
-            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
+            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled>Edit Selected</button>
+      <button id="deleteSelected" disabled>Delete Selected</button>
     </div>
   </section>
 
@@ -75,16 +74,16 @@
   <!-- 4. Attendance Summary -->
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
-    <div class="table-actions">
-      <button id="shareAttendanceSummary">Share</button>
-      <button id="downloadAttendanceSummary">Save PDF</button>
-      <button id="resetAttendance" class="small">Reset</button>
-    </div>
     <div class="table-wrapper">
       <table>
         <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
+    </div>
+    <div class="table-actions">
+      <button id="shareAttendanceSummary">Share</button>
+      <button id="downloadAttendanceSummary">Save PDF</button>
+      <button id="resetAttendance" class="small">Reset</button>
     </div>
   </section>
 
