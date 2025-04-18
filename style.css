@@ -1,150 +1,133 @@
-:root {
-  --primary: #2196F3;
-  --success: #4CAF50;
-  --danger: #f44336;
-  --warning: #FFEB3B;
-  --orange: #FF9800;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
-/* prevent flicker */
-* {
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
-}
-body {
-  font-family: Arial, sans-serif;
-  color: var(--dark);
-  padding: 10px;
-}
-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 15px;
-  text-align: center;
-  margin-bottom: 10px;
-}
-section {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  padding: 15px;
-}
-.row-inline {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
-}
-label {
-  font-weight: bold;
-}
-input,
-select,
-button {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-button {
-  background: var(--primary);
-  color: #fff;
-  cursor: pointer;
-}
-button:hover {
-  opacity: 0.9;
-}
-button.save {
-  background: var(--success);
-}
-button.small {
-  background: var(--info);
-  padding: 4px 8px;
-  font-size: 0.9em;
-}
-.hidden {
-  display: none;
-}
-.table-wrapper {
-  overflow-x: auto;
-  margin-top: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-.table-wrapper.saved {
-  border: 2px solid var(--success);
-  background: var(--light);
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  white-space: nowrap;
-  text-align: left;
-}
-th {
-  background: var(--light);
-}
-.table-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-.attendance-item {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-.attendance-item + .attendance-actions {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 15px;
-}
-.att-btn {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  background: transparent;
-  color: var(--dark);
-  font-weight: bold;
-}
-.table-container {
-  overflow-x: auto;
-  margin-top: 15px;
-}
-.summary-block {
-  margin-top: 15px;
-}
-.graph-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 15px;
-}
-canvas {
-  flex: 1 1 300px;
-  max-width: 100%;
-}
-.selected {
-  background: var(--light);
-}
-.editing {
-  outline: 2px dashed var(--info);
-}
-.select-col {
-  width: 40px;
-}
-@media (max-width: 600px) {
-  .row-inline input,
-  .row-inline select,
-  .row-inline button {
-    flex: 1 1 100%;
-  }
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classwise Attendance Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><h1>Attendance Management</h1></header>
+
+  <!-- 1. Setup -->
+  <section id="teacher-setup">
+    <h2>Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name">
+      <select id="teacherClassSelect">
+        <option value="">--Class--</option>
+        <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
+        <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+      </select>
+      <button type="button" id="saveSetup">Save</button>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <h3 id="setupText"></h3>
+      <button type="button" id="editSetup" class="small">Edit</button>
+    </div>
+  </section>
+
+  <!-- 2. Student Registration -->
+  <section id="student-registration">
+    <h2>Student Registration</h2>
+    <div id="regForm" class="row-inline">
+      <input id="studentName" placeholder="Name" required>
+      <input id="admissionNo" placeholder="Adm#" required>
+      <input id="parentName" placeholder="Parent Name" required>
+      <input id="parentContact" placeholder="Parent Contact" required>
+      <input id="parentOccupation" placeholder="Occupation" required>
+      <input id="parentAddress" placeholder="Address" required>
+      <button type="button" id="addStudent">Add</button>
+    </div>
+    <div class="table-wrapper" id="studentTableWrapper">
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th class="select-col"><input type="checkbox" id="selectAllStudents"></th>
+            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button type="button" id="editSelected" disabled>Edit Selected</button>
+      <button type="button" id="deleteSelected" disabled>Delete Selected</button>
+      <button type="button" id="saveRegistration" class="save">Save Table</button>
+      <button type="button" id="shareRegistration" class="hidden">Share Table</button>
+      <button type="button" id="editRegistration" class="hidden">Edit Table</button>
+      <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
+    </div>
+  </section>
+
+  <!-- 3. Attendance Marking -->
+  <section id="attendance-section">
+    <h2>Mark Attendance</h2>
+    <div class="row-inline">
+      <label for="dateInput">Select Date:</label>
+      <input type="date" id="dateInput">
+      <button type="button" id="loadAttendance">Load Attendance</button>
+    </div>
+    <div id="attendanceList"></div>
+    <button type="button" id="saveAttendance" class="hidden">Save</button>
+  </section>
+
+  <!-- 4. Attendance Summary -->
+  <section id="attendance-result" class="hidden">
+    <h2>Attendance Summary</h2>
+    <div class="table-wrapper">
+      <table id="attendanceSummaryTable">
+        <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button type="button" id="shareAttendanceSummary">Share Table</button>
+      <button type="button" id="downloadAttendancePDF">Download PDF</button>
+      <button type="button" id="resetAttendance" class="small">Reset</button>
+    </div>
+  </section>
+
+  <!-- 5. Analytics -->
+  <section id="analytics-section">
+    <h2>Analytics</h2>
+    <div class="row-inline">
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType">
+        <option value="" disabled selected>--Select Period--</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden">
+      <input type="month" id="analyticsMonth" class="hidden">
+      <input type="month" id="semesterStart" class="hidden">
+      <input type="month" id="semesterEnd" class="hidden">
+      <input type="number" id="yearStart" class="hidden" placeholder="Year">
+      <button type="button" id="loadAnalytics">Load Analytics</button>
+      <button type="button" id="resetAnalytics" class="small hidden">Change</button>
+    </div>
+    <div id="instructions" class="summary-block hidden"></div>
+    <div id="analyticsContainer" class="table-container hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
+    </div>
+  </section>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
