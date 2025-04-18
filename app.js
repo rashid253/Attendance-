@@ -2,216 +2,224 @@
 document.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
 
-  // Setup & Registration
-  $('#saveSetup').addEventListener('click', () => {
-    const school = $('#schoolNameInput').value.trim();
-    const cls    = $('#teacherClassSelect').value;
-    const sec    = $('#teacherSectionSelect').value;
-    if (!school||!cls||!sec) return alert('Fill all setup fields');
-    localStorage.setItem('schoolName', school);
-    localStorage.setItem('teacherClass', cls);
-    localStorage.setItem('teacherSection', sec);
-    $('#dispSchool').textContent = school;
-    $('#dispClass').textContent   = cls;
-    $('#dispSection').textContent = sec;
-    $('#setupForm').classList.add('hidden');
-    $('#setupDisplay').classList.remove('hidden');
-  });
-  $('#editSetup').addEventListener('click', () => {
-    $('#setupDisplay').classList.add('hidden');
-    $('#setupForm').classList.remove('hidden');
+  // Refs
+  const analyticsType     = $('analyticsType');
+  const analyticsDateIn   = $('analyticsDate');
+  const analyticsMonthIn  = $('analyticsMonth');
+  const analyticsSemester = $('analyticsSemester');
+  const analyticsYearIn   = $('analyticsYear');
+  const studentFilter     = $('studentFilter');
+  const repType           = $('representationType');
+  const loadBtn           = $('loadAnalytics');
+  const resetBtn          = $('resetAnalyticsBtn');
+  const container         = $('analyticsContainer');
+  const actions           = $('analyticsActions');
+  const shareBtn          = $('shareAnalytics');
+  const downloadBtn       = $('downloadAnalytics');
+
+  const THRESHOLD = 75; // exam eligibility % cut-off
+
+  let schoolName = localStorage.getItem('schoolName') || '';
+  let cls        = localStorage.getItem('teacherClass') || '';
+  let sec        = localStorage.getItem('teacherSection') || '';
+  let students   = JSON.parse(localStorage.getItem('students')) || [];
+  let attendance = JSON.parse(localStorage.getItem('attendanceData')) || {};
+  let chart;
+
+  // Toggle inputs based on period
+  analyticsType.addEventListener('change', () => {
+    [analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn].forEach(el => el.classList.add('hidden'));
+    const v = analyticsType.value;
+    if (v==='date')     analyticsDateIn.classList.remove('hidden');
+    if (v==='month')    analyticsMonthIn.classList.remove('hidden');
+    if (v==='semester') analyticsSemester.classList.remove('hidden');
+    if (v==='year')     analyticsYearIn.classList.remove('hidden');
   });
 
-  let students = JSON.parse(localStorage.getItem('students')||'[]');
-  const renderStudents = () => {
-    $('#students').innerHTML = '';
-    $('#studentFilter').innerHTML = '<option value="">All Students</option>';
-    students.forEach(s=>{
-      const li = document.createElement('li');
-      li.textContent = `${s.name} (Roll ${s.roll})`;
-      $('#students').append(li);
-      const opt = document.createElement('option');
-      opt.value = s.roll; opt.textContent = s.name;
-      $('#studentFilter').append(opt);
-    });
-  };
-  $('#addStudent').addEventListener('click', () => {
-    const name = $('#studentName').value.trim();
-    if (!name) return alert('Enter student name');
-    const roll = Date.now();
-    students.push({name,roll});
-    localStorage.setItem('students', JSON.stringify(students));
-    renderStudents();
+  loadBtn.addEventListener('click', renderAnalytics);
+  resetBtn.addEventListener('click', () => {
+    [analyticsType, analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn, studentFilter, repType, loadBtn]
+      .forEach(el => { el.disabled = false; el.classList.remove('hidden'); });
+    resetBtn.classList.add('hidden');
+    actions.classList.add('hidden');
+    container.innerHTML = '';
   });
-  $('#deleteAllStudents').addEventListener('click', () => {
-    if (!confirm('Delete all?')) return;
-    students = [];
-    localStorage.setItem('students', '[]');
-    renderStudents();
-  });
-  renderStudents();
 
-  // Analytics
-  const THRESHOLD = 75;
-  let chartBar, chartPie;
-
-  const showPeriodInputs = () => {
-    ['analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart']
-      .forEach(id=>$(id).classList.add('hidden'));
-    const v = $('#analyticsType').value;
-    if (v==='date')     $('#analyticsDate').classList.remove('hidden');
-    if (v==='month')    $('#analyticsMonth').classList.remove('hidden');
-    if (v==='semester'){
-      $('#semesterStart').classList.remove('hidden');
-      $('#semesterEnd').classList.remove('hidden');
+  function getBlocks(type) {
+    const yearNow = new Date().getFullYear();
+    const blocks = [];
+    if (type==='date') {
+      const d = analyticsDateIn.value;
+      if (d) blocks.push({ label: `Date: ${d}`, dates: [d] });
     }
-    if (v==='year')     $('#yearStart').classList.remove('hidden');
-  };
-  $('#analyticsType').addEventListener('change', showPeriodInputs);
-
-  const buildDateArray = () => {
-    const type = $('#analyticsType').value;
-    const dates = [];
-    const pushRange = (start, end) => {
-      let cur = new Date(start);
-      while (cur <= end) {
-        dates.push(cur.toISOString().slice(0,10));
-        cur.setDate(cur.getDate()+1);
+    if (type==='month') {
+      const [y,m] = analyticsMonthIn.value.split('-');
+      const days = new Date(y,m,0).getDate();
+      const dates = Array.from({length:days},(_,i)=>`${y}-${m}-${String(i+1).padStart(2,'0')}`);
+      blocks.push({ label: `Month: ${y}-${m}`, dates });
+    }
+    if (type==='semester') {
+      const sem = analyticsSemester.value;
+      const start = sem==='1'?1:7, end = sem==='1'?6:12;
+      for (let mo=start; mo<=end; mo++) {
+        const mm = String(mo).padStart(2,'0');
+        const days = new Date(yearNow,mo,0).getDate();
+        const dates = Array.from({length:days},(_,i)=>`${yearNow}-${mm}-${String(i+1).padStart(2,'0')}`);
+        blocks.push({ label: `Sem ${sem}: Month ${mm}`, dates });
       }
+    }
+    if (type==='year') {
+      const y = analyticsYearIn.value;
+      for (let mo=1; mo<=12; mo++) {
+        const mm = String(mo).padStart(2,'0');
+        const days = new Date(y,mo,0).getDate();
+        const dates = Array.from({length:days},(_,i)=>`${y}-${mm}-${String(i+1).padStart(2,'0')}`);
+        blocks.push({ label: `Year ${y}: Month ${mm}`, dates });
+      }
+    }
+    return blocks;
+  }
+
+  function renderAnalytics() {
+    const type = analyticsType.value;
+    if (!type) return alert('Please select a period');
+
+    [analyticsType, analyticsDateIn, analyticsMonthIn, analyticsSemester, analyticsYearIn, studentFilter, repType, loadBtn]
+      .forEach(el => el.disabled = true);
+    resetBtn.classList.remove('hidden');
+    actions.classList.remove('hidden');
+    container.innerHTML = '';
+
+    const blocks = getBlocks(type);
+    if (!blocks.length) return alert('Invalid period selection');
+
+    const roster = students.filter(s => s.class===cls && s.section===sec)
+                           .filter(s => !studentFilter.value || s.roll==studentFilter.value);
+
+    // Prepare overall summary counts
+    const overall = roster.map(s => ({
+      name: s.name,
+      cnt: { P:0, A:0, Lt:0, HD:0, L:0 }
+    }));
+
+    // Legend
+    const legend = document.createElement('p');
+    legend.textContent = 'Legend: P=Present, Lt=Late, HD=Half Day, L=Leave, A=Absent';
+    container.appendChild(legend);
+
+    // Render each block
+    blocks.forEach((blk, bi) => {
+      const heading = document.createElement('h3');
+      heading.textContent = blk.label;
+      container.appendChild(heading);
+
+      // Table view
+      if (repType.value==='table' || repType.value==='all') {
+        const tbl = document.createElement('table');
+        tbl.border = 1; tbl.style.width = '100%';
+        const hdr = ['Roll','Name', ...blk.dates.map(d=>d.split('-')[2])];
+        tbl.innerHTML = `<tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+        roster.forEach((s, i) => {
+          const row = [s.roll, s.name, ...blk.dates.map(d => {
+            const st = attendance[d]?.[s.roll] || '';
+            if (st) overall[i].cnt[st]++;
+            return st;
+          })];
+          tbl.innerHTML += `<tr>${row.map(c=>`<td>${c}</td>`).join('')}</tr>`;
+        });
+        container.appendChild(tbl);
+      }
+
+      // Summary for this block
+      if (repType.value==='summary' || repType.value==='all') {
+        const sumDiv = document.createElement('div');
+        sumDiv.className = 'summary-block';
+        sumDiv.innerHTML = `<h4>Summary for ${blk.label}</h4>` +
+          roster.map((s, i) => {
+            const cnt = blk.dates.reduce((a, d) => {
+              const st = attendance[d]?.[s.roll];
+              if (st) a[st] = (a[st]||0)+1;
+              return a;
+            }, {P:0,A:0,Lt:0,HD:0,L:0});
+            const pct = Math.round((cnt.P+cnt.Lt+cnt.HD)/blk.dates.length*100);
+            const elig = pct>=THRESHOLD ? 'Eligible' : 'Not Eligible';
+            return `<p>${s.name}: P:${cnt.P}, Lt:${cnt.Lt}, HD:${cnt.HD}, L:${cnt.L}, A:${cnt.A} — ${pct}%` +
+                   `<span class="eligibility">${elig}</span></p>`;
+          }).join('');
+        container.appendChild(sumDiv);
+      }
+
+      // Graph for this block
+      if (repType.value==='graph' || repType.value==='all') {
+        const cvs = document.createElement('canvas');
+        container.appendChild(cvs);
+        if (chart) chart.destroy();
+        const data = roster.map((s, i) => {
+          const cnt = blk.dates.reduce((a, d) => {
+            const st = attendance[d]?.[s.roll];
+            if (st) a[st] = (a[st]||0)+1;
+            return a;
+          }, {P:0, Lt:0, HD:0});
+          return Math.round((cnt.P+cnt.Lt+cnt.HD)/blk.dates.length*100);
+        });
+        chart = new Chart(cvs.getContext('2d'), {
+          type: 'bar',
+          data: { labels: roster.map(s=>s.name), datasets: [{ label: '% Present', data }] },
+          options: { responsive: true }
+        });
+      }
+    });
+
+    // Overall summary
+    const totalDays = blocks.reduce((sum, b) => sum + b.dates.length, 0);
+    const ovDiv = document.createElement('div');
+    ovDiv.className = 'summary-block';
+    ovDiv.innerHTML = '<h3>Overall Summary & Exam Eligibility</h3>' +
+      overall.map(o => {
+        const pct = Math.round((o.cnt.P+o.cnt.Lt+o.cnt.HD)/totalDays*100);
+        const eligText = pct>=THRESHOLD
+          ? '⚑ Eligible for Exams'
+          : '✗ Not Eligible for Exams';
+        return `<p>${o.name}: P:${o.cnt.P}, Lt:${o.cnt.Lt}, HD:${o.cnt.HD}, L:${o.cnt.L}, A:${o.cnt.A} — ${pct}% ` +
+               `<span class="eligibility">${eligText}</span></p>`;
+      }).join('');
+    container.appendChild(ovDiv);
+
+    // Share Summary only
+    shareBtn.onclick = () => {
+      let text = `${schoolName} | Class-Section: ${cls}-${sec}\n`;
+      text += blocks.map(b=>b.label).join(' | ') + '\n\n';
+      text += ovDiv.innerText;
+      if (navigator.share) navigator.share({ title: 'Attendance Summary', text });
+      else alert('Share not supported');
     };
-    if (type==='date'){
-      const d = new Date($('#analyticsDate').value);
-      dates.push(d.toISOString().slice(0,10));
-    }
-    if (type==='month'){
-      const [y,m] = $('#analyticsMonth').value.split('-');
-      const start = new Date(y, m-1,1);
-      const end   = new Date(y, m, 0);
-      pushRange(start,end);
-    }
-    if (type==='semester'){
-      const [ys,ms] = $('#semesterStart').value.split('-');
-      const [ye,me] = $('#semesterEnd').value.split('-');
-      const start = new Date(ys, ms-1,1);
-      const end   = new Date(ye, me,0);
-      pushRange(start,end);
-    }
-    if (type==='year'){
-      const [ys,ms] = $('#yearStart').value.split('-');
-      const start = new Date(ys, ms-1,1);
-      const end   = new Date(start);
-      end.setMonth(end.getMonth()+11, 0);
-      pushRange(start,end);
-    }
-    return dates;
-  };
 
-  $('#loadAnalytics').addEventListener('click', ()=>{
-    const dates = buildDateArray();
-    if (!dates.length) return alert('Select valid period');
-    $('#resetAnalyticsBtn').classList.remove('hidden');
-    $('#instructions').classList.remove('hidden');
-    $('#analyticsContainer').classList.remove('hidden');
-    $('#graphs').classList.remove('hidden');
-    $('#analyticsActions').classList.remove('hidden');
-
-    // show instructions
-    $('#instructions').innerHTML = `
-      <h3>Instructions & Formulas</h3>
-      <p><strong>Formula:</strong> Attendance % = (P + Lt + HD) / TotalDays × 100</p>
-      <p><strong>Eligibility Threshold:</strong> ${THRESHOLD}% required to sit exams</p>
-      <p>Graphs show each student’s attendance % over the chosen period.</p>
-    `;
-
-    // compute summary
-    const summary = students.map(s=>{
-      const cnt = {P:0,A:0,Lt:0,HD:0,L:0};
-      dates.forEach(d=>{
-        const rec = JSON.parse(localStorage.getItem('attendanceData')||'{}')[d]||{};
-        const st = rec[s.roll];
-        if (st) cnt[st]++;
+    // Download full report
+    downloadBtn.onclick = () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p','pt','a4');
+      let y = 20;
+      doc.setFontSize(12);
+      doc.text(`${schoolName} | Class-Section: ${cls}-${sec}`, 20, y); y += 20;
+      blocks.forEach(b => {
+        doc.text(b.label, 20, y); y += 15;
+        if (repType.value==='table' || repType.value==='all') {
+          const tbl = container.querySelector('table');
+          doc.autoTable({ html: tbl, startY: y, margin:{left:20,right:20} });
+          y = doc.lastAutoTable.finalY + 10;
+        }
+        if (repType.value==='summary' || repType.value==='all') {
+          const sums = Array.from(container.querySelectorAll('.summary-block:nth-of-type(' + (blocks.length+1) + ') p'));
+          sums.forEach(p => { doc.text(p.innerText, 20, y); y += 12; });
+          y += 5;
+        }
       });
-      const pct = Math.round((cnt.P+cnt.Lt+cnt.HD)/dates.length*100);
-      return { name:s.name, ...cnt, pct, elig: pct>=THRESHOLD };
-    });
-
-    // render summary table
-    const tbl = document.createElement('table');
-    tbl.border=1; tbl.style.width='100%';
-    tbl.innerHTML = `
-      <tr>
-        <th>Name</th><th>P</th><th>Lt</th><th>HD</th><th>L</th><th>A</th><th>%</th><th>Elig</th>
-      </tr>
-      ${summary.map(r=>`
-        <tr>
-          <td>${r.name}</td><td>${r.P}</td><td>${r.Lt}</td><td>${r.HD}</td>
-          <td>${r.L}</td><td>${r.A}</td><td>${r.pct}%</td>
-          <td>${r.elig? '✓':'✗'}</td>
-        </tr>`).join('')}
-    `;
-    $('#analyticsContainer').innerHTML = '';
-    $('#analyticsContainer').append(tbl);
-
-    // render bar chart
-    const names = summary.map(r=>r.name);
-    const data  = summary.map(r=>r.pct);
-    if (chartBar) chartBar.destroy();
-    chartBar = new Chart($('#barChart').getContext('2d'), {
-      type:'bar',
-      data:{ labels:names, datasets:[{ label:'%', data }] },
-      options:{ responsive:true }
-    });
-
-    // render pie chart
-    if (chartPie) chartPie.destroy();
-    chartPie = new Chart($('#pieChart').getContext('2d'), {
-      type:'pie',
-      data:{ labels:names, datasets:[{ data }] },
-      options:{ responsive:true }
-    });
-  });
-
-  $('#resetAnalyticsBtn').addEventListener('click', () => {
-    ['analyticsType','analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart']
-      .forEach(id=>$(id).classList.add('hidden'));
-    $('#resetAnalyticsBtn').classList.add('hidden');
-    $('#instructions').classList.add('hidden');
-    $('#analyticsContainer').classList.add('hidden');
-    $('#graphs').classList.add('hidden');
-    $('#analyticsActions').classList.add('hidden');
-    $('#analyticsType').value = '';
-    $('#analyticsContainer').innerHTML = '';
-  });
-
-  // Share & Download
-  $('#shareAnalytics').addEventListener('click', ()=>{
-    let text = $('#instructions').innerText + '\n\n';
-    text += $('#analyticsContainer').innerText;
-    if (navigator.share) navigator.share({ title:'Attendance Summary', text });
-    else alert('Share not supported');
-  });
-
-  $('#downloadAnalytics').addEventListener('click', ()=>{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    let y = 20;
-    doc.setFontSize(12);
-    // instructions
-    $('#instructions p').forEach(p=>{
-      doc.text(p.innerText,20,y); y+=15;
-    });
-    y+=10;
-    // table
-    doc.autoTable({ html: $('#analyticsContainer table'), startY:y, margin:{left:20,right:20} });
-    y = doc.lastAutoTable.finalY + 20;
-    // bar chart
-    doc.text('Bar Chart',20,y); y+=10;
-    const barImg = $('#barChart').toDataURL('image/png');
-    doc.addImage(barImg,'PNG',20,y,550,200); y+=210;
-    // pie chart
-    doc.text('Pie Chart',20,y); y+=10;
-    const pieImg = $('#pieChart').toDataURL('image/png');
-    doc.addImage(pieImg,'PNG',20,y,300,200);
-    doc.save('Attendance_Report.pdf');
-  });
+      // overall
+      doc.text('Overall Summary & Exam Eligibility', 20, y); y += 15;
+      ovDiv.querySelectorAll('p').forEach(p => {
+        doc.text(p.innerText, 20, y); y += 12;
+      });
+      doc.save(`Attendance_Report_${type}.pdf`);
+    };
+  }
 });
