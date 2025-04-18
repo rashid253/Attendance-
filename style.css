@@ -8,6 +8,7 @@
   --light: #f2f2f2;
   --dark: #333;
 }
+/* prevent flicker */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -37,6 +38,9 @@ section {
   flex-wrap: wrap;
   align-items: center;
   margin-bottom: 10px;
+}
+label {
+  font-weight: bold;
 }
 input,
 select,
@@ -94,6 +98,15 @@ th {
   margin-top: 10px;
   flex-wrap: wrap;
 }
+.attendance-item {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.attendance-item + .attendance-actions {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 15px;
+}
 .att-btn {
   flex: 1;
   padding: 8px;
@@ -101,6 +114,13 @@ th {
   background: transparent;
   color: var(--dark);
   font-weight: bold;
+}
+.table-container {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+.summary-block {
+  margin-top: 15px;
 }
 .graph-container {
   display: flex;
@@ -111,4 +131,20 @@ th {
 canvas {
   flex: 1 1 300px;
   max-width: 100%;
+}
+.selected {
+  background: var(--light);
+}
+.editing {
+  outline: 2px dashed var(--info);
+}
+.select-col {
+  width: 40px;
+}
+@media (max-width: 600px) {
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
+    flex: 1 1 100%;
+  }
 }

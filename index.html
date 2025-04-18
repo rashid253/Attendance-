@@ -13,7 +13,7 @@
   <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
-      <input type="text" id="schoolNameInput" placeholder="School Name">
+      <input id="schoolNameInput" placeholder="School Name">
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
         <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
@@ -35,12 +35,12 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input type="text" id="studentName" placeholder="Name" required autocomplete="off">
-      <input type="text" id="admissionNo" placeholder="Adm#" required autocomplete="off">
-      <input type="text" id="parentName" placeholder="Parent Name" required autocomplete="off">
-      <input type="text" id="parentContact" placeholder="Parent Contact" required autocomplete="off">
-      <input type="text" id="parentOccupation" placeholder="Occupation" required autocomplete="off">
-      <input type="text" id="parentAddress" placeholder="Address" required autocomplete="off">
+      <input id="studentName" placeholder="Name" required>
+      <input id="admissionNo" placeholder="Adm#" required>
+      <input id="parentName" placeholder="Parent Name" required>
+      <input id="parentContact" placeholder="Parent Contact" required>
+      <input id="parentOccupation" placeholder="Occupation" required>
+      <input id="parentAddress" placeholder="Address" required>
       <button type="button" id="addStudent">Add</button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
@@ -124,6 +124,7 @@
     </div>
   </section>
 
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
