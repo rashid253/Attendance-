@@ -8,31 +8,22 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1 id="appTitle">Attendance Management</h1>
-  </header>
+  <header><h1>Attendance Management</h1></header>
 
   <!-- 1. Teacher Setup -->
   <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm">
       <div class="row-inline">
-        <input type="text" id="schoolNameInput" placeholder="Your School Name" />
-        <label for="teacherClassSelect">Class:</label>
+        <input type="text" id="schoolNameInput" placeholder="School Name" />
         <select id="teacherClassSelect">
           <option value="">--Class--</option>
-          <option>Pre‑Play</option>
-          <option>Pre‑Prep</option>
-          <option>Nursery</option>
-          <option>Pre‑One</option>
-          <option>One</option><option>Two</option><option>Three</option>
-          <option>Four</option><option>Five</option><option>Six</option>
-          <option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+          <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
+          <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+          <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
         </select>
-        <label for="teacherSectionSelect">Section:</label>
         <select id="teacherSectionSelect">
-          <option value="">--Section--</option>
-          <option>A</option><option>B</option><option>C</option>
+          <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
         </select>
         <button id="saveSetup">Save</button>
       </div>
@@ -46,13 +37,16 @@
   <!-- 2. Student Registration -->
   <section id="student-registration">
     <h2>Student Registration</h2>
-    <div class="row-inline">
-      <input type="text" id="studentName" placeholder="Name" />
-      <input type="text" id="admissionNo" placeholder="Admission No (opt)" />
-      <input type="text" id="parentContact" placeholder="Parent Contact" />
+    <div id="regForm" class="row-inline">
+      <input type="text" id="studentName"       placeholder="Name" />
+      <input type="text" id="admissionNo"       placeholder="Admission No" />
+      <input type="text" id="parentName"        placeholder="Parent Name" />
+      <input type="text" id="parentContact"     placeholder="Parent Contact" />
+      <input type="text" id="parentOccupation"  placeholder="Occupation" />
+      <input type="text" id="parentAddress"     placeholder="Address" />
       <button id="addStudent">Add</button>
     </div>
-    <ul id="students"></ul>
+    <ul id="students" class="list"></ul>
     <button id="deleteAllStudents" class="small">Delete All</button>
   </section>
 
@@ -63,17 +57,16 @@
       <input type="date" id="dateInput" />
       <button id="loadAttendance">Load</button>
     </div>
-    <div id="attendanceList"></div>
-    <button id="saveAttendance" class="hidden">Save Attendance</button>
+    <div id="attendanceList" class="list"></div>
+    <button id="saveAttendance" class="hidden">Save</button>
   </section>
 
-  <!-- 4. Attendance Summary -->
+  <!-- 4. Attendance Summary & WhatsApp Share -->
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
-    <ul id="attendanceResultList" class="attendance-summary"></ul>
-    <div class="row-inline">
-      <button id="resetAttendance" class="small">Reset</button>
-    </div>
+    <ul id="attendanceResultList" class="list"></ul>
+    <button id="shareWhatsApp" class="small">Share via WhatsApp</button>
+    <button id="resetAttendance" class="small">Reset</button>
   </section>
 
   <!-- 5. Analytics -->
@@ -81,24 +74,23 @@
     <h2>Analytics</h2>
     <div class="row-inline">
       <select id="analyticsType">
-        <option value="" selected disabled>Select Period</option>
+        <option value="" disabled selected>Period</option>
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
-        <option value="year">Academic Year</option>
+        <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" placeholder="Semester Start" />
-      <input type="month" id="semesterEnd"   class="hidden" placeholder="Semester End" />
-      <input type="month" id="yearStart" class="hidden" placeholder="Year Start (e.g. 2024-08)" />
+      <input type="date"   id="analyticsDate"      class="hidden" />
+      <input type="month"  id="analyticsMonth"     class="hidden" />
+      <input type="month"  id="semesterStart"      class="hidden" placeholder="Start Month" />
+      <input type="month"  id="semesterEnd"        class="hidden" placeholder="End   Month" />
+      <input type="month"  id="yearStart"          class="hidden" placeholder="Start Month" />
       <button id="loadAnalytics">Load</button>
-      <button id="resetAnalyticsBtn" class="small hidden">Change Period</button>
+      <button id="resetAnalytics" class="small hidden">Change</button>
     </div>
 
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
-
     <div id="graphs" class="graph-container hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
@@ -106,7 +98,7 @@
 
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics" class="small">Share Summary</button>
-      <button id="downloadAnalytics" class="small">Download Report</button>
+      <button id="downloadAnalytics" class="small">Download PDF</button>
     </div>
   </section>
 
