@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Classwise Attendance Management</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Font Awesome for fallback icons (optional) -->
+  <!-- Font Awesome -->
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -20,7 +20,10 @@
         <input type="text" id="schoolNameInput" placeholder="School Name" />
         <select id="teacherClassSelect">
           <option value="">--Class--</option>
-          <!-- ... options ... -->
+          <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
+          <option>One</option><option>Two</option><option>Three</option><option>Four</option>
+          <option>Five</option><option>Six</option><option>Seven</option><option>Eight</option>
+          <option>Nine</option><option>Ten</option>
         </select>
         <select id="teacherSectionSelect">
           <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
@@ -38,15 +41,14 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input type="text" id="studentName"       placeholder="Name" />
-      <input type="text" id="admissionNo"       placeholder="Admission No" />
-      <input type="text" id="parentName"        placeholder="Parent Name" />
-      <input type="text" id="parentContact"     placeholder="Parent Contact" />
-      <input type="text" id="parentOccupation"  placeholder="Occupation" />
-      <input type="text" id="parentAddress"     placeholder="Address" />
+      <input type="text" id="studentName" placeholder="Name" />
+      <input type="text" id="admissionNo" placeholder="Admission No" />
+      <input type="text" id="parentName" placeholder="Parent Name" />
+      <input type="text" id="parentContact" placeholder="Parent Contact" />
+      <input type="text" id="parentOccupation" placeholder="Occupation" />
+      <input type="text" id="parentAddress" placeholder="Address" />
       <button id="addStudent">Add</button>
     </div>
-
     <div class="table-wrapper">
       <table id="studentsTable">
         <thead>
@@ -74,14 +76,12 @@
     <button id="saveAttendance" class="hidden">Save</button>
   </section>
 
-  <!-- 4. Attendance Summary & WhatsApp Share -->
+  <!-- 4. Attendance Summary -->
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
     <div class="table-wrapper">
       <table id="attendanceSummaryTable">
-        <thead>
-          <tr><th>Name</th><th>Status</th><th>Share</th></tr>
-        </thead>
+        <thead><tr><th>Name</th><th>Status</th><th>Share</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -99,22 +99,20 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date"   id="analyticsDate"      class="hidden" />
-      <input type="month"  id="analyticsMonth"     class="hidden" />
-      <input type="month"  id="semesterStart"      class="hidden" />
-      <input type="month"  id="semesterEnd"        class="hidden" />
-      <input type="month"  id="yearStart"          class="hidden" />
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="month" id="yearStart" class="hidden" />
       <button id="loadAnalytics">Load</button>
       <button id="resetAnalytics" class="small hidden">Change</button>
     </div>
-
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
     <div id="graphs" class="graph-container hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics" class="small">Share Summary</button>
       <button id="downloadAnalytics" class="small">Download PDF</button>
