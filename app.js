@@ -11,16 +11,16 @@ const AttendanceRegister = ({ students = [] }) => {
     const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 
     // Build table header: "Student Name" + days
-    const head = [[ 'Student Name', ...days ]];
+    const head = [['Student Name', ...days]];
 
     // Build table body: one row per student with blank attendance cells
-    const body = students.map(name => [ name, ...Array(31).fill('') ]);
+    const body = students.map(name => [name, ...Array(31).fill('')]);
 
     // AutoTable configuration for a traditional school register style
     doc.autoTable({
       head,
       body,
-      startY: 40,
+      startY: 60,
       margin: { left: 40, right: 40 },
       styles: {
         fontSize: 8,
@@ -36,18 +36,20 @@ const AttendanceRegister = ({ students = [] }) => {
         fontStyle: 'bold',
       },
       columnStyles: {
-        0: { cellWidth: 120, halign: 'left' },
-        // Uniform small width for date columns to fit two-digit dates
+        0: { cellWidth: 140, halign: 'left' },
+        // Uniform small width for all date columns to fit two-digit dates
         ...days.reduce((acc, _, idx) => {
           acc[idx + 1] = { cellWidth: 20 };
           return acc;
         }, {}),
-      }
+      },
     });
 
-    // Add title and footer
+    // Add title
     doc.setFontSize(14);
-    doc.text('Attendance Register', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    doc.text('Attendance Register', doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+    // Add footer with generation date
     doc.setFontSize(10);
     const dateStr = new Date().toLocaleDateString();
     doc.text(`Generated on: ${dateStr}`, 40, doc.internal.pageSize.getHeight() - 20);
@@ -58,7 +60,15 @@ const AttendanceRegister = ({ students = [] }) => {
 
   return (
     <div>
-      <button onClick={generatePDF} className="btn btn-primary">
+      <button onClick={generatePDF} style={{
+        padding: '8px 16px',
+        fontSize: '14px',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        backgroundColor: '#007bff',
+        color: '#fff',
+        border: 'none'
+      }}>
         Download Attendance Register
       </button>
     </div>
