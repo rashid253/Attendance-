@@ -1,3 +1,4 @@
+// app.js
 window.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
   const colors = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: 'var(--orange)', L: 'var(--info)' };
@@ -260,12 +261,12 @@ window.addEventListener('DOMContentLoaded', () => {
     resSection.classList.remove('hidden');
     summaryBody.innerHTML = '';
     const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan=\"3\"><em>${hdr}</em></td></tr>`);
+    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan="3"><em>${hdr}</em></td></tr>`);
     students.forEach(s => {
       const code = attendanceData[d][s.roll] || 'A';
       const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class=\"send-btn\">Send</button></td>`;
+      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
       tr.querySelector('.send-btn').onclick = e2 => {
         e2.preventDefault();
         const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
@@ -275,7 +276,14 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  resetAttBtn.onclick = ev => { ev.preventDefault(); resSection.classList.add('hidden'); $('attendance-section').classList.remove('hidden'); attList.innerHTML=''; saveAttBtn.classList.add('hidden'); summaryBody.innerHTML=''; };
+  resetAttBtn.onclick = ev => {
+    ev.preventDefault();
+    resSection.classList.add('hidden');
+    $('attendance-section').classList.remove('hidden');
+    attList.innerHTML = '';
+    saveAttBtn.classList.add('hidden');
+    summaryBody.innerHTML = '';
+  };
 
   shareAttBtn.onclick = ev => {
     ev.preventDefault();
@@ -292,7 +300,22 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  downloadAttPDFBtn.onclick = ev => { ev.preventDefault(); const { jsPDF } = window.jspdf; const doc = new jsPDF('p','pt','a4'); doc.autoTable({ head:[['Name','Status']], body: students.map(s=>{ const code=attendanceData[dateInput.value][s.roll]||'A'; return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; }), startY:40, margin:{left:40,right:40}, styles:{fontSize:10} }); doc.save('attendance_summary.pdf'); };
+  downloadAttPDFBtn.onclick = ev => {
+    ev.preventDefault();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.autoTable({
+      head:[['Name','Status']],
+      body: students.map(s=>{ 
+        const code=attendanceData[dateInput.value][s.roll]||'A'; 
+        return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; 
+      }),
+      startY:40,
+      margin:{left:40,right:40},
+      styles:{fontSize:10}
+    });
+    doc.save('attendance_summary.pdf');
+  };
 
   // ANALYTICS
   const analyticsType = $('analyticsType');
@@ -343,9 +366,17 @@ window.addEventListener('DOMContentLoaded', () => {
     else return;
 
     const stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    Object.entries(attendanceData).forEach(([d, recs]) => { if (d >= from && d <= to) stats.forEach(st => { const c = recs[st.roll] || 'A'; st[c]++; st.total++; }); });
+    Object.entries(attendanceData).forEach(([d, recs]) => { 
+      if (d >= from && d <= to) stats.forEach(st => { 
+        const c = recs[st.roll] || 'A'; st[c]++; st.total++; 
+      }); 
+    });
+
     let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
-    stats.forEach(s => { const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0'; html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`; });
+    stats.forEach(s => { 
+      const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0'; 
+      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`; 
+    });
     html += '</tbody></table>';
     analyticsContainer.innerHTML = html;
     analyticsContainer.classList.remove('hidden');
