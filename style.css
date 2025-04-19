@@ -150,18 +150,17 @@ canvas {
   }
 }
 
-/* --- Traditional Register Styling --- */
-#traditional-register th {
-  background: var(--info);
-  color: #fff;
+/* -- Register Section Enhancements -- */
+#registerTableWrapper {
+  overflow-x: auto;
+  margin-top: 10px;
 }
-#traditional-register table#registerTable {
-  border: 1px solid var(--primary);
-}
-#traditional-register table#registerTable tbody tr:nth-child(even) {
+#registerTable thead th {
+  position: sticky;
+  top: 0;
   background: var(--light);
+  z-index: 1;
 }
-#registerSummaryWrapper {
-  max-height: 200px;
-  overflow-y: auto;
+#register-section .row-inline > * {
+  margin-right: 8px;
 }
