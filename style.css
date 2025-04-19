@@ -10,7 +10,6 @@
   --dark: #333;
 }
 
-/* prevent flicker */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -63,7 +62,6 @@ button {
   color: #fff;
   cursor: pointer;
 }
-
 button:hover {
   opacity: 0.9;
 }
