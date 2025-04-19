@@ -316,229 +316,208 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     const d = dateInput.value;
     attendanceData[d] = {};
-    attList.querySelectorAll('.attendance-actions').forEach((btns, i) => {
+    attList.querySelectorAll('.attendance-actions').forEach((btns,i) => {
       const sel = btns.querySelector('.att-btn[style*="background"]');
       attendanceData[d][students[i].roll] = sel ? sel.dataset.code : 'A';
     });
-    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
-    $('attendance-section').classList.add('hidden');
-    resultSection.classList.remove('hidden');
-    summaryBody.innerHTML = '';
-    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan="3"><em>${hdr}</em></td></tr>`);
-    students.forEach(s => {
-      const code = attendanceData[d][s.roll] || 'A';
-      const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
-      tr.querySelector('.send-btn').onclick = ev2 => {
-        ev2.preventDefault();
-        const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
-        window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank');
-      };
-      summaryBody.appendChild(tr);
+    localStorage.setItem('attendance
+                           // -----------------------------
+  // 5. ATTENDANCE REGISTER
+  // -----------------------------
+  const registerDateFrom = $('registerDateFrom');
+  const registerDateTo   = $('registerDateTo');
+  const loadRegisterBtn  = $('loadRegister');
+  const registerTable    = $('registerTable');
+  const registerBody     = $('registerBody');
+  const downloadRegisterBtn = $('downloadRegisterPDF');
+  const shareRegisterBtn = $('shareRegister');
+
+  loadRegisterBtn.onclick = ev => {
+    ev.preventDefault();
+    if (!registerDateFrom.value || !registerDateTo.value) {
+      return alert('Select date range');
+    }
+
+    const from = new Date(registerDateFrom.value);
+    const to = new Date(registerDateTo.value);
+    if (from > to) {
+      return alert('Invalid date range');
+    }
+
+    // Generate all dates in range
+    const dates = [];
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      dates.push(new Date(d).toISOString().split('T')[0]);
+    }
+
+    // Build table
+    let html = '<thead><tr><th>Name</th>';
+    dates.forEach(d => {
+      html += `<th>${new Date(d).toLocaleDateString('en-US', {month:'short', day:'numeric'})}</th>`;
     });
+    html += '</tr></thead><tbody>';
+
+    students.forEach(s => {
+      html += `<tr><td>${s.name}</td>`;
+      dates.forEach(d => {
+        const code = attendanceData[d]?.[s.roll] || '';
+        html += `<td style="color:${colors[code] || 'inherit'}">${code}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    registerBody.innerHTML = html;
+    registerTable.classList.remove('hidden');
+    downloadRegisterBtn.classList.remove('hidden');
+    shareRegisterBtn.classList.remove('hidden');
   };
 
-  resetAtt.onclick = ev => {
+  downloadRegisterBtn.onclick = ev => {
     ev.preventDefault();
-    resultSection.classList.add('hidden');
-    $('attendance-section').classList.remove('hidden');
-    attList.innerHTML = '';
-    saveAtt.classList.add('hidden');
-    summaryBody.innerHTML = '';
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l','pt','a4');
+    doc.autoTable({
+      html: registerTable,
+      startY: 40,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 8 },
+      columnStyles: { 0: { cellWidth: 80 } }
+    });
+    doc.save('attendance_register.pdf');
   };
 
-  shareAtt.onclick = ev => {
+  shareRegisterBtn.onclick = ev => {
     ev.preventDefault();
-    const d = dateInput.value;
-    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    const map = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
-    const lines = students.map(s => `${s.name}: ${map[attendanceData[d][s.roll]||'A']}`);
-    const total = students.length;
-    const pres  = students.reduce((sum, s) => sum + (attendanceData[d][s.roll]==='P'?1:0), 0);
-    const pct   = total ? ((pres/total)*100).toFixed(1) : '0.0';
-    const remark= pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
-    const summary = `Overall Attendance: ${pct}% | ${remark}`;
-    const msg = [hdr,'',...lines,'',summary].join('\n');
+    const from = registerDateFrom.value;
+    const to = registerDateTo.value;
+    const hdr = `Attendance Register\n${from} to ${to}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    
+    const dates = [];
+    for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate() + 1)) {
+      dates.push(new Date(d).toISOString().split('T')[0]);
+    }
+
+    const lines = students.map(s => {
+      const statuses = dates.map(d => {
+        const code = attendanceData[d]?.[s.roll] || 'A';
+        return `${new Date(d).toLocaleDateString('en-US', {month:'short', day:'numeric'})}: ${code}`;
+      }).join(', ');
+      return `${s.name}: ${statuses}`;
+    });
+
+    const msg = [hdr, '', ...lines].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  downloadAttPDF.onclick = ev => {
+  // -----------------------------
+  // 6. DATA MANAGEMENT
+  // -----------------------------
+  const backupBtn = $('backupData');
+  const restoreBtn = $('restoreData');
+  const restoreFile = $('restoreFile');
+  const resetAllBtn = $('resetAllData');
+
+  backupBtn.onclick = ev => {
     ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    doc.autoTable({
-      head: [['Name','Status']],
-      body: students.map(s => {
-        const code = attendanceData[dateInput.value][s.roll] || 'A';
-        return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];
-      }),
-      startY: 40,
-      margin: { left: 40, right: 40 },
-      styles: { fontSize: 10 }
-    });
-    doc.save('attendance_summary.pdf');
+    const data = {
+      schoolName: localStorage.getItem('schoolName'),
+      teacherClass: localStorage.getItem('teacherClass'),
+      teacherSection: localStorage.getItem('teacherSection'),
+      students: JSON.parse(localStorage.getItem('students') || '[]'),
+      attendanceData: JSON.parse(localStorage.getItem('attendanceData') || '{}')
+    };
+
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_system_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  restoreBtn.onclick = ev => {
+    ev.preventDefault();
+    restoreFile.click();
+  };
+
+  restoreFile.onchange = ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        
+        if (!confirm(`Restore data from ${file.name}? This will overwrite current data.`)) {
+          return;
+        }
+
+        localStorage.setItem('schoolName', data.schoolName || '');
+        localStorage.setItem('teacherClass', data.teacherClass || '');
+        localStorage.setItem('teacherSection', data.teacherSection || '');
+        localStorage.setItem('students', JSON.stringify(data.students || []));
+        localStorage.setItem('attendanceData', JSON.stringify(data.attendanceData || {}));
+
+        // Reload all data
+        students = JSON.parse(localStorage.getItem('students') || [];
+        attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+        
+        // Refresh all views
+        loadSetup();
+        renderStudents();
+        alert('Data restored successfully! Page will reload.');
+        location.reload();
+      } catch (err) {
+        alert('Error restoring data: Invalid file format');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  resetAllBtn.onclick = ev => {
+    ev.preventDefault();
+    if (!confirm('WARNING: This will delete ALL data permanently. Continue?')) {
+      return;
+    }
+    
+    localStorage.clear();
+    alert('All data has been reset. Page will reload.');
+    location.reload();
   };
 
   // -----------------------------
-  // 4. ANALYTICS (fixed semester logic)
+  // 7. INITIALIZATION
   // -----------------------------
-  const analyticsTarget      = $('analyticsTarget');
-  const admInput             = $('studentAdmInput');
-  const analyticsType        = $('analyticsType');
-  const analyticsDate        = $('analyticsDate');
-  const analyticsMonth       = $('analyticsMonth');
-  const semesterStartInput   = $('semesterStart');
-  const semesterEndInput     = $('semesterEnd');
-  const yearStart            = $('yearStart');
-  const loadAnalyticsBtn     = $('loadAnalytics');
-  const resetAnalyticsBtn    = $('resetAnalytics');
-  const instructionsEl       = $('instructions');
-  const analyticsContainer   = $('analyticsContainer');
-  const graphsEl             = $('graphs');
-  const analyticsActionsEl   = $('analyticsActions');
-  const shareAnalyticsBtn    = $('shareAnalytics');
-  const downloadAnalyticsBtn = $('downloadAnalytics');
-  const barCtx               = $('barChart').getContext('2d');
-  const pieCtx               = $('pieChart').getContext('2d');
-  let barChart, pieChart;
-
-  analyticsTarget.onchange = () => {
-    admInput.classList.toggle('hidden', analyticsTarget.value === 'class');
-  };
-
-  function hideAllAnalytics() {
-    [admInput, analyticsDate, analyticsMonth, semesterStartInput, semesterEndInput, yearStart,
-     instructionsEl, analyticsContainer, graphsEl, analyticsActionsEl, resetAnalyticsBtn]
-      .forEach(el => el.classList.add('hidden'));
+  function initializeCurrentDate() {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    analyticsDate.value = today;
+    registerDateFrom.value = today;
+    registerDateTo.value = today;
+    
+    // Set semester inputs to current academic period
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    
+    if (month >= 1 && month <= 6) {
+      semesterStartInput.value = `${year}-01`;
+      semesterEndInput.value = `${year}-06`;
+    } else {
+      semesterStartInput.value = `${year}-07`;
+      semesterEndInput.value = `${year}-12`;
+    }
+    
+    // Set year input to current year
+    yearStart.value = year;
+    
+    // Set month input to current month
+    analyticsMonth.value = `${year}-${month.toString().padStart(2, '0')}`;
   }
 
-  analyticsType.onchange = () => {
-    hideAllAnalytics();
-    if (analyticsTarget.value === 'student') admInput.classList.remove('hidden');
-    if (analyticsType.value === 'date')      analyticsDate.classList.remove('hidden');
-    if (analyticsType.value === 'month')     analyticsMonth.classList.remove('hidden');
-    if (analyticsType.value === 'semester') {
-      semesterStartInput.classList.remove('hidden');
-      semesterEndInput.classList.remove('hidden');
-    }
-    if (analyticsType.value === 'year')      yearStart.classList.remove('hidden');
-    resetAnalyticsBtn.classList.remove('hidden');
-  };
-
-  resetAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    analyticsType.value   = '';
-    analyticsTarget.value = 'class';
-    admInput.value        = '';
-    hideAllAnalytics();
-  };
-
-  loadAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    let from, to;
-
-    if (analyticsType.value === 'date') {
-      if (!analyticsDate.value) return alert('Pick a date');
-      from = to = analyticsDate.value;
-    }
-    else if (analyticsType.value === 'month') {
-      if (!analyticsMonth.value) return alert('Pick a month');
-      const [y, m] = analyticsMonth.value.split('-').map(Number);
-      from = `${analyticsMonth.value}-01`;
-      to   = `${analyticsMonth.value}-${new Date(y, m, 0).getDate()}`;
-    }
-    else if (analyticsType.value === 'semester') {
-      if (!semesterStartInput.value || !semesterEndInput.value)
-        return alert('Pick semester range');
-      // parse YYYY-MM from both inputs:
-      const [startY, startM] = semesterStartInput.value.split('-').map(Number);
-      const [endY, endM]     = semesterEndInput.value.split('-').map(Number);
-      // first of start month
-      from = `${startY}-${String(startM).padStart(2,'0')}-01`;
-      // last day of end month
-      const lastDay = new Date(endY, endM, 0).getDate();
-      to   = `${endY}-${String(endM).padStart(2,'0')}-${lastDay}`;
-    }
-    else if (analyticsType.value === 'year') {
-      if (!yearStart.value) return alert('Pick a year');
-      from = `${yearStart.value}-01-01`;
-      to   = `${yearStart.value}-12-31`;
-    }
-    else {
-      return alert('Select a period');
-    }
-
-    // Convert to Date for reliable comparison
-    const fromDate = new Date(from),
-          toDate   = new Date(to);
-
-    // Build stats array
-    let stats;
-    if (analyticsTarget.value === 'class') {
-      stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    } else {
-      const adm = admInput.value.trim();
-      if (!adm) return alert('Enter Admission #');
-      const stud = students.find(s => s.adm === adm);
-      if (!stud) return alert(`No student with Adm#: ${adm}`);
-      stats = [{ name: stud.name, roll: stud.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }];
-    }
-
-    // Tally attendance within range
-    Object.entries(attendanceData).forEach(([d, recs]) => {
-      const cur = new Date(d);
-      if (cur >= fromDate && cur <= toDate) {
-        stats.forEach(st => {
-          const code = recs[st.roll] || 'A';
-          st[code]++; st.total++;
-        });
-      }
-    });
-
-    // Render table
-    let html = '<table><thead><tr>'
-             + '<th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>'
-             + '</tr></thead><tbody>';
-    stats.forEach(s => {
-      const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0';
-      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td>`
-           +  `<td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td>`
-           +  `<td>${s.total}</td><td>${pct}</td></tr>`;
-    });
-    html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
-    analyticsContainer.classList.remove('hidden');
-    instructionsEl.textContent = `Report: ${from} to ${to}`;
-    instructionsEl.classList.remove('hidden');
-
-    // Draw bar chart
-    const labels  = stats.map(s => s.name);
-    const dataPct = stats.map(s => s.total ? (s.P/s.total)*100 : 0);
-    if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: '% Present', data: dataPct }] },
-      options: { maintainAspectRatio: true }
-    });
-
-    // Draw pie chart
-    const agg = stats.reduce((a, s) => {
-      ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
-      return a;
-    }, { P:0, A:0, Lt:0, HD:0, L:0 });
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, {
-      type: 'pie',
-      data: { labels: ['P','A','Lt','HD','L'], datasets: [{ data: Object.values(agg) }] },
-      options: { maintainAspectRatio: true, aspectRatio: 1 }
-    });
-
-    graphsEl.classList.remove('hidden');
-    analyticsActionsEl.classList.remove('hidden');
-  };
-
-  // 5. ATTENDANCE REGISTER (unchanged)
-  // …existing register code…
+  initializeCurrentDate();
 });
