@@ -292,7 +292,18 @@ window.addEventListener('DOMContentLoaded', () => {
         graphWrap  = $('graphs'),
         actionsDiv = $('analyticsActions'),
         barCtx     = $('barChart').getContext('2d'),
-        pieCtx     = $('pieChart').getContext('2d');
+        pieCtx     = $('pieChart').getContext('2d'),
+        shareAnal  = $('shareAnalytics'),
+        downloadAnal = $('downloadAnalytics');
+  let analyticsCounts = {};
+
+  function getPeriodText() {
+    if (typeSel.value==='date') return `Date: ${datePick.value}`;
+    if (typeSel.value==='month') return `Month: ${monthPick.value}`;
+    if (typeSel.value==='semester') return `Semester: ${semStart.value} to ${semEnd.value}`;
+    if (typeSel.value==='year') return `Year: ${yearPick.value}`;
+    return '';
+  }
 
   typeSel.addEventListener('change',()=>{
     [datePick,monthPick,semStart,semEnd,yearPick].forEach(el=>el.classList.add('hidden'));
@@ -334,9 +345,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const counts={P:0,A:0,Lt:0,HD:0,L:0};
     dates.forEach(d=>Object.values(attendanceData[d]||{}).forEach(c=>counts[c]++));
+    analyticsCounts = counts;
     instr.classList.add('hidden');
     graphWrap.classList.remove('hidden');
     actionsDiv.classList.remove('hidden');
+    shareAnal.classList.remove('hidden');
+    downloadAnal.classList.remove('hidden');
     new Chart(barCtx,{type:'bar',data:{labels:Object.keys(counts),datasets:[{label:'Count',data:Object.values(counts)}]}});
     new Chart(pieCtx,{type:'pie',data:{labels:Object.keys(counts),datasets:[{data:Object.values(counts)}]}});
   });
@@ -347,7 +361,35 @@ window.addEventListener('DOMContentLoaded', () => {
     [datePick,monthPick,semStart,semEnd,yearPick].forEach(el=>el.classList.add('hidden'));
     graphWrap.classList.add('hidden');
     actionsDiv.classList.add('hidden');
+    shareAnal.classList.add('hidden');
+    downloadAnal.classList.add('hidden');
     instr.classList.remove('hidden');
+  });
+
+  shareAnal.addEventListener('click', e => {
+    e.preventDefault();
+    const period = getPeriodText();
+    const lines = Object.entries(analyticsCounts)
+      .map(([k,v]) => `*${k}*: ${v}`)
+      .join('\n');
+    const msg = `${period}\n${lines}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+  downloadAnal.addEventListener('click', e => {
+    e.preventDefault();
+    const period = getPeriodText();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.text(period, 40, 40);
+    doc.autoTable({
+      head: [['Status','Count']],
+      body: Object.entries(analyticsCounts),
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 10 }
+    });
+    doc.save('analytics_report.pdf');
   });
 
 
@@ -358,18 +400,21 @@ window.addEventListener('DOMContentLoaded', () => {
         wrapReg    = $('registerWrapper'),
         tableReg   = $('registerTable'),
         sumReg     = $('registerSummary'),
-        sumBody    = document.querySelector('#registerSummaryTable tbody');
+        sumBody    = document.querySelector('#registerSummaryTable tbody'),
+        shareTrad  = $('shareRegister'),
+        downloadTrad = $('downloadRegisterPDF');
 
   loadReg.addEventListener('click',e=>{
     e.preventDefault();
     if (!monthReg.value) return alert('Pick month');
     const [y,m]=monthReg.value.split('-').map(Number), last=new Date(y,m,0).getDate();
-    let html=`<thead><tr><th>Name</th>`;
+    let html=`<thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th>`;
     for(let d=1;d<=last;d++) html+=`<th>${d}</th>`;
     html+='</tr></thead><tbody>';
-    students.forEach(s=>{
+    sumBody.innerHTML = '';
+    students.forEach((s,i)=>{
       let p=0,a=0,lt=0,hd=0,l=0;
-      html+=`<tr><td>${s.name}</td>`;
+      html+=`<tr><td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
       for(let d=1;d<=last;d++){
         const key=`${monthReg.value}-${String(d).padStart(2,'0')}`;
         const c=(attendanceData[key]||{})[s.roll]||'A';
@@ -386,6 +431,8 @@ window.addEventListener('DOMContentLoaded', () => {
     wrapReg.classList.remove('hidden');
     sumReg.classList.remove('hidden');
     resetReg.classList.remove('hidden');
+    shareTrad.classList.remove('hidden');
+    downloadTrad.classList.remove('hidden');
   });
 
   resetReg.addEventListener('click',e=>{
@@ -394,6 +441,31 @@ window.addEventListener('DOMContentLoaded', () => {
     wrapReg.classList.add('hidden');
     sumReg.classList.add('hidden');
     resetReg.classList.add('hidden');
+    shareTrad.classList.add('hidden');
+    downloadTrad.classList.add('hidden');
     monthReg.value='';
   });
+
+  shareTrad.addEventListener('click', e => {
+    e.preventDefault();
+    const lines = Array.from(sumBody.querySelectorAll('tr')).map(tr => {
+      const cells = tr.children;
+      return `${cells[0].textContent}: P=${cells[1].textContent}, A=${cells[2].textContent}, Lt=${cells[3].textContent}, HD=${cells[4].textContent}, L=${cells[5].textContent}, Total=${cells[6].textContent}, %=${cells[7].textContent}`;
+    }).join('\n');
+    const msg = `Month: ${monthReg.value}\n${lines}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+  downloadTrad.addEventListener('click', e => {
+    e.preventDefault();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.text(`Register Summary - ${monthReg.value}`, 40, 40);
+    const head = [['Name','P','A','Lt','HD','L','Total','%']];
+    const body = Array.from(sumBody.querySelectorAll('tr'))
+      .map(tr => Array.from(tr.children).map(td => td.textContent));
+    doc.autoTable({ head, body, startY: 60, margin:{left:40,right:40}, styles:{fontSize:10} });
+    doc.save('traditional_register_summary.pdf');
+  });
+
 });
