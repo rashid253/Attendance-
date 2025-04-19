@@ -149,3 +149,19 @@ canvas {
     flex: 1 1 100%;
   }
 }
+
+/* --- Traditional Register Styling --- */
+#traditional-register th {
+  background: var(--info);
+  color: #fff;
+}
+#traditional-register table#registerTable {
+  border: 1px solid var(--primary);
+}
+#traditional-register table#registerTable tbody tr:nth-child(even) {
+  background: var(--light);
+}
+#registerSummaryWrapper {
+  max-height: 200px;
+  overflow-y: auto;
+}
