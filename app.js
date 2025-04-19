@@ -205,8 +205,249 @@ window.addEventListener('DOMContentLoaded', () => {
 
   renderStudents();
 
-  // 3. ATTENDANCE MARKING (unchanged) …
-  // 4. ANALYTICS (unchanged) …
+  // 3. ATTENDANCE MARKING
+  let attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+  window.attendanceData = attendanceData;
+  const dateInput       = $('dateInput');
+  const loadAttBtn      = $('loadAttendance');
+  const attList         = $('attendanceList');
+  const saveAttBtn      = $('saveAttendance');
+  const resSection      = $('attendance-result');
+  const summaryBody     = $('summaryBody');
+  const resetAttBtn     = $('resetAttendance');
+  const shareAttBtn     = $('shareAttendanceSummary');
+  const downloadAttPDFBtn = $('downloadAttendancePDF');
+
+  loadAttBtn.onclick = ev => {
+    ev.preventDefault();
+    if (!dateInput.value) return alert('Pick a date');
+    attList.innerHTML = '';
+    students.forEach(s => {
+      const row = document.createElement('div');
+      const btns = document.createElement('div');
+      row.className = 'attendance-item'; row.textContent = s.name;
+      btns.className = 'attendance-actions';
+      ['P','A','Lt','HD','L'].forEach(code => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'att-btn';
+        b.dataset.code = code;
+        b.textContent = code;
+        if (attendanceData[dateInput.value]?.[s.roll] === code) {
+          b.style.background = colors[code];
+          b.style.color = '#fff';
+        }
+        b.onclick = e2 => {
+          e2.preventDefault();
+          btns.querySelectorAll('.att-btn').forEach(x => {
+            x.style.background = '';
+            x.style.color = 'var(--dark)';
+          });
+          b.style.background = colors[code];
+          b.style.color = '#fff';
+        };
+        btns.append(b);
+      });
+      attList.append(row, btns);
+    });
+    saveAttBtn.classList.remove('hidden');
+  };
+
+  saveAttBtn.onclick = ev => {
+    ev.preventDefault();
+    const d = dateInput.value;
+    attendanceData[d] = {};
+    attList.querySelectorAll('.attendance-actions').forEach((btns,i) => {
+      const sel = btns.querySelector('.att-btn[style*="background"]');
+      attendanceData[d][students[i].roll] = sel ? sel.dataset.code : 'A';
+    });
+    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+    $('attendance-section').classList.add('hidden');
+    resSection.classList.remove('hidden');
+    summaryBody.innerHTML = '';
+    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan="3"><em>${hdr}</em></td></tr>`);
+    students.forEach(s => {
+      const code = attendanceData[d][s.roll] || 'A';
+      const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
+      tr.querySelector('.send-btn').onclick = e2 => {
+        e2.preventDefault();
+        const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
+        window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+      };
+      summaryBody.appendChild(tr);
+    });
+  };
+
+  resetAttBtn.onclick = ev => {
+    ev.preventDefault();
+    resSection.classList.add('hidden');
+    $('attendance-section').classList.remove('hidden');
+    attList.innerHTML = '';
+    saveAttBtn.classList.add('hidden');
+    summaryBody.innerHTML = '';
+  };
+
+  shareAttBtn.onclick = ev => {
+    ev.preventDefault();
+    const d = dateInput.value;
+    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    const remarkMap = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
+    const lines = students.map(s => `${s.name}: ${remarkMap[attendanceData[d][s.roll] || 'A']}`);
+    const total = students.length;
+    const pres  = students.reduce((sum,s) => sum + (attendanceData[d][s.roll]==='P'?1:0), 0);
+    const pct   = total ? ((pres/total)*100).toFixed(1) : '0.0';
+    const clsRemark = pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
+    const summary = `Overall Attendance: ${pct}% | ${clsRemark}`;
+    const msg     = [hdr, '', ...lines, '', summary].join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  downloadAttPDFBtn.onclick = ev => {
+    ev.preventDefault();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.autoTable({
+      head:[['Name','Status']],
+      body: students.map(s => {
+        const code = attendanceData[dateInput.value][s.roll] || 'A';
+        return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];
+      }),
+      startY:40, margin:{left:40,right:40}, styles:{fontSize:10}
+    });
+    doc.save('attendance_summary.pdf');
+  };
+
+  // 4. ANALYTICS
+  const analyticsType      = $('analyticsType');
+  const analyticsDate      = $('analyticsDate');
+  const analyticsMonth     = $('analyticsMonth');
+  const semesterStart      = $('semesterStart');
+  const semesterEnd        = $('semesterEnd');
+  const yearStart          = $('yearStart');
+  const loadAnalyticsBtn   = $('loadAnalytics');
+  const resetAnalyticsBtn  = $('resetAnalytics');
+  const instructionsEl     = $('instructions');
+  const analyticsContainer = $('analyticsContainer');
+  const graphsEl           = $('graphs');
+  const analyticsActionsEl = $('analyticsActions');
+  const shareAnalyticsBtn  = $('shareAnalytics');
+  const downloadAnalyticsBtn = $('downloadAnalytics');
+  const barCtx             = document.getElementById('barChart').getContext('2d');
+  const pieCtx             = document.getElementById('pieChart').getContext('2d');
+  let barChart, pieChart;
+
+  function hideAllAnalytics() {
+    [analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart,
+     instructionsEl, analyticsContainer, graphsEl, analyticsActionsEl, resetAnalyticsBtn]
+      .forEach(el => el.classList.add('hidden'));
+  }
+
+  analyticsType.onchange = () => {
+    hideAllAnalytics();
+    if (analyticsType.value === 'date')     analyticsDate.classList.remove('hidden');
+    if (analyticsType.value === 'month')    analyticsMonth.classList.remove('hidden');
+    if (analyticsType.value === 'semester'){ semesterStart.classList.remove('hidden'); semesterEnd.classList.remove('hidden'); }
+    if (analyticsType.value === 'year')      yearStart.classList.remove('hidden');
+  };
+
+  resetAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    analyticsType.value = '';
+    hideAllAnalytics();
+  };
+
+  loadAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    let from, to;
+    if (analyticsType.value==='date') {
+      if(!analyticsDate.value) return alert('Pick a date');
+      from = to = analyticsDate.value;
+    } else if (analyticsType.value==='month') {
+      if(!analyticsMonth.value) return alert('Pick a month');
+      from = analyticsMonth.value+'-01'; to = analyticsMonth.value+'-31';
+    } else if (analyticsType.value==='semester') {
+      if(!semesterStart.value||!semesterEnd.value) return alert('Pick range');
+      from = semesterStart.value+'-01'; to = semesterEnd.value+'-31';
+    } else if (analyticsType.value==='year') {
+      if(!yearStart.value) return alert('Pick a year');
+      from = yearStart.value+'-01-01'; to = yearStart.value+'-12-31';
+    } else return;
+
+    // compute stats
+    const stats = students.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
+    Object.entries(attendanceData).forEach(([d,recs])=>{
+      if(d>=from&&d<=to) stats.forEach(st=>{
+        const c = recs[st.roll]||'A';
+        st[c]++; st.total++;
+      });
+    });
+
+    // render table
+    let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
+    stats.forEach(s=>{
+      const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
+      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    analyticsContainer.innerHTML = html;
+    analyticsContainer.classList.remove('hidden');
+    instructionsEl.textContent = `Report: ${from} to ${to}`;
+    instructionsEl.classList.remove('hidden');
+    resetAnalyticsBtn.classList.remove('hidden');
+
+    // bar chart
+    const labels = stats.map(s=>s.name);
+    const dataPct = stats.map(s=>s.total?s.P/s.total*100:0);
+    if(barChart) barChart.destroy();
+    barChart = new Chart(barCtx,{ type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }] }, options:{ maintainAspectRatio:true } });
+
+    // pie chart
+    const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
+    if(pieChart) pieChart.destroy();
+    pieChart = new Chart(pieCtx,{
+      type:'pie',
+      data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] },
+      options:{ maintainAspectRatio:true, aspectRatio:1 }
+    });
+
+    graphsEl.classList.remove('hidden');
+    analyticsActionsEl.classList.remove('hidden');
+  };
+
+  shareAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    const period = instructionsEl.textContent.replace('Report: ','');
+    const hdr = `Date Range: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>{
+      const td = r.querySelectorAll('td');
+      return `${td[0].textContent} P:${td[1].textContent} A:${td[2].textContent} Lt:${td[3].textContent} HD:${td[4].textContent} L:${td[5].textContent} Total:${td[6].textContent} %:${td[7].textContent}`;
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+rows.join('\n'))}`, '_blank');
+  };
+
+  downloadAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.setFontSize(14);
+    doc.text(localStorage.getItem('schoolName'),40,30);
+    doc.setFontSize(12);
+    doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`,40,45);
+    doc.text(instructionsEl.textContent.replace('Report: ','Period: '),40,60);
+    doc.autoTable({
+      head:[['Name','P','A','Lt','HD','L','Total','%']],
+      body:Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>Array.from(r.querySelectorAll('td')).map(td=>td.textContent)),
+      startY:75, margin:{left:40,right:40}, styles:{fontSize:8}
+    });
+    const y = doc.lastAutoTable.finalY + 10;
+    const w = 120, h = 80;
+    doc.addImage(barChart.toBase64Image(),'PNG', 40, y, w, h);
+    doc.addImage(pieChart.toBase64Image(),'PNG', 40 + w + 20, y, w, h);
+    doc.save('analytics_report.pdf');
+  };
 
   // 5. ATTENDANCE REGISTER
   const regMonthIn       = $('registerMonth');
@@ -231,6 +472,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadRegBtn.onclick = e => {
     e.preventDefault();
     if (!regMonthIn.value) return alert('Select month');
+    const attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
     const [yr,mo] = regMonthIn.value.split('-').map(Number);
     const dim = new Date(yr, mo, 0).getDate();
 
@@ -242,7 +484,7 @@ window.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
       for (let d=1; d<=dim; d++) {
         const key = `${regMonthIn.value}-${String(d).padStart(2,'0')}`;
-        const code= (JSON.parse(localStorage.getItem('attendanceData')||'{}')[key]||{})[s.roll] || 'A';
+        const code= (attendanceData[key]||{})[s.roll] || 'A';
         const td = document.createElement('td');
         td.textContent = code;
         td.style.background = colors[code];
@@ -252,14 +494,12 @@ window.addEventListener('DOMContentLoaded', () => {
       regBody.append(tr);
     });
 
-    // summary
-    const attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
     const stats = students.map(s=>({name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
     stats.forEach(st=>{
       for(let d=1; d<=dim; d++){
         const key = `${regMonthIn.value}-${String(d).padStart(2,'0')}`;
         const rec = attendanceData[key]||{};
-        const code = rec[ students.find(x=>x.name===st.name).roll ]||'A';
+        const code = rec[ s.roll ]||'A';
         st[code]++; st.total++;
       }
       const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
@@ -295,7 +535,6 @@ window.addEventListener('DOMContentLoaded', () => {
   downloadRegBtn2.onclick = e => {
     e.preventDefault();
     const { jsPDF } = window.jspdf;
-    // switch to landscape orientation
     const doc = new jsPDF('l','pt','a4');
     doc.text(localStorage.getItem('schoolName'), 40, 30);
     doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`, 40, 45);
