@@ -1,4 +1,3 @@
-/* style.css */
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -148,21 +147,4 @@ canvas {
   .row-inline button {
     flex: 1 1 100%;
   }
-}
-/* Traditional Register styles */
-#traditional-register .table-wrapper {
-  margin-top: 10px;
-}
-#traditional-register th,
-#traditional-register td {
-  text-align: center;
-}
-#traditional-register thead th {
-  background: var(--light);
-}
-#traditional-register .summary-block {
-  margin-top: 15px;
-}
-#traditional-register .graph-container {
-  margin-top: 15px;
 }
