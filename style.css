@@ -1,14 +1,17 @@
+/* style.css */
+/* — your original CSS up here — */
+
 :root {
-  --primary: #2196F3;
-  --success: #4CAF50;
+  --primary: #2196f3;
+  --success: #4caf50;
   --danger: #f44336;
-  --warning: #FFEB3B;
-  --orange: #FF9800;
+  --warning: #ffeb3b;
+  --orange: #ff9800;
   --info: #03a9f4;
   --light: #f2f2f2;
   --dark: #333;
 }
-/* prevent flicker */
+
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -87,7 +90,7 @@ td {
   border: 1px solid #ccc;
   padding: 8px;
   white-space: nowrap;
-  text-align: left;
+  text-align: center;
 }
 th {
   background: var(--light);
@@ -102,7 +105,7 @@ th {
   font-weight: bold;
   margin-bottom: 5px;
 }
-.attendance-item + .attendance-actions {
+.attendance-actions {
   display: flex;
   gap: 5px;
   margin-bottom: 15px;
@@ -115,12 +118,8 @@ th {
   color: var(--dark);
   font-weight: bold;
 }
-.table-container {
-  overflow-x: auto;
-  margin-top: 15px;
-}
-.summary-block {
-  margin-top: 15px;
+.select-col {
+  width: 40px;
 }
 .graph-container {
   display: flex;
@@ -138,13 +137,25 @@ canvas {
 .editing {
   outline: 2px dashed var(--info);
 }
-.select-col {
-  width: 40px;
-}
 @media (max-width: 600px) {
   .row-inline input,
   .row-inline select,
   .row-inline button {
     flex: 1 1 100%;
   }
+}
+
+/* — new styles for Traditional Monthly Register — */
+#traditional-register .table-wrapper {
+  margin-top: 15px;
+}
+#traditional-register th, 
+#traditional-register td {
+  text-align: center;
+}
+#traditional-register thead th {
+  background: var(--light);
+}
+#traditional-register .summary-block {
+  margin-top: 15px;
 }
