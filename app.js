@@ -315,7 +315,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ANALYTICS
   const analyticsType = $('analyticsType');
-  const analyticsDate = $('analysisDate');
+  const analyticsDate = $('analyticsDate');
   const analyticsMonth = $('analyticsMonth');
   const semesterStart = $('semesterStart');
   const semesterEnd = $('semesterEnd');
@@ -328,5 +328,45 @@ window.addEventListener('DOMContentLoaded', () => {
   const analyticsActionsEl = $('analyticsActions');
   const shareAnalyticsBtn = $('shareAnalytics');
   const downloadAnalyticsBtn = $('downloadAnalytics');
-  const barCtx = document.getElementById('barChart').getContext('2d');
-  const pieCtx = document.getElementById('pieChart').
+  const barCtx = $('barChart').getContext('2d');
+  const pieCtx = $('pieChart').getContext('2d');
+
+  loadAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    // Ensure data is shown
+    instructionsEl.classList.add('hidden');
+    analyticsContainer.classList.remove('hidden');
+    graphsEl.classList.remove('hidden');
+
+    // Simple example: count each status on the selected date
+    const d = analyticsDate.value;
+    const counts = { P:0, A:0, Lt:0, HD:0, L:0 };
+    if (attendanceData[d]) {
+      Object.values(attendanceData[d]).forEach(code => {
+        counts[code] = (counts[code] || 0) + 1;
+      });
+    }
+    // Render bar chart
+    new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{ label: 'Count', data: Object.values(counts) }]
+      }
+    });
+    // Render pie chart
+    new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{ data: Object.values(counts) }]
+      }
+    });
+
+    analyticsActionsEl.classList.remove('hidden');
+  };
+
+  // Remaining analytics handlers (reset, share, download)… (unchanged)
+
+  // TRADITIONAL REGISTER handlers… (unchanged)
+});
