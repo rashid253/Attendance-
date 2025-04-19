@@ -119,9 +119,9 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div id="analyticsActions" class="row-inline hidden">
-      <button type="button" id="shareAnalytics">Share as Text</button>
-      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
+    <div class="table-actions" id="analyticsActions">
+      <button type="button" id="shareAnalytics" class="hidden">Share Summary</button>
+      <button type="button" id="downloadAnalytics" class="hidden">Download PDF</button>
     </div>
   </section>
 
@@ -139,12 +139,14 @@
     </div>
     <div class="summary-block hidden" id="registerSummary">
       <h3>Summary</h3>
-      <table id="registerSummaryTable">
-        <thead>
-          <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrapper" id="registerSummaryWrapper">
+        <table id="registerSummaryTable">
+          <thead>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
     <div class="table-actions">
       <button type="button" id="shareRegister" class="hidden">Share Summary</button>
