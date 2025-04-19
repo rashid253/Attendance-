@@ -119,38 +119,46 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div class="table-actions" id="analyticsActions">
-      <button type="button" id="shareAnalytics" class="hidden">Share Summary</button>
-      <button type="button" id="downloadAnalytics" class="hidden">Download PDF</button>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
     </div>
   </section>
 
-  <!-- 6. Traditional Attendance Register -->
-  <section id="traditional-register">
-    <h2>Traditional Attendance Register</h2>
+  <!-- 6. Attendance Register -->
+  <section id="register-section">
+    <h2>Attendance Register</h2>
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
       <input type="month" id="registerMonth">
-      <button type="button" id="loadRegister">Load Register</button>
-      <button type="button" id="resetRegister" class="small hidden">Change</button>
+      <button type="button" id="loadRegister" class="save">Load Register</button>
+      <button type="button" id="changeRegister" class="small hidden">Change Period</button>
     </div>
-    <div class="table-wrapper hidden" id="registerWrapper">
-      <table id="registerTable"></table>
+    <div class="table-wrapper hidden" id="registerTableWrapper">
+      <table id="registerTable">
+        <thead>
+          <tr>
+            <th>Sr#</th><th>Adm#</th><th>Name</th>
+            <!-- JS will append 1–31 -->
+          </tr>
+        </thead>
+        <tbody id="registerBody"></tbody>
+      </table>
     </div>
-    <div class="summary-block hidden" id="registerSummary">
+    <div id="registerSummarySection" class="hidden">
       <h3>Summary</h3>
-      <div class="table-wrapper" id="registerSummaryWrapper">
-        <table id="registerSummaryTable">
+      <div class="table-wrapper">
+        <table>
           <thead>
-            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="registerSummaryBody"></tbody>
         </table>
       </div>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareRegister" class="hidden">Share Summary</button>
-      <button type="button" id="downloadRegisterPDF" class="hidden">Download PDF</button>
+      <button type="button" id="shareRegister" class="save">Share Summary</button>
+      <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
     </div>
   </section>
 
@@ -159,5 +167,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script src="app.js"></script>
+  <script src="register.js"></script>
 </body>
 </html>
