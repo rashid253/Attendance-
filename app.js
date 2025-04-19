@@ -316,7 +316,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     const d = dateInput.value;
     attendanceData[d] = {};
-    attList.querySelectorAll('.attendance-actions').forEach((btns,i) => {
+    attList.querySelectorAll('.attendance-actions').forEach((btns, i) => {
       const sel = btns.querySelector('.att-btn[style*="background"]');
       attendanceData[d][students[i].roll] = sel ? sel.dataset.code : 'A';
     });
@@ -356,7 +356,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const map = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
     const lines = students.map(s => `${s.name}: ${map[attendanceData[d][s.roll]||'A']}`);
     const total = students.length;
-    const pres  = students.reduce((sum,s) => sum + (attendanceData[d][s.roll]==='P'?1:0), 0);
+    const pres  = students.reduce((sum, s) => sum + (attendanceData[d][s.roll]==='P'?1:0), 0);
     const pct   = total ? ((pres/total)*100).toFixed(1) : '0.0';
     const remark= pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
     const summary = `Overall Attendance: ${pct}% | ${remark}`;
@@ -445,17 +445,21 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     else if (analyticsType.value === 'month') {
       if (!analyticsMonth.value) return alert('Pick a month');
-      const [y,m] = analyticsMonth.value.split('-').map(Number);
+      const [y, m] = analyticsMonth.value.split('-').map(Number);
       from = `${analyticsMonth.value}-01`;
-      to   = `${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
+      to   = `${analyticsMonth.value}-${new Date(y, m, 0).getDate()}`;
     }
     else if (analyticsType.value === 'semester') {
       if (!semesterStartInput.value || !semesterEndInput.value)
         return alert('Pick semester range');
-      from = `${semesterStartInput.value}-01`;
-      to   = `${semesterEndInput.value}-${new Date(
-                ...semesterEndInput.value.split('-').map(Number),0
-              ).getDate()}`;
+      // parse YYYY-MM from both inputs:
+      const [startY, startM] = semesterStartInput.value.split('-').map(Number);
+      const [endY, endM]     = semesterEndInput.value.split('-').map(Number);
+      // first of start month
+      from = `${startY}-${String(startM).padStart(2,'0')}-01`;
+      // last day of end month
+      const lastDay = new Date(endY, endM, 0).getDate();
+      to   = `${endY}-${String(endM).padStart(2,'0')}-${lastDay}`;
     }
     else if (analyticsType.value === 'year') {
       if (!yearStart.value) return alert('Pick a year');
@@ -483,7 +487,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Tally attendance within range
-    Object.entries(attendanceData).forEach(([d,recs]) => {
+    Object.entries(attendanceData).forEach(([d, recs]) => {
       const cur = new Date(d);
       if (cur >= fromDate && cur <= toDate) {
         stats.forEach(st => {
