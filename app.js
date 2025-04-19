@@ -3,9 +3,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
   const colors = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: 'var(--orange)', L: 'var(--info)' };
 
-  // -----------------------------
   // 1. SETUP
-  // -----------------------------
   const schoolIn     = $('schoolNameInput');
   const classSel     = $('teacherClassSelect');
   const secSel       = $('teacherSectionSelect');
@@ -14,11 +12,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const setupDisplay = $('setupDisplay');
   const setupText    = $('setupText');
   const editSetup    = $('editSetup');
-
   function loadSetup() {
-    const school = localStorage.getItem('schoolName');
-    const cls    = localStorage.getItem('teacherClass');
-    const sec    = localStorage.getItem('teacherSection');
+    const school = localStorage.getItem('schoolName'),
+          cls    = localStorage.getItem('teacherClass'),
+          sec    = localStorage.getItem('teacherSection');
     if (school && cls && sec) {
       schoolIn.value = school;
       classSel.value = cls;
@@ -28,24 +25,20 @@ window.addEventListener('DOMContentLoaded', () => {
       setupDisplay.classList.remove('hidden');
     }
   }
-  saveSetup.onclick = e => {
-    e.preventDefault();
-    if (!schoolIn.value || !classSel.value || !secSel.value) return alert('Complete setup');
+  saveSetup.onclick = e => { e.preventDefault();
+    if (!schoolIn.value||!classSel.value||!secSel.value) return alert('Complete setup');
     localStorage.setItem('schoolName', schoolIn.value);
     localStorage.setItem('teacherClass', classSel.value);
     localStorage.setItem('teacherSection', secSel.value);
     loadSetup();
   };
-  editSetup.onclick = e => {
-    e.preventDefault();
+  editSetup.onclick = e => { e.preventDefault();
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
   };
   loadSetup();
 
-  // -----------------------------
   // 2. STUDENT REGISTRATION
-  // -----------------------------
   let students = JSON.parse(localStorage.getItem('students') || '[]');
   window.students = students;
   const studentNameIn   = $('studentName');
@@ -70,25 +63,18 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function renderStudents() {
     studentsBody.innerHTML = '';
-    students.forEach((s, i) => {
+    students.forEach((s,i) => {
       const tr = document.createElement('tr');
       tr.innerHTML =
         `<td><input type="checkbox" class="sel" data-index="${i}" ${regSaved?'disabled':''}></td>` +
-        `<td>${s.name}</td><td>${s.adm}</td><td>${s.parent}</td><td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>` +
+        `<td>${s.name}</td><td>${s.adm}</td><td>${s.parent}</td>` +
+        `<td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>` +
         `<td>${regSaved?'<button class="share-one">Share</button>':''}</td>`;
       if (regSaved) {
         tr.querySelector('.share-one').onclick = ev => {
           ev.preventDefault();
-          const hdr = `School: ${localStorage.getItem('schoolName')}\
-\nClass: ${localStorage.getItem('teacherClass')}\
-\nSection: ${localStorage.getItem('teacherSection')}`;
-          const msg = `${hdr}\
-\n\nName: ${s.name}\
-\nAdm#: ${s.adm}\
-\nParent: ${s.parent}\
-\nContact: ${s.contact}\
-\nOccupation: ${s.occupation}\
-\nAddress: ${s.address}`;
+          const hdr = `School: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+          const msg = `${hdr}\n\nName: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`;
           window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         };
       }
@@ -113,53 +99,49 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     };
   }
-
   addStudentBtn.onclick = ev => {
     ev.preventDefault();
-    const name       = studentNameIn.value.trim();
-    const adm        = admissionNoIn.value.trim();
-    const parent     = parentNameIn.value.trim();
-    const contact    = parentContactIn.value.trim();
-    const occ        = parentOccIn.value.trim();
-    const addr       = parentAddrIn.value.trim();
-    if (!name||!adm||!parent||!contact||!occ||!addr) return alert('All fields required');
+    const name = studentNameIn.value.trim(),
+          adm  = admissionNoIn.value.trim(),
+          parent = parentNameIn.value.trim(),
+          contact = parentContactIn.value.trim(),
+          occ = parentOccIn.value.trim(),
+          addr = parentAddrIn.value.trim();
+    if (!name||!adm||!parent||!contact||!occ||!addr)
+      return alert('All fields required');
     if (!/^\d+$/.test(adm)) return alert('Adm# must be numeric');
-    if (students.some(s => s.adm === adm)) return alert(`Admission# ${adm} already exists`);
+    if (students.some(s=>s.adm===adm)) return alert(`Admission# ${adm} already exists`);
     if (!/^\d{7,15}$/.test(contact)) return alert('Contact must be 7–15 digits');
     students.push({ name, adm, parent, contact, occupation: occ, address: addr, roll: Date.now() });
-    saveStudents();
-    renderStudents();
+    saveStudents(); renderStudents();
     [studentNameIn, admissionNoIn, parentNameIn, parentContactIn, parentOccIn, parentAddrIn].forEach(i=>i.value='');
   };
-
   function onCellBlur(e) {
-    const td = e.target, tr = td.closest('tr');
-    const idx = +tr.querySelector('.sel').dataset.index;
-    const ci  = Array.from(tr.children).indexOf(td);
-    const keys = ['name','adm','parent','contact','occupation','address'];
-    const val = td.textContent.trim();
-    if (ci === 2) {
-      if (!/^\d+$/.test(val)) { alert('Adm# must be numeric'); renderStudents(); return; }
-      if (students.some((s,i2) => s.adm===val && i2!==idx)) { alert('Duplicate Adm# not allowed'); renderStudents(); return; }
+    const td = e.target, tr = td.closest('tr'),
+          idx = +tr.querySelector('.sel').dataset.index,
+          ci = Array.from(tr.children).indexOf(td),
+          keys = ['name','adm','parent','contact','occupation','address'],
+          val = td.textContent.trim();
+    if (ci===2) {
+      if (!/^\d+$/.test(val))     { alert('Adm# must be numeric'); renderStudents(); return; }
+      if (students.some((s,i2)=>s.adm===val&&i2!==idx)) { alert('Duplicate Adm# not allowed'); renderStudents(); return; }
     }
-    if (ci>=1 && ci<=6) {
-      students[idx][keys[ci-1]] = val;
-      saveStudents();
+    if (ci>=1&&ci<=6) {
+      students[idx][keys[ci-1]] = val; saveStudents();
     }
   }
-
   editSelBtn.onclick = ev => {
     ev.preventDefault();
     const sel = Array.from(document.querySelectorAll('.sel:checked'));
     if (!sel.length) return;
     inlineEdit = !inlineEdit;
-    editSelBtn.textContent = inlineEdit ? 'Done Editing' : 'Edit Selected';
+    editSelBtn.textContent = inlineEdit?'Done Editing':'Edit Selected';
     sel.forEach(cb => {
-      cb.closest('tr').querySelectorAll('td').forEach((td, ci) => {
-        if (ci>=1 && ci<=6) {
+      cb.closest('tr').querySelectorAll('td').forEach((td,ci) => {
+        if (ci>=1&&ci<=6) {
           td.contentEditable = inlineEdit;
           td.classList.toggle('editing', inlineEdit);
-          inlineEdit ? td.addEventListener('blur', onCellBlur) : td.removeEventListener('blur', onCellBlur);
+          inlineEdit?td.addEventListener('blur',onCellBlur):td.removeEventListener('blur',onCellBlur);
         }
       });
     });
@@ -195,23 +177,14 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   shareRegBtn.onclick = ev => {
     ev.preventDefault();
-    const hdr = `School: ${localStorage.getItem('schoolName')}\
-\nClass: ${localStorage.getItem('teacherClass')}\
-\nSection: ${localStorage.getItem('teacherSection')}`;
-    const lines = students.map(s=>
-      `Name: ${s.name}\
-\nAdm#: ${s.adm}\
-\nParent: ${s.parent}\
-\nContact: ${s.contact}\
-\nOccupation: ${s.occupation}\
-\nAddress: ${s.address}`
-    ).join('\n---\n');
+    const hdr = `School: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`,
+          lines = students.map(s=>`Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`).join('\n---\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines)}`, '_blank');
   };
   downloadRegBtn.onclick = ev => {
     ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
+    const { jsPDF } = window.jspdf,
+          doc = new jsPDF('p','pt','a4');
     doc.autoTable({
       head:[['Name','Adm#','Parent','Contact','Occupation','Address']],
       body: students.map(s=>[s.name,s.adm,s.parent,s.contact,s.occupation,s.address]),
@@ -221,9 +194,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   renderStudents();
 
-  // -----------------------------
   // 3. ATTENDANCE MARKING
-  // -----------------------------
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')||'{}');
   window.attendanceData = attendanceData;
   const dateInput       = $('dateInput');
@@ -254,8 +225,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         b.onclick = e2=>{
           e2.preventDefault();
-          btns.querySelectorAll('.att-btn').forEach(x=>{ x.style.background=''; x.style.color='var(--dark)'; });
-          b.style.background=colors[code]; b.style.color='#fff';
+          btns.querySelectorAll('.att-btn').forEach(x=>{x.style.background='';x.style.color='var(--dark)';});
+          b.style.background=colors[code];b.style.color='#fff';
         };
         btns.append(b);
       });
@@ -263,7 +234,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     saveAtt.classList.remove('hidden');
   };
-  saveAtt.onclick = ev=>{
+  saveAtt.onclick = ev => {
     ev.preventDefault();
     const d = dateInput.value;
     attendanceData[d]={};
@@ -275,10 +246,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $('attendance-section').classList.add('hidden');
     resultSection.classList.remove('hidden');
     summaryBody.innerHTML='';
-    const hdr = `Date: ${d}\
-\nSchool: ${localStorage.getItem('schoolName')}\
-\nClass: ${localStorage.getItem('teacherClass')}\
-\nSection: ${localStorage.getItem('teacherSection')}`;
+    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     summaryBody.insertAdjacentHTML('beforebegin', `<tr><td colspan="3"><em>${hdr}</em></td></tr>`);
     students.forEach(s=>{
       const code = attendanceData[d][s.roll]||'A';
@@ -287,45 +255,42 @@ window.addEventListener('DOMContentLoaded', () => {
       tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
       tr.querySelector('.send-btn').onclick = e2=>{
         e2.preventDefault();
-        const msg = `${hdr}\
-\n\nName: ${s.name}\
-\nStatus: ${status}`;
+        const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
         window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank');
       };
       summaryBody.appendChild(tr);
     });
   };
-  resetAtt.onclick = ev=>{ ev.preventDefault(); resultSection.classList.add('hidden'); $('attendance-section').classList.remove('hidden'); attList.innerHTML=''; saveAtt.classList.add('hidden'); summaryBody.innerHTML=''; };
+  resetAtt.onclick = ev=>{ev.preventDefault();resultSection.classList.add('hidden');$('attendance-section').classList.remove('hidden');attList.innerHTML='';saveAtt.classList.add('hidden');summaryBody.innerHTML='';};
   shareAtt.onclick = ev=>{
     ev.preventDefault();
     const d = dateInput.value;
-    const hdr = `Date: ${d}\
-\nSchool: ${localStorage.getItem('schoolName')}\
-\nClass: ${localStorage.getItem('teacherClass')}\
-\nSection: ${localStorage.getItem('teacherSection')}`;
+    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     const map={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
-    const lines=students.map(s=>`${s.name}: ${map[attendanceData[d][s.roll]||'A']}`);
-    const total=students.length; const pres=students.reduce((sum,s)=>sum+(attendanceData[d][s.roll]==='P'?1:0),0);
-    const pct=total?((pres/total)*100).toFixed(1):'0.0'; const remark=pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
+    const lines = students.map(s=>`${s.name}: ${map[attendanceData[d][s.roll]||'A']}`);
+    const total=students.length, pres=students.reduce((sum,s)=>sum+(attendanceData[d][s.roll]==='P'?1:0),0);
+    const pct=total?((pres/total)*100).toFixed(1):'0.0';
+    const remark=pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
     const summary=`Overall Attendance: ${pct}% | ${remark}`;
     const msg=[hdr,'',...lines,'',summary].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
   downloadAttPDF.onclick = ev=>{
     ev.preventDefault();
-    const { jsPDF }=window.jspdf;
-    const doc=new jsPDF('p','pt','a4');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
     doc.autoTable({
       head:[['Name','Status']],
-      body: students.map(s=>{ const code=attendanceData[dateInput.value][s.roll]||'A'; return [s.name,{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; }),
+      body: students.map(s=>{
+        const code=attendanceData[dateInput.value][s.roll]||'A';
+        return [s.name,{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];
+      }),
       startY:40, margin:{left:40,right:40}, styles:{fontSize:10}
     });
     doc.save('attendance_summary.pdf');
   };
 
-  // -----------------------------
   // 4. ANALYTICS (fixed semester logic)
-  // -----------------------------
   const analyticsTarget      = $('analyticsTarget');
   const admInput             = $('studentAdmInput');
   const analyticsType        = $('analyticsType');
@@ -347,7 +312,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let barChart, pieChart;
 
   analyticsTarget.onchange = () => {
-    admInput.classList.toggle('hidden', analyticsTarget.value === 'class');
+    admInput.classList.toggle('hidden', analyticsTarget.value==='class');
   };
 
   function hideAllAnalytics() {
@@ -358,14 +323,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   analyticsType.onchange = () => {
     hideAllAnalytics();
-    if (analyticsTarget.value === 'student') admInput.classList.remove('hidden');
-    if (analyticsType.value === 'date') analyticsDate.classList.remove('hidden');
-    if (analyticsType.value === 'month') analyticsMonth.classList.remove('hidden');
-    if (analyticsType.value === 'semester') {
-      semesterStartInput.classList.remove('hidden');
-      semesterEndInput.classList.remove('hidden');
-    }
-    if (analyticsType.value === 'year') yearStart.classList.remove('hidden');
+    if (analyticsTarget.value==='student') admInput.classList.remove('hidden');
+    if (analyticsType.value==='date')      analyticsDate.classList.remove('hidden');
+    if (analyticsType.value==='month')     analyticsMonth.classList.remove('hidden');
+    if (analyticsType.value==='semester')  { semesterStartInput.classList.remove('hidden'); semesterEndInput.classList.remove('hidden'); }
+    if (analyticsType.value==='year')      yearStart.classList.remove('hidden');
     resetAnalyticsBtn.classList.remove('hidden');
   };
 
@@ -379,92 +341,162 @@ window.addEventListener('DOMContentLoaded', () => {
 
   loadAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
-    let from, to;
-    if (analyticsType.value === 'date') {
+    let from,to;
+    if (analyticsType.value==='date') {
       if (!analyticsDate.value) return alert('Pick a date');
-      from = to = analyticsDate.value;
-    } else if (analyticsType.value === 'month') {
+      from=to=analyticsDate.value;
+    }
+    else if (analyticsType.value==='month') {
       if (!analyticsMonth.value) return alert('Pick a month');
-      from = `${analyticsMonth.value}-01`;
-      to   = `${analyticsMonth.value}-${new Date(...analyticsMonth.value.split('-').map(Number),0).getDate()}`;
-    } else if (analyticsType.value === 'semester') {
-      if (!semesterStartInput.value || !semesterEndInput.value)
-        return alert('Pick semester range');
-      from = `${semesterStartInput.value}-01`;
-      to   = `${semesterEndInput.value}-${new Date(
-                ...semesterEndInput.value.split('-').map(Number),0
-              ).getDate()}`;
-    } else if (analyticsType.value === 'year') {
+      const [y,m]=analyticsMonth.value.split('-').map(Number);
+      from=`${analyticsMonth.value}-01`;
+      to  =`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
+    }
+    else if (analyticsType.value==='semester') {
+      if (!semesterStartInput.value||!semesterEndInput.value) return alert('Pick semester range');
+      from=`${semesterStartInput.value}-01`;
+      to  =`${semesterEndInput.value}-${new Date(
+              ...semesterEndInput.value.split('-').map(Number),0
+            ).getDate()}`;
+    }
+    else if (analyticsType.value==='year') {
       if (!yearStart.value) return alert('Pick a year');
-      from = `${yearStart.value}-01-01`;
-      to   = `${yearStart.value}-12-31`;
-    } else {
-      return alert('Select a period');
+      from=`${yearStart.value}-01-01`;
+      to  =`${yearStart.value}-12-31`;
     }
+    else return alert('Select a period');
 
-    // Build stats
+    const fromDate=new Date(from), toDate=new Date(to);
+
     let stats = [];
-    if (analyticsTarget.value === 'class') {
-      stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    if (analyticsTarget.value==='class') {
+      stats = students.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
     } else {
-      const adm = admInput.value.trim();
+      const adm=admInput.value.trim();
       if (!adm) return alert('Enter Admission #');
-      const stud = students.find(s => s.adm === adm);
+      const stud=students.find(s=>s.adm===adm);
       if (!stud) return alert(`No student with Adm#: ${adm}`);
-      stats = [{ name: stud.name, roll: stud.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }];
+      stats=[{name:stud.name,roll:stud.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}];
     }
 
-    // Tally using string comparison for date keys
-    Object.entries(attendanceData).forEach(([d, recs]) => {
-      if (d >= from && d <= to) {
-        stats.forEach(st => {
-          const code = recs[st.roll] || 'A';
+    Object.entries(attendanceData).forEach(([d,recs])=>{
+      const cur=new Date(d);
+      if (cur>=fromDate&&cur<=toDate){
+        stats.forEach(st=>{
+          const code=recs[st.roll]||'A';
           st[code]++; st.total++;
         });
       }
     });
 
-    // Render table
-    let html = '<table><thead><tr>'
-      + '<th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>'
-      + '</tr></thead><tbody>';
-    stats.forEach(s => {
-      const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0';
-      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td>`
-           + `<td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td>`
-           + `<td>${s.total}</td><td>${pct}</td></tr>`;
+    let html='<table><thead><tr>'
+            +'<th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>'
+            +'</tr></thead><tbody>';
+    stats.forEach(s=>{
+      const pct=s.total?((s.P/s.total)*100).toFixed(1):'0.0';
+      html+=`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td>`
+           +`<td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td>`
+           +`<td>${s.total}</td><td>${pct}</td></tr>`;
     });
-    html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
+    html+='</tbody></table>';
+    analyticsContainer.innerHTML=html;
     analyticsContainer.classList.remove('hidden');
-    instructionsEl.textContent = `Report: ${from} to ${to}`;
+    instructionsEl.textContent=`Report: ${from} to ${to}`;
     instructionsEl.classList.remove('hidden');
 
-    // Bar chart (% Present)
-    const labels = stats.map(s => s.name);
-    const dataPct = stats.map(s => s.total ? (s.P/s.total)*100 : 0);
+    const labels=stats.map(s=>s.name);
+    const dataPct=stats.map(s=>s.total?(s.P/s.total)*100:0);
     if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: '% Present', data: dataPct }] },
-      options: { maintainAspectRatio: true }
-    });
+    barChart=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{label:'% Present',data:dataPct}]},options:{maintainAspectRatio:true}});
 
-    // Pie chart (aggregate)
-    const agg = stats.reduce((a, s) => {
-      ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
+    const agg=stats.reduce((a,s)=>{
+      ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);
       return a;
-    }, {P:0, A:0, Lt:0, HD:0, L:0});
+    },{P:0,A:0,Lt:0,HD:0,L:0});
     if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, {
-      type: 'pie',
-      data: { labels: ['P','A','Lt','HD','L'], datasets: [{ data: Object.values(agg) }] },
-      options: { maintainAspectRatio: true, aspectRatio:1 }
-    });
+    pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]},options:{maintainAspectRatio:true,aspectRatio:1}});
 
     graphsEl.classList.remove('hidden');
     analyticsActionsEl.classList.remove('hidden');
   };
 
-  // Remaining sections (share/download analytics, register, etc.) remain unchanged...
+  // 5. ATTENDANCE REGISTER (unchanged)
+  const regMonthIn      = $('registerMonth');
+  const loadReg         = $('loadRegister');
+  const changeReg       = $('changeRegister');
+  const regTableWrapper = $('registerTableWrapper');
+  const regTable        = $('registerTable');
+  const regBody         = $('registerBody');
+  const regSummarySec   = $('registerSummarySection');
+  const regSummaryBody  = $('registerSummaryBody');
+  const shareReg2       = $('shareRegister');
+  const downloadReg2    = $('downloadRegisterPDF');
+
+  const headerRow = regTable.querySelector('thead tr');
+  for (let d=1;d<=31;d++){
+    const th=document.createElement('th'); th.textContent=d; headerRow.append(th);
+  }
+
+  loadReg.onclick=e=>{e.preventDefault();
+    if(!regMonthIn.value)return alert('Select month');
+    const data=JSON.parse(localStorage.getItem('attendanceData')||'{}'),
+          [y,m]=regMonthIn.value.split('-').map(Number),
+          dim=new Date(y,m,0).getDate();
+    regBody.innerHTML=''; regSummaryBody.innerHTML='';
+    students.forEach((s,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      for(let d=1;d<=dim;d++){
+        const key=`${regMonthIn.value}-${String(d).padStart(2,'0')}`,
+              code=(data[key]||{})[s.roll]||'A',
+              td=document.createElement('td');
+        td.textContent=code; td.style.background=colors[code]; td.style.color='#fff';
+        tr.append(td);
+      }
+      regBody.append(tr);
+    });
+
+    const stats=students.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
+    stats.forEach(st=>{
+      for(let d=1;d<=dim;d++){
+        const key=`${regMonthIn.value}-${String(d).padStart(2,'0')}`,
+              code=(data[key]||{})[st.roll]||'A';
+        st[code]++; st.total++;
+      }
+      const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0',
+            tr=document.createElement('tr');
+      tr.innerHTML=`<td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${pct}</td>`;
+      regSummaryBody.append(tr);
+    });
+
+    regTableWrapper.classList.remove('hidden');
+    regSummarySec.classList.remove('hidden');
+    loadReg.classList.add('hidden');
+    changeReg.classList.remove('hidden');
+  };
+  changeReg.onclick=e=>{e.preventDefault();
+    regTableWrapper.classList.add('hidden');
+    regSummarySec.classList.add('hidden');
+    loadReg.classList.remove('hidden');
+    changeReg.classList.add('hidden');
+  };
+  shareReg2.onclick=e=>{e.preventDefault();
+    const hdr=`Register for ${regMonthIn.value}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`,
+          lines=Array.from(regSummaryBody.querySelectorAll('tr')).map(r=>{
+            const td=r.querySelectorAll('td');
+            return `${td[0].textContent}: P:${td[1].textContent}, A:${td[2].textContent}, Lt:${td[3].textContent}, HD:${td[4].textContent}, L:${td[5].textContent}, %:${td[6].textContent}`;
+          });
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines.join('\n'))}`, '_blank');
+  };
+  downloadReg2.onclick=e=>{e.preventDefault();
+    const { jsPDF }=window.jspdf,
+          doc=new jsPDF('l','pt','a4');
+    doc.text(localStorage.getItem('schoolName'),40,30);
+    doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`,40,45);
+    doc.text(`Register for ${regMonthIn.value}`,40,60);
+    doc.autoTable({html:'#registerTable',startY:75,styles:{fontSize:8}});
+    doc.autoTable({html:'#registerSummarySection table',startY:doc.lastAutoTable.finalY+10,styles:{fontSize:8}});
+    doc.save('attendance_register.pdf');
+  };
+
 });
