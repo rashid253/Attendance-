@@ -93,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const boxes = Array.from(document.querySelectorAll('.sel'));
     boxes.forEach(cb => {
       cb.onchange = () => {
-        cb.closest('tr').classList.toggle('selected', cb.checked);
+       	cb.closest('tr').classList.toggle('selected', cb.checked);
         const any = boxes.some(x => x.checked);
         editSelectedBtn.disabled = deleteSelectedBtn.disabled = !any;
       };
@@ -268,8 +268,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
       tr.querySelector('.send-btn').onclick = e2 => {
-        e2.preventDefault();
-        const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
+        e2.preventDefault();const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
         window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank');
       };
       summaryBody.appendChild(tr);
@@ -316,7 +315,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ANALYTICS
   const analyticsType = $('analyticsType');
-  const analyticsDate = $('analyticsDate');
+  const analyticsDate = $('analysisDate');
   const analyticsMonth = $('analyticsMonth');
   const semesterStart = $('semesterStart');
   const semesterEnd = $('semesterEnd');
@@ -330,190 +329,4 @@ window.addEventListener('DOMContentLoaded', () => {
   const shareAnalyticsBtn = $('shareAnalytics');
   const downloadAnalyticsBtn = $('downloadAnalytics');
   const barCtx = document.getElementById('barChart').getContext('2d');
-  const pieCtx = document.getElementById('pieChart').getContext('2d');
-  let barChart, pieChart;
-
-  analyticsType.onchange = () => {
-    [analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart, instructionsEl, analyticsContainer, graphsEl, analyticsActionsEl, resetAnalyticsBtn]
-      .forEach(el => el.classList.add('hidden'));
-    if (analyticsType.value === 'date') analyticsDate.classList.remove('hidden');
-    if (analyticsType.value === 'month') analyticsMonth.classList.remove('hidden');
-    if (analyticsType.value === 'semester') { semesterStart.classList.remove('hidden'); semesterEnd.classList.remove('hidden'); }
-    if (analyticsType.value === 'year') yearStart.classList.remove('hidden');
-  };
-
-  resetAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    analyticsType.value = '';
-    [analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart, instructionsEl, analyticsContainer, graphsEl, analyticsActionsEl, resetAnalyticsBtn]
-      .forEach(el => el.classList.add('hidden'));
-  };
-
-  loadAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    let from, to;
-    if (analyticsType.value==='date') { if(!analyticsDate.value) return alert('Pick a date'); from = to = analyticsDate.value; }
-    else if (analyticsType.value==='month') { if(!analyticsMonth.value) return alert('Pick a month'); from=analyticsMonth.value+'-01'; to=analyticsMonth.value+'-31'; }
-    else if (analyticsType.value==='semester') { if(!semesterStart.value||!semesterEnd.value) return alert('Pick range'); from=semesterStart.value+'-01'; to=semesterEnd.value+'-31'; }
-    else if (analyticsType.value==='year') { if(!yearStart.value) return alert('Pick a year'); from=yearStart.value+'-01-01'; to=yearStart.value+'-12-31'; }
-    else return;
-
-    const stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    Object.entries(attendanceData).forEach(([d, recs]) => { if (d >= from && d <= to) stats.forEach(st => { const c = recs[st.roll] || 'A'; st[c]++; st.total++; }); });
-    let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
-    stats.forEach(s => { const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0'; html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`; });
-    html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
-    analyticsContainer.classList.remove('hidden');
-    instructionsEl.textContent = `Report: ${from} to ${to}`;
-    instructionsEl.classList.remove('hidden');
-    resetAnalyticsBtn.classList.remove('hidden');
-
-    const labels = stats.map(s => s.name);
-    const dataPct = stats.map(s => s.total ? s.P/s.total*100 : 0);
-    if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx, { type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }] }, options:{ maintainAspectRatio:true } });
-    const agg = stats.reduce((a,s) => { ['P','A','Lt','HD','L'].forEach(c => a[c]+=s[c]); return a; }, {P:0,A:0,Lt:0,HD:0,L:0});
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, { type:'pie', data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] }, options:{ maintainAspectRatio:true } });
-    graphsEl.classList.remove('hidden');
-    analyticsActionsEl.classList.remove('hidden');
-  };
-
-  shareAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    const period = instructionsEl.textContent.replace('Report: ','');
-    const hdr = `Date Range: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => {
-      const [name,p,a,lt,hd,l,total,pct] = Array.from(r.querySelectorAll('td')).map(td => td.textContent);
-      return `${name} P:${p} A:${a} Lt:${lt} HD:${hd} L:${l} Total:${total} %:${pct}`;
-    }).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + rows)}`, '_blank');
-  };
-
-  downloadAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    doc.setFontSize(14);
-    doc.text(localStorage.getItem('schoolName'), 40, 30);
-    doc.setFontSize(12);
-    doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`, 40, 45);
-    doc.text(instructionsEl.textContent.replace('Report: ', 'Period: '), 40, 60);
-    doc.autoTable({
-      head: [['Name','P','A','Lt','HD','L','Total','%']],
-      body: Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => Array.from(r.querySelectorAll('td')).map(td=>td.textContent)),
-      startY: 75,
-      margin: { left:40, right:40 },
-      styles: { fontSize:8 }
-    });
-    const y = doc.lastAutoTable.finalY + 10;
-    const w = 120, h = 80;
-    doc.addImage(barChart.toBase64Image(), 'PNG', 40, y, w, h);
-    doc.addImage(pieChart.toBase64Image(), 'PNG', 40 + w + 20, y, w, h);
-    doc.save('analytics_report.pdf');
-  };
-
-  //
-  // 6. Traditional Attendance Register
-  //
-  const registerMonth       = $('registerMonth');
-  const loadRegisterBtn     = $('loadRegister');
-  const resetRegisterBtn    = $('resetRegister');
-  const registerWrapper     = $('registerWrapper');
-  const registerTable       = $('registerTable');
-  const registerSummaryBlock= $('registerSummary');
-  const registerSummaryTbody= $('registerSummaryTable').querySelector('tbody');
-  const shareRegisterBtn    = $('shareRegister');
-  const downloadRegisterPDFBtn = $('downloadRegisterPDF');
-
-  loadRegisterBtn.onclick = ev => {
-    ev.preventDefault();
-    if (!registerMonth.value) return alert('Pick a month');
-    const [year, month] = registerMonth.value.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    // build header
-    let thead = '<thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th>';
-    for (let d = 1; d <= daysInMonth; d++) thead += `<th>${d}</th>`;
-    thead += '</tr></thead>';
-    // build body
-    let tbody = '<tbody>';
-    students.forEach((s, idx) => {
-      tbody += `<tr><td>${idx+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dd = String(d).padStart(2,'0');
-        const key = `${registerMonth.value}-${dd}`;
-        const code = attendanceData[key]?.[s.roll] || '';
-        tbody += `<td>${code}</td>`;
-      }
-      tbody += '</tr>';
-    });
-    tbody += '</tbody>';
-    registerTable.innerHTML = thead + tbody;
-    registerWrapper.classList.remove('hidden');
-    resetRegisterBtn.classList.remove('hidden');
-
-    // summary
-    registerSummaryTbody.innerHTML = '';
-    students.forEach(s => {
-      const stats = {P:0,A:0,Lt:0,HD:0,L:0,total:0};
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dd = String(d).padStart(2,'0');
-        const key = `${registerMonth.value}-${dd}`;
-        const c = attendanceData[key]?.[s.roll] || 'A';
-        stats[c]++; stats.total++;
-      }
-      const pct = stats.total ? ((stats.P/stats.total)*100).toFixed(1) : '0.0';
-      registerSummaryTbody.innerHTML += `
-        <tr>
-          <td>${s.name}</td>
-          <td>${stats.P}</td><td>${stats.A}</td><td>${stats.Lt}</td>
-          <td>${stats.HD}</td><td>${stats.L}</td>
-          <td>${stats.total}</td><td>${pct}</td>
-        </tr>`;
-    });
-    registerSummaryBlock.classList.remove('hidden');
-    shareRegisterBtn.classList.remove('hidden');
-    downloadRegisterPDFBtn.classList.remove('hidden');
-  };
-
-  resetRegisterBtn.onclick = ev => {
-    ev.preventDefault();
-    registerMonth.value = '';
-    registerWrapper.classList.add('hidden');
-    registerSummaryBlock.classList.add('hidden');
-    shareRegisterBtn.classList.add('hidden');
-    downloadRegisterPDFBtn.classList.add('hidden');
-    resetRegisterBtn.classList.add('hidden');
-  };
-
-  shareRegisterBtn.onclick = ev => {
-    ev.preventDefault();
-    const header = `Month: ${registerMonth.value}`;
-    const lines = students.map((s, idx) => {
-      const cells = registerTable.rows[idx+1].cells;
-      const present = Array.from(cells).slice(3).filter(td=>td.textContent==='P').length;
-      const totalDays = cells.length - 3;
-      return `${s.adm} ${s.name}: ${present}/${totalDays}`;
-    });
-    const msg = [header, '', ...lines].join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  downloadRegisterPDFBtn.onclick = ev => {
-    ev.preventDefault();
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p','pt','a4');
-    doc.setFontSize(14);
-    doc.text(`Traditional Register – ${registerMonth.value}`, 40, 30);
-    doc.autoTable({
-      html: '#registerTable',
-      startY: 50,
-      styles: { fontSize: 8 }
-    });
-    doc.save(`register_${registerMonth.value}.pdf`);
-  };
-
-});```
-
-Everything else is exactly as you provided; the only addition is the new section and its JS. Let me know if any minor tweak is needed!
+  const pieCtx = document.getElementById('pieChart').
