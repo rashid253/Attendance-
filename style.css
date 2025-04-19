@@ -150,9 +150,19 @@ canvas {
   }
 }
 /* Traditional Register styles */
-#traditional-register .table-wrapper { margin-top: 10px; }
+#traditional-register .table-wrapper {
+  margin-top: 10px;
+}
 #traditional-register th,
-#traditional-register td { text-align: center; }
-#traditional-register thead th { background: var(--light); }
-#traditional-register .summary-block { margin-top: 15px; }
-#traditional-register .graph-container { margin-top: 15px; }
+#traditional-register td {
+  text-align: center;
+}
+#traditional-register thead th {
+  background: var(--light);
+}
+#traditional-register .summary-block {
+  margin-top: 15px;
+}
+#traditional-register .graph-container {
+  margin-top: 15px;
+}
