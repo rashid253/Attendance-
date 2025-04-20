@@ -1,4 +1,4 @@
-// app.js - Complete file with individual-student analytics flow
+// app.js - Complete code with functional Individual Student Analytics
 window.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
   const colors = { P: '#4CAF50', A: '#f44336', Lt: '#FFEB3B', HD: '#FF9800', L: '#03a9f4' };
@@ -327,7 +327,7 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.text(`Class: ${localStorage.getItem('teacherClass')}`,10,32);
     doc.text(`Section: ${localStorage.getItem('teacherSection')}`,10,38);
     doc.autoTable({
-      head:[['Name','Status']],
+      head: [['Name','Status']],
       body: students.map(s => {
         const code = (attendanceData[dateInput.value] || {})[s.roll] || 'A';
         return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];
@@ -337,7 +337,7 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.save('attendance_summary.pdf');
   };
 
-  // 4. ATTENDANCE ANALYTICS
+  // 4. ANALYTICS with per-student click
   const analyticsType = $('analyticsType');
   const analyticsDate = $('analyticsDate');
   const analyticsMonth = $('analyticsMonth');
@@ -398,6 +398,7 @@ window.addEventListener('DOMContentLoaded', () => {
       data: { labels, datasets: [{ label: '% Present', data: dataPct }] },
       options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
     });
+
     const agg = stats.reduce((a, s) => {
       ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
       return a;
@@ -413,17 +414,17 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     graphs.classList.remove('hidden');
 
-    // PER-STUDENT CLICK
+    // Per-student click
     analyticsContainer.querySelectorAll('tbody tr').forEach(tr => {
       const cell = tr.cells[0];
       cell.style.cursor = 'pointer';
-      cell.title = 'Click to view only this student';
+      cell.title = 'Click to filter to this student';
       cell.onclick = () => {
         const adm = prompt('Enter Admission Number:');
         if (!adm) return;
         const stu = students.find(s => s.adm === adm.trim());
         if (!stu) return alert('Admission Number not found');
-        // ask period
+        // Ask period
         const pType = prompt('Period type: date, month, semester, or year').toLowerCase();
         let from, to;
         if (pType === 'date') {
@@ -433,19 +434,21 @@ window.addEventListener('DOMContentLoaded', () => {
           const m = prompt('Enter month (YYYY-MM):'); if (!m) return;
           const [y, mm] = m.split('-').map(Number);
           from = new Date(`${m}-01`);
-          to   = new Date(y, mm, 0);
+          to = new Date(y, mm, 0);
         } else if (pType === 'semester') {
           const start = prompt('Semester start (YYYY-MM):'); const end = prompt('Semester end (YYYY-MM):');
           if (!start || !end) return;
           const [ey, em] = end.split('-').map(Number);
           from = new Date(`${start}-01`);
-          to   = new Date(ey, em, 0);
+          to = new Date(ey, em, 0);
         } else if (pType === 'year') {
           const y = prompt('Enter year (YYYY):'); if (!y) return;
           from = new Date(`${y}-01-01`);
-          to   = new Date(`${y}-12-31`);
-        } else return alert('Invalid period');
-        // compute stats for stu
+          to = new Date(`${y}-12-31`);
+        } else {
+          return alert('Invalid period');
+        }
+        // Compute student stats
         const sStat = { name: stu.name, roll: stu.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 };
         Object.entries(attendanceData).forEach(([d, recs]) => {
           const dt = new Date(d);
@@ -463,23 +466,25 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     if (!analyticsType.value) return alert('Select period');
     let fromDate, toDate;
+
     if (analyticsType.value === 'date') {
       if (!analyticsDate.value) return alert('Pick date');
       fromDate = toDate = new Date(analyticsDate.value);
     } else if (analyticsType.value === 'month') {
       const [y, m] = analyticsMonth.value.split('-').map(Number);
       fromDate = new Date(`${analyticsMonth.value}-01`);
-      toDate   = new Date(y, m, 0);
+      toDate = new Date(y, m, 0);
     } else if (analyticsType.value === 'semester') {
       if (!semesterStart.value || !semesterEnd.value) return alert('Pick range');
       const [ey, em] = semesterEnd.value.split('-').map(Number);
       fromDate = new Date(`${semesterStart.value}-01`);
-      toDate   = new Date(ey, em, 0);
-    } else {
+      toDate = new Date(ey, em, 0);
+    } else { // year
       if (!yearStart.value) return alert('Pick year');
       fromDate = new Date(`${yearStart.value}-01-01`);
-      toDate   = new Date(`${yearStart.value}-12-31`);
+      toDate = new Date(`${yearStart.value}-12-31`);
     }
+
     const stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
     Object.entries(attendanceData).forEach(([d, recs]) => {
       const dt = new Date(d);
@@ -620,5 +625,4 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.autoTable({ html:'#registerSummarySection table', startY:doc.lastAutoTable.finalY+10, styles:{fontSize:8}});
     doc.save('attendance_register.pdf');
   };
-
 });
