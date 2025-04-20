@@ -1,4 +1,6 @@
-<!-- index.html --><!DOCTYPE html><html lang="en">
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -6,7 +8,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header><h1>Attendance Management</h1></header>  <!-- 1. Setup -->  <section id="teacher-setup">
+  <header><h1>Attendance Management</h1></header>
+
+  <!-- 1. Setup -->
+  <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
       <input id="schoolNameInput" placeholder="School Name">
@@ -25,7 +30,10 @@
       <h3 id="setupText"></h3>
       <button type="button" id="editSetup" class="small">Edit</button>
     </div>
-  </section>  <!-- 2. Student Registration -->  <section id="student-registration">
+  </section>
+
+  <!-- 2. Student Registration -->
+  <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name" required>
@@ -55,7 +63,10 @@
       <button type="button" id="editRegistration" class="hidden">Edit Table</button>
       <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
     </div>
-  </section>  <!-- 3. Attendance Marking -->  <section id="attendance-section">
+  </section>
+
+  <!-- 3. Attendance Marking -->
+  <section id="attendance-section">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
@@ -64,7 +75,10 @@
     </div>
     <div id="attendanceList"></div>
     <button type="button" id="saveAttendance" class="hidden">Save</button>
-  </section>  <!-- 4. Attendance Summary -->  <section id="attendance-result" class="hidden">
+  </section>
+
+  <!-- 4. Attendance Summary -->
+  <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
     <div class="table-wrapper">
       <table id="attendanceSummaryTable">
@@ -77,42 +91,48 @@
       <button type="button" id="downloadAttendancePDF">Download PDF</button>
       <button type="button" id="resetAttendance" class="small">Reset</button>
     </div>
-  </section>  <!-- 5. Analytics -->  <section id="analytics-section">
+  </section>
+
+  <!-- 5. Analytics -->
+  <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
       <label for="analyticsTarget">Report For:</label>
       <select id="analyticsTarget">
-        <option value="class">Full Class</option>
+        <option value="class">Whole Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden"><label for="analyticsType">Period:</label>
-  <select id="analyticsType">
-    <option value="" disabled selected>--Select Period--</option>
-    <option value="date">Specific Date</option>
-    <option value="month">Month</option>
-    <option value="semester">Semester</option>
-    <option value="year">Year</option>
-  </select>
-  <input type="date" id="analyticsDate" class="hidden">
-  <input type="month" id="analyticsMonth" class="hidden">
-  <input type="month" id="semesterStart" class="hidden">
-  <input type="month" id="semesterEnd" class="hidden">
-  <input type="number" id="yearStart" class="hidden" placeholder="Year">
-  <button type="button" id="loadAnalytics">Load Analytics</button>
-  <button type="button" id="resetAnalytics" class="small hidden">Change</button>
-</div>
-<div id="instructions" class="summary-block hidden"></div>
-<div id="analyticsContainer" class="table-container hidden"></div>
-<div id="graphs" class="graph-container hidden">
-  <canvas id="barChart"></canvas>
-  <canvas id="pieChart"></canvas>
-</div>
-<div id="analyticsActions" class="row-inline hidden">
-  <button type="button" id="shareAnalytics">Share as Text</button>
-  <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
-</div>
+      <input id="studentAdmInput" placeholder="Enter Adm#" class="hidden">
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType">
+        <option value="" disabled selected>--Select Period--</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden">
+      <input type="month" id="analyticsMonth" class="hidden">
+      <input type="month" id="semesterStart" class="hidden">
+      <input type="month" id="semesterEnd" class="hidden">
+      <input type="number" id="yearStart" class="hidden" placeholder="Year">
+      <button type="button" id="loadAnalytics">Load Analytics</button>
+      <button type="button" id="resetAnalytics" class="small hidden">Change</button>
+    </div>
+    <div id="instructions" class="summary-block hidden"></div>
+    <div id="analyticsContainer" class="table-container hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
+    </div>
+  </section>
 
-  </section>  <!-- 6. Attendance Register -->  <section id="register-section">
+  <!-- 6. Attendance Register -->
+  <section id="register-section">
     <h2>Attendance Register</h2>
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
@@ -125,7 +145,7 @@
         <thead>
           <tr>
             <th>Sr#</th><th>Adm#</th><th>Name</th>
-            <!-- days appended by JS -->
+            <!-- JS will append 1–31 -->
           </tr>
         </thead>
         <tbody id="registerBody"></tbody>
@@ -146,5 +166,12 @@
       <button type="button" id="shareRegister" class="save">Share Summary</button>
       <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
     </div>
-  </section>  <!-- Libraries + Single Script -->  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>  <script src="app.js"></script></body>
+  </section>
+
+  <!-- Libraries + Single Script -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="app.js"></script>
+</body>
 </html>
