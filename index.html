@@ -97,6 +97,13 @@
   <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
+      <label for="analyticsTarget">Report For:</label>
+      <select id="analyticsTarget">
+        <option value="class">Full Class</option>
+        <option value="student">Individual Student</option>
+      </select>
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden">
+
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
         <option value="" disabled selected>--Select Period--</option>
@@ -139,7 +146,7 @@
         <thead>
           <tr>
             <th>Sr#</th><th>Adm#</th><th>Name</th>
-            <!-- JS will append days -->
+            <!-- days appended by JS -->
           </tr>
         </thead>
         <tbody id="registerBody"></tbody>
@@ -162,6 +169,7 @@
     </div>
   </section>
 
+  <!-- Libraries + Single Script -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
