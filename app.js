@@ -157,98 +157,321 @@ window.addEventListener('DOMContentLoaded', () => {
   downloadRegBtn.addEventListener('click', e => {
     e.preventDefault();
     const doc = new jsPDF('p','pt','a4');
-    doc.autoTable({ head:[['Name','Adm#','Parent','Contact','Occupation','Address']], body: students.map(s => [s.name,s.adm,s.parent,s.contact,s.occupation,s.address]), startY:40, margin:{left:40,right:40}, styles:{fontSize:10} });
+    doc.autoTable({ 
+      head: [['Name','Adm#','Parent','Contact','Occupation','Address']], 
+      body: students.map(s => [s.name,s.adm,s.parent,s.contact,s.occupation,s.address]), 
+      startY: 40, 
+      margin: {left: 40, right: 40}, 
+      styles: {fontSize: 10} 
+    });
     doc.save('students_registration.pdf');
   });
 
   renderStudents();
 
-  // 3. MARK ATTENDANCE
+  // 3. MARK ATTENDANCE - Fixed section
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
   const dateInput = $('dateInput');
   const loadAtt = $('loadAttendance');
   const attList = $('attendanceList');
   const saveAtt = $('saveAttendance');
+  const resetAtt = $('resetAttendance');
+  const summaryBody = $('summaryBody');
 
   loadAtt.addEventListener('click', e => {
-    e.preventDefault(); if (!dateInput.value) { alert('Select a date'); return; }
+    e.preventDefault();
+    if (!dateInput.value) { 
+      alert('Select a date'); 
+      return; 
+    }
+    if (students.length === 0) {
+      alert('No students registered yet');
+      return;
+    }
+    
     attList.innerHTML = '';
     students.forEach(s => {
-      const row = document.createElement('div'); row.className = 'attendance-item'; row.textContent = s.name;
-      const btns = document.createElement('div'); btns.className = 'attendance-actions';
+      const row = document.createElement('div');
+      row.className = 'attendance-item';
+      row.textContent = s.name;
+      
+      const btns = document.createElement('div');
+      btns.className = 'attendance-actions';
+      
       ['P','A','Lt','HD','L'].forEach(code => {
-        const b = document.createElement('button'); b.type='button'; b.className='att-btn'; b.dataset.code=code; b.textContent=code;
-        if (attendanceData[dateInput.value]?.[s.roll] === code) { b.style.background = colors[code]; b.style.color = '#fff'; }
-        b.addEventListener('click', () => { btns.querySelectorAll('.att-btn').forEach(x => { x.style.background = ''; x.style.color = 'var(--dark)'; }); b.style.background = colors[code]; b.style.color = '#fff'; });
-        btns.appendChild(b);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'att-btn';
+        btn.dataset.code = code;
+        btn.textContent = code;
+        
+        // Set initial state if attendance exists
+        if (attendanceData[dateInput.value]?.[s.roll] === code) {
+          btn.style.background = colors[code];
+          btn.style.color = '#fff';
+        }
+        
+        btn.addEventListener('click', () => {
+          // Reset all buttons in this group
+          btns.querySelectorAll('.att-btn').forEach(b => {
+            b.style.background = '';
+            b.style.color = 'var(--dark)';
+          });
+          // Set selected button style
+          btn.style.background = colors[code];
+          btn.style.color = '#fff';
+        });
+        
+        btns.appendChild(btn);
       });
+      
       attList.appendChild(row);
       attList.appendChild(btns);
     });
+    
     saveAtt.classList.remove('hidden');
   });
 
   saveAtt.addEventListener('click', e => {
     e.preventDefault();
-    const d = dateInput.value;
-    attendanceData[d] = {};
-    document.querySelectorAll('.attendance-actions').forEach((btns, idx) => {
-      const sel = btns.querySelector('.att-btn[style*="background"]');
-      attendanceData[d][students[idx].roll] = sel ? sel.dataset.code : 'A';
+    const date = dateInput.value;
+    attendanceData[date] = {};
+    
+    // Get all attendance action groups
+    const actionGroups = document.querySelectorAll('.attendance-actions');
+    
+    actionGroups.forEach((group, index) => {
+      const selectedBtn = group.querySelector('.att-btn[style*="background"]');
+      const status = selectedBtn ? selectedBtn.dataset.code : 'A';
+      attendanceData[date][students[index].roll] = status;
     });
+    
     localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+    
+    // Show summary
     $('attendance-section').classList.add('hidden');
     $('attendance-result').classList.remove('hidden');
-  });
-
-  $('shareAttendanceSummary').addEventListener('click', e => {
+    
+    // Populate summary table
+    summaryBody.innerHTML = '';
+    const statusMap = { P: 'Present', A: 'Absent', Lt: 'Late', HD: 'Half Day', L: 'Leave' };
+    
+    students.forEach((student, index) => {
+      const status = attendanceData[date]?.[student.roll] || 'A';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${student.name}</td>
+        <td>${statusMap[status]}</td>
+        <td><button class="share-one" data-index="${index}">Send</button></td>
+      `;
+      summaryBody.appendChild(tr);
+      
+      // Add click handler for share buttons
+      tr.querySelector('.share-one').addEventListener('click', () => {
+        const msg = `Date: ${date}\nStudent: ${student.name}\nStatus: ${statusMap[status]}\nSchool:
+          // 5. ATTENDANCE REGISTER (continued)
+  loadRegister.addEventListener('click', e => {
     e.preventDefault();
-    const d = dateInput.value;
-    const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    const map = { P:'Present', A:'Absent', Lt:'Late', HD:'Half Day', L:'Leave' };
-    const lines = students.map(s => `${s.name}: ${map[attendanceData[d][s.roll] || 'A']}`);
-    window.open(`mailto:?body=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`);
+    if (!registerMonth.value) { 
+      alert('Please select a month'); 
+      return; 
+    }
+    if (students.length === 0) {
+      alert('No students registered yet');
+      return;
+    }
+
+    const [year, month] = registerMonth.value.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    // Clear existing header cells except the first three (Sr#, Adm#, Name)
+    const headerRow = document.querySelector('#registerTable thead tr');
+    while (headerRow.children.length > 3) {
+      headerRow.removeChild(headerRow.lastChild);
+    }
+
+    // Add day columns to header
+    for (let day = 1; day <= daysInMonth; day++) {
+      const th = document.createElement('th');
+      th.textContent = day;
+      headerRow.appendChild(th);
+    }
+
+    // Populate student rows
+    registerBody.innerHTML = '';
+    students.forEach((student, index) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${student.adm}</td>
+        <td>${student.name}</td>
+      `;
+
+      // Add attendance cells for each day
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${registerMonth.value}-${day.toString().padStart(2, '0')}`;
+        const status = attendanceData[dateStr]?.[student.roll] || '';
+        const cell = document.createElement('td');
+        cell.textContent = status;
+        
+        // Apply styling if status exists
+        if (status) {
+          cell.style.backgroundColor = colors[status];
+          cell.style.color = '#fff';
+        }
+        
+        row.appendChild(cell);
+      }
+
+      registerBody.appendChild(row);
+    });
+
+    // Calculate and display summary
+    registerSummaryBody.innerHTML = '';
+    students.forEach(student => {
+      const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${registerMonth.value}-${day.toString().padStart(2, '0')}`;
+        const status = attendanceData[dateStr]?.[student.roll] || 'A';
+        stats[status]++;
+      }
+
+      const totalDays = daysInMonth;
+      const percentage = totalDays > 0 ? ((stats.P / totalDays) * 100).toFixed(1) : '0.0';
+
+      const summaryRow = document.createElement('tr');
+      summaryRow.innerHTML = `
+        <td>${student.name}</td>
+        <td>${stats.P}</td>
+        <td>${stats.A}</td>
+        <td>${stats.Lt}</td>
+        <td>${stats.HD}</td>
+        <td>${stats.L}</td>
+        <td>${percentage}%</td>
+      `;
+      registerSummaryBody.appendChild(summaryRow);
+    });
+
+    // Show the tables
+    registerTableWrapper.classList.remove('hidden');
+    $('registerSummarySection').classList.remove('hidden');
+    changeRegister.classList.remove('hidden');
+    loadRegister.classList.add('hidden');
   });
 
-  $('downloadAttendancePDF').addEventListener('click', e => {
+  changeRegister.addEventListener('click', e => {
     e.preventDefault();
-    const doc = new jsPDF('p','pt','a4');
-    doc.autoTable({ head:[['Name','Status']], body: students.map(s => { const code = attendanceData[dateInput.value]?.[s.roll] || 'A'; return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; }), startY:40, margin:{left:40,right:40}, styles:{fontSize:10} });
-    doc.save('attendance_summary.pdf');
+    registerTableWrapper.classList.add('hidden');
+    $('registerSummarySection').classList.add('hidden');
+    changeRegister.classList.add('hidden');
+    loadRegister.classList.remove('hidden');
+    registerMonth.value = '';
   });
 
-  // 4. ANALYTICS
-  const analyticsTarget = $('analyticsTarget');
-  const studentAdmInput = $('studentAdmInput');
-  const analyticsType = $('analyticsType');
-  const analyticsDate = $('analyticsDate');
-  const analyticsMonth = $('analyticsMonth');
-  const semesterStart = $('semesterStart');
-  const semesterEnd = $('semesterEnd');
-  const yearStart = $('yearStart');
-  const loadAnalytics = $('loadAnalytics');
-  const resetAnalytics = $('resetAnalytics');
-  const instructionsEl = $('instructions');
-  const analyticsContainer = $('analyticsContainer');
-  const graphsEl = $('graphs');
-  const analyticsActions = $('analyticsActions');
-  const shareAnalyticsBtn = $('shareAnalytics');
-  const downloadAnalyticsBtn = $('downloadAnalytics');
-  let barChart, pieChart;
-
-  analyticsTarget.addEventListener('change', () => { studentAdmInput.classList.toggle('hidden', analyticsTarget.value==='class'); });
-  analyticsType.addEventListener('change', () => {
-    [analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart].forEach(el=>el.classList.add('hidden'));
-    if(analyticsType.value==='date') analyticsDate.classList.remove('hidden');
-    if(analyticsType.value==='month') analyticsMonth.classList.remove('hidden');
-    if(analyticsType.value==='semester'){ semesterStart.classList.remove('hidden'); semesterEnd.classList.remove('hidden'); }
-    if(analyticsType.value==='year') yearStart.classList.remove('hidden');
-    resetAnalytics.classList.remove('hidden');
-  });
-
-  loadAnalytics.addEventListener('click', e => {
+  shareRegister.addEventListener('click', e => {
     e.preventDefault();
-    let from,to;
-    if(analyticsType.value==='date'){ if(!analyticsDate.value){alert('Pick date');return;} from=to=analyticsDate.value; }
-    else if(analyticsType.value==='month'){ if(!analyticsMonth.value){alert('Pick month');return;} const [y,m]=analyticsMonth.value.split('-').map(Number); from=`${analyticsMonth.value}-01`; to=`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if(analyticsType.value==='semester'){ if(!semesterStart.value||!semesterEnd.value){alert('Pick range');return;} const [sy,sm]=semesterEnd.value.split('-').map(Number); from=`${semesterStart.value}-01`; to=`...
+    if (!registerMonth.value) {
+      alert('Please load a register first');
+      return;
+    }
+
+    const summaryLines = [];
+    const rows = document.querySelectorAll('#registerSummaryBody tr');
+    
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      summaryLines.push(
+        `${cells[0].textContent}: P ${cells[1].textContent}, A ${cells[2].textContent}, ` +
+        `Lt ${cells[3].textContent}, HD ${cells[4].textContent}, L ${cells[5].textContent}, ` +
+        `Attendance % ${cells[6].textContent}`
+      );
+    });
+
+    const message = `Attendance Register for ${registerMonth.value}\n` +
+                   `School: ${localStorage.getItem('schoolName')}\n` +
+                   `Class: ${localStorage.getItem('teacherClass')}, Section: ${localStorage.getItem('teacherSection')}\n\n` +
+                   summaryLines.join('\n');
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
+  });
+
+  downloadRegisterPDF.addEventListener('click', e => {
+    e.preventDefault();
+    if (!registerMonth.value) {
+      alert('Please load a register first');
+      return;
+    }
+
+    const doc = new jsPDF('landscape', 'pt', 'a4');
+    
+    // Add header
+    doc.setFontSize(16);
+    doc.text(`Attendance Register - ${registerMonth.value}`, 40, 40);
+    doc.setFontSize(12);
+    doc.text(`School: ${localStorage.getItem('schoolName')}`, 40, 60);
+    doc.text(`Class: ${localStorage.getItem('teacherClass')}, Section: ${localStorage.getItem('teacherSection')}`, 40, 80);
+
+    // Get all day headers
+    const dayHeaders = Array.from(document.querySelectorAll('#registerTable thead th'))
+      .slice(3) // Skip Sr#, Adm#, Name
+      .map(th => th.textContent);
+
+    // Prepare register data
+    const registerData = Array.from(document.querySelectorAll('#registerTable tbody tr')).map(row => {
+      const cells = Array.from(row.cells);
+      return [
+        cells[0].textContent, // Sr#
+        cells[1].textContent, // Adm#
+        cells[2].textContent, // Name
+        ...dayHeaders.map((_, i) => cells[i + 3].textContent) // Attendance
+      ];
+    });
+
+    // Create register table
+    doc.autoTable({
+      head: [['Sr#', 'Adm#', 'Name', ...dayHeaders]],
+      body: registerData,
+      startY: 100,
+      margin: { left: 20, right: 20 },
+      styles: { fontSize: 6 },
+      columnStyles: {
+        0: { cellWidth: 20 }, // Sr#
+        1: { cellWidth: 30 }, // Adm#
+        2: { cellWidth: 60 }, // Name
+        ...dayHeaders.reduce((styles, _, index) => {
+          styles[index + 3] = { cellWidth: 10 }; // Day columns
+          return styles;
+        }, {})
+      }
+    });
+
+    // Add summary table on a new page
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.text('Attendance Summary', 40, 40);
+    
+    const summaryData = Array.from(document.querySelectorAll('#registerSummaryBody tr')).map(row => {
+      const cells = Array.from(row.cells);
+      return [
+        cells[0].textContent, // Name
+        cells[1].textContent, // P
+        cells[2].textContent, // A
+        cells[3].textContent, // Lt
+        cells[4].textContent, // HD
+        cells[5].textContent, // L
+        cells[6].textContent  // %
+      ];
+    });
+
+    doc.autoTable({
+      head: [['Name', 'Present', 'Absent', 'Late', 'Half Day', 'Leave', 'Attendance %']],
+      body: summaryData,
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 10 }
+    });
+
+    doc.save(`attendance_register_${registerMonth.value}.pdf`);
+  });
+});
