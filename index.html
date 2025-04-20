@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +8,6 @@
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
-
   <!-- 1. Setup -->
   <section id="teacher-setup">
     <h2>Setup</h2>
@@ -99,10 +97,10 @@
     <div class="row-inline">
       <label for="analyticsTarget">Report For:</label>
       <select id="analyticsTarget">
-        <option value="class">Whole Class</option>
+        <option value="class">Full Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input id="studentAdmInput" placeholder="Enter Adm#" class="hidden">
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden">
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
         <option value="" disabled selected>--Select Period--</option>
@@ -145,7 +143,7 @@
         <thead>
           <tr>
             <th>Sr#</th><th>Adm#</th><th>Name</th>
-            <!-- JS will append 1–31 -->
+            <!-- days appended by JS -->
           </tr>
         </thead>
         <tbody id="registerBody"></tbody>
