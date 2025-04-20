@@ -10,7 +10,6 @@
   --dark: #333;
 }
 
-/* prevent flicker */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -171,15 +170,6 @@ canvas {
   width: 40px;
 }
 
-@media (max-width: 600px) {
-  .row-inline input,
-  .row-inline select,
-  .row-inline button {
-    flex: 1 1 100%;
-  }
-}
-
-/* -- Register Section Enhancements -- */
 #registerTableWrapper {
   overflow-x: auto;
   margin-top: 10px;
@@ -196,7 +186,6 @@ canvas {
   margin-right: 8px;
 }
 
-/* restore attendance‑marking buttons */
 .attendance-actions .att-btn {
   flex: 1;
   padding: 8px;
@@ -207,7 +196,68 @@ canvas {
   font-size: 1em;
 }
 
-/* ensure pie chart is perfectly round */
 #pieChart {
   aspect-ratio: 1 / 1;
+}
+
+/* Toast notifications */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  border-radius: 4px;
+  color: white;
+  z-index: 1000;
+  animation: fadeInOut 3s ease-in-out;
+}
+.toast-info { background-color: var(--info); }
+.toast-success { background-color: var(--success); }
+.toast-warning { background-color: var(--warning); color: #333; }
+.toast-error { background-color: var(--danger); }
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; transform: translateY(20px); }
+  10%, 90% { opacity: 1; transform: translateY(0); }
+}
+
+/* Attendance stats */
+.attendance-stats {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+.stat-present { color: var(--success); font-weight: bold; }
+.stat-absent { color: var(--danger); font-weight: bold; }
+.stat-late { color: var(--warning); font-weight: bold; }
+.stat-halfday { color: var(--orange); font-weight: bold; }
+.stat-leave { color: var(--info); font-weight: bold; }
+
+.danger {
+  background-color: var(--danger);
+}
+
+@media (max-width: 600px) {
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
+    flex: 1 1 100%;
+  }
+  
+  .attendance-stats {
+    gap: 8px;
+    font-size: 0.9em;
+  }
+  
+  .row-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .row-inline > * {
+    margin-bottom: 8px;
+  }
 }
