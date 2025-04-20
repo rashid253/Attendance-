@@ -1,4 +1,4 @@
-// app.js
+// Complete updated app.js with Individual Student Analytics feature
 window.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
   const colors = { P: '#4CAF50', A: '#f44336', Lt: '#FFEB3B', HD: '#FF9800', L: '#03a9f4' };
@@ -199,7 +199,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines)}`, '_blank');
   };
 
-  // 2a. STUDENT REGISTRATION PDF
   downloadRegBtn.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
@@ -305,7 +304,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const hdr = `Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     const lines = students.map(s => {
       const code = attendanceData[d][s.roll] || 'A';
-      return `${s.name}: ${{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]}`;
+      return `${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code] }`;
     });
     const total = students.length, pres = students.reduce((sum, s) => sum + (attendanceData[d][s.roll] === 'P' ? 1 : 0), 0);
     const pct = total ? ((pres / total) * 100).toFixed(1) : '0.0', remark = pct == 100 ? 'Best' : pct >= 75 ? 'Good' : pct >= 50 ? 'Fair' : 'Poor';
@@ -313,7 +312,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent([hdr, '', ...lines, '', summary].join('\n'))}`, '_blank');
   };
 
-  // 3a. DAILY ATTENDANCE PDF
   downloadAttPDF.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
@@ -339,7 +337,7 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.save('attendance_summary.pdf');
   };
 
-  // 4. ANALYTICS
+  // 4. ANALYTICS with Individual Student Click
   const analyticsType = $('analyticsType');
   const analyticsDate = $('analyticsDate');
   const analyticsMonth = $('analyticsMonth');
@@ -357,6 +355,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const barCtx = $('barChart').getContext('2d');
   const pieCtx = $('pieChart').getContext('2d');
   let barChart, pieChart;
+  let currentFromDate, currentToDate;
 
   function hideAllAnalytics() {
     [analyticsDate, analyticsMonth, semesterStartInput, semesterEndInput, yearStart,
@@ -382,41 +381,8 @@ window.addEventListener('DOMContentLoaded', () => {
     hideAllAnalytics();
   };
 
-  loadAnalyticsBtn.onclick = ev => {
-    ev.preventDefault();
-    let from, to;
-    if (analyticsType.value === 'date') {
-      if (!analyticsDate.value) return alert('Pick date');
-      from = to = analyticsDate.value;
-    } else if (analyticsType.value === 'month') {
-      if (!analyticsMonth.value) return alert('Pick month');
-      const [y, m] = analyticsMonth.value.split('-').map(Number);
-      from = `${analyticsMonth.value}-01`;
-      to = `${analyticsMonth.value}-${new Date(y, m, 0).getDate()}`;
-    } else if (analyticsType.value === 'semester') {
-      if (!semesterStartInput.value || !semesterEndInput.value) return alert('Pick range');
-      from = `${semesterStartInput.value}-01`;
-      const [ey, em] = semesterEndInput.value.split('-').map(Number);
-      to = `${semesterEndInput.value}-${new Date(ey, em, 0).getDate()}`;
-    } else if (analyticsType.value === 'year') {
-      if (!yearStart.value) return alert('Pick year');
-      from = `${yearStart.value}-01-01`;
-      to = `${yearStart.value}-12-31`;
-    } else return alert('Select period');
-
-    const fromDate = new Date(from), toDate = new Date(to);
-    let stats = students.map(s => ({ name: s.name, roll: s.roll, P: 0, A: 0, Lt: 0, HD: 0, L: 0, total: 0 }));
-    Object.entries(attendanceData).forEach(([d, recs]) => {
-      const cur = new Date(d);
-      if (cur >= fromDate && cur <= toDate) {
-        stats.forEach(st => {
-          const code = recs[st.roll] || 'A';
-          st[code]++; st.total++;
-        });
-      }
-    });
-
-    // render table
+  function renderAnalytics(stats) {
+    // Table
     let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s => {
       const pct = s.total ? ((s.P / s.total) * 100).toFixed(1) : '0.0';
@@ -426,10 +392,11 @@ window.addEventListener('DOMContentLoaded', () => {
     analyticsContainer.innerHTML = html;
     analyticsContainer.classList.remove('hidden');
 
-    instructionsEl.textContent = `Report: ${from} to ${to}`;
+    // Instructions
+    instructionsEl.textContent = `Report: ${currentFromDate.toISOString().slice(0,10)} to ${currentToDate.toISOString().slice(0,10)}`;
     instructionsEl.classList.remove('hidden');
 
-    // bar chart
+    // Bar chart
     const labels = stats.map(s => s.name);
     const dataPct = stats.map(s => s.total ? (s.P / s.total) * 100 : 0);
     if (barChart) barChart.destroy();
@@ -439,7 +406,7 @@ window.addEventListener('DOMContentLoaded', () => {
       options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
     });
 
-    // pie chart
+    // Pie chart
     const agg = stats.reduce((a, s) => {
       ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
       return a;
@@ -456,20 +423,78 @@ window.addEventListener('DOMContentLoaded', () => {
 
     graphsEl.classList.remove('hidden');
     analyticsActionsEl.classList.remove('hidden');
+
+    // Enable individual click
+    document.querySelectorAll('#analyticsContainer tbody tr').forEach(tr => {
+      const nameCell = tr.cells[0];
+      nameCell.style.cursor = 'pointer';
+      nameCell.title = 'Click for Individual Analytics';
+      nameCell.onclick = () => {
+        const adm = prompt('Enter Admission Number:');
+        if (!adm) return;
+        const student = students.find(s => s.adm === adm.trim());
+        if (!student) return alert('Admission Number not found');
+        // Build stats for one student
+        const st = { name: student.name, roll: student.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 };
+        Object.entries(attendanceData).forEach(([d,recs]) => {
+          const dt = new Date(d);
+          if (dt >= currentFromDate && dt <= currentToDate) {
+            const code = recs[st.roll] || 'A';
+            st[code]++; st.total++;
+          }
+        });
+        renderAnalytics([st]);
+      };
+    });
+  }
+
+  loadAnalyticsBtn.onclick = ev => {
+    ev.preventDefault();
+    let from, to;
+    if (analyticsType.value === 'date') {
+      if (!analyticsDate.value) return alert('Pick Date');
+      from = to = analyticsDate.value;
+    } else if (analyticsType.value === 'month') {
+      if (!analyticsMonth.value) return alert('Pick Month');
+      const [y,m] = analyticsMonth.value.split('-').map(Number);
+      from = `${analyticsMonth.value}-01`;
+      to = `${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
+    } else if (analyticsType.value === 'semester') {
+      if (!semesterStartInput.value || !semesterEndInput.value) return alert('Pick Range');
+      from = `${semesterStartInput.value}-01`;
+      const [ey,em] = semesterEndInput.value.split('-').map(Number);
+      to = `${semesterEndInput.value}-${new Date(ey,em,0).getDate()}`;
+    } else if (analyticsType.value === 'year') {
+      if (!yearStart.value) return alert('Pick Year');
+      from = `${yearStart.value}-01-01`;
+      to = `${yearStart.value}-12-31`;
+    } else return alert('Select Period');
+
+    currentFromDate = new Date(from);
+    currentToDate = new Date(to);
+    let stats = students.map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    Object.entries(attendanceData).forEach(([d,recs]) => {
+      const cur = new Date(d);
+      if (cur >= currentFromDate && cur <= currentToDate) {
+        stats.forEach(st => {
+          const code = recs[st.roll] || 'A';
+          st[code]++; st.total++;
+        });
+      }
+    });
+    renderAnalytics(stats);
   };
 
   shareAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
-    const period = instructionsEl.textContent.replace('Report: ','');
-    const hdr = `Period: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    const hdr = `${instructionsEl.textContent}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => {
-      const tds = r.querySelectorAll('td');
-      return `${tds[0].textContent} P:${tds[1].textContent} A:${tds[2].textContent} Lt:${tds[3].textContent} HD:${tds[4].textContent} L:${tds[5].textContent} Total:${tds[6].textContent} %:${tds[7].textContent}`;
+      const t = Array.from(r.cells).slice(0,8).map(td => td.textContent);
+      return `${t[0]} P:${t[1]} A:${t[2]} Lt:${t[3]} HD:${t[4]} L:${t[5]} Total:${t[6]} %:${t[7]}`;
     });
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + rows.join('\n'))}`, '_blank');
   };
 
-  // 4a. ATTENDANCE ANALYTICS PDF
   downloadAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
@@ -478,14 +503,13 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.text('Attendance Analytics', 10, 10);
     doc.setFontSize(12);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, 20);
-    const period = instructionsEl.textContent.replace('Report: ','');
-    doc.text(`Period: ${period}`, 10, 26);
+    doc.text(instructionsEl.textContent, 10, 26);
     doc.text(`School: ${localStorage.getItem('schoolName')}`, 10, 32);
     doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`, 10, 38);
     doc.autoTable({
       head: [['Name','P','A','Lt','HD','L','Total','%']],
       body: Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r =>
-        Array.from(r.querySelectorAll('td')).map(td => td.textContent)
+        Array.from(r.cells).map(td => td.textContent)
       ),
       startY: 44
     });
@@ -523,7 +547,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const [y, m] = regMonthIn.value.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
 
-    // regenerate header once per load
     generateRegisterHeader(daysInMonth);
 
     regBody.innerHTML = '';
@@ -544,7 +567,6 @@ window.addEventListener('DOMContentLoaded', () => {
       regBody.appendChild(tr);
     });
 
-    // summary
     students.forEach(s => {
       const st = { P:0, A:0, Lt:0, HD:0, L:0, total:0 };
       for (let day = 1; day <= daysInMonth; day++) {
@@ -582,7 +604,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`, '_blank');
   };
 
-  // 5a. MONTHLY ATTENDANCE REGISTER PDF
   downloadReg2.onclick = ev => {
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
@@ -607,4 +628,5 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     doc.save('attendance_register.pdf');
   };
+
 });
