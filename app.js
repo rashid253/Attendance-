@@ -1,4 +1,3 @@
-// app.js
 window.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
   const colors = {
@@ -353,8 +352,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const pres  = students.reduce((sum, s) => sum + (attendanceData[d][s.roll] === 'P' ? 1 : 0), 0);
     const pct   = total ? ((pres / total) * 100).toFixed(1) : '0.0';
     const remark = pct == 100 ? 'Best' : pct >= 75 ? 'Good' : pct >= 50 ? 'Fair' : 'Poor';
-    const summary = `Overall Attendance: ${pct}% | ${remark}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent([hdr, '', ...lines, '', summary].join('\n'))}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent([hdr, '', ...lines, '', `Overall Attendance: ${pct}% | ${remark}`].join('\n'))}`, '_blank');
   };
 
   downloadAttPDF.onclick = ev => {
@@ -388,6 +386,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const analyticsContainer   = $('analyticsContainer');
   const graphsEl             = $('graphs');
   const analyticsActionsEl   = $('analyticsActions');
+  const shareAnalyticsBtn    = $('shareAnalytics');
+  const downloadAnalyticsBtn = $('downloadAnalyticsPDF');
   const barCtx               = $('barChart').getContext('2d');
   const pieCtx               = $('pieChart').getContext('2d');
   let barChart, pieChart;
@@ -467,7 +467,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // build table HTML
     let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s => {
       const pct = s.total ? ((s.P / s.total) * 100).toFixed(1) : '0.0';
@@ -480,7 +479,6 @@ window.addEventListener('DOMContentLoaded', () => {
     instructionsEl.textContent = `Report: ${from} to ${to}`;
     instructionsEl.classList.remove('hidden');
 
-    // bar chart
     const labels  = stats.map(s => s.name);
     const dataPct = stats.map(s => s.total ? (s.P / s.total) * 100 : 0);
     if (barChart) barChart.destroy();
@@ -491,7 +489,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     window.barChart = barChart;
 
-    // pie chart
     const agg = stats.reduce((a, s) => {
       ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
       return a;
@@ -508,7 +505,7 @@ window.addEventListener('DOMContentLoaded', () => {
     analyticsActionsEl.classList.remove('hidden');
   };
 
-  $('shareAnalytics').onclick = ev => {
+  shareAnalyticsBtn.onclick = ev => {
     ev.preventDefault();
     const period = instructionsEl.textContent.replace('Report: ', '');
     const hdr = `Period: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
@@ -554,7 +551,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const shareReg2       = $('shareRegister');
   const downloadReg2    = $('downloadRegisterPDF');
 
-  // append days 1–31
+  // append days 1–31 (once)
   const headerRow = regTable.querySelector('thead tr');
   for (let d = 1; d <= 31; d++) {
     const th = document.createElement('th');
