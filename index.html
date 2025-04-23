@@ -17,7 +17,7 @@
       <input id="schoolNameInput" placeholder="School Name">
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
-        <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
+        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
         <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
         <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
       </select>
@@ -62,6 +62,7 @@
       <button type="button" id="shareRegistration" class="hidden">Share Table</button>
       <button type="button" id="editRegistration" class="hidden">Edit Table</button>
       <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
+      <button type="button" id="downloadRegistrationJSON">Download Registration JSON</button>
     </div>
   </section>
 
@@ -75,6 +76,7 @@
     </div>
     <div id="attendanceList"></div>
     <button type="button" id="saveAttendance" class="hidden">Save</button>
+    <button type="button" id="downloadAttendanceJSON" class="hidden">Download Attendance JSON</button>
   </section>
 
   <!-- 4. Attendance Summary -->
@@ -102,7 +104,7 @@
         <option value="class">Full Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden">
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden">
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
         <option value="" disabled selected>--Select Period--</option>
