@@ -123,7 +123,11 @@ window.addEventListener('DOMContentLoaded', () => {
       return alert(`Admission# ${adm} already exists`);
     if (!/^\d{7,15}$/.test(contact))
       return alert('Contact must be 7-15 digits');
-    students.push({ name, adm, parent, contact, occupation: occ, address: addr, roll: Date.now() });
+    students.push({
+      name, adm, parent, contact,
+      occupation: occ, address: addr,
+      roll: Date.now()
+    });
     saveStudents();
     renderStudents();
     [studentNameIn, admissionNoIn, parentNameIn, parentContactIn, parentOccIn, parentAddrIn].forEach(i => i.value = '');
@@ -179,7 +183,8 @@ window.addEventListener('DOMContentLoaded', () => {
   saveRegBtn.onclick = ev => {
     ev.preventDefault();
     regSaved = true;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id => $(id).classList.add('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
+      .forEach(id=>$(id).classList.add('hidden'));
     shareRegBtn.classList.remove('hidden');
     editRegBtn.classList.remove('hidden');
     downloadRegBtn.classList.remove('hidden');
@@ -190,7 +195,8 @@ window.addEventListener('DOMContentLoaded', () => {
   editRegBtn.onclick = ev => {
     ev.preventDefault();
     regSaved = false;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id => $(id).classList.remove('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
+      .forEach(id=>$(id).classList.remove('hidden'));
     shareRegBtn.classList.add('hidden');
     editRegBtn.classList.add('hidden');
     downloadRegBtn.classList.add('hidden');
@@ -224,12 +230,11 @@ window.addEventListener('DOMContentLoaded', () => {
       body: students.map(s=>[s.name,s.adm,s.parent,s.contact,s.occupation,s.address]),
       startY:44
     });
-    const blobUrl = doc.output('bloburl');
+    alert('PDF generation complete. Starting download...');
     doc.save('student_registration.pdf');
-    if (confirm('Download complete. Click OK to open the PDF.')) {
-      window.open(blobUrl);
-    }
   };
+
+  renderStudents();
 
   // 3. ATTENDANCE MARKING
   let attendanceData = JSON.parse(localStorage.getItem('attendanceData')||'{}');
@@ -301,8 +306,32 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // 3a. DAILY ATTENDANCE PDF
-  downloadAttPDF.onclick = ev => {
+  resetAtt.onclick=ev=>{
+    ev.preventDefault();
+    resultSection.classList.add('hidden');
+    $('attendance-section').classList.remove('hidden');
+    attList.innerHTML='';
+    saveAtt.classList.add('hidden');
+    summaryBody.innerHTML='';
+  };
+
+  shareAtt.onclick=ev=>{
+    ev.preventDefault();
+    const d=dateInput.value;
+    const hdr=`Date: ${d}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
+    const lines=students.map(s=>{
+      const code=attendanceData[d][s.roll]||'A';
+      return `${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code] }`;
+    });
+    const total=students.length;
+    const pres=students.reduce((sum,s)=>(sum+(attendanceData[d][s.roll]==='P'?1:0)),0);
+    const pct= total?((pres/total)*100).toFixed(1):'0.0';
+    const remark= pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
+    const summary=`Overall Attendance: ${pct}% | ${remark}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent([hdr,'',...lines,'',summary].join('\n'))}`,'_blank');
+  };
+
+  downloadAttPDF.onclick=ev=>{
     ev.preventDefault();
     const { jsPDF }=window.jspdf;
     const doc=new jsPDF();
@@ -323,11 +352,8 @@ window.addEventListener('DOMContentLoaded', () => {
       }),
       startY:44
     });
-    const blobUrl = doc.output('bloburl');
+    alert('PDF generation complete. Starting download...');
     doc.save('attendance_summary.pdf');
-    if (confirm('Download complete. Click OK to open the PDF.')) {
-      window.open(blobUrl);
-    }
   };
 
   // 4. ANALYTICS
@@ -423,50 +449,50 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     const fromDate=new Date(from), toDate=new Date(to);
-    Object.entries(attendanceData).forEach(([d,recs]) => {
+    Object.entries(attendanceData).forEach(([d,recs])=>{
       const cur=new Date(d);
       if (cur>=fromDate && cur<=toDate) {
-        stats.forEach(st => {
-          const code = recs[st.roll] || 'A';
+        stats.forEach(st=>{
+          const code = recs[st.roll]||'A';
           st[code]++; st.total++;
         });
       }
     });
 
     let html='<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
-    stats.forEach(s => {
-      const pct = s.total ? ((s.P/s.total)*100).toFixed(1) : '0.0';
-      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
+    stats.forEach(s=>{
+      const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
+      html+=`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
     });
-    html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
+    html+='</tbody></table>';
+    analyticsContainer.innerHTML=html;
     analyticsContainer.classList.remove('hidden');
 
-    if (analyticsTarget.value === 'student') {
-      instructionsEl.textContent = `Admission#: ${studentAdmInput.value.trim()} | Report: ${from} to ${to}`;
+    if (analyticsTarget.value==='student') {
+      instructionsEl.textContent=`Admission#: ${studentAdmInput.value.trim()} | Report: ${from} to ${to}`;
     } else {
-      instructionsEl.textContent = `Report: ${from} to ${to}`;
+      instructionsEl.textContent=`Report: ${from} to ${to}`;
     }
     instructionsEl.classList.remove('hidden');
 
-    const labels = stats.map(s => s.name);
-    const dataPct = stats.map(s => s.total ? (s.P/s.total)*100 : 0);
+    const labels = stats.map(s=>s.name);
+    const dataPct = stats.map(s=> s.total? (s.P/s.total)*100 : 0 );
     if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: '% Present', data: dataPct }] },
-      options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+    barChart = new Chart(barCtx,{
+      type:'bar',
+      data:{ labels, datasets:[{ label:'% Present', data:dataPct }]},
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
     });
 
-    const agg = stats.reduce((a,s) => {
-      ['P','A','Lt','HD','L'].forEach(c => a[c] += s[c]);
+    const agg = stats.reduce((a,s)=>{
+      ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);
       return a;
-    }, { P:0,A:0,Lt:0,HD:0,L:0 });
+    },{ P:0,A:0,Lt:0,HD:0,L:0 });
     if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, {
-      type: 'pie',
-      data: { labels: ['Present','Absent','Late','Half Day','Leave'], datasets: [{ data: Object.values(agg) }] },
-      options: { responsive: true }
+    pieChart = new Chart(pieCtx,{
+      type:'pie',
+      data:{ labels:['Present','Absent','Late','Half Day','Leave'], datasets:[{ data: Object.values(agg) }]},
+      options:{ responsive:true }
     });
 
     graphsEl.classList.remove('hidden');
@@ -477,7 +503,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     const period = instructionsEl.textContent.replace(/.*\|\s*/, '');
     const hdr = `Period: ${period}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
-    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r => {
+    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>{
       const tds = r.querySelectorAll('td');
       return `${tds[0].textContent} P:${tds[1].textContent} A:${tds[2].textContent} Lt:${tds[3].textContent} HD:${tds[4].textContent} L:${tds[5].textContent} Total:${tds[6].textContent} %:${tds[7].textContent}`;
     });
@@ -496,20 +522,17 @@ window.addEventListener('DOMContentLoaded', () => {
     doc.text(`School: ${localStorage.getItem('schoolName')}`,10,32);
     doc.text(`Class: ${localStorage.getItem('teacherClass')} | Section: ${localStorage.getItem('teacherSection')}`,10,38);
     doc.autoTable({
-      head: [['Name','P','A','Lt','HD','L','Total','%']],
-      body: Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r =>
-        Array.from(r.querySelectorAll('td')).map(td => td.textContent)
+      head:[['Name','P','A','Lt','HD','L','Total','%']],
+      body:Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>
+        Array.from(r.querySelectorAll('td')).map(td=>td.textContent)
       ),
       startY:44
     });
     const y = doc.lastAutoTable.finalY + 10;
     doc.addImage(barChart.toBase64Image(),'PNG',10,y,80,60);
     doc.addImage(pieChart.toBase64Image(),'PNG',100,y,80,60);
-    const blobUrl = doc.output('bloburl');
+    alert('PDF generation complete. Starting download...');
     doc.save('attendance_analytics.pdf');
-    if (confirm('Download complete. Click OK to open the PDF.')) {
-      window.open(blobUrl);
-    }
   };
 
   // 5. ATTENDANCE REGISTER
@@ -584,7 +607,7 @@ window.addEventListener('DOMContentLoaded', () => {
     changeReg.classList.add('hidden');
   };
 
-  shareReg2.onclick = e => {
+  shareReg2.onclick = e=>{
     e.preventDefault();
     const hdr=`Register for ${regMonthIn.value}\nSchool: ${localStorage.getItem('schoolName')}\nClass: ${localStorage.getItem('teacherClass')}\nSection: ${localStorage.getItem('teacherSection')}`;
     const lines=Array.from(regSummaryBody.querySelectorAll('tr')).map(r=>{
@@ -594,8 +617,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`, '_blank');
   };
 
-  // 5a. MONTHLY ATTENDANCE REGISTER PDF
-  downloadReg2.onclick = ev => {
+  downloadReg2.onclick = ev=>{
     ev.preventDefault();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape');
@@ -616,11 +638,8 @@ window.addEventListener('DOMContentLoaded', () => {
       startY: doc.lastAutoTable.finalY + 10,
       styles:{ fontSize:8 }
     });
-    const blobUrl = doc.output('bloburl');
+    alert('PDF generation complete. Starting download...');
     doc.save('attendance_register.pdf');
-    if (confirm('Download complete. Click OK to open the PDF.')) {
-      window.open(blobUrl);
-    }
   };
 
   // Register service worker for offline capability
