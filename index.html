@@ -13,9 +13,11 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- IndexedDB key-value wrapper:
-       load the IIFE build so `idbKeyval` is defined globally 0 -->
-  <script src="https://unpkg.com/idb-keyval@6/dist/idb-keyval-iife.min.js"></script>
+  <!-- Load idb-keyval as ES module, then expose it globally -->
+  <script type="module">
+    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
+    window.idbKeyval = idbKeyvalModule;
+  </script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
@@ -188,4 +190,3 @@
   <script>eruda.init();</script>
 </body>
 </html>
-```1
