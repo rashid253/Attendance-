@@ -5,10 +5,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
+
+  <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -28,31 +31,31 @@
       <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
       </select>
-      <button id="saveSetup">Save</button>
+      <button type="button" id="saveSetup">Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
       <h3 id="setupText"></h3>
-      <button id="editSetup" class="small">Edit</button>
+      <button type="button" id="editSetup" class="small">Edit</button>
     </div>
   </section>
 
   <!-- 2. Student Registration -->
   <section id="student-registration">
     <h2>Student Registration</h2>
-    <div class="row-inline">
-      <input id="studentName" placeholder="Name" />
-      <input id="admissionNo" placeholder="Adm#" />
-      <input id="parentName" placeholder="Parent Name" />
-      <input id="parentContact" placeholder="Parent Contact" />
-      <input id="parentOccupation" placeholder="Occupation" />
-      <input id="parentAddress" placeholder="Address" />
-      <button id="addStudent">Add</button>
+    <div id="regForm" class="row-inline">
+      <input id="studentName" placeholder="Name" required />
+      <input id="admissionNo" placeholder="Adm#" required />
+      <input id="parentName" placeholder="Parent Name" required />
+      <input id="parentContact" placeholder="Parent Contact" required />
+      <input id="parentOccupation" placeholder="Occupation" required />
+      <input id="parentAddress" placeholder="Address" required />
+      <button type="button" id="addStudent">Add</button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
       <table id="studentTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents" /></th>
+            <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
             <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
@@ -60,12 +63,12 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" disabled>Edit Selected</button>
-      <button id="deleteSelected" disabled>Delete Selected</button>
-      <button id="saveRegistration" class="save">Save Table</button>
-      <button id="shareRegistration" class="hidden">Share Table</button>
-      <button id="editRegistration" class="hidden">Edit Table</button>
-      <button id="downloadRegistrationPDF" class="hidden">Download PDF</button>
+      <button type="button" id="editSelected" disabled>Edit Selected</button>
+      <button type="button" id="deleteSelected" disabled>Delete Selected</button>
+      <button type="button" id="saveRegistration" class="save">Save Table</button>
+      <button type="button" id="shareRegistration" class="hidden">Share Table</button>
+      <button type="button" id="editRegistration" class="hidden">Edit Table</button>
+      <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
     </div>
   </section>
 
@@ -75,25 +78,25 @@
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
       <input type="date" id="dateInput" />
-      <button id="loadAttendance">Load Attendance</button>
+      <button type="button" id="loadAttendance">Load Attendance</button>
     </div>
     <div id="attendanceList"></div>
-    <button id="saveAttendance" class="hidden">Save</button>
+    <button type="button" id="saveAttendance" class="hidden">Save</button>
   </section>
 
   <!-- 4. Attendance Summary -->
   <section id="attendance-result" class="hidden">
     <h2>Attendance Summary</h2>
     <div class="table-wrapper">
-      <table>
+      <table id="attendanceSummaryTable">
         <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="shareAttendanceSummary">Share Table</button>
-      <button id="downloadAttendancePDF">Download PDF</button>
-      <button id="resetAttendance" class="small">Reset</button>
+      <button type="button" id="shareAttendanceSummary">Share Table</button>
+      <button type="button" id="downloadAttendancePDF">Download PDF</button>
+      <button type="button" id="resetAttendance" class="small">Reset</button>
     </div>
   </section>
 
@@ -106,11 +109,11 @@
         <option value="class">Full Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
-        <option disabled selected>--Select Period--</option>
-        <option value="date">Date</option>
+        <option value="" disabled selected>--Select Period--</option>
+        <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
         <option value="year">Year</option>
@@ -120,8 +123,8 @@
       <input type="month" id="semesterStart" class="hidden" />
       <input type="month" id="semesterEnd" class="hidden" />
       <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-      <button id="loadAnalytics">Load Analytics</button>
-      <button id="resetAnalytics" class="small hidden">Change</button>
+      <button type="button" id="loadAnalytics">Load Analytics</button>
+      <button type="button" id="resetAnalytics" class="small hidden">Change</button>
     </div>
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
@@ -129,9 +132,9 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div class="table-actions hidden" id="analyticsActions">
-      <button id="shareAnalytics">Share as Text</button>
-      <button id="downloadAnalytics">Download PDF</button>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
     </div>
   </section>
 
@@ -141,12 +144,16 @@
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
       <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="save">Load Register</button>
-      <button id="changeRegister" class="small hidden">Change Period</button>
+      <button type="button" id="loadRegister" class="save">Load Register</button>
+      <button type="button" id="changeRegister" class="small hidden">Change Period</button>
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Sr#</th><th>Adm#</th><th>Name</th>
+          </tr>
+        </thead>
         <tbody id="registerBody"></tbody>
       </table>
     </div>
@@ -154,24 +161,23 @@
       <h3>Summary</h3>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead>
+          <thead>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
+          </thead>
           <tbody id="registerSummaryBody"></tbody>
         </table>
       </div>
     </div>
     <div class="table-actions">
-      <button id="shareRegister" class="save">Share Summary</button>
-      <button id="downloadRegisterPDF" class="save">Download PDF</button>
+      <button type="button" id="shareRegister" class="save">Share Summary</button>
+      <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
     </div>
   </section>
 
-  <!-- Libraries -->
+  <!-- External Libraries + Main Script -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <!-- IndexedDB helper -->
-  <script src="https://unpkg.com/idb/build/iife/index-min.js"></script>
-  <!-- Main app -->
   <script src="app.js"></script>
 </body>
 </html>
