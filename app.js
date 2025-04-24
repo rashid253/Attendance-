@@ -117,18 +117,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const contact = parentContactIn.value.trim();
     const occ     = parentOccIn.value.trim();
     const addr    = parentAddrIn.value.trim();
-    if (!name || !adm || !parent || !contact || !occ || !addr)
-      return alert('All fields required');
+    if (!name || !adm || !parent || !contact || !occ || !addr) return alert('All fields required');
     if (!/^\d+$/.test(adm)) return alert('Adm# must be numeric');
-    if (students.some(s => s.adm === adm))
-      return alert(`Admission# ${adm} already exists`);
-    if (!/^\d{7,15}$/.test(contact))
-      return alert('Contact must be 7-15 digits');
-    students.push({
-      name, adm, parent, contact,
-      occupation: occ, address: addr,
-      roll: Date.now()
-    });
+    if (students.some(s => s.adm === adm)) return alert(`Admission# ${adm} already exists`);
+    if (!/^\d{7,15}$/.test(contact)) return alert('Contact must be 7-15 digits');
+    students.push({ name, adm, parent, contact, occupation: occ, address: addr, roll: Date.now() });
     await saveStudents();
     renderStudents();
     [studentNameIn, admissionNoIn, parentNameIn, parentContactIn, parentOccIn, parentAddrIn].forEach(i => i.value = '');
@@ -142,14 +135,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const val = td.textContent.trim();
     if (ci === 2) {
       if (!/^\d+$/.test(val)) { alert('Adm# must be numeric'); renderStudents(); return; }
-      if (students.some((s,i2) => s.adm===val && i2!==idx)) {
-        alert('Duplicate Adm# not allowed'); renderStudents(); return;
-      }
+      if (students.some((s,i2) => s.adm===val && i2!==idx)) { alert('Duplicate Adm# not allowed'); renderStudents(); return; }
     }
-    if (ci>=1 && ci<=6) {
-      students[idx][keys[ci-1]] = val;
-      saveStudents();
-    }
+    if (ci>=1 && ci<=6) { students[idx][keys[ci-1]] = val; saveStudents(); }
   }
 
   editSelBtn.onclick = ev => {
@@ -163,9 +151,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (ci>=1 && ci<=6) {
           td.contentEditable = inlineEdit;
           td.classList.toggle('editing', inlineEdit);
-          inlineEdit
-            ? td.addEventListener('blur', onCellBlur)
-            : td.removeEventListener('blur', onCellBlur);
+          inlineEdit ? td.addEventListener('blur', onCellBlur) : td.removeEventListener('blur', onCellBlur);
         }
       });
     });
@@ -302,7 +288,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       tr.querySelector('.send-btn').onclick = e2 => {
         e2.preventDefault();
         const msg = `${hdr}\n\nName: ${s.name}\nStatus: ${status}`;
-        window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/${s.contact}?text=${encodeURIComponent(msg)}`, '_blank`);
       };
       summaryBody.appendChild(tr);
     });
@@ -330,7 +316,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const pct = total ? ((pres/total)*100).toFixed(1) : '0.0';
     const remark = pct==100?'Best':pct>=75?'Good':pct>=50?'Fair':'Poor';
     const summary = `Overall Attendance: ${pct}% | ${remark}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent([hdr,'',...lines,'',summary].join('\n'))}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent([hdr,'',...lines,'',summary].join('\n'))}`, '_blank`);
   };
 
   downloadAttPDF.onclick = ev => {
@@ -422,8 +408,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       from = `${analyticsMonth.value}-01`;
       to   = `${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
     } else if (analyticsType.value === 'semester') {
-      if (!semesterStartInput.value || !semesterEndInput.value)
-        return alert('Pick semester range');
+      if (!semesterStartInput.value || !semesterEndInput.value) return alert('Pick semester range');
       from = `${semesterStartInput.value}-01`;
       const [ey,em] = semesterEndInput.value.split('-').map(Number);
       to   = `${semesterEndInput.value}-${new Date(ey,em,0).getDate()}`;
@@ -503,7 +488,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const tds = r.querySelectorAll('td');
       return `${tds[0].textContent} P:${tds[1].textContent} A:${tds[2].textContent} Lt:${tds[3].textContent} HD:${tds[4].textContent} L:${tds[5].textContent} Total:${tds[6].textContent} %:${tds[7].textContent}`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + rows.join('\n'))}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + rows.join('\n'))}`, '_blank`);
   };
 
   downloadAnalyticsBtn.onclick = ev => {
@@ -610,7 +595,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const tds=r.querySelectorAll('td');
       return `${tds[0].textContent}: P:${tds[1].textContent}, A:${tds[2].textContent}, Lt:${tds[3].textContent}, HD:${tds[4].textContent}, L:${tds[5].textContent}, %:${tds[6].textContent}`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`, '_blank`);
   };
 
   downloadReg2.onclick = ev=>{
