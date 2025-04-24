@@ -2,17 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Classwise Attendance Management</title>
-
-  <!-- PWA manifest -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
-
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
@@ -21,10 +14,10 @@
   <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
+      <input id="schoolNameInput" placeholder="School Name">
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
-        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
+        <option>Pre‑Play</option><option>Pre‑Prep</option><option>Nursery</option><option>Pre‑One</option>
         <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
         <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
       </select>
@@ -43,19 +36,19 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input id="studentName" placeholder="Name" required />
-      <input id="admissionNo" placeholder="Adm#" required />
-      <input id="parentName" placeholder="Parent Name" required />
-      <input id="parentContact" placeholder="Parent Contact" required />
-      <input id="parentOccupation" placeholder="Occupation" required />
-      <input id="parentAddress" placeholder="Address" required />
+      <input id="studentName" placeholder="Name" required>
+      <input id="admissionNo" placeholder="Adm#" required>
+      <input id="parentName" placeholder="Parent Name" required>
+      <input id="parentContact" placeholder="Parent Contact" required>
+      <input id="parentOccupation" placeholder="Occupation" required>
+      <input id="parentAddress" placeholder="Address" required>
       <button type="button" id="addStudent">Add</button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
       <table id="studentTable">
         <thead>
           <tr>
-            <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
+            <th class="select-col"><input type="checkbox" id="selectAllStudents"></th>
             <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
@@ -77,7 +70,7 @@
     <h2>Mark Attendance</h2>
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
-      <input type="date" id="dateInput" />
+      <input type="date" id="dateInput">
       <button type="button" id="loadAttendance">Load Attendance</button>
     </div>
     <div id="attendanceList"></div>
@@ -109,7 +102,7 @@
         <option value="class">Full Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden">
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
         <option value="" disabled selected>--Select Period--</option>
@@ -118,11 +111,11 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <input type="date" id="analyticsDate" class="hidden">
+      <input type="month" id="analyticsMonth" class="hidden">
+      <input type="month" id="semesterStart" class="hidden">
+      <input type="month" id="semesterEnd" class="hidden">
+      <input type="number" id="yearStart" class="hidden" placeholder="Year">
       <button type="button" id="loadAnalytics">Load Analytics</button>
       <button type="button" id="resetAnalytics" class="small hidden">Change</button>
     </div>
@@ -143,7 +136,7 @@
     <h2>Attendance Register</h2>
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
-      <input type="month" id="registerMonth" />
+      <input type="month" id="registerMonth">
       <button type="button" id="loadRegister" class="save">Load Register</button>
       <button type="button" id="changeRegister" class="small hidden">Change Period</button>
     </div>
@@ -174,7 +167,7 @@
     </div>
   </section>
 
-  <!-- External Libraries + Main Script -->
+  <!-- Libraries + Single Script -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
