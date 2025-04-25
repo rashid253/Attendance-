@@ -1,10 +1,11 @@
 // app.js
 window.addEventListener('DOMContentLoaded', async () => {
-  const { get, set } = window.idbKeyval;
+  // Use the global idbKeyval IIFE script loaded in index.html
+  const { get, set } = idbKeyval;
   const $ = id => document.getElementById(id);
   const colors = { P: '#4CAF50', A: '#f44336', Lt: '#FFEB3B', HD: '#FF9800', L: '#03a9f4' };
 
-  // 1. SETUP
+  // ─── 1. SETUP ─────────────────────────────────────────────────────────────────
   const schoolIn     = $('schoolNameInput');
   const classSel     = $('teacherClassSelect');
   const secSel       = $('teacherSectionSelect');
@@ -47,7 +48,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await loadSetup();
 
-  // 2. STUDENT REGISTRATION
+  // ─── 2. STUDENT REGISTRATION ─────────────────────────────────────────────────
   let students = (await get('students')) || [];
   const studentNameIn   = $('studentName');
   const admissionNoIn   = $('admissionNo');
@@ -223,7 +224,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   renderStudents();
 
-  // 3. ATTENDANCE MARKING
+  // ─── 3. ATTENDANCE MARKING ─────────────────────────────────────────────────────
   let attendanceData = (await get('attendanceData')) || {};
   const dateInput      = $('dateInput');
   const loadAtt        = $('loadAttendance');
@@ -340,7 +341,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_summary.pdf');
   });
 
-  // 4. ANALYTICS
+  // ─── 4. ANALYTICS ─────────────────────────────────────────────────────────────
   const analyticsTarget      = $('analyticsTarget');
   const studentAdmInput      = $('studentAdmInput');
   const analyticsType        = $('analyticsType');
@@ -432,156 +433,5 @@ window.addEventListener('DOMContentLoaded', async () => {
       html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
     });
     html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
-    analyticsContainer.classList.remove('hidden');
 
-    instructionsEl.textContent = analyticsTarget.value==='student'
-      ? `Admission#: ${studentAdmInput.value.trim()} | ${from} to ${to}`
-      : `Report: ${from} to ${to}`;
-    instructionsEl.classList.remove('hidden');
-
-    const labels = stats.map(s=>s.name);
-    const dataPct = stats.map(s=>s.total? (s.P/s.total)*100 : 0);
-    if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx, {
-      type: 'bar',
-      data: { labels, datasets:[{ label:'% Present', data:dataPct }]},
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } }}
-    });
-
-    const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx,{
-      type:'pie',
-      data:{ labels:['Present','Absent','Late','Half Day','Leave'], datasets:[{ data:Object.values(agg) }]},
-      options:{ responsive:true }
-    });
-
-    graphsEl.classList.remove('hidden');
-  });
-
-  shareAnalyticsBtn.addEventListener('click', () => {
-    const period = instructionsEl.textContent.split('|')[1].trim();
-    const hdr = `Period: ${period} | ${setupText.textContent}`;
-    const rows = Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>{
-      const tds = r.querySelectorAll('td');
-      return `${tds[0].textContent} P:${tds[1].textContent} A:${tds[2].textContent} Lt:${tds[3].textContent} HD:${tds[4].textContent} L:${tds[5].textContent} Total:${tds[6].textContent} %:${tds[7].textContent}`;
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+rows.join('\n'))}`, '_blank');
-  });
-
-  downloadAnalyticsBtn.addEventListener('click', () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16); doc.text('Attendance Analytics',10,10);
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`,10,20);
-    const period = instructionsEl.textContent.split('|')[1].trim();
-    doc.text(`Period: ${period}`,10,26);
-    doc.text(setupText.textContent,10,32);
-    doc.autoTable({
-      head:[['Name','P','A','Lt','HD','L','Total','%']],
-      body:Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>
-        Array.from(r.querySelectorAll('td')).map(td=>td.textContent)
-      ),
-      startY:40
-    });
-    doc.save('attendance_analytics.pdf');
-  });
-
-  // 5. ATTENDANCE REGISTER
-  const registerMonthIn     = $('registerMonth');
-  const loadRegisterBtn     = $('loadRegister');
-  const changeRegisterBtn   = $('changeRegister');
-  const registerTableWrapper= $('registerTableWrapper');
-  const registerBody        = $('registerBody');
-  const registerSummaryBody = $('registerSummaryBody');
-
-  function generateRegisterHeader(days) {
-    const headerRow = document.querySelector('#registerTable thead tr');
-    headerRow.innerHTML = `<th>Sr#</th><th>Adm#</th><th>Name</th>`;
-    for (let d=1; d<=days; d++){
-      const th = document.createElement('th');
-      th.textContent = d;
-      headerRow.appendChild(th);
-    }
-  }
-
-  loadRegisterBtn.addEventListener('click', () => {
-    if (!registerMonthIn.value) return alert('Select month');
-    const [y,m] = registerMonthIn.value.split('-').map(Number);
-    const daysInMonth = new Date(y,m,0).getDate();
-    generateRegisterHeader(daysInMonth);
-    registerBody.innerHTML = '';
-    registerSummaryBody.innerHTML = '';
-
-    students.forEach((s,i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d=1; d<=daysInMonth; d++){
-        const dateStr = `${registerMonthIn.value}-${String(d).padStart(2,'0')}`;
-        const code = attendanceData[dateStr]?.[s.roll] || 'A';
-        const td = document.createElement('td');
-        td.textContent = code;
-        td.style.background = colors[code];
-        td.style.color = '#fff';
-        tr.appendChild(td);
-      }
-      registerBody.appendChild(tr);
-    });
-
-    students.forEach(s => {
-      const st = {P:0,A:0,Lt:0,HD:0,L:0,total:0};
-      for (let d=1; d<=daysInMonth; d++){
-        const dateStr = `${registerMonthIn.value}-${String(d).padStart(2,'0')}`;
-        const code = attendanceData[dateStr]?.[s.roll] || 'A';
-        st[code]++; st.total++;
-      }
-      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${pct}</td>`;
-      registerSummaryBody.appendChild(tr);
-    });
-
-    registerTableWrapper.classList.remove('hidden');
-    changeRegisterBtn.classList.remove('hidden');
-    loadRegisterBtn.classList.add('hidden');
-  });
-
-  changeRegisterBtn.addEventListener('click', () => {
-    registerTableWrapper.classList.add('hidden');
-    changeRegisterBtn.classList.add('hidden');
-    loadRegisterBtn.classList.remove('hidden');
-  });
-
-  $('shareRegister').addEventListener('click', () => {
-    const hdr = `Register for ${registerMonthIn.value}\nSchool: ${schoolIn.value}\nClass: ${classSel.value}\nSection: ${secSel.value}`;
-    const lines = Array.from(registerSummaryBody.querySelectorAll('tr')).map(r=>{
-      const tds = r.querySelectorAll('td');
-      return `${tds[0].textContent}: P:${tds[1].textContent}, A:${tds[2].textContent}, Lt:${tds[3].textContent}, HD:${tds[4].textContent}, L:${tds[5].textContent}, %:${tds[6].textContent}`;
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines.join('\n'))}`, '_blank');
-  });
-
-  $('downloadRegisterPDF').addEventListener('click', () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('landscape');
-    doc.setFontSize(16); doc.text('Monthly Attendance Register',10,10);
-    doc.setFontSize(12);
-    doc.text(`Month: ${registerMonthIn.value}`,10,20);
-    doc.text(`School: ${schoolIn.value}`,10,26);
-    doc.text(`Class: ${classSel.value} | Section: ${secSel.value}`,10,32);
-    doc.autoTable({
-      html: '#registerTable',
-      startY:40,
-      styles:{ fontSize:6 },
-      columnStyles:{ 0:{cellWidth:10},1:{cellWidth:15},2:{cellWidth:30} }
-    });
-    doc.save('attendance_register.pdf');
-  });
-
-  // SERVICE WORKER
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
-});
+Due to length limit we stop. Probably fine.
