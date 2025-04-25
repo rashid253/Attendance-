@@ -8,13 +8,13 @@
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet" />
 
-  <!-- Bootstrap 5 CSS -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
   <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-  <!-- Your existing CSS -->
+  <!-- Your CSS -->
   <link href="style.css" rel="stylesheet" />
 
   <!-- idb-keyval -->
@@ -23,11 +23,11 @@
     window.idbKeyval = idbKeyvalModule;
   </script>
 </head>
-<body class="bg-light text-dark" style="font-family:'Roboto',sans-serif;">
+<body class="bg-light text-dark" style="font-family: 'Roboto', sans-serif;">
 
-  <!-- Header + Totals -->
+  <!-- Header -->
   <header class="bg-primary text-white text-center py-4">
-    <h1><i class="fas fa-school me-2"></i> Attendance Management</h1>
+    <h1><i class="fas fa-school me-2"></i>Attendance Management</h1>
     <div class="d-flex justify-content-center gap-4 mt-3">
       <div><i class="fas fa-users"></i> <strong id="totalSchoolCount">0</strong> Students</div>
       <div><i class="fas fa-chalkboard-teacher"></i> <strong id="totalClassCount">0</strong> Class</div>
@@ -37,9 +37,9 @@
 
   <main class="container my-4">
 
-    <!-- Setup (expanded) -->
+    <!-- Setup -->
     <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard" aria-expanded="true" style="cursor:pointer;">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard" style="cursor:pointer;">
         <h2><i class="fas fa-cog me-2"></i>Setup</h2>
       </div>
       <div id="setupCard" class="collapse show">
@@ -71,7 +71,7 @@
 
     <!-- Student Registration -->
     <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard" aria-expanded="false" style="cursor:pointer;">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard" style="cursor:pointer;">
         <h2><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
       </div>
       <div id="regCard" class="collapse">
@@ -87,11 +87,12 @@
               <i class="fas fa-plus-circle"></i>
             </button>
           </div>
+
           <div id="studentTableWrapper" class="table-responsive mb-3">
             <table id="studentTable" class="table table-striped">
               <thead>
                 <tr>
-                  <th><input type="checkbox" id="selectAllStudents"></th>
+                  <th><input type="checkbox" id="selectAllStudents" /></th>
                   <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
                   <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
                 </tr>
@@ -99,171 +100,29 @@
               <tbody id="studentsBody"></tbody>
             </table>
           </div>
+
           <div class="d-flex gap-2">
-            <button id="editSelected" class="btn btn-warning" disabled>
-              <i class="fas fa-edit"></i> Edit Selected
-            </button>
-            <button id="deleteSelected" class="btn btn-danger" disabled>
-              <i class="fas fa-trash-alt"></i> Delete Selected
-            </button>
-            <button id="saveRegistration" class="btn btn-success">
-              <i class="fas fa-save"></i> Save Table
-            </button>
-            <button id="shareRegistration" class="btn btn-primary d-none">
-              <i class="fas fa-share-alt"></i> Share
-            </button>
-            <button id="downloadRegistrationPDF" class="btn btn-danger d-none">
-              <i class="fas fa-file-pdf"></i> PDF
-            </button>
+            <button id="editSelected" class="btn btn-warning" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+            <button id="deleteSelected" class="btn btn-danger" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+            <button id="saveRegistration" class="btn btn-success"><i class="fas fa-save"></i> Save Table</button>
+            <button id="shareRegistration" class="btn btn-primary d-none"><i class="fas fa-share-alt"></i> Share Table</button>
+            <button id="editRegistration" class="btn btn-info d-none"><i class="fas fa-edit"></i> Edit Table</button>
+            <button id="downloadRegistrationPDF" class="btn btn-danger d-none"><i class="fas fa-file-pdf"></i> PDF</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Mark Attendance -->
-    <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#markCard" aria-expanded="false" style="cursor:pointer;">
-        <h2><i class="fas fa-calendar-check me-2"></i>Mark Attendance</h2>
-      </div>
-      <div id="markCard" class="collapse">
-        <div class="card-body">
-          <section id="attendance-section">
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <label for="dateInput" class="me-2 align-self-center mb-0">Select Date:</label>
-              <input type="date" id="dateInput" class="form-control me-2" />
-              <button id="loadAttendance" class="btn btn-primary">
-                <i class="fas fa-sync-alt"></i> Load
-              </button>
-            </div>
-            <div id="attendanceList"></div>
-            <button id="saveAttendance" class="btn btn-success d-none mt-3">
-              <i class="fas fa-save"></i> Save
-            </button>
-          </section>
-        </div>
-      </div>
-    </div>
-
-    <!-- Attendance Summary -->
-    <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#summaryCard" aria-expanded="false" style="cursor:pointer;">
-        <h2><i class="fas fa-clipboard-list me-2"></i>Attendance Summary</h2>
-      </div>
-      <div id="summaryCard" class="collapse">
-        <div class="card-body">
-          <section id="attendance-result">
-            <div class="table-responsive mb-3">
-              <table class="table">
-                <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
-                <tbody id="summaryBody"></tbody>
-              </table>
-            </div>
-            <div class="d-flex gap-2">
-              <button id="shareAttendanceSummary" class="btn btn-primary">
-                <i class="fas fa-share-alt"></i> Share
-              </button>
-              <button id="downloadAttendancePDF" class="btn btn-danger">
-                <i class="fas fa-file-pdf"></i> PDF
-              </button>
-              <button id="resetAttendance" class="btn btn-info">
-                <i class="fas fa-undo"></i> Reset
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-
-    <!-- Analytics -->
-    <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#analyticsCard" aria-expanded="false" style="cursor:pointer;">
-        <h2><i class="fas fa-chart-bar me-2"></i>Analytics</h2>
-      </div>
-      <div id="analyticsCard" class="collapse">
-        <div class="card-body">
-          <section id="analytics-section">
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <select id="analyticsTarget" class="form-select w-auto">
-                <option value="class">Full Class</option>
-                <option value="student">Individual</option>
-              </select>
-              <input id="studentAdmInput" class="form-control w-auto d-none" placeholder="Adm#" />
-              <select id="analyticsType" class="form-select w-auto">
-                <option value="" disabled selected>--Period--</option>
-                <option value="date">Date</option>
-                <option value="month">Month</option>
-                <option value="semester">Semester</option>
-                <option value="year">Year</option>
-              </select>
-              <input type="date" id="analyticsDate" class="form-control w-auto d-none" />
-              <input type="month" id="analyticsMonth" class="form-control w-auto d-none" />
-              <input type="month" id="semesterStart" class="form-control w-auto d-none" placeholder="Start" />
-              <input type="month" id="semesterEnd" class="form-control w-auto d-none" placeholder="End" />
-              <input type="number" id="yearStart" class="form-control w-auto d-none" placeholder="Year" />
-              <button id="loadAnalytics" class="btn btn-primary">
-                <i class="fas fa-sync-alt"></i> Load
-              </button>
-              <button id="resetAnalytics" class="btn btn-info d-none">
-                <i class="fas fa-undo"></i> Reset
-              </button>
-            </div>
-            <div id="instructions" class="mb-3"></div>
-            <div id="analyticsContainer" class="table-responsive mb-3"></div>
-            <div id="graphs" class="graph-container mb-3">
-              <canvas id="barChart"></canvas>
-              <canvas id="pieChart"></canvas>
-            </div>
-            <div class="d-flex gap-2">
-              <button id="shareAnalytics" class="btn btn-primary">
-                <i class="fas fa-share-alt"></i> Share
-              </button>
-              <button id="downloadAnalytics" class="btn btn-danger">
-                <i class="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-
-    <!-- Attendance Register -->
-    <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#registerCard" aria-expanded="false" style="cursor:pointer;">
-        <h2><i class="fas fa-book-open me-2"></i>Attendance Register</h2>
-      </div>
-      <div id="registerCard" class="collapse">
-        <div class="card-body">
-          <section id="register-section">
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <input type="month" id="registerMonth" class="form-control w-auto" />
-              <button id="loadRegister" class="btn btn-success">
-                <i class="fas fa-sync-alt"></i> Load
-              </button>
-              <button id="changeRegister" class="btn btn-info d-none">
-                <i class="fas fa-undo"></i> Reset
-              </button>
-            </div>
-            <div id="registerTableWrapper" class="table-responsive mb-3"></div>
-            <div id="registerSummarySection" class="mb-3"></div>
-            <div class="d-flex gap-2">
-              <button id="shareRegister" class="btn btn-primary">
-                <i class="fas fa-share-alt"></i> Share
-              </button>
-              <button id="downloadRegisterPDF" class="btn btn-danger">
-                <i class="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+    <!-- Other sections can follow here (Mark Attendance, Summary, etc.) -->
 
   </main>
 
-  <!-- Bootstrap JS + your app.js -->
+  <!-- Bootstrap Bundle + App JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="app.js"></script>
+
   <!-- Eruda Console -->
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
 </body>
 </html>
