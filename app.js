@@ -1,36 +1,19 @@
 // app.js
 window.addEventListener('DOMContentLoaded', async () => {
-  // ─── 0. KEY-VALUE STORAGE (IndexedDB or fallback to localStorage) ─────────────
-  let get, set;
-  if (typeof idbKeyval !== 'undefined') {
-    ({ get, set } = idbKeyval);
-  } else {
-    console.warn('⚠️ idbKeyval not found, falling back to localStorage');
-    get = async key => {
-      const v = localStorage.getItem(key);
-      return v === null ? undefined : JSON.parse(v);
-    };
-    set = async (key, val) => {
-      localStorage.setItem(key, JSON.stringify(val));
-    };
-  }
-
+  const { get, set } = idbKeyval;
   const $ = id => document.getElementById(id);
-  const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
+  const colors = { P: '#4CAF50', A: '#f44336', Lt: '#FFEB3B', HD: '#FF9800', L: '#03a9f4' };
 
-  // Cache the big sections so we can reveal them after setup
-  const studentSection    = $('student-registration');
-  const attendanceSection = $('attendance-section');
-  const analyticsSection  = $('analytics-section');
-  const registerSection   = $('register-section');
-  function showAllAfterSetup() {
-    studentSection.classList.remove('hidden');
-    attendanceSection.classList.remove('hidden');
-    analyticsSection.classList.remove('hidden');
-    registerSection.classList.remove('hidden');
-  }
+  // cache and reveal sections after setup
+  const sections = [
+    $('student-registration'),
+    $('attendance-section'),
+    $('analytics-section'),
+    $('register-section')
+  ];
+  function showAll() { sections.forEach(s => s.classList.remove('hidden')); }
 
-  // ─── 1. SETUP ────────────────────────────────────────────────────────────────
+  // 1. SETUP
   const schoolIn     = $('schoolNameInput');
   const classSel     = $('teacherClassSelect');
   const secSel       = $('teacherSectionSelect');
@@ -45,21 +28,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cls    = await get('teacherClass');
     const sec    = await get('teacherSection');
     if (school && cls && sec) {
-      schoolIn.value = school;
-      classSel.value = cls;
-      secSel.value   = sec;
+      schoolIn.value   = school;
+      classSel.value   = cls;
+      secSel.value     = sec;
       setupText.textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
       setupForm.classList.add('hidden');
       setupDisplay.classList.remove('hidden');
-      showAllAfterSetup();
+      showAll();
     }
   }
 
   saveSetup.addEventListener('click', async e => {
     e.preventDefault();
-    if (!schoolIn.value || !classSel.value || !secSel.value) {
-      return alert('Complete setup');
-    }
+    if (!schoolIn.value || !classSel.value || !secSel.value) return alert('Complete setup');
     await set('schoolName', schoolIn.value);
     await set('teacherClass', classSel.value);
     await set('teacherSection', secSel.value);
@@ -74,7 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await loadSetup();
 
-  // ─── 2. STUDENT REGISTRATION ─────────────────────────────────────────────────
+  // 2. STUDENT REGISTRATION
   let students = (await get('students')) || [];
   const studentNameIn   = $('studentName');
   const admissionNoIn   = $('admissionNo');
@@ -93,13 +74,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const downloadRegBtn  = $('downloadRegistrationPDF');
   let regSaved = false, inlineEdit = false;
 
-  async function saveStudents() {
-    await set('students', students);
-  }
+  async function saveStudents() { await set('students', students); }
 
   function renderStudents() {
     studentsBody.innerHTML = '';
-    students.forEach((s, i) => {
+    students.forEach((s,i) => {
       const tr = document.createElement('tr');
       tr.innerHTML =
         `<td><input type="checkbox" class="sel" data-index="${i}" ${regSaved?'disabled':''}></td>` +
@@ -123,7 +102,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     boxes.forEach(cb => {
       cb.onchange = () => {
         cb.closest('tr').classList.toggle('selected', cb.checked);
-        const any = boxes.some(x => x.checked);
+        const any = boxes.some(x=>x.checked);
         editSelBtn.disabled = deleteSelBtn.disabled = !any;
       };
     });
@@ -146,11 +125,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const addr    = parentAddrIn.value.trim();
     if (!name||!adm||!parent||!contact||!occ||!addr) return alert('All fields required');
     if (!/^\d+$/.test(adm)) return alert('Adm# must be numeric');
-    if (students.some(s=>s.adm===adm)) return alert('Duplicate Adm# not allowed');
+    if (students.some(s=>s.adm===adm)) return alert('Duplicate Adm#');
     if (!/^\d{7,15}$/.test(contact)) return alert('Contact must be 7–15 digits');
     students.push({name,adm,parent,contact,occupation:occ,address:addr,roll:Date.now()});
-    await saveStudents();
-    renderStudents();
+    await saveStudents(); renderStudents();
     [studentNameIn,admissionNoIn,parentNameIn,parentContactIn,parentOccIn,parentAddrIn].forEach(i=>i.value='');
   });
 
@@ -161,13 +139,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const keys = ['name','adm','parent','contact','occupation','address'];
     const val = td.textContent.trim();
     if (ci===2) {
-      if (!/^\d+$/.test(val)) { alert('Adm# must be numeric'); renderStudents(); return; }
-      if (students.some((s,i2)=>s.adm===val&&i2!==idx)) { alert('Duplicate Adm# not allowed'); renderStudents(); return; }
+      if (!/^\d+$/.test(val)) { alert('Adm# numeric'); renderStudents(); return; }
+      if (students.some((s,i2)=>s.adm===val&&i2!==idx)) { alert('Duplicate Adm#'); renderStudents(); return; }
     }
-    if (ci>=1&&ci<=6) {
-      students[idx][keys[ci-1]] = val;
-      saveStudents();
-    }
+    if (ci>=1&&ci<=6) { students[idx][keys[ci-1]] = val; saveStudents(); }
   }
 
   editSelBtn.addEventListener('click', e => {
@@ -175,13 +150,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     const sel = Array.from(document.querySelectorAll('.sel:checked'));
     if (!sel.length) return;
     inlineEdit = !inlineEdit;
-    editSelBtn.textContent = inlineEdit ? 'Done Editing' : 'Edit Selected';
+    editSelBtn.textContent = inlineEdit?'Done Editing':'Edit Selected';
     sel.forEach(cb => {
       cb.closest('tr').querySelectorAll('td').forEach((td,ci) => {
         if (ci>=1&&ci<=6) {
           td.contentEditable = inlineEdit;
           td.classList.toggle('editing', inlineEdit);
-          inlineEdit ? td.addEventListener('blur', onCellBlur) : td.removeEventListener('blur', onCellBlur);
+          inlineEdit? td.addEventListener('blur', onCellBlur) : td.removeEventListener('blur', onCellBlur);
         }
       });
     });
@@ -197,9 +172,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   saveRegBtn.addEventListener('click', e => {
     e.preventDefault();
-    regSaved = true;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
-      .forEach(id=>$(id).classList.add('hidden'));
+    regSaved=true;
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id=>$(id).classList.add('hidden'));
     shareRegBtn.classList.remove('hidden');
     editRegBtn.classList.remove('hidden');
     downloadRegBtn.classList.remove('hidden');
@@ -209,9 +183,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   editRegBtn.addEventListener('click', e => {
     e.preventDefault();
-    regSaved = false;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
-      .forEach(id=>$(id).classList.remove('hidden'));
+    regSaved=false;
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id=>$(id).classList.remove('hidden'));
     shareRegBtn.classList.add('hidden');
     editRegBtn.classList.add('hidden');
     downloadRegBtn.classList.add('hidden');
@@ -221,17 +194,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   shareRegBtn.addEventListener('click', e => {
     e.preventDefault();
-    const hdr = `School: ${schoolIn.value}\nClass: ${classSel.value}\nSection: ${secSel.value}`;
-    const lines = students.map(s=>
+    const hdr=`School: ${schoolIn.value}\nClass: ${classSel.value}\nSection: ${secSel.value}`;
+    const lines=students.map(s=>
       `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`
     ).join('\n---\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines)}`,'_blank');
   });
 
   downloadRegBtn.addEventListener('click', e => {
     e.preventDefault();
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc=new jsPDF();
     doc.setFontSize(16); doc.text('Student Registration',10,10);
     doc.setFontSize(12);
     doc.text(`Date: ${new Date().toLocaleDateString()}`,10,20);
@@ -247,8 +220,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   renderStudents();
-
-  // ─── 3. ATTENDANCE MARKING ─────────────────────────────────────────────────────
+ // ─── 3. ATTENDANCE MARKING ─────────────────────────────────────────────────────
   let attendanceData = await get('attendanceData') || {};
   const dateInput      = $('dateInput');
   const loadAttBtn     = $('loadAttendance');
