@@ -1,5 +1,4 @@
 /* style.css */
-
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -10,7 +9,7 @@
   --dark: #333;
 }
 
-/* Mobile tap highlight removal */
+/* Remove tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -31,68 +30,61 @@ header {
   margin-bottom: 10px;
 }
 
-section {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  padding: 15px;
-}
-
 .hidden {
   display: none !important;
 }
 
-/* Table responsiveness */
-.table-responsive {
-  overflow-x: auto;
-  margin-top: 10px;
+section {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
+/* Carousel inner section padding */
+.carousel-item section {
+  padding: 1rem 0;
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
 table {
   width: 100%;
   border-collapse: collapse;
 }
-
 th, td {
   border: 1px solid #ccc;
   padding: 8px;
   white-space: nowrap;
   text-align: left;
 }
-
 th {
   background: var(--light);
 }
 
-/* Attendance action buttons */
+/* Attendance actions */
 .attendance-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: .5rem;
   margin-bottom: 1rem;
 }
-
 .attendance-actions button {
   flex: 1;
-  padding: 0.5rem;
+  padding: .5rem;
   font-size: 1rem;
 }
 
-.attendance-item {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-/* Override legacy totals-bar if present */
+/* Overrides legacy totals-bar */
 header .totals-bar {
   display: none !important;
 }
 
 @media (max-width: 600px) {
-  input,
-  select,
-  button,
-  .attendance-actions {
+  input, select, button {
     flex: 1 1 100%;
+  }
+  .attendance-actions {
+    flex-wrap: wrap;
   }
 }
