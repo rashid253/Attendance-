@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +14,7 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Load idb-keyval as ES module, then expose it globally -->
+  <!-- expose idb-keyval globally -->
   <script type="module">
     import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
     window.idbKeyval = idbKeyvalModule;
@@ -22,9 +23,16 @@
 <body>
   <header><h1>Attendance Management</h1></header>
 
+  <!-- Class Switcher -->
+  <div class="row-inline">
+    <label for="classSwitcher">Select Class:</label>
+    <select id="classSwitcher"></select>
+    <button type="button" id="newSetup" class="small">New Class</button>
+  </div>
+
   <!-- 1. Setup -->
   <section id="teacher-setup">
-    <h2>Setup</h2>
+    <h2>Setup New Class</h2>
     <div id="setupForm" class="row-inline">
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
@@ -36,7 +44,7 @@
       <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
       </select>
-      <button type="button" id="saveSetup">Save</button>
+      <button type="button" id="saveSetup">Save Class</button>
     </div>
     <div id="setupDisplay" class="hidden">
       <h3 id="setupText"></h3>
@@ -172,12 +180,7 @@
           <tbody id="registerSummaryBody"></tbody>
         </table>
       </div>
-    </div>
-    <div class="table-actions">
-      <button type="button" id="shareRegister" class="save">Share Summary</button>
-      <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
-    </div>
-  </section>
+    </section>
 
   <!-- External Libraries + Main Script -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
