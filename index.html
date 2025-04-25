@@ -130,7 +130,7 @@
       <div class="card-header" data-bs-toggle="collapse" data-bs-target="#attCard">
         <h2><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
       </div>
-      <div id="attCard" class="collapse">
+      <div id="attCard" class="collapse show">
         <div class="card-body">
 
           <!-- Date picker with inline label -->
@@ -142,8 +142,9 @@
                 id="dateInput"
                 class="form-control"
                 placeholder="Select date"
+                style="overflow:hidden;"
               />
-              <button id="loadAttendance" class="btn btn-primary btn-sm">
+              <button type="button" id="loadAttendance" class="btn btn-primary btn-sm">
                 <i class="fas fa-hourglass-start me-1"></i>Load
               </button>
             </div>
@@ -154,6 +155,7 @@
 
           <!-- Save button: hidden by default -->
           <button
+            type="button"
             id="saveAttendance"
             class="btn btn-success btn-sm mt-3"
             style="display: none;"
@@ -200,14 +202,7 @@
               <option value="section">Section</option>
               <option value="student">Student</option>
             </select>
-
-            <input
-              type="text"
-              id="studentAdmInput"
-              class="form-control form-control-sm d-none"
-              placeholder="Adm#"
-            />
-
+            <input type="text" id="studentAdmInput" class="form-control form-control-sm d-none" placeholder="Adm#" />
             <select id="analyticsType" class="form-select form-select-sm">
               <option value="">-- Type --</option>
               <option value="date">Date</option>
@@ -215,38 +210,11 @@
               <option value="semester">Semester</option>
               <option value="year">Year</option>
             </select>
-
-            <input
-              type="date"
-              id="analyticsDate"
-              class="form-control form-control-sm d-none"
-              placeholder="Select date"
-            />
-            <input
-              type="month"
-              id="analyticsMonth"
-              class="form-control form-control-sm d-none"
-              placeholder="Select month"
-            />
-            <input
-              type="month"
-              id="semesterStart"
-              class="form-control form-control-sm d-none"
-              placeholder="Start month"
-            />
-            <input
-              type="month"
-              id="semesterEnd"
-              class="form-control form-control-sm d-none"
-              placeholder="End month"
-            />
-            <input
-              type="number"
-              id="yearStart"
-              class="form-control form-control-sm d-none"
-              placeholder="Year"
-            />
-
+            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" placeholder="Select date" />
+            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" placeholder="Select month" />
+            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start month" />
+            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End month" />
+            <input type="number" id="yearStart" class="form-control form-control-sm d-none" placeholder="Year" />
             <button id="loadAnalytics" class="btn btn-primary btn-sm">
               <i class="fas fa-chart-line me-1"></i>Load
             </button>
@@ -254,7 +222,6 @@
               <i class="fas fa-redo me-1"></i>Reset
             </button>
           </div>
-
           <div id="instructions" class="mb-2 text-truncate" style="overflow-x:auto;"></div>
           <div id="analyticsContainer" class="d-none"></div>
           <div id="graphs" class="d-flex gap-4 d-none overflow-auto">
@@ -280,29 +247,18 @@
       </div>
       <div id="registerCard" class="collapse">
         <div class="card-body">
-
           <div class="mb-3">
             <label for="registerMonth" class="form-label">Select month</label>
-            <input
-              type="month"
-              id="registerMonth"
-              class="form-control"
-              placeholder="Select month"
-            />
+            <input type="month" id="registerMonth" class="form-control" placeholder="Select month" />
           </div>
           <div class="d-flex gap-2 mb-3">
             <button id="loadRegister" class="btn btn-primary btn-sm">
               <i class="fas fa-eye me-1"></i>Load
             </button>
-            <button
-              id="changeRegister"
-              class="btn btn-secondary btn-sm"
-              style="display:none;"
-            >
+            <button id="changeRegister" class="btn btn-secondary btn-sm" style="display:none;">
               <i class="fas fa-edit me-1"></i>Change
             </button>
           </div>
-
           <div id="registerTableWrapper" class="table-responsive d-none">
             <table id="registerTable" class="table table-bordered">
               <thead><tr></tr></thead>
@@ -315,7 +271,6 @@
               <tbody id="registerSummaryBody"></tbody>
             </table>
           </div>
-
           <div class="d-flex gap-2 mt-2">
             <button id="shareRegister" class="btn btn-primary btn-sm">
               <i class="fas fa-share-alt me-1"></i>Share
@@ -324,7 +279,6 @@
               <i class="fas fa-file-pdf me-1"></i>PDF
             </button>
           </div>
-
         </div>
       </div>
     </div>
