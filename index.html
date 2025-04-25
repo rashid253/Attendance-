@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +11,8 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
+  <!-- your CSS -->
   <link rel="stylesheet" href="style.css" />
-  <!-- IndexedDB key-value wrapper (defines global `idbKeyval`) -->
-  <script src="https://unpkg.com/idb-keyval@6/dist/idb-keyval.iife.js"></script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
@@ -42,7 +40,7 @@
   </section>
 
   <!-- 2. Student Registration -->
-  <section id="student-registration">
+  <section id="student-registration" class="hidden">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name" required />
@@ -75,7 +73,7 @@
   </section>
 
   <!-- 3. Attendance Marking -->
-  <section id="attendance-section">
+  <section id="attendance-section" class="hidden">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
@@ -103,7 +101,7 @@
   </section>
 
   <!-- 5. Analytics -->
-  <section id="analytics-section">
+  <section id="analytics-section" class="hidden">
     <h2>Analytics</h2>
     <div class="row-inline">
       <label for="analyticsTarget">Report For:</label>
@@ -141,7 +139,7 @@
   </section>
 
   <!-- 6. Attendance Register -->
-  <section id="register-section">
+  <section id="register-section" class="hidden">
     <h2>Attendance Register</h2>
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
@@ -176,13 +174,19 @@
     </div>
   </section>
 
-  <!-- External Libraries + Main Script -->
+  <!-- load idb-keyval BEFORE any code that uses it -->
+  <script src="https://unpkg.com/idb-keyval@6/dist/idb-keyval.iife.js"></script>
+
+  <!-- your libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- then your app logic -->
   <script src="app.js"></script>
 
   <!-- Mobile‐friendly error console -->
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
 </body>
 </html>
