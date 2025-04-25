@@ -1,90 +1,19 @@
 /* style.css */
-:root {
-  --primary: #2196F3;
-  --success: #4CAF50;
-  --danger: #f44336;
-  --warning: #FFEB3B;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
-
-/* Remove tap highlight */
-* {
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
-}
-
-body {
-  font-family: 'Roboto', Arial, sans-serif;
-  color: var(--dark);
-  background: var(--light);
-  padding: 10px;
-}
-
-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 15px;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
 .hidden {
   display: none !important;
 }
 
-section {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+.form-control,
+.form-select,
+.btn {
+  min-height: 38px; /* match Bootstrap default */
 }
 
-/* Carousel inner section padding */
-.carousel-item section {
-  padding: 1rem 0;
+#studentTableWrapper {
+  max-height: 400px;
+  overflow-y: auto;
 }
 
-/* Tables */
-.table-responsive {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  white-space: nowrap;
-  text-align: left;
-}
-th {
-  background: var(--light);
-}
-
-/* Attendance actions */
-.attendance-actions {
-  display: flex;
-  gap: .5rem;
-  margin-bottom: 1rem;
-}
-.attendance-actions button {
-  flex: 1;
-  padding: .5rem;
-  font-size: 1rem;
-}
-
-/* Overrides legacy totals-bar */
-header .totals-bar {
-  display: none !important;
-}
-
-@media (max-width: 600px) {
-  input, select, button {
-    flex: 1 1 100%;
-  }
-  .attendance-actions {
-    flex-wrap: wrap;
-  }
+td.editing {
+  outline: 2px dashed #007bff;
 }
