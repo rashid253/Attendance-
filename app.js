@@ -15,12 +15,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const setupForm         = $('setupForm');
   const setupDisplay      = $('setupDisplay');
   const setupText         = $('setupText');
-
   const studentSection    = $('student-registration');
   const attendanceSection = $('attendance-section');
   const summarySection    = $('attendance-result');
   const analyticsSection  = $('analytics-section');
   const registerSection   = $('register-section');
+
+  // Canvas contexts will be initialized when needed
+  let barCtx, pieCtx;
 
   // ─── Helpers: load & save class list ─────────────────────────────────────────
   async function loadClasses() {
@@ -73,8 +75,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     currentKey = key;
     // initialize empty stores if first time
-    if (!await get(`students-${key}`))       await set(`students-${key}`, []);
-    if (!await get(`attendanceData-${key}`)) await set(`attendanceData-${key}`, {});
+    if (!(await get(`students-${key}`)))       await set(`students-${key}`, []);
+    if (!(await get(`attendanceData-${key}`))) await set(`attendanceData-${key}`, {});
     // update UI
     await loadClasses();
     classSelect.value = key;
@@ -110,15 +112,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupSection.classList.remove('hidden');
     // populate setup display
     const [sch, cls, sec] = currentKey.split('|');
-    $('schoolNameInput').value       = sch;
-    $('teacherClassSelect').value    = cls;
-    $('teacherSectionSelect').value  = sec;
-    setupText.textContent            = `${sch} 🏫 | ${cls}-${sec}`;
+    $('schoolNameInput').value      = sch;
+    $('teacherClassSelect').value   = cls;
+    $('teacherSectionSelect').value = sec;
+    setupText.textContent           = `${sch} 🏫 | ${cls}-${sec}`;
     setupForm.classList.add('hidden');
     setupDisplay.classList.remove('hidden');
     // load students & attendance
-    students = await get(`students-${currentKey}`) || [];
-    attendanceData = await get(`attendanceData-${currentKey}`) || {};
+    students = (await get(`students-${currentKey}`)) || [];
+    attendanceData = (await get(`attendanceData-${currentKey}`)) || {};
     renderStudents();
     showAfterSetup();
   }
@@ -178,12 +180,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   $('addStudent').onclick = async () => {
-    const name   = $('studentName').value.trim();
-    const adm    = $('admissionNo').value.trim();
-    const parent = $('parentName').value.trim();
-    const contact= $('parentContact').value.trim();
-    const occ    = $('parentOccupation').value.trim();
-    const addr   = $('parentAddress').value.trim();
+    const name    = $('studentName').value.trim();
+    const adm     = $('admissionNo').value.trim();
+    const parent  = $('parentName').value.trim();
+    const contact = $('parentContact').value.trim();
+    const occ     = $('parentOccupation').value.trim();
+    const addr    = $('parentAddress').value.trim();
     if (!name||!adm||!parent||!contact||!occ||!addr) return alert('All fields required');
     if (!/^\d+$/.test(adm)) return alert('Adm# must be numeric');
     if (students.some(s=>s.adm===adm)) return alert('Duplicate Adm#');
@@ -206,7 +208,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             td.classList.add('editing');
             td.onblur = async () => {
               const tr = td.closest('tr'), idx = +tr.querySelector('.sel').dataset.index;
-              const val = td.textContent.trim(), keys = ['name','adm','parent','contact','occupation','address'];
+              const val = td.textContent.trim();
+              const keys = ['name','adm','parent','contact','occupation','address'];
               if (ci===2 && (!/^\d+$/.test(val)||students.some((s,i)=>s.adm===val&&i!==idx))) {
                 alert('Invalid Adm#'); renderStudents(); return;
               }
@@ -261,7 +264,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   shareRegBtn.onclick = () => {
     const hdr = setupText.textContent;
     const lines = students.map(s=>
-      `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`
+      `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOcc: ${s.occupation}\nAddr: ${s.address}`
     ).join('\n---\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines)}`, '_blank');
   };
@@ -280,14 +283,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // ─── ATTENDANCE MARKING ───────────────────────────────────────────────────────
-  const dateInput          = $('dateInput');
-  const loadAttendanceBtn  = $('loadAttendance');
-  const attendanceList     = $('attendanceList');
-  const saveAttendanceBtn  = $('saveAttendance');
-  const resetAttendanceBtn = $('resetAttendance');
-  const shareAttendanceBtn = $('shareAttendanceSummary');
-  const downloadAttendanceBtn = $('downloadAttendancePDF');
-  const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
+  const dateInput            = $('dateInput');
+  const loadAttendanceBtn    = $('loadAttendance');
+  const attendanceList       = $('attendanceList');
+  const saveAttendanceBtn    = $('saveAttendance');
+  const resetAttendanceBtn   = $('resetAttendance');
+  const shareAttendanceBtn   = $('shareAttendanceSummary');
+  const downloadAttendanceBtn= $('downloadAttendancePDF');
+  const colors = { P:'#4CAF50',A:'#f44336',Lt:'#FFEB3B',HD:'#FF9800',L:'#03a9f4' };
 
   loadAttendanceBtn.onclick = () => {
     if (!dateInput.value) return alert('Pick a date');
@@ -346,7 +349,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     hdrRow.innerHTML = `<td colspan="3"><em>Date: ${date} | ${setupText.textContent}</em></td>`;
     tbody.appendChild(hdrRow);
     students.forEach(s => {
-      const code = attendanceData[date][s.roll] || 'A';
+      const code   = attendanceData[date][s.roll] || 'A';
       const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
@@ -361,7 +364,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   shareAttendanceBtn.onclick = () => {
     const date = dateInput.value;
     const hdr  = `Date: ${date} | ${setupText.textContent}`;
-    const lines = students.map(s =>
+    const lines= students.map(s =>
       `${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[attendanceData[date][s.roll]||'A'] }`
     );
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines.join('\n'))}`, '_blank');
@@ -402,14 +405,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const graphsEl             = $('graphs');
   const shareAnalyticsBtn    = $('shareAnalytics');
   const downloadAnalyticsBtn = $('downloadAnalytics');
-  const barCtx               = $('barChart').getContext('2d');
-  const pieCtx               = $('pieChart').getContext('2d');
-  let barChart, pieChart;
 
   function hideAllAnalytics() {
     [analyticsDate, analyticsMonth, semesterStartInput,
      semesterEndInput, yearStart, instructionsEl,
-     analyticsContainer, graphsEl, resetAnalyticsBtn].forEach(el => el.classList.add('hidden'));
+     analyticsContainer, graphsEl, resetAnalyticsBtn]
+    .forEach(el => el.classList.add('hidden'));
   }
 
   analyticsTarget.onchange = () => {
@@ -448,7 +449,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       from = `${analyticsMonth.value}-01`;
       to   = `${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
     } else if (analyticsType.value==='semester') {
-      if (!semesterStartInput.value||!semesterEndInput.value) return alert('Pick semester range');
+      if (!semesterStartInput.value||!semesterEndInput.value) return alert('Pick range');
       from = `${semesterStartInput.value}-01`;
       const [ey,em] = semesterEndInput.value.split('-').map(Number);
       to   = `${semesterEndInput.value}-${new Date(ey,em,0).getDate()}`;
@@ -456,56 +457,58 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!yearStart.value) return alert('Pick year');
       from = `${yearStart.value}-01-01`;
       to   = `${yearStart.value}-12-31`;
-    } else {
-      return alert('Select period');
-    }
+    } else return alert('Select period');
 
-    // build stats
-    const stats = (analyticsTarget.value==='student'
-      ? [students.find(s=>s.adm===studentAdmInput.value.trim())]
-      : students
-    ).map(s=>({ name:s.name, roll:s.roll, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
-
-    const fromDate = new Date(from), toDate = new Date(to);
+    // compute stats
+    const subset = analyticsTarget.value==='student'
+      ? students.filter(s=>s.adm===studentAdmInput.value.trim())
+      : students;
+    const stats = subset.map(s=>({ name:s.name, roll:s.roll, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
+    const fromD=new Date(from), toD=new Date(to);
     Object.entries(attendanceData).forEach(([d,recs])=>{
-      const cd = new Date(d);
-      if (cd>=fromDate && cd<=toDate) {
-        stats.forEach(st=>{
-          const code = recs[st.roll]||'A';
-          st[code]++; st.total++;
-        });
-      }
+      const cd=new Date(d);
+      if (cd>=fromD && cd<=toD) stats.forEach(st=>{
+        const code=recs[st.roll]||'A';
+        st[code]++; st.total++;
+      });
     });
 
     // render table
-    let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
+    let html='<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s=>{
-      const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
-      html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
+      const pct=s.total?((s.P/s.total)*100).toFixed(1):'0.0';
+      html+=`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
     });
-    html += '</tbody></table>';
-    analyticsContainer.innerHTML = html;
+    html+='</tbody></table>';
+    analyticsContainer.innerHTML=html;
     analyticsContainer.classList.remove('hidden');
 
-    // instructions
     instructionsEl.textContent = analyticsTarget.value==='student'
       ? `Admission#: ${studentAdmInput.value.trim()} | ${from} to ${to}`
       : `Report: ${from} to ${to}`;
     instructionsEl.classList.remove('hidden');
 
-    // bar chart
-    const labels = stats.map(s=>s.name);
-    const dataPct = stats.map(s=>s.total?(s.P/s.total)*100:0);
-    if (barChart) barChart.destroy();
-    barChart = new Chart(barCtx,{ type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }]}, options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 }}}});
+    // initialize canvas contexts here to avoid null
+    const barEl = $('barChart'), pieEl = $('pieChart');
+    if (barEl && pieEl) {
+      barCtx = barEl.getContext('2d');
+      pieCtx = pieEl.getContext('2d');
+    }
 
-    // pie chart
-    const agg = stats.reduce((a,s)=>{
-      ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);
-      return a;
-    },{P:0,A:0,Lt:0,HD:0,L:0});
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx,{ type:'pie', data:{ labels:['Present','Absent','Late','Half Day','Leave'], datasets:[{ data:Object.values(agg) }]}, options:{ responsive:true }});
+    // draw bar chart
+    const labels = stats.map(s=>s.name);
+    const dataPct = stats.map(s=> s.total?(s.P/s.total)*100:0 );
+    if (barCtx) {
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(barCtx,{ type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }]}, options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 }}}});
+    }
+
+    // draw pie chart
+    const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
+    if (pieCtx) {
+      if (window.pieChart) window.pieChart.destroy();
+      window.pieChart = new Chart(pieCtx,{ type:'pie', data:{ labels:['Present','Absent','Late','Half Day','Leave'], datasets:[{ data:Object.values(agg) }]}, options:{ responsive:true }});
+    }
 
     graphsEl.classList.remove('hidden');
   };
@@ -550,8 +553,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   function generateRegisterHeader(days) {
     const headerRow = document.querySelector('#registerTable thead tr');
     headerRow.innerHTML = `<th>Sr#</th><th>Adm#</th><th>Name</th>`;
-    for (let d = 1; d <= days; d++) {
-      const th = document.createElement('th'); th.textContent = d;
+    for (let d=1; d<=days; d++){
+      const th = document.createElement('th');
+      th.textContent = d;
       headerRow.appendChild(th);
     }
   }
@@ -564,10 +568,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     registerBody.innerHTML = '';
     registerSummaryBody.innerHTML = '';
 
-    students.forEach((s,i) => {
+    students.forEach((s,i)=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d=1; d<=daysInMonth; d++) {
+      for (let d=1; d<=daysInMonth; d++){
         const dateStr = `${registerMonthIn.value}-${String(d).padStart(2,'0')}`;
         const code = attendanceData[dateStr]?.[s.roll] || 'A';
         const td = document.createElement('td');
@@ -579,14 +583,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       registerBody.appendChild(tr);
     });
 
-    students.forEach(s => {
+    students.forEach(s=>{
       const st={P:0,A:0,Lt:0,HD:0,L:0,total:0};
       for (let d=1; d<=daysInMonth; d++){
         const dateStr = `${registerMonthIn.value}-${String(d).padStart(2,'0')}`;
         const code = attendanceData[dateStr]?.[s.roll] || 'A';
         st[code]++; st.total++;
       }
-      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
+      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${s.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${pct}</td>`;
       registerSummaryBody.appendChild(tr);
@@ -607,7 +611,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('shareRegister').onclick = () => {
     const hdr = `Register for ${registerMonthIn.value} | ${setupText.textContent}`;
-    const lines = Array.from(registerSummaryBody.querySelectorAll('tr')).map(r => {
+    const lines = Array.from(registerSummaryBody.querySelectorAll('tr')).map(r=>{
       const tds = r.querySelectorAll('td');
       return `${tds[0].textContent}: P:${tds[1].textContent}, A:${tds[2].textContent}, Lt:${tds[3].textContent}, HD:${tds[4].textContent}, L:${tds[5].textContent}, %:${tds[6].textContent}`;
     });
@@ -618,14 +622,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape');
     doc.setFontSize(16); doc.text('Monthly Attendance Register',10,10);
-    doc.setFontSize(12);
-    doc.text(`Month: ${registerMonthIn.value}`,10,20);
-    doc.text(setupText.textContent,10,30);
+    doc.setFontSize(12); doc.text(setupText.textContent,10,20);
     doc.autoTable({
       html: '#registerTable',
-      startY:40,
+      startY:30,
       styles:{ fontSize:6 },
-      columnStyles:{ 0:{cellWidth:10},1:{cellWidth:15},2:{cellWidth:30} }
+      columnStyles:{0:{cellWidth:10},1:{cellWidth:15},2:{cellWidth:30}}
     });
     doc.save('attendance_register.pdf');
   };
@@ -639,7 +641,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // ─── Initialization ─────────────────────────────────────────────────────────
   await loadClasses();
-  if (classes.length === 0) {
+  if (!classes.length) {
     classSelect.value = '__new';
     enterNewSetup();
   } else {
