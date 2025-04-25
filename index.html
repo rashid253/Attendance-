@@ -7,7 +7,7 @@
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
+  <meta name="theme-color" content="#00796b" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
@@ -20,22 +20,8 @@
     referrerpolicy="no-referrer"
   />
 
+  <!-- Main styles -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- attendance buttons tweak -->
-  <style>
-    .attendance-actions { display: flex; gap: 0.5rem; }
-    .attendance-actions button {
-      flex: 1;
-      padding: 0.75rem 0;
-      font-size: 0.9rem;
-      border-radius: 0.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-    }
-  </style>
 
   <!-- Load idb-keyval -->
   <script type="module">
@@ -47,9 +33,21 @@
   <header>
     <h1>Attendance Management</h1>
     <div class="totals-bar">
-      <span><i class="fas fa-school"></i> School: <strong id="totalSchoolCount">0</strong></span>
-      <span><i class="fas fa-chalkboard"></i> Class: <strong id="totalClassCount">0</strong></span>
-      <span><i class="fas fa-layer-group"></i> Section: <strong id="totalSectionCount">0</strong></span>
+      <div class="stat-card">
+        <i class="fas fa-school"></i>
+        <div class="count" id="totalSchoolCount">0</div>
+        <div class="label">Total School Students</div>
+      </div>
+      <div class="stat-card">
+        <i class="fas fa-chalkboard"></i>
+        <div class="count" id="totalClassCount">0</div>
+        <div class="label">Total Class Students</div>
+      </div>
+      <div class="stat-card">
+        <i class="fas fa-layer-group"></i>
+        <div class="count" id="totalSectionCount">0</div>
+        <div class="label">Total Section Students</div>
+      </div>
     </div>
   </header>
 
