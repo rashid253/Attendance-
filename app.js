@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnEditReg     = $('editRegistration');
   const btnDownloadReg = $('downloadRegistrationPDF');
 
-  // Attendance
+  // Attendance Marking
   const dateInput      = $('dateInput');
   const btnLoadAtt     = $('loadAttendance');
   const divAttList     = $('attendanceList');
@@ -257,8 +257,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnSaveReg.onclick = e => {
     e.preventDefault();
     registrationSaved = true;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id=>$(id).classList.add('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.remove('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
+      .forEach(id=>$(id).classList.add('hidden'));
+    ['shareRegistration','editRegistration','downloadRegistrationPDF']
+      .forEach(id=>$(id).classList.remove('hidden'));
     $('studentTableWrapper').classList.add('saved');
     renderStudents();
   };
@@ -266,8 +268,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnEditReg.onclick = e => {
     e.preventDefault();
     registrationSaved = false;
-    ['editSelected','deleteSelected','selectAllStudents','saveRegistration'].forEach(id=>$(id).classList.remove('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.add('hidden'));
+    ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
+      .forEach(id=>$(id).classList.remove('hidden'));
+    ['shareRegistration','editRegistration','downloadRegistrationPDF']
+      .forEach(id=>$(id).classList.add('hidden'));
     $('studentTableWrapper').classList.remove('saved');
     renderStudents();
   };
@@ -278,7 +282,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const lines = filteredStudents().map(s=>
       `Name: ${s.name}\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`
     ).join('\n---\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines)}`, '_blank`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines)}`, '_blank');
   };
 
   btnDownloadReg.onclick = e => {
@@ -308,15 +312,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!d) return alert('Pick a date');
     divAttList.innerHTML = '';
     filteredStudents().forEach(s=>{
-      const row = document.createElement('div'); row.className='attendance-item'; row.textContent=s.name;
-      const actions = document.createElement('div'); actions.className='attendance-actions';
+      const row = document.createElement('div');
+      row.className='attendance-item';
+      row.textContent=s.name;
+      const actions = document.createElement('div');
+      actions.className='attendance-actions';
       ['P','A','Lt','HD','L'].forEach(code=>{
         const b = document.createElement('button');
-        b.type='button'; b.textContent=code; b.dataset.code=code;
-        if(attendanceData[d]?.[s.roll]===code){ b.style.background=colors[code]; b.style.color='#fff'; }
+        b.type='button';
+        b.textContent=code;
+        b.dataset.code=code;
+        if (attendanceData[d]?.[s.roll]===code) {
+          b.style.background=colors[code];
+          b.style.color='#fff';
+        }
         b.onclick = e2 => {
           e2.preventDefault();
-          actions.querySelectorAll('button').forEach(x=>{ x.style.background=''; x.style.color='#333'; });
+          actions.querySelectorAll('button').forEach(x=>{
+            x.style.background=''; x.style.color='#333';
+          });
           b.style.background = colors[code];
           b.style.color = '#fff';
         };
@@ -354,7 +368,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           `Name: ${s.name}`,
           `Status: ${status}`
         ].join('\n');
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank`);
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
       };
       tbodySummary.appendChild(tr);
     });
@@ -378,7 +392,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const pres  = filteredStudents().reduce((a,s)=>a + (attendanceData[d][s.roll]==='P'?1:0), 0);
     const pct   = total?((pres/total)*100).toFixed(1):'0.0';
     const summary = `${hdr}\n\n${lines.join('\n')}\n\nOverall Attendance: ${pct}%`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank');
   };
 
   btnDownloadAtt.onclick = () => {
@@ -393,15 +407,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text(`Section: ${sectionSelect.value}`, 10, 38);
     doc.autoTable({
       head:[['Name','Status']],
-      body: filteredStudents().map(s=>{ const code = attendanceData[d][s.roll]||'A'; return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]]; }),
-      startY: 44
+      body: filteredStudents().map(s=>{
+        const code = attendanceData[d][s.roll]||'A';
+        return [s.name, {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];
+      }),
+      startY:44
     });
     doc.save('attendance_summary.pdf');
   };
 
   // --- ANALYTICS ---
   function hideAnalyticsInputs() {
-    ['studentAdmInput','analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart','instructions','analyticsContainer','graphs','analyticsActions']
+    ['studentAdmInput','analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart',
+     'instructions','analyticsContainer','graphs','analyticsActions']
       .forEach(id => $(id).classList.add('hidden'));
   }
 
@@ -446,7 +464,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       return alert('Select period');
     }
 
-    // collect stats
     let stats = filteredStudents().map(s => ({ name: s.name, roll: s.roll, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
     Object.entries(attendanceData).forEach(([d,recs]) => {
       const cd = new Date(d), fD = new Date(from), tD = new Date(to);
@@ -458,7 +475,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // build table
     let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s => {
       const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
@@ -468,13 +484,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     divAnalyticsTable.innerHTML = html;
     divAnalyticsTable.classList.remove('hidden');
 
-    // instructions
     divInstructions.textContent = selectAnalyticsTarget.value==='student'
       ? `Adm#: ${admAnalyticsInput.value.trim()} | Report: ${from} to ${to}`
       : `Report: ${from} to ${to}`;
     divInstructions.classList.remove('hidden');
 
-    // bar chart
     const labels = stats.map(s=>s.name), dataPct = stats.map(s=>s.total?(s.P/s.total)*100:0);
     if (chartBar) chartBar.destroy();
     chartBar = new Chart(ctxBar, {
@@ -483,7 +497,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
     });
 
-    // pie chart
     const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; }, {P:0,A:0,Lt:0,HD:0,L:0});
     if (chartPie) chartPie.destroy();
     chartPie = new Chart(ctxPie, {
@@ -498,14 +511,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnShareAnalytics.onclick = e => {
     e.preventDefault();
-    const hdrParts = divInstructions.textContent.split('|');
-    const period = hdrParts.pop().trim();
+    const parts = divInstructions.textContent.split('|');
+    const period = parts.pop().trim();
     const header = `Period: ${period}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
     const rows = [...divAnalyticsTable.querySelectorAll('tbody tr')].map(r=>{
       const td = [...r.querySelectorAll('td')].map(c=>c.textContent);
       return `${td[0]} P:${td[1]} A:${td[2]} Lt:${td[3]} HD:${td[4]} L:${td[5]} Total:${td[6]} %:${td[7]}`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+rows.join('\n'))}`, '_blank`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+rows.join('\n'))}`, '_blank');
   };
 
   btnDownloadAnalytics.onclick = e => {
@@ -531,7 +544,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- ATTENDANCE REGISTER ---
-  function generateRegisterHeader(days) {
+  function generateRegisterHeader(days) {  
     headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>';
     for (let d = 1; d <= days; d++) {
       const th = document.createElement('th');
@@ -542,23 +555,20 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnLoadReg.onclick = e => {
     e.preventDefault();
-    if (!monthInput.value) {
-      return alert('Select month');
-    }
-    const [y, m] = monthInput.value.split('-').map(Number);
-    const days   = new Date(y, m, 0).getDate();
+    if (!monthInput.value) return alert('Select month');
+    const [y,m] = monthInput.value.split('-').map(Number);
+    const days  = new Date(y,m,0).getDate();
 
     generateRegisterHeader(days);
     tbodyReg.innerHTML    = '';
     tbodyRegSum.innerHTML = '';
 
-    // Daily register rows
-    filteredStudents().forEach((s, i) => {
+    filteredStudents().forEach((s,i)=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d = 1; d <= days; d++) {
-        const dateStr = `${monthInput.value}-${String(d).padStart(2, '0')}`;
-        const code    = (attendanceData[dateStr] || {})[s.roll] || 'A';
+      for (let d=1; d<=days; d++){
+        const dateStr = `${monthInput.value}-${String(d).padStart(2,'0')}`;
+        const code    = (attendanceData[dateStr]||{})[s.roll]||'A';
         const td      = document.createElement('td');
         td.textContent   = code;
         td.style.background = colors[code];
@@ -568,20 +578,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       tbodyReg.appendChild(tr);
     });
 
-    // Summary rows
-    filteredStudents().forEach(s => {
+    filteredStudents().forEach(s=>{
       const stat = { P:0, A:0, Lt:0, HD:0, L:0, total:0 };
-      for (let d = 1; d <= days; d++) {
-        const dateStr = `${monthInput.value}-${String(d).padStart(2, '0')}`;
-        const code    = (attendanceData[dateStr] || {})[s.roll] || 'A';
+      for (let d=1; d<=days; d++){
+        const dateStr = `${monthInput.value}-${String(d).padStart(2,'0')}`;
+        const code    = (attendanceData[dateStr]||{})[s.roll]||'A';
         stat[code]++; stat.total++;
       }
-      const pct = stat.total ? ((stat.P / stat.total) * 100).toFixed(1) : '0.0';
+      const pct = stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
       const tr  = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td>
-        <td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>
-      `;
+      tr.innerHTML = `<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
       tbodyRegSum.appendChild(tr);
     });
 
@@ -603,10 +609,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const hdr   = `Register for ${monthInput.value}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
     const lines = [...tbodyRegSum.querySelectorAll('tr')].map(r => {
-      const [name, p, a, lt, hd, l, pct] = [...r.querySelectorAll('td')].map(td => td.textContent);
+      const [name,p,a,lt,hd,l,pct] = [...r.querySelectorAll('td')].map(td=>td.textContent);
       return `${name}: P:${p}, A:${a}, Lt:${lt}, HD:${hd}, L:${l}, %:${pct}`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n\n' + lines.join('\n'))}`, '_blank`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n\n'+lines.join('\n'))}`, '_blank');
   };
 
   btnDownloadReg2.onclick = e => {
