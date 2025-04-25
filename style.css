@@ -1,90 +1,42 @@
 /* style.css */
 
-/* 1. Light background on all collapsible cards and hover effect */
-.card {
-  background-color: #f9f9f9;
-  transition: background-color 0.2s ease;
-}
-.card:hover {
-  background-color: #ffffff;
-}
+/* 1. Light background on all cards */
+.card { background-color: #f9f9f9; transition: background-color 0.2s ease; }
+.card:hover { background-color: #ffffff; }
+.card-body { background-color: #fcfcfc; }
 
-/* Ensure the inner card-body has matching light background */
-.card-body {
-  background-color: #fcfcfc;
-}
+/* Setup edit alignment */
+#setupDisplay { display: flex; align-items: center; gap: .5rem; }
 
-/* 2. “Add Student” button: include text and icon spacing */
-#addStudent {
-  display: inline-flex;
-  align-items: center;
-}
-#addStudent i {
-  margin-left: 0.4em;
-}
+/* 2. Add Student button styling */
+#addStudent { display: inline-flex; align-items: center; }
+#addStudent i { margin-left: 0.4em; }
 
-/* 3. Reveal edit/share/download buttons when table is saved */
-/* The JS adds class "saved" to #studentTableWrapper */
-#studentTableWrapper.saved + .d-flex .btn.d-none {
-  display: inline-block !important;
-}
+/* 3. Reg# small column */
+.small-col { width: 4ch; }
 
-/* 4. Disable simulated placeholder on date inputs */
-input[type="date"]::before {
-  content: none !important;
-}
+/* 4. Attendance buttons layout */
+.attendance-item { margin-bottom: 1rem; }
+.attendance-item .att-name { font-weight: 500; }
+.att-buttons button { width: 3rem; }
+.btn.active { border-color: #000; }
 
-/* 5. Attendance buttons full-width on narrow/mobile screens */
-.attendance-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  gap: 0.3rem;
-  margin-bottom: 1rem;
-}
-.attendance-actions button {
-  width: 100%;
-  padding: 0.5rem 0;
-  white-space: nowrap;
-}
+/* 5. Color codes in register table */
+.register-table td.P { background: #4CAF50; color: #fff; }
+.register-table td.A { background: #f44336; color: #fff; }
+.register-table td.Lt { background: #FFEB3B; }
+.register-table td.HD { background: #FF9800; }
+.register-table td.L { background: #03a9f4; color: #fff; }
 
-/* 6. Analytics controls wrap and smaller font */
-#analyticsActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-#analyticsActions .form-select,
-#analyticsActions input,
-#analyticsActions button {
-  font-size: 0.85rem;
-}
+/* 6. Hidden utility */
+.hidden, .d-none { display: none !important; }
 
-/* 7. Hidden utility */
-.hidden,
-.d-none {
-  display: none !important;
-}
-
-/* Highlight editable cells when inline editing */
-td.editing {
-  outline: 2px dashed #007bff;
-}
-
-/* Style the “saved” table wrapper border */
-#studentTableWrapper.saved {
-  border: 2px solid #28a745;
-  border-radius: 4px;
-}
-
-/* Ensure collapse headers show pointer */
-.card-header {
-  cursor: pointer;
-}
+/* 7. Actions icons */
+.action-btn { background: none; border: none; cursor: pointer; }
+.action-btn .fa-share-alt { color: #0d6efd; }
+.action-btn .fa-trash-alt { color: #dc3545; margin-left: .5rem; }
 
 /* Responsive tweaks */
 @media (max-width: 576px) {
-  #analyticsActions .form-select,
-  #analyticsActions input {
-    flex: 1 1 100%;
-  }
+  #analyticsControls .form-select, #analyticsControls input { flex: 1 1 100%; }
 }
