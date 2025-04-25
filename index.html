@@ -94,17 +94,18 @@
                 <tr>
                   <th><input type="checkbox" id="selectAllStudents" /></th>
                   <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-                  <th>Contact</th><th>Occ.</th><th>Address</th><th>Share</th>
+                  <th>Contact</th><th>Occ.</th><th>Address</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="studentsBody"></tbody>
             </table>
           </div>
           <div class="d-flex gap-2">
-            <button id="editSelected" class="btn btn-warning btn-sm" disabled>Edit</button>
-            <button id="deleteSelected" class="btn btn-danger btn-sm" disabled>Delete</button>
+            <button id="editSelected" class="btn btn-warning btn-sm" disabled>Edit Selected</button>
+            <button id="deleteSelected" class="btn btn-danger btn-sm" disabled>Delete Selected</button>
             <button id="saveRegistration" class="btn btn-success btn-sm">Save</button>
-            <button id="shareRegistration" class="btn btn-primary btn-sm d-none">Share</button>
+            <button id="shareRegistration" class="btn btn-primary btn-sm d-none">Share All</button>
+            <button id="downloadRegistrationPDF" class="btn btn-danger btn-sm d-none">Download PDF</button>
           </div>
         </div>
       </div>
@@ -119,11 +120,11 @@
         <div class="card-body">
           <div class="mb-3">
             <label for="dateInput" class="form-label">Select date</label>
-            <input type="date" id="dateInput" class="form-control" placeholder="Select date" />
-            <button type="button" id="loadAttendance" class="btn btn-primary btn-sm mt-2">Load</button>
+            <input type="date" id="dateInput" class="form-control" />
+            <button id="loadAttendance" class="btn btn-primary btn-sm mt-2">Load</button>
           </div>
           <div id="attendanceList" class="d-grid gap-2"></div>
-          <button type="button" id="saveAttendance" class="btn btn-success btn-sm mt-3 d-none">Save</button>
+          <button id="saveAttendance" class="btn btn-success btn-sm mt-3 d-none">Save</button>
         </div>
       </div>
     </div>
@@ -132,11 +133,11 @@
     <div id="attendance-result" class="card mb-3 d-none">
       <div class="card-header"><h2>Attendance Summary</h2></div>
       <div class="card-body">
-        <table class="table"><tbody id="summaryBody"></tbody></table>
+        <table class="table mb-3"><tbody id="summaryBody"></tbody></table>
         <div class="d-flex gap-2">
           <button id="resetAttendance" class="btn btn-secondary btn-sm">Reset</button>
           <button id="shareAttendanceSummary" class="btn btn-primary btn-sm">Share</button>
-          <button id="downloadAttendancePDF" class="btn btn-danger btn-sm">PDF</button>
+          <button id="downloadAttendancePDF" class="btn btn-danger btn-sm">Download PDF</button>
         </div>
       </div>
     </div>
@@ -163,23 +164,23 @@
               <option value="semester">Semester</option>
               <option value="year">Year</option>
             </select>
-            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" placeholder="Select date" />
-            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" placeholder="Select month" />
-            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start month" />
-            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End month" />
+            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" />
+            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" />
+            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start" />
+            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End" />
             <input type="number" id="yearStart" class="form-control form-control-sm d-none" placeholder="Year" />
             <button id="loadAnalytics" class="btn btn-primary btn-sm">Load</button>
             <button id="resetAnalytics" class="btn btn-secondary btn-sm d-none">Reset</button>
           </div>
-          <div id="instructions" class="mb-2 text-truncate d-none" style="overflow-x:auto;"></div>
+          <div id="instructions" class="mb-2 d-none" style="overflow-x:auto;"></div>
           <div id="analyticsContainer" class="d-none"></div>
           <div id="graphs" class="d-flex gap-4 d-none overflow-auto">
             <canvas id="barChart" width="400" height="200"></canvas>
             <canvas id="pieChart" width="400" height="200"></canvas>
           </div>
-          <div id="analyticsActions2" class="mt-2 d-none">
+          <div class="mt-2 d-none" id="analyticsActions2">
             <button id="shareAnalytics" class="btn btn-primary btn-sm">Share</button>
-            <button id="downloadAnalytics" class="btn btn-danger btn-sm">PDF</button>
+            <button id="downloadAnalytics" class="btn btn-danger btn-sm">Download PDF</button>
           </div>
         </div>
       </div>
@@ -194,7 +195,7 @@
         <div class="card-body">
           <div class="mb-3">
             <label for="registerMonth" class="form-label">Select month</label>
-            <input type="month" id="registerMonth" class="form-control" placeholder="Select month" />
+            <input type="month" id="registerMonth" class="form-control" />
           </div>
           <div class="d-flex gap-2 mb-3">
             <button id="loadRegister" class="btn btn-primary btn-sm">Load</button>
@@ -212,7 +213,7 @@
           </div>
           <div class="d-flex gap-2 mt-2">
             <button id="shareRegister" class="btn btn-primary btn-sm">Share</button>
-            <button id="downloadRegisterPDF" class="btn btn-danger btn-sm">PDF</button>
+            <button id="downloadRegisterPDF" class="btn btn-danger btn-sm">Download PDF</button>
           </div>
         </div>
       </div>
