@@ -1,90 +1,37 @@
 /* style.css */
+/* 1. Light background & hover */
+.card { background-color: #f9f9f9; transition: background-color .2s; }
+.card:hover { background-color: #fff; }
+.card-body { background-color: #fcfcfc; }
 
-/* 1. Light background on all collapsible cards and hover effect */
-.card {
-  background-color: #f9f9f9;
-  transition: background-color 0.2s ease;
-}
-.card:hover {
-  background-color: #ffffff;
-}
+/* 2. Add student icon spacing */
+#addStudent { display: inline-flex; align-items: center; }
+#addStudent i { margin-left: .4em; }
 
-/* Ensure the inner card-body has matching light background */
-.card-body {
-  background-color: #fcfcfc;
-}
+/* 3. Disable date-placeholder simulation */
+input[type="date"]::before { content: none !important; }
 
-/* 2. “Add Student” button: include text and icon spacing */
-#addStudent {
-  display: inline-flex;
-  align-items: center;
-}
-#addStudent i {
-  margin-left: 0.4em;
-}
+/* 4. Attendance button grid */
+.attendance-actions { display: grid; grid-template-columns: repeat(auto-fit,minmax(3rem,1fr)); gap:.3rem; margin-bottom:1rem; }
+.attendance-actions button { width:100%; padding:.5rem 0; }
 
-/* 3. Reveal edit/share/download buttons when table is saved */
-/* The JS adds class "saved" to #studentTableWrapper */
-#studentTableWrapper.saved + .d-flex .btn.d-none {
-  display: inline-block !important;
-}
+/* 5. Analytics wrap & small font */
+#analyticsActions { display:flex; flex-wrap:wrap; gap:.5rem; }
+#analyticsActions .form-select,#analyticsActions input,#analyticsActions button { font-size:.85rem; }
 
-/* 4. Disable simulated placeholder on date inputs */
-input[type="date"]::before {
-  content: none !important;
-}
+/* 6. Hide utilities */
+.d-none { display:none!important; }
 
-/* 5. Attendance buttons full-width on narrow/mobile screens */
-.attendance-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  gap: 0.3rem;
-  margin-bottom: 1rem;
-}
-.attendance-actions button {
-  width: 100%;
-  padding: 0.5rem 0;
-  white-space: nowrap;
-}
+/* 7. Chart layout */
+#graphs { display:flex; flex-direction:column; gap:1rem; align-items:center; }
 
-/* 6. Analytics controls wrap and smaller font */
-#analyticsActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-#analyticsActions .form-select,
-#analyticsActions input,
-#analyticsActions button {
-  font-size: 0.85rem;
-}
+/* 8. Saved table border */
+#studentTableWrapper.saved { border:2px solid #28a745; border-radius:4px; }
 
-/* 7. Hidden utility */
-.hidden,
-.d-none {
-  display: none !important;
-}
+/* 9. Collapse pointer */
+.card-header { cursor:pointer; }
 
-/* Highlight editable cells when inline editing */
-td.editing {
-  outline: 2px dashed #007bff;
-}
-
-/* Style the “saved” table wrapper border */
-#studentTableWrapper.saved {
-  border: 2px solid #28a745;
-  border-radius: 4px;
-}
-
-/* Ensure collapse headers show pointer */
-.card-header {
-  cursor: pointer;
-}
-
-/* Responsive tweaks */
-@media (max-width: 576px) {
-  #analyticsActions .form-select,
-  #analyticsActions input {
-    flex: 1 1 100%;
-  }
+/* 10. Responsive */
+@media(max-width:576px) {
+  #analyticsActions .form-select, #analyticsActions input { flex:1 1 100%; }
 }
