@@ -1,6 +1,23 @@
 // app.js
-
 window.addEventListener('DOMContentLoaded', async () => {
+  // --- DEBUG: check for missing DOM elements ---
+  const expectIds = [
+    'schoolNameInput','teacherClassSelect','teacherSectionSelect','saveSetup','editSetup',
+    'studentName','admissionNo','parentName','parentContact','parentOccupation','parentAddress',
+    'addStudent','studentsBody','selectAllStudents','editSelected','deleteSelected','saveRegistration',
+    'shareRegistration','editRegistration','downloadRegistrationPDF',
+    'dateInput','loadAttendance','attendanceList','saveAttendance','attendance-result','summaryBody',
+    'resetAttendance','shareAttendanceSummary','downloadAttendancePDF',
+    'analyticsTarget','studentAdmInput','analyticsType','analyticsDate','analyticsMonth',
+    'semesterStart','semesterEnd','yearStart','loadAnalytics','resetAnalytics','instructions',
+    'analyticsContainer','graphs','barChart','pieChart','shareAnalytics','downloadAnalytics',
+    'registerMonth','loadRegister','changeRegister','registerTableWrapper','registerTable',
+    'registerBody','registerSummarySection','registerSummaryBody','shareRegister','downloadRegisterPDF'
+  ];
+  expectIds.forEach(id => {
+    if (!document.getElementById(id)) console.error(`Missing element with id="${id}"`);
+  });
+
   // --- STORAGE & HELPERS ---
   const { get, set } = idbKeyval;
   const $ = id => document.getElementById(id);
@@ -25,91 +42,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     const { cls, sec } = getCurrentClassSection();
     return students.filter(s => s.cls === cls && s.sec === sec);
   }
-
   function updateTotals() {
-    const totalSchool = students.length;
-    const { cls, sec } = getCurrentClassSection();
-    const totalClass   = students.filter(s => s.cls === cls).length;
-    const totalSection = filteredStudents().length;
-    $('totalSchoolCount').textContent  = totalSchool;
-    $('totalClassCount').textContent   = totalClass;
-    $('totalSectionCount').textContent = totalSection;
+    $('totalSchoolCount').textContent  = students.length;
+    const { cls } = getCurrentClassSection();
+    $('totalClassCount').textContent   = students.filter(s => s.cls === cls).length;
+    $('totalSectionCount').textContent = filteredStudents().length;
   }
 
-  // --- DOM ELEMENTS ---
-  // Setup
-  const schoolInput    = $('schoolNameInput');
-  const classSelect    = $('teacherClassSelect');
-  const sectionSelect  = $('teacherSectionSelect');
-  const btnSaveSetup   = $('saveSetup');
-  const setupForm      = $('setupForm');
-  const setupDisplay   = $('setupDisplay');
-  const setupText      = $('setupText');
-  const btnEditSetup   = $('editSetup');
-
-  // Registration
-  const nameInput      = $('studentName');
-  const admInput       = $('admissionNo');
-  const parentInput    = $('parentName');
-  const contactInput   = $('parentContact');
-  const occInput       = $('parentOccupation');
-  const addrInput      = $('parentAddress');
-  const btnAddStudent  = $('addStudent');
-  const tbodyStudents  = $('studentsBody');
-  const chkAllStudents = $('selectAllStudents');
-  const btnEditSel     = $('editSelected');
-  const btnDeleteSel   = $('deleteSelected');
-  const btnSaveReg     = $('saveRegistration');
-  const btnShareReg    = $('shareRegistration');
-  const btnEditReg     = $('editRegistration');
-  const btnDownloadReg = $('downloadRegistrationPDF');
-
-  // Attendance Marking
-  const dateInput      = $('dateInput');
-  const btnLoadAtt     = $('loadAttendance');
-  const divAttList     = $('attendanceList');
-  const btnSaveAtt     = $('saveAttendance');
-  const sectionResult  = $('attendance-result');
-  const tbodySummary   = $('summaryBody');
-  const btnResetAtt    = $('resetAttendance');
-  const btnShareAtt    = $('shareAttendanceSummary');
-  const btnDownloadAtt = $('downloadAttendancePDF');
-
-  // Analytics
-  const selectAnalyticsTarget = $('analyticsTarget');
-  const admAnalyticsInput     = $('studentAdmInput');
-  const selectAnalyticsType   = $('analyticsType');
-  const inputAnalyticsDate    = $('analyticsDate');
-  const inputAnalyticsMonth   = $('analyticsMonth');
-  const inputSemesterStart    = $('semesterStart');
-  const inputSemesterEnd      = $('semesterEnd');
-  const inputAnalyticsYear    = $('yearStart');
-  const btnLoadAnalytics      = $('loadAnalytics');
-  const btnResetAnalytics     = $('resetAnalytics');
-  const divInstructions       = $('instructions');
-  const divAnalyticsTable     = $('analyticsContainer');
-  const divGraphs             = $('graphs');
-  const btnShareAnalytics     = $('shareAnalytics');
-  const btnDownloadAnalytics  = $('downloadAnalytics');
-  const ctxBar                = $('barChart').getContext('2d');
-  const ctxPie                = $('pieChart').getContext('2d');
-  let chartBar, chartPie;
-
-  // Attendance Register
-  const monthInput       = $('registerMonth');
-  const btnLoadReg       = $('loadRegister');
-  const btnChangeReg     = $('changeRegister');
-  const divRegTable      = $('registerTableWrapper');
-  const tbodyReg         = $('registerBody');
-  const divRegSummary    = $('registerSummarySection');
-  const tbodyRegSum      = $('registerSummaryBody');
-  const btnShareReg2     = $('shareRegister');
-  const btnDownloadReg2  = $('downloadRegisterPDF');
-  const headerRegRowEl   = document.querySelector('#registerTable thead tr');
-
-  const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
-
   // --- SETUP LOGIC ---
+  const schoolInput    = $('schoolNameInput'),
+        classSelect    = $('teacherClassSelect'),
+        sectionSelect  = $('teacherSectionSelect'),
+        btnSaveSetup   = $('saveSetup'),
+        setupForm      = $('setupForm'),
+        setupDisplay   = $('setupDisplay'),
+        setupText      = $('setupText'),
+        btnEditSetup   = $('editSetup');
+
   async function loadSetup() {
     const school = await get('schoolName'),
           cls    = await get('teacherClass'),
@@ -143,6 +92,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadSetup();
 
   // --- STUDENT REGISTRATION LOGIC ---
+  const nameInput      = $('studentName'),
+        admInput       = $('admissionNo'),
+        parentInput    = $('parentName'),
+        contactInput   = $('parentContact'),
+        occInput       = $('parentOccupation'),
+        addrInput      = $('parentAddress'),
+        btnAddStudent  = $('addStudent'),
+        tbodyStudents  = $('studentsBody'),
+        chkAllStudents = $('selectAllStudents'),
+        btnEditSel     = $('editSelected'),
+        btnDeleteSel   = $('deleteSelected'),
+        btnSaveReg     = $('saveRegistration'),
+        btnShareReg    = $('shareRegistration'),
+        btnEditReg     = $('editRegistration'),
+        btnDownloadReg = $('downloadRegistrationPDF');
+
   let registrationSaved = false, inlineEditing = false;
 
   function bindRowSelection() {
@@ -326,33 +291,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderStudents();
 
   // --- ATTENDANCE MARKING ---
+  const dateInputEl   = $('dateInput'),
+        btnLoadAtt    = $('loadAttendance'),
+        divAttList    = $('attendanceList'),
+        btnSaveAtt    = $('saveAttendance'),
+        sectionResult = $('attendance-result'),
+        tbodySummary  = $('summaryBody'),
+        btnResetAtt   = $('resetAttendance'),
+        btnShareAtt   = $('shareAttendanceSummary'),
+        btnDownloadAtt= $('downloadAttendancePDF');
+  const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
+
   btnLoadAtt.onclick = e => {
     e.preventDefault();
-    const d = dateInput.value;
+    const d = dateInputEl.value;
     if (!d) return alert('Pick a date');
     divAttList.innerHTML = '';
     filteredStudents().forEach(s=>{
-      const row = document.createElement('div');
-      row.className='attendance-item';
-      row.textContent=s.name;
-      const actions = document.createElement('div');
-      actions.className='attendance-actions';
+      const row = document.createElement('div'); row.className='attendance-item'; row.textContent=s.name;
+      const actions = document.createElement('div'); actions.className='attendance-actions';
       ['P','A','Lt','HD','L'].forEach(code=>{
-        const b = document.createElement('button');
-        b.type='button';
-        b.textContent=code;
-        b.dataset.code=code;
-        if (attendanceData[d]?.[s.roll]===code) {
-          b.style.background=colors[code];
-          b.style.color='#fff';
-        }
+        const b = document.createElement('button'); b.type='button'; b.textContent=code; b.dataset.code=code;
+        if (attendanceData[d]?.[s.roll]===code) { b.style.background=colors[code]; b.style.color='#fff'; }
         b.onclick = e2 => {
           e2.preventDefault();
-          actions.querySelectorAll('button').forEach(x=>{
-            x.style.background=''; x.style.color='#333';
-          });
-          b.style.background = colors[code];
-          b.style.color = '#fff';
+          actions.querySelectorAll('button').forEach(x=>{ x.style.background=''; x.style.color='#333'; });
+          b.style.background = colors[code]; b.style.color = '#fff';
         };
         actions.appendChild(b);
       });
@@ -363,16 +327,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnSaveAtt.onclick = async e => {
     e.preventDefault();
-    const d = dateInput.value;
+    const d = dateInputEl.value;
     attendanceData[d] = {};
     document.querySelectorAll('.attendance-actions').forEach((actions,i)=>{
       const sel = actions.querySelector('button[style*="background"]');
       attendanceData[d][filteredStudents()[i].roll] = sel?.dataset.code || 'A';
     });
     await saveAttendanceData();
-    $('attendance-section').classList.add('hidden');
     sectionResult.classList.remove('hidden');
-    tbodySummary.innerHTML = `<tr><td colspan="3"><em>Date: ${d}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}</em></td></tr>`;
+    tbodySummary.innerHTML = `<tr><td colspan="3"><em>Date: ${d}<br>School: ${schoolInput.value}<br>Class: ${classSelect.value}<br>Section: ${sectionSelect.value}</em></td></tr>`;
     filteredStudents().forEach(s=>{
       const code = attendanceData[d][s.roll] || 'A';
       const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
@@ -396,15 +359,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnResetAtt.onclick = () => {
     sectionResult.classList.add('hidden');
-    $('attendance-section').classList.remove('hidden');
+    $('attendance-section')?.classList.remove('hidden');
     divAttList.innerHTML = '';
     btnSaveAtt.classList.add('hidden');
   };
-
   btnShareAtt.onclick = () => {
-    const d = dateInput.value;
+    const d = dateInputEl.value;
     const hdr = `Date: ${d}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
-    const lines = filteredStudents().map(s=>{
+    const lines = filteredStudents().map(s => {
       const code = attendanceData[d][s.roll] || 'A';
       return `${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code] }`;
     });
@@ -414,9 +376,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const summary = `${hdr}\n\n${lines.join('\n')}\n\nOverall Attendance: ${pct}%`;
     window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank');
   };
-
   btnDownloadAtt.onclick = () => {
-    const d = dateInput.value;
+    const d = dateInputEl.value;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(16); doc.text('Daily Attendance Report', 10, 10);
@@ -436,10 +397,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_summary.pdf');
   };
 
-  // --- ANALYTICS ---
+  // --- ANALYTICS LOGIC ---
+  const selectAnalyticsTarget = $('analyticsTarget'),
+        admAnalyticsInput    = $('studentAdmInput'),
+        selectAnalyticsType  = $('analyticsType'),
+        inputAnalyticsDate   = $('analyticsDate'),
+        inputAnalyticsMonth  = $('analyticsMonth'),
+        inputSemesterStart   = $('semesterStart'),
+        inputSemesterEnd     = $('semesterEnd'),
+        inputAnalyticsYear   = $('yearStart'),
+        btnLoadAnalytics     = $('loadAnalytics'),
+        btnResetAnalytics    = $('resetAnalytics'),
+        divInstructions      = $('instructions'),
+        divAnalyticsTable    = $('analyticsContainer'),
+        divGraphs            = $('graphs'),
+        ctxBar               = $('barChart').getContext('2d'),
+        ctxPie               = $('pieChart').getContext('2d'),
+        btnShareAnalytics    = $('shareAnalytics'),
+        btnDownloadAnalytics = $('downloadAnalytics');
+  let chartBar, chartPie;
+
   function hideAnalyticsInputs() {
     ['studentAdmInput','analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart',
-     'instructions','analyticsContainer','graphs','analyticsActions']
+     'instructions','analyticsContainer','graphs','analyticsActions2']
       .forEach(id => $(id).classList.add('hidden'));
   }
 
@@ -458,7 +438,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnResetAnalytics.classList.remove('hidden');
   };
 
-  btnResetAnalytics.onclick = e => { e.preventDefault(); hideAnalyticsInputs(); selectAnalyticsType.value = ''; };
+  btnResetAnalytics.onclick = e => {
+    e.preventDefault();
+    hideAnalyticsInputs();
+    selectAnalyticsType.value = '';
+  };
 
   btnLoadAnalytics.onclick = e => {
     e.preventDefault();
@@ -495,7 +479,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    let html = '<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
+    let html = '<table class="table"><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th></tr></thead><tbody>';
     stats.forEach(s => {
       const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
       html += `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total}</td><td>${pct}</td></tr>`;
@@ -526,7 +510,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     divGraphs.classList.remove('hidden');
-    $('analyticsActions').classList.remove('hidden');
+    $('analyticsActions2').classList.remove('hidden');
   };
 
   btnShareAnalytics.onclick = e => {
@@ -535,7 +519,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const period = parts.pop().trim();
     const header = `Period: ${period}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
     const rows   = [...divAnalyticsTable.querySelectorAll('tbody tr')].map(r=>{
-      const td = [...r.querySelectorAll('td')].map(c=>c.textContent); return `${td[0]} P:${td[1]} A:${td[2]} Lt:${td[3]} HD:${td[4]} L:${td[5]} Total:${td[6]} %:${td[7]}`; });
+      const td = [...r.querySelectorAll('td')].map(c=>c.textContent);
+      return `${td[0]} P:${td[1]} A:${td[2]} Lt:${td[3]} HD:${td[4]} L:${td[5]} Total:${td[6]} %:${td[7]}`;
+    });
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+rows.join('\n'))}`, '_blank');
   };
 
@@ -561,7 +547,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_analytics.pdf');
   };
 
-  // --- ATTENDANCE REGISTER ---
+  // --- ATTENDANCE REGISTER LOGIC ---
+  const monthInput       = $('registerMonth'),
+        btnLoadReg       = $('loadRegister'),
+        btnChangeReg     = $('changeRegister'),
+        divRegTable      = $('registerTableWrapper'),
+        tbodyReg         = $('registerBody'),
+        divRegSummary    = $('registerSummarySection'),
+        tbodyRegSum      = $('registerSummaryBody'),
+        btnShareReg2     = $('shareRegister'),
+        btnDownloadReg2  = $('downloadRegisterPDF'),
+        headerRegRowEl   = document.querySelector('#registerTable thead tr');
+
   function generateRegisterHeader(days) {
     headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>';
     for (let d = 1; d <= days; d++) {
@@ -658,4 +655,4 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-});
+});```
