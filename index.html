@@ -24,7 +24,7 @@
     window.idbKeyval = idbKeyvalModule;
   </script>
 </head>
-<body class="bg-light text-dark" style="font-family:'Roboto',sans-serif;">
+<body class="bg-light text-dark" style="font-family: 'Roboto', sans-serif;">
 
   <!-- Header -->
   <header class="bg-primary text-white text-center py-4">
@@ -38,12 +38,44 @@
 
   <main class="container my-4">
 
+    <!-- Setup -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard">
+        <h2><i class="fas fa-cog me-2"></i>Setup</h2>
+      </div>
+      <div id="setupCard" class="collapse show">
+        <div class="card-body">
+          <div id="setupForm" class="d-flex flex-wrap gap-2 mb-3">
+            <input id="schoolNameInput" class="form-control" placeholder="School Name" />
+            <select id="teacherClassSelect" class="form-select">
+              <option value="">--Class--</option>
+              <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
+              <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+              <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+            </select>
+            <select id="teacherSectionSelect" class="form-select">
+              <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+            </select>
+            <button id="saveSetup" class="btn btn-success btn-sm">
+              <i class="fas fa-save me-1"></i>Save
+            </button>
+          </div>
+          <div id="setupDisplay" class="d-none">
+            <h4 id="setupText"></h4>
+            <button id="editSetup" class="btn btn-info btn-sm">
+              <i class="fas fa-edit me-1"></i>Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Student Registration -->
     <div class="card mb-3">
       <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard">
         <h2><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
       </div>
-      <div id="regCard" class="collapse show">
+      <div id="regCard" class="collapse">
         <div class="card-body">
           <div id="regForm" class="d-flex flex-wrap gap-2 mb-3">
             <input id="studentName" class="form-control" placeholder="Name" />
@@ -52,14 +84,17 @@
             <input id="parentContact" class="form-control" placeholder="Contact" />
             <input id="parentOccupation" class="form-control" placeholder="Occupation" />
             <input id="parentAddress" class="form-control" placeholder="Address" />
-            <button id="addStudent" class="btn btn-primary btn-sm"><i class="fas fa-plus-circle me-1"></i>Add</button>
+            <button id="addStudent" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus-circle me-1"></i>Add
+            </button>
           </div>
           <div id="studentTableWrapper" class="table-responsive mb-3">
             <table id="studentTable" class="table table-striped">
               <thead>
                 <tr>
                   <th><input type="checkbox" id="selectAllStudents" /></th>
-                  <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occ.</th><th>Address</th><th>Share</th>
+                  <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+                  <th>Contact</th><th>Occ.</th><th>Address</th><th>Share</th>
                 </tr>
               </thead>
               <tbody id="studentsBody"></tbody>
@@ -70,8 +105,6 @@
             <button id="deleteSelected" class="btn btn-danger btn-sm" disabled>Delete</button>
             <button id="saveRegistration" class="btn btn-success btn-sm">Save</button>
             <button id="shareRegistration" class="btn btn-primary btn-sm d-none">Share</button>
-            <button id="downloadRegistrationPDF" class="btn btn-danger btn-sm d-none">PDF</button>
-            <button id="editRegistration" class="btn btn-info btn-sm d-none">Edit</button>
           </div>
         </div>
       </div>
@@ -84,15 +117,13 @@
       </div>
       <div id="attCard" class="collapse show">
         <div class="card-body">
-          <label for="dateInput" class="form-label">Select date</label>
-          <input type="date" id="dateInput" class="form-control mb-2" />
-          <button type="button" id="loadAttendance" class="btn btn-primary btn-sm mb-3">Load</button>
-
-          <div id="attendanceList" class="d-grid gap-2 mb-3"></div>
-
-          <button type="button" id="saveAttendance" class="btn btn-success btn-sm mb-3 d-none">Save</button>
-          <button type="button" id="shareAttendance" class="btn btn-primary btn-sm d-none">Share</button>
-          <button type="button" id="downloadAttendancePDF" class="btn btn-danger btn-sm d-none">PDF</button>
+          <div class="mb-3">
+            <label for="dateInput" class="form-label">Select date</label>
+            <input type="date" id="dateInput" class="form-control" placeholder="Select date" />
+            <button type="button" id="loadAttendance" class="btn btn-primary btn-sm mt-2">Load</button>
+          </div>
+          <div id="attendanceList" class="d-grid gap-2"></div>
+          <button type="button" id="saveAttendance" class="btn btn-success btn-sm mt-3 d-none">Save</button>
         </div>
       </div>
     </div>
@@ -105,7 +136,7 @@
         <div class="d-flex gap-2">
           <button id="resetAttendance" class="btn btn-secondary btn-sm">Reset</button>
           <button id="shareAttendanceSummary" class="btn btn-primary btn-sm">Share</button>
-          <button id="downloadAttendanceSummaryPDF" class="btn btn-danger btn-sm">PDF</button>
+          <button id="downloadAttendancePDF" class="btn btn-danger btn-sm">PDF</button>
         </div>
       </div>
     </div>
@@ -118,26 +149,37 @@
       <div id="analyticsCard" class="collapse">
         <div class="card-body">
           <div id="analyticsActions" class="d-flex flex-wrap gap-2 mb-3">
-            <select id="analyticsTarget" class="form-select form-select-sm"><option value="">-- Target --</option><option value="class">Class</option><option value="section">Section</option><option value="student">Student</option></select>
-            <input type="text" id="studentAdmInput" class="form-control form-control-sm d-none" placeholder="Adm#">
-            <select id="analyticsType" class="form-select form-select-sm"><option value="">-- Type --</option><option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option></select>
-            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" placeholder="Select date">
-            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" placeholder="Select month">
-            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start month">
-            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End month">
-            <input type="number" id="yearStart" class="form-control form-control-sm d-none" placeholder="Year">
+            <select id="analyticsTarget" class="form-select form-select-sm">
+              <option value="">-- Target --</option>
+              <option value="class">Class</option>
+              <option value="section">Section</option>
+              <option value="student">Student</option>
+            </select>
+            <input type="text" id="studentAdmInput" class="form-control form-control-sm d-none" placeholder="Adm#" />
+            <select id="analyticsType" class="form-select form-select-sm">
+              <option value="">-- Type --</option>
+              <option value="date">Date</option>
+              <option value="month">Month</option>
+              <option value="semester">Semester</option>
+              <option value="year">Year</option>
+            </select>
+            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" placeholder="Select date" />
+            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" placeholder="Select month" />
+            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start month" />
+            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End month" />
+            <input type="number" id="yearStart" class="form-control form-control-sm d-none" placeholder="Year" />
             <button id="loadAnalytics" class="btn btn-primary btn-sm">Load</button>
             <button id="resetAnalytics" class="btn btn-secondary btn-sm d-none">Reset</button>
           </div>
-          <div id="instructions" class="mb-2 d-none" style="white-space:nowrap; overflow-x:auto;"></div>
+          <div id="instructions" class="mb-2 text-truncate d-none" style="overflow-x:auto;"></div>
           <div id="analyticsContainer" class="d-none"></div>
-          <div id="graphs" class="d-none">
+          <div id="graphs" class="d-flex gap-4 d-none overflow-auto">
             <canvas id="barChart" width="400" height="200"></canvas>
             <canvas id="pieChart" width="400" height="200"></canvas>
           </div>
           <div id="analyticsActions2" class="mt-2 d-none">
             <button id="shareAnalytics" class="btn btn-primary btn-sm">Share</button>
-            <button id="downloadAnalyticsPDF" class="btn btn-danger btn-sm">PDF</button>
+            <button id="downloadAnalytics" class="btn btn-danger btn-sm">PDF</button>
           </div>
         </div>
       </div>
@@ -150,10 +192,14 @@
       </div>
       <div id="registerCard" class="collapse">
         <div class="card-body">
-          <label for="registerMonth" class="form-label">Select month</label>
-          <input type="month" id="registerMonth" class="form-control mb-2">
-          <button id="loadRegister" class="btn btn-primary btn-sm mb-3">Load</button>
-          <button id="changeRegister" class="btn btn-secondary btn-sm mb-3 d-none">Change</button>
+          <div class="mb-3">
+            <label for="registerMonth" class="form-label">Select month</label>
+            <input type="month" id="registerMonth" class="form-control" placeholder="Select month" />
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button id="loadRegister" class="btn btn-primary btn-sm">Load</button>
+            <button id="changeRegister" class="btn btn-secondary btn-sm d-none">Change</button>
+          </div>
           <div id="registerTableWrapper" class="table-responsive d-none">
             <table id="registerTable" class="table table-bordered">
               <thead><tr></tr></thead>
@@ -179,5 +225,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="app.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 </body>
 </html>
