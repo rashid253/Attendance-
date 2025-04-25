@@ -13,6 +13,25 @@
 
   <link rel="stylesheet" href="style.css" />
 
+  <!-- small inline tweaks for attendance buttons -->
+  <style>
+    .attendance-actions { display: flex; gap: 0.25em; }
+    .attendance-actions button {
+      flex: 1;
+      padding: 0.5em;
+      font-size: 1rem;
+      min-width: 0;
+    }
+    .totals-bar {
+      display: flex;
+      gap: 1.5em;
+      font-weight: bold;
+      padding: 0.5em 0;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 1em;
+    }
+  </style>
+
   <!-- Load idb-keyval as ES module, then expose it globally -->
   <script type="module">
     import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
@@ -20,7 +39,14 @@
   </script>
 </head>
 <body>
-  <header><h1>Attendance Management</h1></header>
+  <header>
+    <h1>Attendance Management</h1>
+    <div class="totals-bar">
+      <span>Total School Students: <span id="totalSchoolCount">0</span></span>
+      <span>Total Class Students: <span id="totalClassCount">0</span></span>
+      <span>Total Section Students: <span id="totalSectionCount">0</span></span>
+    </div>
+  </header>
 
   <!-- 1. Setup -->
   <section id="teacher-setup">
@@ -61,6 +87,7 @@
         <thead>
           <tr>
             <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
+            <th>Sr#</th>
             <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
