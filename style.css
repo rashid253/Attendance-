@@ -49,7 +49,6 @@ header h1 {
   font-size: 2.5rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: var(--color-text);
 }
 .totals-bar {
   display: flex;
@@ -60,6 +59,9 @@ header h1 {
 }
 .totals-bar span {
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Sections as cards */
@@ -74,7 +76,6 @@ section h2 {
   font-size: 1.75rem;
   font-weight: 500;
   margin-bottom: 1rem;
-  color: var(--color-text);
 }
 
 /* Utility classes */
@@ -92,9 +93,9 @@ section h2 {
   font-size: 0.875rem;
   padding: 0.5rem 1rem;
   border-radius: var(--border-radius);
-  border: 1px solid var(--color-primary);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
@@ -177,7 +178,7 @@ th.select-col, td.select-col {
 .attendance-actions button {
   flex: 1;
   padding: 0.75rem 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   border-radius: var(--border-radius);
   background: var(--color-surface);
   border: 1px solid #ddd;
