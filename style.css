@@ -1,219 +1,150 @@
 /* style.css */
 
-/* Import Poppins for a clean, modern look */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-:root {
-  --font-base: 'Poppins', sans-serif;
-  --color-bg: #e0f7fa;
-  --color-surface: #ffffff;
-  --color-primary: #00796b;
-  --color-primary-light: #48a999;
-  --color-secondary: #ff8a65;
-  --color-accent: #ffd54f;
-  --color-text: #263238;
-  --color-text-light: #546e7a;
-  --border-radius: 1rem;
-  --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.05);
-  --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.2);
-  --card-tilt: perspective(500px) rotateX(2deg);
-}
-
-/* Reset & Base */
+/* Reset & base */
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 body {
-  font-family: var(--font-base);
-  background: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.6;
-  padding: 2rem;
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  background: #f9f9f9;
+  color: #333;
+  padding: 1rem;
 }
 
-/* Wide inputs for touch friendliness */
-.wide-input {
-  flex: 1;
-  min-width: 150px;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: var(--border-radius);
-  background: #fff;
-  font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+/* Header & totals bar */
+header {
+  margin-bottom: 1rem;
 }
-.wide-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.2);
-}
-
-/* Stat Cards Row */
-.totals-bar {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-.stat-card {
-  flex: 1;
-  background: var(--color-surface);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-heavy);
-  padding: 1.5rem;
-  text-align: center;
-  transform: var(--card-tilt);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-.stat-card:hover {
-  transform: perspective(500px) rotateX(0deg) scale(1.02);
-  box-shadow: var(--shadow-heavy), 0 12px 24px rgba(0, 0, 0, 0.15);
-}
-.stat-card i {
-  font-size: 2rem;
-  color: var(--color-primary);
+header h1 {
+  font-size: 1.75rem;
   margin-bottom: 0.5rem;
 }
-.stat-card .count {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0.25rem 0;
-}
-.stat-card .label {
-  font-size: 1rem;
-  color: var(--color-text-light);
+.totals-bar {
+  display: flex;
+  gap: 1.5em;
+  font-weight: bold;
+  padding: 0.5em 0;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 1em;
 }
 
 /* Sections */
 section {
-  background: var(--color-surface);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-light);
-  padding: 2rem;
-  margin-bottom: 2rem;
+  background: #fff;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 section h2 {
-  font-size: 1.75rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
-/* Row Inline Utility */
+/* Utility */
+.hidden {
+  display: none !important;
+}
 .row-inline {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-/* Buttons */
-.save, .small {
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-light);
-  transition: transform 0.1s, box-shadow 0.2s;
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
-}
-.save {
-  background: linear-gradient(145deg, var(--color-primary-light), var(--color-primary));
-  color: #fff;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-}
-.save:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-heavy);
-}
-.small {
-  background: var(--color-surface);
-  color: var(--color-primary);
-  border: 2px solid var(--color-primary-light);
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-}
-.small:hover {
-  background: var(--color-primary);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-/* Attendance Buttons */
-.attendance-actions {
-  display: flex;
-  gap: 0.5rem;
+  align-items: center;
   margin-bottom: 1rem;
 }
-.attendance-actions button {
-  flex: 1;
-  padding: 0.75rem 0;
-  font-size: 0.9rem;
-  border-radius: var(--border-radius);
-  background: var(--color-surface);
-  border: 1px solid #ddd;
-  box-shadow: var(--shadow-light);
-  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+.small {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #888;
+  background: #eee;
+  cursor: pointer;
 }
-.attendance-actions button:hover {
-  background: var(--color-primary);
+.save {
+  background: #4CAF50;
   color: #fff;
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+.save:hover {
+  opacity: 0.9;
 }
 
 /* Tables */
 .table-wrapper {
   overflow-x: auto;
-  margin-bottom: 1.5rem;
-  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
 }
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-light);
+  border-collapse: collapse;
+  background: #fff;
 }
 th, td {
-  padding: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
   text-align: left;
 }
-th {
-  background: var(--color-bg);
-  color: var(--color-text-light);
-  font-weight: 500;
+th.select-col {
+  width: 2rem;
 }
-tbody tr:nth-child(even) td {
-  background: #fafbfc;
-}
-th.select-col, td.select-col {
-  width: 3rem;
-  text-align: center;
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-/* Table Actions */
-.table-actions {
+/* Attendance buttons */
+.attendance-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.attendance-actions button {
+  flex: 1;
+  padding: 0.5em;
+  font-size: 1rem;
+  min-width: 0;
+  border: 1px solid #ccc;
+  background: #fafafa;
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+.attendance-actions button:hover {
+  background: #eee;
+}
+
+/* Analytics & graphs */
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+.summary-block {
+  background: #eef;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 0.25rem;
+}
+.graph-container {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-/* Hidden Utility */
-.hidden {
-  display: none !important;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .totals-bar {
+    flex-direction: column;
+    gap: 0.5em;
+  }
   .row-inline {
     flex-direction: column;
     align-items: stretch;
-  }
-  .totals-bar {
-    flex-direction: column;
   }
 }
