@@ -13,25 +13,15 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <script type="module">
-    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
-    window.idbKeyval = idbKeyvalModule;
-  </script>
+  <!-- IndexedDB key-value wrapper -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6.0.3/dist/idb-keyval-iife.min.js"></script>
 </head>
 <body>
   <header><h1>Attendance Management</h1></header>
 
-  <!-- Class selector -->
-  <div class="row-inline">
-    <label for="classSelect">Class:</label>
-    <select id="classSelect">
-      <option value="__new">+ New Class</option>
-    </select>
-  </div>
-
   <!-- 1. Setup -->
-  <section id="teacher-setup" class="hidden">
-    <h2>Setup New Class</h2>
+  <section id="teacher-setup">
+    <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
@@ -43,7 +33,7 @@
       <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
       </select>
-      <button type="button" id="saveSetup" class="save">Save Class</button>
+      <button type="button" id="saveSetup">Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
       <h3 id="setupText"></h3>
@@ -52,7 +42,7 @@
   </section>
 
   <!-- 2. Student Registration -->
-  <section id="student-registration" class="hidden">
+  <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
       <input id="studentName" placeholder="Name" required />
@@ -85,7 +75,7 @@
   </section>
 
   <!-- 3. Attendance Marking -->
-  <section id="attendance-section" class="hidden">
+  <section id="attendance-section">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
@@ -113,21 +103,86 @@
   </section>
 
   <!-- 5. Analytics -->
-  <section id="analytics-section" class="hidden">
+  <section id="analytics-section">
     <h2>Analytics</h2>
-    <!-- ... same as before ... -->
+    <div class="row-inline">
+      <label for="analyticsTarget">Report For:</label>
+      <select id="analyticsTarget">
+        <option value="class">Full Class</option>
+        <option value="student">Individual Student</option>
+      </select>
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType">
+        <option value="" disabled selected>--Select Period--</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <button type="button" id="loadAnalytics">Load Analytics</button>
+      <button type="button" id="resetAnalytics" class="small hidden">Change</button>
+    </div>
+    <div id="instructions" class="summary-block hidden"></div>
+    <div id="analyticsContainer" class="table-container hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
+    </div>
   </section>
 
   <!-- 6. Attendance Register -->
-  <section id="register-section" class="hidden">
+  <section id="register-section">
     <h2>Attendance Register</h2>
-    <!-- ... same as before ... -->
+    <div class="row-inline">
+      <label for="registerMonth">Select Month:</label>
+      <input type="month" id="registerMonth" />
+      <button type="button" id="loadRegister" class="save">Load Register</button>
+      <button type="button" id="changeRegister" class="small hidden">Change Period</button>
+    </div>
+    <div class="table-wrapper hidden" id="registerTableWrapper">
+      <table id="registerTable">
+        <thead>
+          <tr>
+            <th>Sr#</th><th>Adm#</th><th>Name</th>
+          </tr>
+        </thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div id="registerSummarySection" class="hidden">
+      <h3>Summary</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
+          </thead>
+          <tbody id="registerSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-actions">
+      <button type="button" id="shareRegister" class="save">Share Summary</button>
+      <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
+    </div>
   </section>
 
+  <!-- External Libraries + Main Script -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script src="app.js"></script>
+
+  <!-- Mobile‐friendly error console -->
   <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 </body>
 </html>
