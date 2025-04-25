@@ -1,105 +1,232 @@
-/* style.css */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Management</title>
 
-/* 1. Light background on all collapsible cards and hover effect */
-.card {
-  background-color: #f9f9f9;
-  transition: background-color 0.2s ease;
-}
-.card:hover {
-  background-color: #ffffff;
-}
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet" />
 
-/* Ensure the inner card-body has matching light background */
-.card-body {
-  background-color: #fcfcfc;
-}
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
-/* 2. “Add Student” button: include text and icon spacing */
-#addStudent {
-  display: inline-flex;
-  align-items: center;
-}
-#addStudent i {
-  margin-left: 0.4em;
-}
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-/* 3. Reveal edit/share/download buttons when table is saved */
-/* The JS adds class "saved" to #studentTableWrapper */
-#studentTableWrapper.saved + .d-flex .btn.d-none {
-  display: inline-block !important;
-}
+  <!-- Custom CSS -->
+  <link href="style.css" rel="stylesheet" />
 
-/* 4. Date input “Select date” placeholder simulation */
-/* HTML must include placeholder="Select date" on the <input type="date"> */
-input[type="date"] {
-  position: relative;
-}
-input[type="date"]::before {
-  content: attr(placeholder);
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  pointer-events: none;
-}
-input[type="date"]:focus::before,
-input[type="date"]:not(:placeholder-shown)::before {
-  content: "";
-}
+  <!-- idb-keyval -->
+  <script type="module">
+    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
+    window.idbKeyval = idbKeyvalModule;
+  </script>
+</head>
+<body class="bg-light text-dark" style="font-family: 'Roboto', sans-serif;">
 
-/* 5. Attendance buttons full-width on narrow/mobile screens */
-.attendance-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  gap: 0.3rem;
-  margin-bottom: 1rem;
-}
-.attendance-actions button {
-  width: 100%;
-  padding: 0.5rem 0;
-  white-space: nowrap;
-}
+  <!-- Header -->
+  <header class="bg-primary text-white text-center py-4">
+    <h1><i class="fas fa-school me-2"></i>Attendance Management</h1>
+    <div class="d-flex justify-content-center gap-4 mt-3">
+      <div><i class="fas fa-users"></i> <strong id="totalSchoolCount">0</strong> Students</div>
+      <div><i class="fas fa-chalkboard-teacher"></i> <strong id="totalClassCount">0</strong> Class</div>
+      <div><i class="fas fa-layer-group"></i> <strong id="totalSectionCount">0</strong> Section</div>
+    </div>
+  </header>
 
-/* 6. Analytics controls wrap and smaller font */
-#analyticsActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-#analyticsActions .form-select,
-#analyticsActions input,
-#analyticsActions button {
-  font-size: 0.85rem;
-}
+  <main class="container my-4">
 
-/* Utility classes */
-.hidden,
-.d-none {
-  display: none !important;
-}
+    <!-- Setup -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard" style="cursor:pointer;">
+        <h2><i class="fas fa-cog me-2"></i>Setup</h2>
+      </div>
+      <div id="setupCard" class="collapse show">
+        <div class="card-body">
+          <div id="setupForm" class="d-flex flex-wrap gap-2 mb-3">
+            <input id="schoolNameInput" class="form-control" placeholder="School Name" />
+            <select id="teacherClassSelect" class="form-select">
+              <option value="">--Class--</option>
+              <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
+              <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+              <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+            </select>
+            <select id="teacherSectionSelect" class="form-select">
+              <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+            </select>
+            <button id="saveSetup" class="btn btn-success">
+              <i class="fas fa-save me-1"></i>Save
+            </button>
+          </div>
+          <div id="setupDisplay" class="d-none">
+            <h4 id="setupText"></h4>
+            <button id="editSetup" class="btn btn-info btn-sm">
+              <i class="fas fa-edit me-1"></i>Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-/* Highlight editable cells when inline editing */
-td.editing {
-  outline: 2px dashed #007bff;
-}
+    <!-- Student Registration -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard" style="cursor:pointer;">
+        <h2><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
+      </div>
+      <div id="regCard" class="collapse">
+        <div class="card-body">
+          <div id="regForm" class="d-flex flex-wrap gap-2 mb-3">
+            <input id="studentName" class="form-control" placeholder="Name" />
+            <input id="admissionNo" class="form-control" placeholder="Adm#" />
+            <input id="parentName" class="form-control" placeholder="Parent Name" />
+            <input id="parentContact" class="form-control" placeholder="Contact" />
+            <input id="parentOccupation" class="form-control" placeholder="Occupation" />
+            <input id="parentAddress" class="form-control" placeholder="Address" />
+            <button id="addStudent" class="btn btn-primary">
+              Add <i class="fas fa-plus-circle"></i>
+            </button>
+          </div>
 
-/* Style the “saved” table wrapper border */
-#studentTableWrapper.saved {
-  border: 2px solid #28a745;
-  border-radius: 4px;
-}
+          <div id="studentTableWrapper" class="table-responsive mb-3">
+            <table id="studentTable" class="table table-striped">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllStudents" /></th>
+                  <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+                  <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody"></tbody>
+            </table>
+          </div>
 
-/* Ensure collapse headers show pointer */
-.card-header {
-  cursor: pointer;
-}
+          <div class="d-flex gap-2">
+            <button id="editSelected" class="btn btn-warning" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+            <button id="deleteSelected" class="btn btn-danger" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+            <button id="saveRegistration" class="btn btn-success"><i class="fas fa-save"></i> Save Table</button>
+            <button id="shareRegistration" class="btn btn-primary d-none"><i class="fas fa-share-alt"></i> Share Table</button>
+            <button id="editRegistration" class="btn btn-info d-none"><i class="fas fa-edit"></i> Edit Table</button>
+            <button id="downloadRegistrationPDF" class="btn btn-danger d-none"><i class="fas fa-file-pdf"></i> PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-/* Responsive tweaks */
-@media (max-width: 576px) {
-  /* Shrink analytics dropdowns on xs */
-  #analyticsActions .form-select,
-  #analyticsActions input {
-    flex: 1 1 100%;
-  }
-}
+    <!-- Mark Attendance -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#attCard" style="cursor:pointer;">
+        <h2><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
+      </div>
+      <div id="attCard" class="collapse">
+        <div class="card-body">
+          <div class="d-flex gap-2 mb-3">
+            <input type="date" id="dateInput" class="form-control" placeholder="Select date" />
+            <button id="loadAttendance" class="btn btn-primary"><i class="fas fa-hourglass-start me-1"></i>Load</button>
+          </div>
+          <div id="attendanceList" class="mb-3 attendance-actions"></div>
+          <button id="saveAttendance" class="btn btn-success hidden"><i class="fas fa-save me-1"></i>Save Attendance</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Summary -->
+    <div id="attendance-result" class="card mb-3 hidden">
+      <div class="card-header"><h2>Attendance Summary</h2></div>
+      <div class="card-body">
+        <table class="table">
+          <tbody id="summaryBody"></tbody>
+        </table>
+        <button id="resetAttendance" class="btn btn-secondary"><i class="fas fa-redo me-1"></i>Reset</button>
+        <button id="shareAttendanceSummary" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share Summary</button>
+        <button id="downloadAttendancePDF" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#analyticsCard" style="cursor:pointer;">
+        <h2><i class="fas fa-chart-bar me-2"></i>Analytics</h2>
+      </div>
+      <div id="analyticsCard" class="collapse">
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2 mb-3" id="analyticsActions">
+            <select id="analyticsTarget" class="form-select">
+              <option value="">-- Target --</option>
+              <option value="class">Class</option>
+              <option value="section">Section</option>
+              <option value="student">Student</option>
+            </select>
+            <input type="text" id="studentAdmInput" class="form-control hidden" placeholder="Admission No" />
+            <select id="analyticsType" class="form-select">
+              <option value="">-- Type --</option>
+              <option value="date">Date</option>
+              <option value="month">Month</option>
+              <option value="semester">Semester</option>
+              <option value="year">Year</option>
+            </select>
+            <input type="date" id="analyticsDate" class="form-control hidden" />
+            <input type="month" id="analyticsMonth" class="form-control hidden" />
+            <input type="month" id="semesterStart" class="form-control hidden" />
+            <input type="month" id="semesterEnd" class="form-control hidden" />
+            <input type="number" id="yearStart" class="form-control hidden" placeholder="Year" />
+            <button id="loadAnalytics" class="btn btn-primary"><i class="fas fa-chart-line me-1"></i>Load</button>
+            <button id="resetAnalytics" class="btn btn-secondary"><i class="fas fa-redo me-1"></i>Reset</button>
+          </div>
+          <div id="instructions" class="mb-2"></div>
+          <div id="analyticsContainer" class="hidden"></div>
+          <div id="graphs" class="d-flex gap-4 hidden">
+            <canvas id="barChart" width="400" height="200"></canvas>
+            <canvas id="pieChart" width="400" height="200"></canvas>
+          </div>
+          <div class="mt-2 hidden" id="analyticsActions2">
+            <button id="shareAnalytics" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadAnalytics" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Register -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#registerCard" style="cursor:pointer;">
+        <h2><i class="fas fa-calendar-alt me-2"></i>Attendance Register</h2>
+      </div>
+      <div id="registerCard" class="collapse">
+        <div class="card-body">
+          <div class="d-flex gap-2 mb-3">
+            <input type="month" id="registerMonth" class="form-control" />
+            <button id="loadRegister" class="btn btn-primary"><i class="fas fa-eye me-1"></i>Load</button>
+            <button id="changeRegister" class="btn btn-secondary hidden"><i class="fas fa-edit me-1"></i>Change</button>
+          </div>
+          <div id="registerTableWrapper" class="table-responsive hidden">
+            <table id="registerTable" class="table table-bordered">
+              <thead><tr></tr></thead>
+              <tbody id="registerBody"></tbody>
+            </table>
+          </div>
+          <div id="registerSummarySection" class="hidden">
+            <h5>Summary</h5>
+            <table class="table">
+              <tbody id="registerSummaryBody"></tbody>
+            </table>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button id="shareRegister" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadRegisterPDF" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="app.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+</body>
+</html>
