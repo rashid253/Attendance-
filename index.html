@@ -48,7 +48,6 @@
       </div>
       <div id="setupCard" class="collapse show">
         <div class="card-body">
-          <!-- existing setupForm and setupDisplay -->
           <div id="setupForm" class="d-flex flex-wrap gap-2 align-items-center mb-3">
             <input id="schoolNameInput" class="form-control" placeholder="School Name">
             <select id="teacherClassSelect" class="form-select">
@@ -83,15 +82,34 @@
       </div>
       <div id="regCard" class="collapse">
         <div class="card-body">
-          <!-- existing registration markup -->
           <div id="regForm" class="d-flex flex-wrap gap-2 align-items-center mb-3">
-            <!-- inputs & add button -->
+            <input id="studentName" class="form-control" placeholder="Name">
+            <input id="admissionNo" class="form-control" placeholder="Adm#">
+            <input id="parentName" class="form-control" placeholder="Parent Name">
+            <input id="parentContact" class="form-control" placeholder="Parent Contact">
+            <input id="parentOccupation" class="form-control" placeholder="Occupation">
+            <input id="parentAddress" class="form-control" placeholder="Address">
+            <button id="addStudent" class="btn btn-primary">
+              <i class="fas fa-plus-circle me-1"></i>Add
+            </button>
           </div>
           <div id="studentTableWrapper" class="table-responsive mb-3">
-            <!-- table -->
+            <table id="studentTable" class="table table-striped">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllStudents"></th>
+                  <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody"></tbody>
+            </table>
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <!-- action buttons -->
+            <button id="editSelected" class="btn btn-warning" disabled><i class="fas fa-edit me-1"></i>Edit Selected</button>
+            <button id="deleteSelected" class="btn btn-danger" disabled><i class="fas fa-trash-alt me-1"></i>Delete Selected</button>
+            <button id="saveRegistration" class="btn btn-success"><i class="fas fa-save me-1"></i>Save Table</button>
+            <button id="shareRegistration" class="btn btn-primary hidden"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadRegistrationPDF" class="btn btn-danger hidden"><i class="fas fa-file-pdf me-1"></i>PDF</button>
           </div>
         </div>
       </div>
@@ -106,7 +124,13 @@
       </div>
       <div id="markCard" class="collapse">
         <div class="card-body">
-          <!-- existing attendance-section markup -->
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <label for="dateInput" class="mb-0">Select Date:</label>
+            <input type="date" id="dateInput" class="form-control">
+            <button id="loadAttendance" class="btn btn-primary"><i class="fas fa-sync-alt me-1"></i>Load</button>
+          </div>
+          <div id="attendanceList"></div>
+          <button id="saveAttendance" class="btn btn-success hidden mt-3"><i class="fas fa-save me-1"></i>Save</button>
         </div>
       </div>
     </div>
@@ -120,7 +144,17 @@
       </div>
       <div id="summaryCard" class="collapse">
         <div class="card-body">
-          <!-- existing attendance-result markup -->
+          <div class="table-responsive mb-3">
+            <table class="table">
+              <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
+              <tbody id="summaryBody"></tbody>
+            </table>
+          </div>
+          <div class="d-flex gap-2">
+            <button id="shareAttendanceSummary" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadAttendancePDF" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+            <button id="resetAttendance" class="btn btn-info btn-sm"><i class="fas fa-undo me-1"></i>Reset</button>
+          </div>
         </div>
       </div>
     </div>
@@ -134,7 +168,35 @@
       </div>
       <div id="analyticsCard" class="collapse">
         <div class="card-body">
-          <!-- existing analytics-section markup -->
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <select id="analyticsTarget" class="form-select w-auto">
+              <option value="class">Full Class</option>
+              <option value="student">Individual</option>
+            </select>
+            <input id="studentAdmInput" class="form-control w-auto hidden" placeholder="Adm#">
+            <select id="analyticsType" class="form-select w-auto">
+              <option value="" disabled selected>--Period--</option>
+              <option value="date">Date</option><option value="month">Month</option>
+              <option value="semester">Semester</option><option value="year">Year</option>
+            </select>
+            <input type="date" id="analyticsDate" class="form-control w-auto hidden">
+            <input type="month" id="analyticsMonth" class="form-control w-auto hidden">
+            <input type="month" id="semesterStart" class="form-control w-auto hidden">
+            <input type="month" id="semesterEnd" class="form-control w-auto hidden">
+            <input type="number" id="yearStart" class="form-control w-auto hidden" placeholder="Year">
+            <button id="loadAnalytics" class="btn btn-primary"><i class="fas fa-sync-alt me-1"></i>Load</button>
+            <button id="resetAnalytics" class="btn btn-info btn-sm hidden"><i class="fas fa-undo me-1"></i>Reset</button>
+          </div>
+          <div id="instructions" class="summary-block hidden mb-3"></div>
+          <div id="analyticsContainer" class="table-responsive hidden mb-3"></div>
+          <div id="graphs" class="graph-container hidden mb-3">
+            <canvas id="barChart"></canvas>
+            <canvas id="pieChart"></canvas>
+          </div>
+          <div class="d-flex gap-2 hidden" id="analyticsActions">
+            <button id="shareAnalytics" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadAnalytics" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+          </div>
         </div>
       </div>
     </div>
@@ -148,7 +210,30 @@
       </div>
       <div id="registerCard" class="collapse">
         <div class="card-body">
-          <!-- existing register-section markup -->
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <input type="month" id="registerMonth" class="form-control w-auto">
+            <button id="loadRegister" class="btn btn-success"><i class="fas fa-sync-alt me-1"></i>Load</button>
+            <button id="changeRegister" class="btn btn-info btn-sm hidden"><i class="fas fa-undo me-1"></i>Reset</button>
+          </div>
+          <div id="registerTableWrapper" class="table-responsive hidden mb-3">
+            <table id="registerTable" class="table table-striped">
+              <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
+              <tbody id="registerBody"></tbody>
+            </table>
+          </div>
+          <div id="registerSummarySection" class="hidden">
+            <h3>Summary</h3>
+            <div class="table-responsive">
+              <table class="table">
+                <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead>
+                <tbody id="registerSummaryBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button id="shareRegister" class="btn btn-primary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            <button id="downloadRegisterPDF" class="btn btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+          </div>
         </div>
       </div>
     </div>
