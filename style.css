@@ -1,19 +1,105 @@
 /* style.css */
-.hidden {
+
+/* 1. Light background on all collapsible cards and hover effect */
+.card {
+  background-color: #f9f9f9;
+  transition: background-color 0.2s ease;
+}
+.card:hover {
+  background-color: #ffffff;
+}
+
+/* Ensure the inner card-body has matching light background */
+.card-body {
+  background-color: #fcfcfc;
+}
+
+/* 2. “Add Student” button: include text and icon spacing */
+#addStudent {
+  display: inline-flex;
+  align-items: center;
+}
+#addStudent i {
+  margin-left: 0.4em;
+}
+
+/* 3. Reveal edit/share/download buttons when table is saved */
+/* The JS adds class "saved" to #studentTableWrapper */
+#studentTableWrapper.saved + .d-flex .btn.d-none {
+  display: inline-block !important;
+}
+
+/* 4. Date input “Select date” placeholder simulation */
+/* HTML must include placeholder="Select date" on the <input type="date"> */
+input[type="date"] {
+  position: relative;
+}
+input[type="date"]::before {
+  content: attr(placeholder);
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  pointer-events: none;
+}
+input[type="date"]:focus::before,
+input[type="date"]:not(:placeholder-shown)::before {
+  content: "";
+}
+
+/* 5. Attendance buttons full-width on narrow/mobile screens */
+.attendance-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+.attendance-actions button {
+  width: 100%;
+  padding: 0.5rem 0;
+  white-space: nowrap;
+}
+
+/* 6. Analytics controls wrap and smaller font */
+#analyticsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+#analyticsActions .form-select,
+#analyticsActions input,
+#analyticsActions button {
+  font-size: 0.85rem;
+}
+
+/* Utility classes */
+.hidden,
+.d-none {
   display: none !important;
 }
 
-.form-control,
-.form-select,
-.btn {
-  min-height: 38px; /* match Bootstrap default */
-}
-
-#studentTableWrapper {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
+/* Highlight editable cells when inline editing */
 td.editing {
   outline: 2px dashed #007bff;
+}
+
+/* Style the “saved” table wrapper border */
+#studentTableWrapper.saved {
+  border: 2px solid #28a745;
+  border-radius: 4px;
+}
+
+/* Ensure collapse headers show pointer */
+.card-header {
+  cursor: pointer;
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+  /* Shrink analytics dropdowns on xs */
+  #analyticsActions .form-select,
+  #analyticsActions input {
+    flex: 1 1 100%;
+  }
 }
