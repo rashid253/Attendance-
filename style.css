@@ -8,26 +8,29 @@
 .card:hover {
   background-color: #ffffff;
 }
-/* Ensure inner card-body matches */
+
+/* Ensure the inner card-body has matching light background */
 .card-body {
   background-color: #fcfcfc;
 }
 
-/* 2. “Add Student” button spacing (text + icon already in HTML) */
+/* 2. “Add Student” button: include text and icon spacing */
 #addStudent {
   display: inline-flex;
   align-items: center;
 }
 #addStudent i {
-  margin-left: 0.3em;
+  margin-left: 0.4em;
 }
 
-/* 3. Reveal edit/share/download when table saved */
+/* 3. Reveal edit/share/download buttons when table is saved */
+/* The JS adds class "saved" to #studentTableWrapper */
 #studentTableWrapper.saved + .d-flex .btn.d-none {
   display: inline-block !important;
 }
 
-/* 4. Date input “Select date” placeholder styling */
+/* 4. Date input “Select date” placeholder simulation */
+/* HTML must include placeholder="Select date" on the <input type="date"> */
 input[type="date"] {
   position: relative;
 }
@@ -45,7 +48,7 @@ input[type="date"]:not(:placeholder-shown)::before {
   content: "";
 }
 
-/* 5. Attendance buttons full-width on mobile and small font */
+/* 5. Attendance buttons full-width on narrow/mobile screens */
 .attendance-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
@@ -54,12 +57,11 @@ input[type="date"]:not(:placeholder-shown)::before {
 }
 .attendance-actions button {
   width: 100%;
-  padding: 0.3rem 0;
-  font-size: 0.85rem;
+  padding: 0.5rem 0;
   white-space: nowrap;
 }
 
-/* 6. Analytics controls wrap & smaller text */
+/* 6. Analytics controls wrap and smaller font */
 #analyticsActions {
   display: flex;
   flex-wrap: wrap;
@@ -71,60 +73,31 @@ input[type="date"]:not(:placeholder-shown)::before {
   font-size: 0.85rem;
 }
 
-/* 7. Register month placeholder styling */
-input[type="month"] {
-  position: relative;
-}
-input[type="month"]::before {
-  content: attr(placeholder);
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  pointer-events: none;
-}
-input[type="month"]:focus::before,
-input[type="month"]:not(:placeholder-shown)::before {
-  content: "";
-}
-
-/* 8. Short button labels & smaller size */
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-/* Utility: hide/show */
-.d-none,
-.hidden {
+/* Utility classes */
+.hidden,
+.d-none {
   display: none !important;
 }
 
-/* Editable cell highlight */
+/* Highlight editable cells when inline editing */
 td.editing {
   outline: 2px dashed #007bff;
 }
 
-/* Saved table border highlight */
+/* Style the “saved” table wrapper border */
 #studentTableWrapper.saved {
   border: 2px solid #28a745;
   border-radius: 4px;
 }
 
-/* Prevent horizontal scroll */
-body {
-  overflow-x: hidden;
-}
-
-/* Prevent analytics overflow: container scroll */
-#analyticsContainer,
-#graphs {
-  overflow-x: auto;
+/* Ensure collapse headers show pointer */
+.card-header {
+  cursor: pointer;
 }
 
 /* Responsive tweaks */
 @media (max-width: 576px) {
+  /* Shrink analytics dropdowns on xs */
   #analyticsActions .form-select,
   #analyticsActions input {
     flex: 1 1 100%;
