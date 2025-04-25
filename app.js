@@ -4,7 +4,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
   const colors = { P: '#4CAF50', A: '#f44336', Lt: '#FFEB3B', HD: '#FF9800', L: '#03a9f4' };
 
-  // ─── 1. SETUP ─────────────────────────────────────────────────────────────────
+  // 1. SETUP
   const schoolIn     = $('schoolNameInput');
   const classSel     = $('teacherClassSelect');
   const secSel       = $('teacherSectionSelect');
@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await loadSetup();
 
-  // ─── 2. STUDENT REGISTRATION ─────────────────────────────────────────────────
+  // 2. STUDENT REGISTRATION
   let students = (await get('students')) || [];
   const studentNameIn   = $('studentName');
   const admissionNoIn   = $('admissionNo');
@@ -223,7 +223,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   renderStudents();
 
-  // ─── 3. ATTENDANCE MARKING ─────────────────────────────────────────────────────
+  // 3. ATTENDANCE MARKING
   let attendanceData = (await get('attendanceData')) || {};
   const dateInput      = $('dateInput');
   const loadAtt        = $('loadAttendance');
@@ -322,26 +322,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   downloadAttPDF.addEventListener('click', () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Daily Attendance Report', 10, 10);
+    doc.setFontSize(16); doc.text('Daily Attendance Report',10,10);
     doc.setFontSize(12);
-    doc.text(`Date: ${new Date(dateInput.value).toLocaleDateString()}`, 10, 20);
-    doc.text(`School: ${schoolIn.value}`, 10, 26);
-    doc.text(`Class: ${classSel.value}`, 10, 32);
-    doc.text(`Section: ${secSel.value}`, 10, 38);
+    doc.text(`Date: ${new Date(dateInput.value).toLocaleDateString()}`,10,20);
+    doc.text(`School: ${schoolIn.value}`,10,26);
+    doc.text(`Class: ${classSel.value}`,10,32);
+    doc.text(`Section: ${secSel.value}`,10,38);
     doc.autoTable({
-      head: [['Name','Status']],
+      head:[['Name','Status']],
       body: students.map(s => {
         const code = attendanceData[dateInput.value]?.[s.roll] || 'A';
         const status = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
         return [s.name, status];
       }),
-      startY: 44
+      startY:44
     });
     doc.save('attendance_summary.pdf');
   });
 
-  // ─── 4. ANALYTICS ─────────────────────────────────────────────────────────────
+  // 4. ANALYTICS
   const analyticsTarget      = $('analyticsTarget');
   const studentAdmInput      = $('studentAdmInput');
   const analyticsType        = $('analyticsType');
@@ -446,8 +445,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (barChart) barChart.destroy();
     barChart = new Chart(barCtx, {
       type: 'bar',
-      data: { labels, datasets:[{ label:'% Present', data:dataPct }] },
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
+      data: { labels, datasets:[{ label:'% Present', data:dataPct }]},
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } }}
     });
 
     const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
@@ -474,8 +473,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   downloadAnalyticsBtn.addEventListener('click', () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Attendance Analytics',10,10);
+    doc.setFontSize(16); doc.text('Attendance Analytics',10,10);
     doc.setFontSize(12);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`,10,20);
     const period = instructionsEl.textContent.split('|')[1].trim();
@@ -483,18 +481,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text(setupText.textContent,10,32);
     doc.autoTable({
       head:[['Name','P','A','Lt','HD','L','Total','%']],
-      body:Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>Array.from(r.querySelectorAll('td')).map(td=>td.textContent)),
+      body:Array.from(analyticsContainer.querySelectorAll('tbody tr')).map(r=>
+        Array.from(r.querySelectorAll('td')).map(td=>td.textContent)
+      ),
       startY:40
     });
     doc.save('attendance_analytics.pdf');
   });
 
-  // ─── 5. ATTENDANCE REGISTER ───────────────────────────────────────────────────
-  const registerMonthIn   = $('registerMonth');
-  const loadRegisterBtn   = $('loadRegister');
-  const changeRegisterBtn = $('changeRegister');
-  const registerTableWrapper = $('registerTableWrapper');
-  const registerBody      = $('registerBody');
+  // 5. ATTENDANCE REGISTER
+  const registerMonthIn     = $('registerMonth');
+  const loadRegisterBtn     = $('loadRegister');
+  const changeRegisterBtn   = $('changeRegister');
+  const registerTableWrapper= $('registerTableWrapper');
+  const registerBody        = $('registerBody');
   const registerSummaryBody = $('registerSummaryBody');
 
   function generateRegisterHeader(days) {
@@ -580,7 +580,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_register.pdf');
   });
 
-  // ─── SERVICE WORKER ───────────────────────────────────────────────────────────
+  // SERVICE WORKER
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
