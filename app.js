@@ -8,15 +8,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   let students       = await get('students')       || [];
   let attendanceData = await get('attendanceData') || {};
 
-  async function saveStudents()        { await set('students', students); }
-  async function saveAttendanceData()  { await set('attendanceData', attendanceData); }
+  async function saveStudents() {
+    await set('students', students);
+  }
+  async function saveAttendanceData() {
+    await set('attendanceData', attendanceData);
+  }
 
   function getCurrentClassSection() {
-    return { cls: $('teacherClassSelect').value, sec: $('teacherSectionSelect').value };
+    return {
+      cls: $('teacherClassSelect').value,
+      sec: $('teacherSectionSelect').value
+    };
   }
   function filteredStudents() {
     const { cls, sec } = getCurrentClassSection();
     return students.filter(s => s.cls === cls && s.sec === sec);
+  }
+
+  function updateTotals() {
+    const totalSchool = students.length;
+    const { cls, sec } = getCurrentClassSection();
+    const totalClass   = students.filter(s => s.cls === cls).length;
+    const totalSection = filteredStudents().length;
+    $('totalSchoolCount').textContent  = totalSchool;
+    $('totalClassCount').textContent   = totalClass;
+    $('totalSectionCount').textContent = totalSection;
   }
 
   // --- DOM ELEMENTS ---
@@ -106,6 +123,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       setupDisplay.classList.remove('hidden');
       renderStudents();
     }
+    updateTotals();
   }
   btnSaveSetup.onclick = async e => {
     e.preventDefault();
@@ -150,6 +168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="checkbox" class="sel" data-index="${idx}" ${registrationSaved?'disabled':''}></td>
+        <td>${idx+1}</td>
         <td>${st.name}</td><td>${st.adm}</td><td>${st.parent}</td>
         <td>${st.contact}</td><td>${st.occupation}</td><td>${st.address}</td>
         <td>${registrationSaved?'<button class="share-one">Share</button>':''}</td>
@@ -172,6 +191,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       tbodyStudents.appendChild(tr);
     });
     bindRowSelection();
+    updateTotals();
   }
 
   btnAddStudent.onclick = async e => {
@@ -424,7 +444,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   selectAnalyticsTarget.onchange = () => {
-    admAnalyticsInput.classList.toggle('hidden', selectAnalyticsTarget.value!=='student');
+    admAnalyticsInput.classList.toggle('hidden', selectAnalyticsTarget
+.value!=='student');
     hideAnalyticsInputs();
     selectAnalyticsType.value = '';
   };
@@ -511,10 +532,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnShareAnalytics.onclick = e => {
     e.preventDefault();
-    const parts = divInstructions.textContent.split('|');
+    const parts  = divInstructions.textContent.split('|');
     const period = parts.pop().trim();
     const header = `Period: ${period}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
-    const rows = [...divAnalyticsTable.querySelectorAll('tbody tr')].map(r=>{
+    const rows   = [...divAnalyticsTable.querySelectorAll('tbody tr')].map(r=>{
       const td = [...r.querySelectorAll('td')].map(c=>c.textContent);
       return `${td[0]} P:${td[1]} A:${td[2]} Lt:${td[3]} HD:${td[4]} L:${td[5]} Total:${td[6]} %:${td[7]}`;
     });
@@ -524,7 +545,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnDownloadAnalytics.onclick = e => {
     e.preventDefault();
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc        = new jsPDF();
     doc.setFontSize(16); doc.text('Attendance Analytics',10,10);
     doc.setFontSize(12);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`,10,20);
@@ -544,7 +565,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- ATTENDANCE REGISTER ---
-  function generateRegisterHeader(days) {  
+  function generateRegisterHeader(days) {
     headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>';
     for (let d = 1; d <= days; d++) {
       const th = document.createElement('th');
@@ -587,7 +608,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       const pct = stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
       const tr  = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
+      tr.innerHTML = `<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td>
+                      <td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
       tbodyRegSum.appendChild(tr);
     });
 
@@ -638,4 +660,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         .catch(err => console.error('SW failed:', err));
     });
   }
+
 });
