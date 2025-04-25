@@ -1,5 +1,3 @@
-/* style.css */
-
 /* 1. Light background on all collapsible cards and hover effect */
 .card {
   background-color: #f9f9f9;
@@ -29,23 +27,10 @@
   display: inline-block !important;
 }
 
-/* 4. Date input “Select date” placeholder simulation */
-/* HTML must include placeholder="Select date" on the <input type="date"> */
-input[type="date"] {
-  position: relative;
-}
+/* 4. Disable simulated placeholder on date inputs */
+/* Overrides any ::before content from earlier rules */
 input[type="date"]::before {
-  content: attr(placeholder);
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  pointer-events: none;
-}
-input[type="date"]:focus::before,
-input[type="date"]:not(:placeholder-shown)::before {
-  content: "";
+  content: none !important;
 }
 
 /* 5. Attendance buttons full-width on narrow/mobile screens */
@@ -71,6 +56,11 @@ input[type="date"]:not(:placeholder-shown)::before {
 #analyticsActions input,
 #analyticsActions button {
   font-size: 0.85rem;
+}
+
+/* 7. Hide saveAttendance by default (use .d-none to show) */
+#saveAttendance.d-none {
+  display: none !important;
 }
 
 /* Utility classes */
