@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,9 +84,10 @@
             <input id="parentOccupation" class="form-control" placeholder="Occupation" />
             <input id="parentAddress" class="form-control" placeholder="Address" />
             <button id="addStudent" class="btn btn-primary">
-              <i class="fas fa-plus-circle"></i>
+              Add <i class="fas fa-plus-circle"></i>
             </button>
           </div>
+
           <div id="studentTableWrapper" class="table-responsive mb-3">
             <table id="studentTable" class="table table-striped">
               <thead>
@@ -100,6 +100,7 @@
               <tbody id="studentsBody"></tbody>
             </table>
           </div>
+
           <div class="d-flex gap-2">
             <button id="editSelected" class="btn btn-warning" disabled><i class="fas fa-edit"></i> Edit Selected</button>
             <button id="deleteSelected" class="btn btn-danger" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
@@ -112,7 +113,7 @@
       </div>
     </div>
 
-    <!-- Attendance Marking -->
+    <!-- Mark Attendance -->
     <div class="card mb-3">
       <div class="card-header" data-bs-toggle="collapse" data-bs-target="#attCard" style="cursor:pointer;">
         <h2><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
@@ -120,10 +121,10 @@
       <div id="attCard" class="collapse">
         <div class="card-body">
           <div class="d-flex gap-2 mb-3">
-            <input type="date" id="dateInput" class="form-control" />
+            <input type="date" id="dateInput" class="form-control" placeholder="Select date" />
             <button id="loadAttendance" class="btn btn-primary"><i class="fas fa-hourglass-start me-1"></i>Load</button>
           </div>
-          <div id="attendanceList" class="mb-3"></div>
+          <div id="attendanceList" class="mb-3 attendance-actions"></div>
           <button id="saveAttendance" class="btn btn-success hidden"><i class="fas fa-save me-1"></i>Save Attendance</button>
         </div>
       </div>
@@ -149,7 +150,7 @@
       </div>
       <div id="analyticsCard" class="collapse">
         <div class="card-body">
-          <div class="d-flex gap-2 mb-3" id="analyticsActions">
+          <div class="d-flex flex-wrap gap-2 mb-3" id="analyticsActions">
             <select id="analyticsTarget" class="form-select">
               <option value="">-- Target --</option>
               <option value="class">Class</option>
