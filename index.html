@@ -1,204 +1,176 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Attendance Management</title>
+/* style.css */
+/* Global */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-  <!-- PWA manifest -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0052cc" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
+:root {
+  --font-family: 'Inter', sans-serif;
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-primary: #0052cc;
+  --color-text: #343a40;
+  --color-border: #dee2e6;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --radius-md: 0.5rem;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+}
 
-  <!-- Google Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
-  <!-- Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html {
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+body {
+  padding: var(--space-md);
+}
+.hidden {
+  display: none !important;
+}
 
-  <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <!-- Hero -->
-  <header class="hero">
-    <span class="material-icons md-36">school</span>
-    <h1>Attendance Management</h1>
-  </header>
+/* Card */
+.card {
+  background: var(--color-surface);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-lg);
+}
 
-  <!-- Summary -->
-  <section class="card summary-line">
-    <span>🏫 School: <strong id="totalSchoolCount">0</strong></span>
-    <span>🏷️ Class: <strong id="totalClassCount">0</strong></span>
-    <span>🔖 Section: <strong id="totalSectionCount">0</strong></span>
-  </section>
+/* Hero */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--color-primary);
+  color: #fff;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.hero h1 {
+  font-size: 1.5rem;
+}
 
-  <!-- Setup -->
-  <section id="teacher-setup" class="card">
-    <h2><span class="material-icons">settings</span> Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
-      <select id="teacherClassSelect"><option value="">--Class--</option>…</select>
-      <select id="teacherSectionSelect"><option value="">--Section--</option>…</select>
-      <button id="saveSetup" class="btn save">
-        <span class="material-icons">save</span> Save
-      </button>
-    </div>
-    <div id="setupDisplay" class="hidden">
-      <h3 id="setupText"></h3>
-      <button id="editSetup" class="btn secondary small">
-        <span class="material-icons">edit</span> Edit
-      </button>
-    </div>
-  </section>
+/* Summary Line */
+.summary-line {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  font-weight: 600;
+}
+.summary-line span strong {
+  color: var(--color-primary);
+}
 
-  <!-- Student Registration -->
-  <section id="student-registration" class="card">
-    <h2><span class="material-icons">person_add</span> Student Registration</h2>
-    <div id="regForm" class="row-inline">
-      <input id="studentName" placeholder="Name" required />
-      <input id="admissionNo" placeholder="Adm#" required />
-      <input id="parentName" placeholder="Parent Name" required />
-      <input id="parentContact" placeholder="Parent Contact" required />
-      <input id="parentOccupation" placeholder="Occupation" required />
-      <input id="parentAddress" placeholder="Address" required />
-      <button id="addStudent" class="btn save">
-        <span class="material-icons">add_circle</span> Add
-      </button>
-    </div>
-    <div class="table-wrapper" id="studentTableWrapper">
-      <table id="studentTable">
-        <thead>
-          <tr>
-            <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
-            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="studentsBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="editSelected" class="btn secondary" disabled>
-        <span class="material-icons">edit</span> Edit
-      </button>
-      <button id="deleteSelected" class="btn delete" disabled>
-        <span class="material-icons">delete</span> Delete
-      </button>
-      <button id="saveRegistration" class="btn save">
-        <span class="material-icons">save</span> Save
-      </button>
-    </div>
-  </section>
+/* Section Titles */
+.card h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 1.25rem;
+  margin-bottom: var(--space-md);
+}
 
-  <!-- Attendance Marking -->
-  <section id="attendance-section" class="card">
-    <h2><span class="material-icons">event_available</span> Mark Attendance</h2>
-    <div class="row-inline">
-      <label for="dateInput"><span class="material-icons">calendar_today</span> Date:</label>
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance" class="btn secondary">
-        <span class="material-icons">sync</span> Load
-      </button>
-    </div>
-    <div id="attendanceList"></div>
-    <button id="saveAttendance" class="btn save hidden">
-      <span class="material-icons">save</span> Save
-    </button>
-  </section>
+/* Layout Helpers */
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
 
-  <!-- Attendance Summary -->
-  <section id="attendance-result" class="card hidden">
-    <h2><span class="material-icons">assignment</span> Attendance Summary</h2>
-    <div class="table-wrapper">
-      <table id="attendanceSummaryTable">
-        <thead><tr><th>Name</th><th>Status</th><th>Notify</th></tr></thead>
-        <tbody id="summaryBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="shareAttendanceSummary" class="btn share">
-        <span class="material-icons">share</span> Share
-      </button>
-      <button id="downloadAttendancePDF" class="btn download">
-        <span class="material-icons">download</span> PDF
-      </button>
-      <button id="resetAttendance" class="btn secondary small">
-        <span class="material-icons">undo</span> Reset
-      </button>
-    </div>
-  </section>
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.save {
+  background: #198754;
+  color: #fff;
+}
+.secondary {
+  background: #00b4d8;
+  color: #fff;
+}
+.delete {
+  background: #dc3545;
+  color: #fff;
+}
+.share {
+  background: #00b4d8;
+  color: #fff;
+}
+.download {
+  background: #ffc107;
+  color: #212529;
+}
+.small {
+  font-size: 0.875rem;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
-  <!-- Analytics -->
-  <section id="analytics-section" class="card">
-    <h2><span class="material-icons">analytics</span> Analytics</h2>
-    <div class="row-inline">
-      <label for="analyticsTarget"><span class="material-icons">people</span> Report:</label>
-      <select id="analyticsTarget">
-        <option value="class">Full Class</option>
-        <option value="student">Student</option>
-      </select>
-      <label for="analyticsType"><span class="material-icons">query_builder</span> Period:</label>
-      <select id="analyticsType">
-        <option disabled selected>--Select--</option>
-        <option value="date">Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
-      </select>
-      <button id="loadAnalytics" class="btn secondary">
-        <span class="material-icons">sync</span> Load
-      </button>
-    </div>
-    <div id="analyticsContainer"></div>
-    <div id="graphs" class="graph-container"></div>
-    <div class="table-actions">
-      <button id="shareAnalytics" class="btn share">
-        <span class="material-icons">share</span> Share
-      </button>
-      <button id="downloadAnalytics" class="btn download">
-        <span class="material-icons">download</span> PDF
-      </button>
-    </div>
-  </section>
+/* Tables */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: var(--space-md);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th, tbody td {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+.select-col {
+  width: 2.5rem;
+  text-align: center;
+}
 
-  <!-- Register -->
-  <section id="register-section" class="card">
-    <h2><span class="material-icons">menu_book</span> Attendance Register</h2>
-    <div class="row-inline">
-      <label for="registerMonth"><span class="material-icons">calendar_view_month</span> Month:</label>
-      <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="btn save">
-        <span class="material-icons">sync</span> Load
-      </button>
-    </div>
-    <div class="table-wrapper hidden" id="registerTableWrapper">
-      <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
-        <tbody id="registerBody"></tbody>
-      </table>
-    </div>
-    <div id="registerSummarySection" class="card hidden">
-      <h3>Summary</h3>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>%</th></tr></thead>
-          <tbody id="registerSummaryBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+/* Graph containers */
+.graph-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+canvas {
+  flex: 1;
+  max-width: 100%;
+  height: auto;
+}
 
-  <!-- Scripts & Error Console -->
-  <script type="module">
-    import * as idbKeyval from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
-    window.idbKeyval = idbKeyval;
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+/* Mobile */
+@media (max-width: 600px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+  }
+  .summary-line {
+    flex-direction: column;
+  }
+  .row-inline {
+    flex-direction: column;
+  }
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
