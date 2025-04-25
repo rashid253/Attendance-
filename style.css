@@ -1,219 +1,213 @@
-/* style.css – Refined, Professional & Modern */
-
-/* 1. Reset & Box Sizing */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* 2. Root Variables */
+/* style.css */
 :root {
-  /* Colors */
-  --color-primary: #0052cc;
-  --color-primary-light: #4c6ef5;
-  --color-secondary: #00b4d8;
-  --color-bg: #f8f9fa;
-  --color-surface: #ffffff;
-  --color-text: #343a40;
-  --color-text-light: #6c757d;
-  --color-border: #dee2e6;
-  --color-success: #198754;
-  --color-danger: #dc3545;
-  --color-warning: #ffc107;
-
-  /* Typography */
-  --font-family: 'Inter', sans-serif;
-  --font-size-base: 1rem;
-  --font-size-sm: 0.875rem;
-  --font-size-lg: 1.25rem;
-  --line-height: 1.6;
-
-  /* Spacing */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-
-  /* Border Radius & Shadows */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --primary: #2196F3;
+  --success: #4CAF50;
+  --danger: #f44336;
+  --warning: #FFEB3B;
+  --orange: #FF9800;
+  --info: #03a9f4;
+  --light: #f2f2f2;
+  --dark: #333;
 }
 
-/* 3. Base Styles */
-html {
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  scroll-behavior: smooth;
-}
-body {
-  min-height: 100vh;
-  padding: var(--space-lg);
-}
-
-/* 4. Typography */
-h1, h2, h3, h4 {
-  color: var(--color-primary);
-  margin-bottom: var(--space-md);
-  font-weight: 600;
-}
-h1 { font-size: 2rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.5rem; }
-
-/* 5. Utility Classes */
-.hidden { display: none !important; }
-.text-center { text-align: center; }
-.flex { display: flex; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.mb-sm { margin-bottom: var(--space-sm); }
-.mb-md { margin-bottom: var(--space-md); }
-.mt-md { margin-top: var(--space-md); }
-.p-md { padding: var(--space-md); }
-.rounded { border-radius: var(--radius-md); }
-.shadow-sm { box-shadow: var(--shadow-sm); }
-
-/* 6. Header & Totals */
-header {
-  background-color: var(--color-primary);
-  color: var(--color-surface);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-.totals-bar {
-  display: flex; flex-wrap: wrap; gap: var(--space-lg);
-  margin-top: var(--space-sm);
-}
-.totals-bar span {
-  display: flex; align-items: center; font-weight: 600;
-}
-
-/* 7. Form Controls */
-input[type="text"],
-input[type="date"],
-input[type="month"],
-input[type="number"],
-select {
-  width: 100%;
-  padding: var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
-  background-color: var(--color-surface);
-  transition: border-color 0.2s ease;
-}
-input:focus,
-select:focus {
+/* prevent flicker */
+* {
+  -webkit-tap-highlight-color: transparent;
   outline: none;
-  border-color: var(--color-primary-light);
 }
 
-/* 8. Buttons */
-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-surface);
-  background-color: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+body {
+  font-family: Arial, sans-serif;
+  color: var(--dark);
+  padding: 10px;
 }
-button:hover {
-  background-color: var(--color-primary-light);
-}
-button:active {
-  transform: scale(0.98);
-}
-button:disabled {
-  background-color: var(--color-border);
-  color: var(--color-text-light);
-  cursor: not-allowed;
-}
-/* Variants */
-button.secondary { background-color: var(--color-secondary); }
-button.secondary:hover { background-color: #33c1d9; }
-button.save     { background-color: var(--color-success); }
-button.save:hover { background-color: #28a745; }
-button.small    { font-size: var(--font-size-sm); padding: var(--space-xs) var(--space-sm); }
 
-/* 9. Sections & Cards */
+header {
+  background: var(--primary);
+  color: #fff;
+  padding: 15px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 section {
-  background-color: var(--color-surface);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-lg);
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 15px;
 }
 
-/* 10. Tables */
+.row-inline {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input,
+select,
+button {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.save {
+  background: var(--success);
+}
+
+button.small {
+  background: var(--info);
+  padding: 4px 8px;
+  font-size: 0.9em;
+}
+
+.hidden {
+  display: none;
+}
+
 .table-wrapper {
   overflow-x: auto;
-  margin-top: var(--space-md);
-  border-radius: var(--radius-sm);
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
+
+.table-wrapper.saved {
+  border: 2px solid var(--success);
+  background: var(--light);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
 }
-thead th {
-  background-color: var(--color-bg);
-  color: var(--color-text-light);
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  white-space: nowrap;
   text-align: left;
-  padding: var(--space-sm);
-  border-bottom: 2px solid var(--color-border);
-}
-tbody td {
-  padding: var(--space-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-.select-col { width: 40px; text-align: center; }
-
-/* 11. Attendance Actions */
-.attendance-actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-}
-.attendance-actions button {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  font-weight: 600;
-}
-.attendance-actions button.present { background-color: #d1e7dd; }
-.attendance-actions button.absent  { background-color: #f8d7da; }
-.attendance-actions button.late    { background-color: #fff3cd; }
-
-/* 12. Charts */
-#graphs {
-  margin-top: var(--space-lg);
-}
-#graphs canvas {
-  width: 100% !important;
-  max-width: 640px;
-  height: auto !important;
 }
 
-/* 13. Responsive */
-@media (max-width: 768px) {
-  body { padding: var(--space-md); }
-  .totals-bar { flex-direction: column; gap: var(--space-md); }
-  .row-inline { flex-direction: column; gap: var(--space-sm); }
-  button { width: 100%; }
+th {
+  background: var(--light);
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.attendance-item {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.attendance-item + .attendance-actions {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.att-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: var(--dark);
+  font-weight: bold;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.summary-block {
+  margin-top: 15px;
+}
+
+.graph-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+canvas {
+  flex: 1 1 300px;
+  max-width: 100%;
+}
+
+.selected {
+  background: var(--light);
+}
+
+.editing {
+  outline: 2px dashed var(--info);
+}
+
+.select-col {
+  width: 40px;
+}
+
+@media (max-width: 600px) {
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
+    flex: 1 1 100%;
+  }
+}
+
+/* -- Register Section Enhancements -- */
+#registerTableWrapper {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+#registerTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--light);
+  z-index: 1;
+}
+
+#register-section .row-inline > * {
+  margin-right: 8px;
+}
+
+/* restore attendance-marking buttons */
+.attendance-actions .att-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: var(--dark);
+  font-weight: bold;
+  font-size: 1em;
+}
+
+/* ensure pie chart is perfectly round */
+#pieChart {
+  aspect-ratio: 1 / 1;
 }
