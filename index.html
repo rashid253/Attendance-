@@ -5,28 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
-  <!-- Poppins font for modern readability -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#00796b" />
+  <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome icons -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    integrity="sha512-pbV1kXjr0UqNQXMKzFvHoH2c5hXkHSfq+XEEaIj4ECPBdCnU5vX6Yb8FHB69UGYc+Tb2R5W1jV6Xzr5Nvz8BOg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
-
-  <!-- Main stylesheet -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Load idb-keyval -->
+  <!-- small inline tweaks for attendance buttons -->
+  <style>
+    .attendance-actions { display: flex; gap: 0.25em; }
+    .attendance-actions button {
+      flex: 1;
+      padding: 0.5em;
+      font-size: 1rem;
+      min-width: 0;
+    }
+    .totals-bar {
+      display: flex;
+      gap: 1.5em;
+      font-weight: bold;
+      padding: 0.5em 0;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 1em;
+    }
+  </style>
+
+  <!-- Load idb-keyval as ES module, then expose it globally -->
   <script type="module">
     import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
     window.idbKeyval = idbKeyvalModule;
@@ -36,21 +42,9 @@
   <header>
     <h1>Attendance Management</h1>
     <div class="totals-bar">
-      <div class="stat-card">
-        <i class="fas fa-school"></i>
-        <div class="count" id="totalSchoolCount">0</div>
-        <div class="label">School Total</div>
-      </div>
-      <div class="stat-card">
-        <i class="fas fa-chalkboard"></i>
-        <div class="count" id="totalClassCount">0</div>
-        <div class="label">Class Total</div>
-      </div>
-      <div class="stat-card">
-        <i class="fas fa-layer-group"></i>
-        <div class="count" id="totalSectionCount">0</div>
-        <div class="label">Section Total</div>
-      </div>
+      <span>Total School Students: <span id="totalSchoolCount">0</span></span>
+      <span>Total Class Students: <span id="totalClassCount">0</span></span>
+      <span>Total Section Students: <span id="totalSectionCount">0</span></span>
     </div>
   </header>
 
@@ -58,27 +52,21 @@
   <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" class="wide-input" placeholder="School Name" />
-      <select id="teacherClassSelect" class="wide-input">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
         <option value="">--Class--</option>
-        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option>
-        <option>Pre-One</option><option>One</option><option>Two</option>
-        <option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option>
-        <option>Nine</option><option>Ten</option>
+        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
+        <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
       </select>
-      <select id="teacherSectionSelect" class="wide-input">
+      <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
       </select>
-      <button type="button" id="saveSetup" class="save">
-        <i class="fas fa-check"></i> Save Setup
-      </button>
+      <button type="button" id="saveSetup">Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
       <h3 id="setupText"></h3>
-      <button type="button" id="editSetup" class="small">
-        <i class="fas fa-edit"></i> Edit
-      </button>
+      <button type="button" id="editSetup" class="small">Edit</button>
     </div>
   </section>
 
@@ -86,44 +74,33 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input id="studentName" class="wide-input" placeholder="Student Name" />
-      <input id="admissionNo" class="wide-input" placeholder="Admission #" />
-      <input id="parentName" class="wide-input" placeholder="Parent Name" />
-      <input id="parentContact" class="wide-input" placeholder="Parent Contact" />
-      <input id="parentOccupation" class="wide-input" placeholder="Occupation" />
-      <input id="parentAddress" class="wide-input" placeholder="Address" />
-      <button type="button" id="addStudent" class="save">
-        <i class="fas fa-user-plus"></i> Add Student
-      </button>
+      <input id="studentName" placeholder="Name" required />
+      <input id="admissionNo" placeholder="Adm#" required />
+      <input id="parentName" placeholder="Parent Name" required />
+      <input id="parentContact" placeholder="Parent Contact" required />
+      <input id="parentOccupation" placeholder="Occupation" required />
+      <input id="parentAddress" placeholder="Address" required />
+      <button type="button" id="addStudent">Add</button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
       <table id="studentTable">
         <thead>
           <tr>
             <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
-            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
+            <th>Sr#</th>
+            <th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" class="small" disabled>
-        <i class="fas fa-pencil-alt"></i> Edit
-      </button>
-      <button id="deleteSelected" class="small" disabled>
-        <i class="fas fa-trash"></i> Delete
-      </button>
-      <button id="saveRegistration" class="save">
-        <i class="fas fa-save"></i> Save
-      </button>
-      <button id="shareRegistration" class="small hidden">
-        <i class="fas fa-share-alt"></i> Share
-      </button>
-      <button id="downloadRegistrationPDF" class="small hidden">
-        <i class="fas fa-file-download"></i> Download
-      </button>
+      <button type="button" id="editSelected" disabled>Edit Selected</button>
+      <button type="button" id="deleteSelected" disabled>Delete Selected</button>
+      <button type="button" id="saveRegistration" class="save">Save Table</button>
+      <button type="button" id="shareRegistration" class="hidden">Share Table</button>
+      <button type="button" id="editRegistration" class="hidden">Edit Table</button>
+      <button type="button" id="downloadRegistrationPDF" class="hidden">Download PDF</button>
     </div>
   </section>
 
@@ -131,15 +108,12 @@
   <section id="attendance-section">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
-      <input type="date" id="dateInput" class="wide-input" />
-      <button id="loadAttendance" class="save">
-        <i class="fas fa-calendar-check"></i> Load
-      </button>
+      <label for="dateInput">Select Date:</label>
+      <input type="date" id="dateInput" />
+      <button type="button" id="loadAttendance">Load Attendance</button>
     </div>
     <div id="attendanceList"></div>
-    <button id="saveAttendance" class="save hidden">
-      <i class="fas fa-save"></i> Save
-    </button>
+    <button type="button" id="saveAttendance" class="hidden">Save</button>
   </section>
 
   <!-- 4. Attendance Summary -->
@@ -152,15 +126,9 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="shareAttendanceSummary" class="small">
-        <i class="fas fa-share-alt"></i> Share
-      </button>
-      <button id="downloadAttendancePDF" class="small">
-        <i class="fas fa-file-download"></i> Download
-      </button>
-      <button id="resetAttendance" class="small">
-        <i class="fas fa-undo"></i> Reset
-      </button>
+      <button type="button" id="shareAttendanceSummary">Share Table</button>
+      <button type="button" id="downloadAttendancePDF">Download PDF</button>
+      <button type="button" id="resetAttendance" class="small">Reset</button>
     </div>
   </section>
 
@@ -168,27 +136,27 @@
   <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
-      <select id="analyticsTarget" class="wide-input">
+      <label for="analyticsTarget">Report For:</label>
+      <select id="analyticsTarget">
         <option value="class">Full Class</option>
-        <option value="student">Student</option>
+        <option value="student">Individual Student</option>
       </select>
-      <input type="text" id="studentAdmInput" class="wide-input hidden" placeholder="Admission #" />
-      <select id="analyticsType" class="wide-input">
-        <option disabled selected>--Period--</option>
-        <option value="date">Date</option><option value="month">Month</option>
-        <option value="semester">Semester</option><option value="year">Year</option>
+      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType">
+        <option value="" disabled selected>--Select Period--</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="wide-input hidden" />
-      <input type="month" id="analyticsMonth" class="wide-input hidden" />
-      <input type="month" id="semesterStart" class="wide-input hidden" />
-      <input type="month" id="semesterEnd" class="wide-input hidden" />
-      <input type="number" id="yearStart" class="wide-input hidden" placeholder="Year" />
-      <button id="loadAnalytics" class="save">
-        <i class="fas fa-chart-line"></i> Load
-      </button>
-      <button id="resetAnalytics" class="small hidden">
-        <i class="fas fa-undo"></i> Change
-      </button>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <button type="button" id="loadAnalytics">Load Analytics</button>
+      <button type="button" id="resetAnalytics" class="small hidden">Change</button>
     </div>
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
@@ -196,13 +164,9 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div class="row-inline hidden" id="analyticsActions">
-      <button id="shareAnalytics" class="small">
-        <i class="fas fa-share-alt"></i> Share
-      </button>
-      <button id="downloadAnalytics" class="small">
-        <i class="fas fa-file-download"></i> Download
-      </button>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button type="button" id="shareAnalytics">Share as Text</button>
+      <button type="button" id="downloadAnalytics">Download Analytics PDF</button>
     </div>
   </section>
 
@@ -210,18 +174,17 @@
   <section id="register-section">
     <h2>Attendance Register</h2>
     <div class="row-inline">
-      <input type="month" id="registerMonth" class="wide-input" />
-      <button id="loadRegister" class="save">
-        <i class="fas fa-calendar-alt"></i> Load
-      </button>
-      <button id="changeRegister" class="small hidden">
-        <i class="fas fa-undo"></i> Change
-      </button>
+      <label for="registerMonth">Select Month:</label>
+      <input type="month" id="registerMonth" />
+      <button type="button" id="loadRegister" class="save">Load Register</button>
+      <button type="button" id="changeRegister" class="small hidden">Change Period</button>
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
         <thead>
-          <tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr>
+          <tr>
+            <th>Sr#</th><th>Adm#</th><th>Name</th>
+          </tr>
         </thead>
         <tbody id="registerBody"></tbody>
       </table>
@@ -238,12 +201,8 @@
       </div>
     </div>
     <div class="table-actions">
-      <button id="shareRegister" class="small">
-        <i class="fas fa-share-alt"></i> Share
-      </button>
-      <button id="downloadRegisterPDF" class="small">
-        <i class="fas fa-file-download"></i> Download
-      </button>
+      <button type="button" id="shareRegister" class="save">Share Summary</button>
+      <button type="button" id="downloadRegisterPDF" class="save">Download PDF</button>
     </div>
   </section>
 
@@ -253,7 +212,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="app.js"></script>
 
-  <!-- Mobile console -->
+  <!-- Mobile‐friendly error console -->
   <script src="//cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 </body>
