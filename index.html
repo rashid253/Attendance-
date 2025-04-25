@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,36 +17,8 @@
 
   <!-- Custom CSS -->
   <link href="style.css" rel="stylesheet" />
-
-  <!-- Eruda for floating console icon -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
-
-  <!-- idb-keyval storage helper -->
-  <script type="module">
-    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
-    window.idbKeyval = idbKeyvalModule;
-  </script>
-
-  <style>
-    /* help icon */
-    .help-icon {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #0d6efd;
-    }
-    .attendance-item { margin-bottom: 1rem; }
-    .attendance-item .att-name { font-weight: 500; }
-    .attendance-item .att-buttons { margin-top: .5rem; }
-  </style>
 </head>
 <body class="bg-light text-dark" style="font-family:'Roboto',sans-serif; position: relative;">
-
-  <!-- Help icon -->
-  <i class="fas fa-question-circle help-icon" title="Click for guidance" onclick="alert(`• Setup: Save your school, class & section\n• Registration: Name, Parent, Contact, Occupation, Address → auto Reg# & Adm#\n• Attendance: Pick date → mark P/A/L etc per student\n• Summary: Download or share via WhatsApp\n• Analytics: Select period → view pie chart & table, download PDF\n• Register: Monthly grid, download & share`)"></i>
 
   <!-- Header -->
   <header class="bg-primary text-white text-center py-4">
@@ -61,11 +34,11 @@
 
     <!-- Setup -->
     <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard">
-        <h2><i class="fas fa-cog me-2"></i>Setup</h2>
+      <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#setupCard">
+        <h2 class="mb-0"><i class="fas fa-cog me-2"></i>Setup</h2>
       </div>
       <div id="setupCard" class="collapse show">
-        <div class="card-body d-flex flex-wrap gap-2">
+        <div class="card-body d-flex flex-wrap align-items-center gap-2">
           <input id="schoolNameInput" class="form-control w-auto" placeholder="School Name">
           <select id="teacherClassSelect" class="form-select w-auto">
             <option value="">--Class--</option>
@@ -75,7 +48,7 @@
             <option value="">--Section--</option><option>A</option><option>B</option>
           </select>
           <button id="saveSetup" class="btn btn-success btn-sm"><i class="fas fa-save me-1"></i>Save</button>
-          <div id="setupDisplay" class="ms-auto d-none align-self-center">
+          <div id="setupDisplay" class="ms-auto d-none text-end">
             <h4 id="setupText" class="mb-0"></h4>
             <button id="editSetup" class="btn btn-info btn-sm"><i class="fas fa-edit me-1"></i>Edit</button>
           </div>
@@ -84,30 +57,34 @@
     </div>
 
     <!-- Student Registration -->
-    <div class="card mb-3 position-relative">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard">
-        <h2><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#regCard">
+        <h2 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
       </div>
       <div id="regCard" class="collapse show">
         <div class="card-body">
           <div id="regForm" class="d-flex flex-wrap gap-2 mb-3">
-            <input id="studentName" class="form-control" placeholder="Name">
-            <input id="parentName" class="form-control" placeholder="Parent">
-            <input id="parentContact" class="form-control" placeholder="Contact">
-            <input id="parentOccupation" class="form-control" placeholder="Occupation">
-            <input id="parentAddress" class="form-control" placeholder="Address">
+            <input id="studentName" class="form-control" placeholder="Name" required>
+            <input id="parentName" class="form-control" placeholder="Parent" required>
+            <input id="parentContact" class="form-control" placeholder="Contact" pattern="\\d{10}" title="10 digits" required>
+            <input id="parentOccupation" class="form-control" placeholder="Occupation" required>
+            <input id="parentAddress" class="form-control" placeholder="Address" required>
             <button id="addStudent" class="btn btn-primary btn-sm"><i class="fas fa-plus-circle me-1"></i>Add</button>
           </div>
-          <div class="table-responsive mb-3">
+          <div id="studentTableWrapper" class="table-responsive mb-3">
             <table id="studentTable" class="table table-striped">
               <thead>
                 <tr>
-                  <th>Reg#</th><th>Adm#</th><th>Name</th><th>Parent</th>
-                  <th>Contact</th><th>Occ.</th><th>Address</th>
+                  <th class="small-col">Reg#</th><th>Adm#</th><th>Name</th><th>Parent</th>
+                  <th>Contact</th><th>Occ.</th><th>Address</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody id="studentsBody"></tbody>
             </table>
+            <div class="d-flex gap-2">
+              <button id="shareAllStudents" class="btn btn-light btn-sm d-none"><i class="fas fa-share-alt me-1"></i>Share All</button>
+              <button id="downloadAllStudents" class="btn btn-light btn-sm d-none"><i class="fas fa-file-download me-1"></i>Download CSV</button>
+            </div>
           </div>
         </div>
       </div>
@@ -115,8 +92,8 @@
 
     <!-- Mark Attendance -->
     <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#attCard">
-        <h2><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
+      <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#attCard">
+        <h2 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
       </div>
       <div id="attCard" class="collapse show">
         <div class="card-body">
@@ -130,26 +107,20 @@
       </div>
     </div>
 
-    <!-- Attendance Summary -->
-    <div id="attendance-result" class="card mb-3 d-none">
-      <div class="card-header"><h2>Attendance Summary</h2></div>
-      <div class="card-body">
-        <canvas id="summaryPie" width="400" height="200"></canvas>
-        <div class="d-flex justify-content-end gap-2 mt-3">
-          <button id="shareAttendanceSummary" class="btn btn-light btn-sm border"><i class="fas fa-share-alt me-1"></i>Share</button>
-          <button id="downloadAttendancePDF" class="btn btn-light btn-sm border"><i class="fas fa-file-download me-1"></i>Download</button>
-        </div>
-      </div>
+    <!-- Attendance Details -->
+    <div id="attendanceText" class="card mb-3 d-none">
+      <div class="card-header"><h2>Attendance Details</h2></div>
+      <div class="card-body" id="attendanceDetails"></div>
     </div>
 
     <!-- Analytics -->
     <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#analyticsCard">
-        <h2><i class="fas fa-chart-bar me-2"></i>Analytics</h2>
+      <div class="card-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#analyticsCard">
+        <h2 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Analytics</h2>
       </div>
       <div id="analyticsCard" class="collapse">
         <div class="card-body">
-          <div id="analyticsActions" class="d-flex flex-wrap gap-2 mb-3">
+          <div id="analyticsControls" class="d-flex flex-wrap gap-2 mb-3">
             <select id="analyticsType" class="form-select form-select-sm w-auto">
               <option value="">-- Period --</option>
               <option value="date">Date</option>
@@ -157,49 +128,19 @@
               <option value="semester">Semester</option>
               <option value="year">Year</option>
             </select>
-            <input type="date"   id="analyticsDate" class="form-control form-control-sm w-auto d-none">
-            <input type="month"  id="analyticsMonth" class="form-control form-control-sm w-auto d-none">
-            <input type="month"  id="semesterStart" class="form-control form-control-sm w-auto d-none">
-            <input type="month"  id="semesterEnd"   class="form-control form-control-sm w-auto d-none">
-            <input type="number" id="yearStart"     class="form-control form-control-sm w-auto d-none" placeholder="Year">
-            <button id="loadAnalytics"  class="btn btn-primary btn-sm"><i class="fas fa-chart-pie me-1"></i>Load</button>
+            <input type="date" id="analyticsDate" class="form-control form-control-sm w-auto d-none">
+            <input type="month" id="analyticsMonth" class="form-control form-control-sm w-auto d-none">
+            <input type="month" id="semesterStart" class="form-control form-control-sm w-auto d-none">
+            <input type="month" id="semesterEnd" class="form-control form-control-sm w-auto d-none">
+            <input type="number" id="yearStart" class="form-control form-control-sm w-auto d-none" placeholder="Year">
+            <button id="loadAnalytics" class="btn btn-primary btn-sm"><i class="fas fa-chart-pie me-1"></i>Load</button>
             <button id="resetAnalytics" class="btn btn-secondary btn-sm d-none"><i class="fas fa-undo me-1"></i>Reset</button>
           </div>
           <canvas id="analyticsPie" width="400" height="200" class="d-none"></canvas>
           <div id="analyticsTable" class="table-responsive mb-3 d-none"></div>
-          <div class="text-end d-none" id="analyticsControls">
+          <div class="text-end d-none" id="analyticsActionsEnd">
             <button id="shareAnalytics" class="btn btn-light btn-sm border"><i class="fas fa-share-alt me-1"></i>Share</button>
             <button id="downloadAnalytics" class="btn btn-light btn-sm border"><i class="fas fa-file-download me-1"></i>Download</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Attendance Register -->
-    <div class="card mb-3">
-      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#registerCard">
-        <h2><i class="fas fa-calendar-alt me-2"></i>Attendance Register</h2>
-      </div>
-      <div id="registerCard" class="collapse">
-        <div class="card-body">
-          <div class="d-flex gap-2 mb-3">
-            <input type="month" id="registerMonth" class="form-control w-auto">
-            <button id="loadRegister" class="btn btn-primary btn-sm"><i class="fas fa-calendar-check me-1"></i>Load</button>
-            <button id="changeRegister" class="btn btn-secondary btn-sm d-none"><i class="fas fa-edit me-1"></i>Change</button>
-          </div>
-          <div id="registerTableWrapper" class="table-responsive d-none mb-3">
-            <table id="registerTable" class="table table-bordered">
-              <thead><tr></tr></thead>
-              <tbody id="registerBody"></tbody>
-            </table>
-          </div>
-          <div id="registerSummarySection" class="d-none">
-            <h5>Summary</h5>
-            <table class="table"><tbody id="registerSummaryBody"></tbody></table>
-            <div class="text-end">
-              <button id="shareRegister" class="btn btn-light btn-sm border"><i class="fas fa-share-alt me-1"></i>Share</button>
-              <button id="downloadRegisterPDF" class="btn btn-light btn-sm border"><i class="fas fa-file-download me-1"></i>Download</button>
-            </div>
           </div>
         </div>
       </div>
