@@ -5,13 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
+  <!-- Poppins font for modern readability -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#00796b" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Icon library -->
+  <!-- Font Awesome icons -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -20,7 +23,7 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Main styles -->
+  <!-- Main stylesheet -->
   <link rel="stylesheet" href="style.css" />
 
   <!-- Load idb-keyval -->
@@ -36,17 +39,17 @@
       <div class="stat-card">
         <i class="fas fa-school"></i>
         <div class="count" id="totalSchoolCount">0</div>
-        <div class="label">Total School Students</div>
+        <div class="label">School Total</div>
       </div>
       <div class="stat-card">
         <i class="fas fa-chalkboard"></i>
         <div class="count" id="totalClassCount">0</div>
-        <div class="label">Total Class Students</div>
+        <div class="label">Class Total</div>
       </div>
       <div class="stat-card">
         <i class="fas fa-layer-group"></i>
         <div class="count" id="totalSectionCount">0</div>
-        <div class="label">Total Section Students</div>
+        <div class="label">Section Total</div>
       </div>
     </div>
   </header>
@@ -55,18 +58,20 @@
   <section id="teacher-setup">
     <h2>Setup</h2>
     <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
-      <select id="teacherClassSelect">
+      <input id="schoolNameInput" class="wide-input" placeholder="School Name" />
+      <select id="teacherClassSelect" class="wide-input">
         <option value="">--Class--</option>
-        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
-        <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option>
+        <option>Pre-One</option><option>One</option><option>Two</option>
+        <option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option>
+        <option>Nine</option><option>Ten</option>
       </select>
-      <select id="teacherSectionSelect">
+      <select id="teacherSectionSelect" class="wide-input">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
       </select>
       <button type="button" id="saveSetup" class="save">
-        <i class="fas fa-save"></i> Save
+        <i class="fas fa-check"></i> Save Setup
       </button>
     </div>
     <div id="setupDisplay" class="hidden">
@@ -81,14 +86,14 @@
   <section id="student-registration">
     <h2>Student Registration</h2>
     <div id="regForm" class="row-inline">
-      <input id="studentName" placeholder="Name" required />
-      <input id="admissionNo" placeholder="Adm#" required />
-      <input id="parentName" placeholder="Parent Name" required />
-      <input id="parentContact" placeholder="Parent Contact" required />
-      <input id="parentOccupation" placeholder="Occupation" required />
-      <input id="parentAddress" placeholder="Address" required />
+      <input id="studentName" class="wide-input" placeholder="Student Name" />
+      <input id="admissionNo" class="wide-input" placeholder="Admission #" />
+      <input id="parentName" class="wide-input" placeholder="Parent Name" />
+      <input id="parentContact" class="wide-input" placeholder="Parent Contact" />
+      <input id="parentOccupation" class="wide-input" placeholder="Occupation" />
+      <input id="parentAddress" class="wide-input" placeholder="Address" />
       <button type="button" id="addStudent" class="save">
-        <i class="fas fa-user-plus"></i> Add
+        <i class="fas fa-user-plus"></i> Add Student
       </button>
     </div>
     <div class="table-wrapper" id="studentTableWrapper">
@@ -96,27 +101,28 @@
         <thead>
           <tr>
             <th class="select-col"><input type="checkbox" id="selectAllStudents" /></th>
-            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button type="button" id="editSelected" disabled class="small">
-        <i class="fas fa-edit"></i> Edit Selected
+      <button id="editSelected" class="small" disabled>
+        <i class="fas fa-pencil-alt"></i> Edit
       </button>
-      <button type="button" id="deleteSelected" disabled class="small">
-        <i class="fas fa-trash-alt"></i> Delete Selected
+      <button id="deleteSelected" class="small" disabled>
+        <i class="fas fa-trash"></i> Delete
       </button>
-      <button type="button" id="saveRegistration" class="save">
-        <i class="fas fa-check-circle"></i> Save Table
+      <button id="saveRegistration" class="save">
+        <i class="fas fa-save"></i> Save
       </button>
-      <button type="button" id="shareRegistration" class="small hidden">
-        <i class="fas fa-share-alt"></i> Share Table
+      <button id="shareRegistration" class="small hidden">
+        <i class="fas fa-share-alt"></i> Share
       </button>
-      <button type="button" id="downloadRegistrationPDF" class="small hidden">
-        <i class="fas fa-file-download"></i> Download PDF
+      <button id="downloadRegistrationPDF" class="small hidden">
+        <i class="fas fa-file-download"></i> Download
       </button>
     </div>
   </section>
@@ -125,14 +131,13 @@
   <section id="attendance-section">
     <h2>Mark Attendance</h2>
     <div class="row-inline">
-      <label for="dateInput">Select Date:</label>
-      <input type="date" id="dateInput" />
-      <button type="button" id="loadAttendance" class="save">
+      <input type="date" id="dateInput" class="wide-input" />
+      <button id="loadAttendance" class="save">
         <i class="fas fa-calendar-check"></i> Load
       </button>
     </div>
     <div id="attendanceList"></div>
-    <button type="button" id="saveAttendance" class="save hidden">
+    <button id="saveAttendance" class="save hidden">
       <i class="fas fa-save"></i> Save
     </button>
   </section>
@@ -147,13 +152,13 @@
       </table>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareAttendanceSummary" class="small">
-        <i class="fas fa-share-alt"></i> Share Table
+      <button id="shareAttendanceSummary" class="small">
+        <i class="fas fa-share-alt"></i> Share
       </button>
-      <button type="button" id="downloadAttendancePDF" class="small">
-        <i class="fas fa-file-download"></i> Download PDF
+      <button id="downloadAttendancePDF" class="small">
+        <i class="fas fa-file-download"></i> Download
       </button>
-      <button type="button" id="resetAttendance" class="small">
+      <button id="resetAttendance" class="small">
         <i class="fas fa-undo"></i> Reset
       </button>
     </div>
@@ -163,29 +168,25 @@
   <section id="analytics-section">
     <h2>Analytics</h2>
     <div class="row-inline">
-      <label for="analyticsTarget">Report For:</label>
-      <select id="analyticsTarget">
+      <select id="analyticsTarget" class="wide-input">
         <option value="class">Full Class</option>
-        <option value="student">Individual Student</option>
+        <option value="student">Student</option>
       </select>
-      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
-      <label for="analyticsType">Period:</label>
-      <select id="analyticsType">
-        <option value="" disabled selected>--Select Period--</option>
-        <option value="date">Specific Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
+      <input type="text" id="studentAdmInput" class="wide-input hidden" placeholder="Admission #" />
+      <select id="analyticsType" class="wide-input">
+        <option disabled selected>--Period--</option>
+        <option value="date">Date</option><option value="month">Month</option>
+        <option value="semester">Semester</option><option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-      <button type="button" id="loadAnalytics" class="save">
-        <i class="fas fa-chart-bar"></i> Load Analytics
+      <input type="date" id="analyticsDate" class="wide-input hidden" />
+      <input type="month" id="analyticsMonth" class="wide-input hidden" />
+      <input type="month" id="semesterStart" class="wide-input hidden" />
+      <input type="month" id="semesterEnd" class="wide-input hidden" />
+      <input type="number" id="yearStart" class="wide-input hidden" placeholder="Year" />
+      <button id="loadAnalytics" class="save">
+        <i class="fas fa-chart-line"></i> Load
       </button>
-      <button type="button" id="resetAnalytics" class="small hidden">
+      <button id="resetAnalytics" class="small hidden">
         <i class="fas fa-undo"></i> Change
       </button>
     </div>
@@ -195,11 +196,11 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div id="analyticsActions" class="row-inline hidden">
-      <button type="button" id="shareAnalytics" class="small">
+    <div class="row-inline hidden" id="analyticsActions">
+      <button id="shareAnalytics" class="small">
         <i class="fas fa-share-alt"></i> Share
       </button>
-      <button type="button" id="downloadAnalytics" class="small">
+      <button id="downloadAnalytics" class="small">
         <i class="fas fa-file-download"></i> Download
       </button>
     </div>
@@ -209,21 +210,18 @@
   <section id="register-section">
     <h2>Attendance Register</h2>
     <div class="row-inline">
-      <label for="registerMonth">Select Month:</label>
-      <input type="month" id="registerMonth" />
-      <button type="button" id="loadRegister" class="save">
+      <input type="month" id="registerMonth" class="wide-input" />
+      <button id="loadRegister" class="save">
         <i class="fas fa-calendar-alt"></i> Load
       </button>
-      <button type="button" id="changeRegister" class="small hidden">
+      <button id="changeRegister" class="small hidden">
         <i class="fas fa-undo"></i> Change
       </button>
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
         <thead>
-          <tr>
-            <th>Sr#</th><th>Adm#</th><th>Name</th>
-          </tr>
+          <tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr>
         </thead>
         <tbody id="registerBody"></tbody>
       </table>
@@ -240,10 +238,10 @@
       </div>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareRegister" class="small">
+      <button id="shareRegister" class="small">
         <i class="fas fa-share-alt"></i> Share
       </button>
-      <button type="button" id="downloadRegisterPDF" class="small">
+      <button id="downloadRegisterPDF" class="small">
         <i class="fas fa-file-download"></i> Download
       </button>
     </div>
@@ -260,4 +258,3 @@
   <script>eruda.init();</script>
 </body>
 </html>
-```10
