@@ -118,7 +118,7 @@ th {
   flex-wrap: wrap;
 }
 
-/* 0. Animated Counters */
+/* 2. Animated Counters */
 .counter-grid {
   display: flex;
   flex-wrap: nowrap;
