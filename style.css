@@ -9,7 +9,6 @@
   --dark: #333;
 }
 
-/* prevent flicker */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -165,6 +164,12 @@ th {
 
 .attendance-actions button:hover {
   background: rgba(242,242,242,0.8);
+}
+
+/* Choices.js dropdown */
+.choices__list--dropdown {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* Responsive */
