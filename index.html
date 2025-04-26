@@ -2,107 +2,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Management System</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Management</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link href="style.css" rel="stylesheet" />
+
+  <!-- idb-keyval storage helper -->
+  <script type="module">
+    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
+    window.idbKeyval = idbKeyvalModule;
+  </script>
 </head>
-<body>
-<div class="container my-4">
-    <h1 class="text-center mb-4">Attendance Management System</h1>
-    <!-- Navigation Tabs -->
-    <nav class="nav nav-pills flex-column flex-md-row mb-4">
-        <a class="flex-sm-fill text-sm-center nav-link active" data-bs-toggle="pill" href="#registration" role="tab">Student Registration</a>
-        <a class="flex-sm-fill text-sm-center nav-link" data-bs-toggle="pill" href="#attendance" role="tab">Mark Attendance</a>
-        <a class="flex-sm-fill text-sm-center nav-link" data-bs-toggle="pill" href="#analytics" role="tab">Analytics</a>
-        <a class="flex-sm-fill text-sm-center nav-link" data-bs-toggle="pill" href="#attendanceRegister" role="tab">Attendance Register</a>
-    </nav>
+<body class="bg-light text-dark" style="font-family: 'Roboto', sans-serif;">
 
-    <div class="tab-content">
-        <!-- Student Registration Section -->
-        <div class="tab-pane fade show active" id="registration" role="tabpanel">
-            <h2 class="mb-3">Student Registration</h2>
-            <div id="studentFormGroup" class="row mb-3">
-                <div class="col-md-8">
-                    <input type="text" id="studentName" class="form-control" placeholder="Enter student name">
-                </div>
-                <div class="col-md-4">
-                    <button id="addStudent" class="btn btn-primary w-100">Add Student</button>
-                </div>
-            </div>
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Sr#</th>
-                        <th>Admission No.</th>
-                        <th>Name</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsTableBody">
-                    <!-- Student rows will be inserted here -->
-                </tbody>
-            </table>
-            <div class="d-flex justify-content-between mt-2">
-                <button id="saveTable" class="btn btn-success">Save Table</button>
-                <div>
-                    <button id="shareTable" class="btn btn-info d-none"><i class="fa fa-share-alt"></i> Share</button>
-                    <button id="downloadTable" class="btn btn-secondary d-none"><i class="fa fa-download"></i> Download</button>
-                    <button id="editTable" class="btn btn-warning d-none"><i class="fa fa-edit"></i> Edit Table</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mark Attendance Section -->
-        <div class="tab-pane fade" id="attendance" role="tabpanel">
-            <h2 class="mb-3">Mark Attendance</h2>
-            <div id="attendanceContainer">
-                <!-- Attendance form/table will be generated here -->
-            </div>
-            <div id="attendanceSummary" class="d-none">
-                <h3>Attendance Summary</h3>
-                <ul class="list-group mb-3" id="attendanceSummaryList">
-                    <!-- Summary items inserted here -->
-                </ul>
-                <button id="shareAttendance" class="btn btn-info"><i class="fa fa-share-alt"></i> Share</button>
-                <button id="downloadAttendance" class="btn btn-secondary"><i class="fa fa-download"></i> Download</button>
-            </div>
-        </div>
-
-        <!-- Analytics Section -->
-        <div class="tab-pane fade" id="analytics" role="tabpanel">
-            <h2 class="mb-3">Analytics</h2>
-            <p>Use this section to view attendance analytics. For example:</p>
-            <ul>
-                <li>Select a date range to filter attendance data.</li>
-                <li>View summaries of attendance rates over time.</li>
-                <li>Analyze individual student attendance patterns.</li>
-            </ul>
-        </div>
-
-        <!-- Attendance Register Section -->
-        <div class="tab-pane fade" id="attendanceRegister" role="tabpanel">
-            <h2 class="mb-3">Attendance Register</h2>
-            <div id="attendanceRecordsContainer">
-                <!-- Attendance records will be displayed here -->
-            </div>
-        </div>
+  <!-- Header -->
+  <header class="bg-primary text-white text-center py-4">
+    <h1><i class="fas fa-school me-2"></i>Attendance Management</h1>
+    <div class="d-flex justify-content-center gap-4 mt-3">
+      <div><i class="fas fa-users"></i> <strong id="totalSchoolCount">0</strong> Students</div>
+      <div><i class="fas fa-chalkboard-teacher"></i> <strong id="totalClassCount">0</strong> Class</div>
+      <div><i class="fas fa-layer-group"></i> <strong id="totalSectionCount">0</strong> Section</div>
     </div>
-</div>
+  </header>
 
-<!-- Bootstrap Bundle JS (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<!-- idb-keyval for IndexedDB storage -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/idb-keyval/6.2.1/umd.min.js"></script>
-<!-- jsPDF and AutoTable for PDF generation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
-<!-- Custom JS -->
-<script src="app.js"></script>
+  <main class="container my-4">
+
+    <!-- Setup -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#setupCard">
+        <h2><i class="fas fa-cog me-2"></i>Setup</h2>
+      </div>
+      <div id="setupCard" class="collapse show">
+        <div class="card-body">
+          <div id="setupForm" class="d-flex flex-wrap gap-2 mb-3">
+            <input id="schoolNameInput" class="form-control" placeholder="School Name" />
+            <select id="teacherClassSelect" class="form-select">
+              <option value="">--Class--</option>
+              <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
+              <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+              <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+            </select>
+            <select id="teacherSectionSelect" class="form-select">
+              <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+            </select>
+            <button id="saveSetup" class="btn btn-success btn-sm">
+              <i class="fas fa-save me-1"></i>Save
+            </button>
+          </div>
+          <div id="setupDisplay" class="d-none">
+            <h4 id="setupText"></h4>
+            <button id="editSetup" class="btn btn-info btn-sm">
+              <i class="fas fa-edit me-1"></i>Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Registration -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#regCard">
+        <h2><i class="fas fa-user-graduate me-2"></i>Student Registration</h2>
+      </div>
+      <div id="regCard" class="collapse">
+        <div class="card-body">
+          <div id="regForm" class="d-flex flex-wrap gap-2 mb-3">
+            <input id="studentName" class="form-control" placeholder="Name" />
+            <input id="admissionNo" class="form-control" placeholder="Adm#" />
+            <input id="parentName" class="form-control" placeholder="Parent" />
+            <input id="parentContact" class="form-control" placeholder="Contact" />
+            <input id="parentOccupation" class="form-control" placeholder="Occupation" />
+            <input id="parentAddress" class="form-control" placeholder="Address" />
+            <button id="addStudent" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus-circle me-1"></i>Add
+            </button>
+          </div>
+          <div id="studentTableWrapper" class="table-responsive mb-3">
+            <table id="studentTable" class="table table-striped">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllStudents" /></th>
+                  <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+                  <th>Contact</th><th>Occ.</th><th>Address</th><th>Share</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody"></tbody>
+            </table>
+          </div>
+          <div class="d-flex gap-2">
+            <button id="editSelected" class="btn btn-warning btn-sm" disabled>Edit</button>
+            <button id="deleteSelected" class="btn btn-danger btn-sm" disabled>Delete</button>
+            <button id="saveRegistration" class="btn btn-success btn-sm">Save</button>
+            <button id="shareRegistration" class="btn btn-primary btn-sm d-none">Share</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mark Attendance -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#attCard">
+        <h2><i class="fas fa-clipboard-list me-2"></i>Mark Attendance</h2>
+      </div>
+      <div id="attCard" class="collapse show">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="dateInput" class="form-label">Select date</label>
+            <input type="date" id="dateInput" class="form-control" placeholder="Select date" />
+            <button type="button" id="loadAttendance" class="btn btn-primary btn-sm mt-2">Load</button>
+          </div>
+          <div id="attendanceList" class="d-grid gap-2"></div>
+          <button type="button" id="saveAttendance" class="btn btn-success btn-sm mt-3 d-none">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Summary -->
+    <div id="attendance-result" class="card mb-3 d-none">
+      <div class="card-header"><h2>Attendance Summary</h2></div>
+      <div class="card-body">
+        <table class="table"><tbody id="summaryBody"></tbody></table>
+        <div class="d-flex gap-2">
+          <button id="resetAttendance" class="btn btn-secondary btn-sm">Reset</button>
+          <button id="shareAttendanceSummary" class="btn btn-primary btn-sm">Share</button>
+          <button id="downloadAttendancePDF" class="btn btn-danger btn-sm">PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#analyticsCard">
+        <h2><i class="fas fa-chart-bar me-2"></i>Analytics</h2>
+      </div>
+      <div id="analyticsCard" class="collapse">
+        <div class="card-body">
+          <div id="analyticsActions" class="d-flex flex-wrap gap-2 mb-3">
+            <select id="analyticsTarget" class="form-select form-select-sm">
+              <option value="">-- Target --</option>
+              <option value="class">Class</option>
+              <option value="section">Section</option>
+              <option value="student">Student</option>
+            </select>
+            <input type="text" id="studentAdmInput" class="form-control form-control-sm d-none" placeholder="Adm#" />
+            <select id="analyticsType" class="form-select form-select-sm">
+              <option value="">-- Type --</option>
+              <option value="date">Date</option>
+              <option value="month">Month</option>
+              <option value="semester">Semester</option>
+              <option value="year">Year</option>
+            </select>
+            <input type="date" id="analyticsDate" class="form-control form-control-sm d-none" placeholder="Select date" />
+            <input type="month" id="analyticsMonth" class="form-control form-control-sm d-none" placeholder="Select month" />
+            <input type="month" id="semesterStart" class="form-control form-control-sm d-none" placeholder="Start month" />
+            <input type="month" id="semesterEnd" class="form-control form-control-sm d-none" placeholder="End month" />
+            <input type="number" id="yearStart" class="form-control form-control-sm d-none" placeholder="Year" />
+            <button id="loadAnalytics" class="btn btn-primary btn-sm">Load</button>
+            <button id="resetAnalytics" class="btn btn-secondary btn-sm d-none">Reset</button>
+          </div>
+          <div id="instructions" class="mb-2 text-truncate d-none" style="overflow-x:auto;"></div>
+          <div id="analyticsContainer" class="d-none"></div>
+          <div id="graphs" class="d-flex gap-4 d-none overflow-auto">
+            <canvas id="barChart" width="400" height="200"></canvas>
+            <canvas id="pieChart" width="400" height="200"></canvas>
+          </div>
+          <div id="analyticsActions2" class="mt-2 d-none">
+            <button id="shareAnalytics" class="btn btn-primary btn-sm">Share</button>
+            <button id="downloadAnalytics" class="btn btn-danger btn-sm">PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Register -->
+    <div class="card mb-3">
+      <div class="card-header" data-bs-toggle="collapse" data-bs-target="#registerCard">
+        <h2><i class="fas fa-calendar-alt me-2"></i>Attendance Register</h2>
+      </div>
+      <div id="registerCard" class="collapse">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="registerMonth" class="form-label">Select month</label>
+            <input type="month" id="registerMonth" class="form-control" placeholder="Select month" />
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button id="loadRegister" class="btn btn-primary btn-sm">Load</button>
+            <button id="changeRegister" class="btn btn-secondary btn-sm d-none">Change</button>
+          </div>
+          <div id="registerTableWrapper" class="table-responsive d-none">
+            <table id="registerTable" class="table table-bordered">
+              <thead><tr></tr></thead>
+              <tbody id="registerBody"></tbody>
+            </table>
+          </div>
+          <div id="registerSummarySection" class="d-none">
+            <h5>Summary</h5>
+            <table class="table"><tbody id="registerSummaryBody"></tbody></table>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button id="shareRegister" class="btn btn-primary btn-sm">Share</button>
+            <button id="downloadRegisterPDF" class="btn btn-danger btn-sm">PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="app.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 </body>
 </html>
