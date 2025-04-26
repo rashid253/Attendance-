@@ -1,18 +1,90 @@
 /* style.css */
-/* Basic styling adjustments */
-body {
-    background-color: #f8f9fa;
+
+/* 1. Light background on all collapsible cards and hover effect */
+.card {
+  background-color: #f9f9f9;
+  transition: background-color 0.2s ease;
 }
-h1, h2, h3 {
-    color: #343a40;
+.card:hover {
+  background-color: #ffffff;
 }
-.nav-link {
-    margin-right: 5px;
+
+/* Ensure the inner card-body has matching light background */
+.card-body {
+  background-color: #fcfcfc;
 }
-/* Highlight present/absent statuses */
-.list-group-item .text-success {
-    font-weight: bold;
+
+/* 2. “Add Student” button: include text and icon spacing */
+#addStudent {
+  display: inline-flex;
+  align-items: center;
 }
-.list-group-item .text-danger {
-    font-weight: bold;
+#addStudent i {
+  margin-left: 0.4em;
+}
+
+/* 3. Reveal edit/share/download buttons when table is saved */
+/* The JS adds class "saved" to #studentTableWrapper */
+#studentTableWrapper.saved + .d-flex .btn.d-none {
+  display: inline-block !important;
+}
+
+/* 4. Disable simulated placeholder on date inputs */
+input[type="date"]::before {
+  content: none !important;
+}
+
+/* 5. Attendance buttons full-width on narrow/mobile screens */
+.attendance-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+.attendance-actions button {
+  width: 100%;
+  padding: 0.5rem 0;
+  white-space: nowrap;
+}
+
+/* 6. Analytics controls wrap and smaller font */
+#analyticsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+#analyticsActions .form-select,
+#analyticsActions input,
+#analyticsActions button {
+  font-size: 0.85rem;
+}
+
+/* 7. Hidden utility */
+.hidden,
+.d-none {
+  display: none !important;
+}
+
+/* Highlight editable cells when inline editing */
+td.editing {
+  outline: 2px dashed #007bff;
+}
+
+/* Style the “saved” table wrapper border */
+#studentTableWrapper.saved {
+  border: 2px solid #28a745;
+  border-radius: 4px;
+}
+
+/* Ensure collapse headers show pointer */
+.card-header {
+  cursor: pointer;
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+  #analyticsActions .form-select,
+  #analyticsActions input {
+    flex: 1 1 100%;
+  }
 }
