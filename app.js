@@ -272,74 +272,172 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // — ANALYTICS (fixed select & enable logic) —
-  const hideAnalytics = () => {
-    ['analyticsFilter','analyticsStudentInput','analyticsType','analyticsDate','analyticsMonth',
-     'semesterStart','semesterEnd','yearStart','instructions','analyticsContainer','graphs','analyticsActions']
-      .forEach(id=>$(id).classList.add('hidden'));
-  };
-  selectAnalyticsTarget.onchange = () => {
-    hideAnalytics();
-    if (selectAnalyticsTarget.value==='section') {
-      selectAnalyticsType.disabled = false;  // allow period for section 5
-    }
-    if (selectAnalyticsTarget.value==='student') {
-      analyticsFilter.classList.remove('hidden'); // show By: field
-    }
-  };
-  analyticsFilter.onchange = () => {
-    analyticsStudentInput.innerHTML = '<option value="" disabled selected>--Select student--</option>';
-    filteredStudents().forEach(s=>{
-      const opt=document.createElement('option');
-      opt.value=opt.textContent = analyticsFilter.value==='adm'? s.adm : s.name;
-      analyticsStudentInput.appendChild(opt);
+  // — ANALYTICS REWORK —
+// place this in your app.js instead of the old analytics code
+
+const selectAnalyticsTarget = document.getElementById('analyticsTarget');
+const analyticsFilter       = document.getElementById('analyticsFilter');
+const analyticsStudentInput = document.getElementById('analyticsStudentInput');
+const selectAnalyticsType   = document.getElementById('analyticsType');
+const inputAnalyticsDate    = document.getElementById('analyticsDate');
+const inputAnalyticsMonth   = document.getElementById('analyticsMonth');
+const inputSemesterStart    = document.getElementById('semesterStart');
+const inputSemesterEnd      = document.getElementById('semesterEnd');
+const inputAnalyticsYear    = document.getElementById('yearStart');
+const btnLoadAnalytics      = document.getElementById('loadAnalytics');
+const btnResetAnalytics     = document.getElementById('resetAnalytics');
+const divInstructions       = document.getElementById('instructions');
+const divAnalyticsTable     = document.getElementById('analyticsContainer');
+const divGraphs             = document.getElementById('graphs');
+const btnShareAnalytics     = document.getElementById('shareAnalytics');
+const btnDownloadAnalytics  = document.getElementById('downloadAnalytics');
+let chartBar, chartPie;
+
+// 1) initial state
+analyticsFilter.disabled       = true;
+analyticsStudentInput.disabled = true;
+selectAnalyticsType.disabled   = true;
+[inputAnalyticsDate, inputAnalyticsMonth, inputSemesterStart, inputSemesterEnd, inputAnalyticsYear]
+  .forEach(i => i.classList.add('hidden'));
+btnResetAnalytics.classList.add('hidden');
+
+// 2) when scope changes
+selectAnalyticsTarget.addEventListener('change', () => {
+  // if Section: enable period immediately
+  if (selectAnalyticsTarget.value === 'section') {
+    analyticsFilter.classList.add('hidden');
+    analyticsFilter.disabled = true;
+    analyticsStudentInput.classList.add('hidden');
+    selectAnalyticsType.disabled = false;
+  }
+  // if Student: show & enable filter
+  if (selectAnalyticsTarget.value === 'student') {
+    analyticsFilter.classList.remove('hidden');
+    analyticsFilter.disabled = false;
+    analyticsStudentInput.classList.add('hidden');
+    selectAnalyticsType.disabled = true;
+  }
+  // if Class: just enable period
+  if (selectAnalyticsTarget.value === 'class') {
+    analyticsFilter.classList.add('hidden');
+    analyticsFilter.disabled = true;
+    analyticsStudentInput.classList.add('hidden');
+    selectAnalyticsType.disabled = false;
+  }
+});
+
+// 3) when “By” changes (only for individual student)
+analyticsFilter.addEventListener('change', () => {
+  // populate student dropdown
+  analyticsStudentInput.innerHTML = '<option value="" disabled selected>--Select student--</option>';
+  filteredStudents().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = analyticsFilter.value === 'adm' ? s.adm : s.name;
+    opt.textContent = opt.value;
+    analyticsStudentInput.appendChild(opt);
+  });
+  analyticsStudentInput.classList.remove('hidden');
+  analyticsStudentInput.disabled = false;
+});
+
+// 4) once a student is picked, enable period
+analyticsStudentInput.addEventListener('change', () => {
+  selectAnalyticsType.disabled = false;
+});
+
+// 5) when period type changes, show correct picker
+selectAnalyticsType.addEventListener('change', () => {
+  [inputAnalyticsDate, inputAnalyticsMonth, inputSemesterStart, inputSemesterEnd, inputAnalyticsYear]
+    .forEach(i => i.classList.add('hidden'));
+  btnResetAnalytics.classList.remove('hidden');
+
+  switch (selectAnalyticsType.value) {
+    case 'date':     inputAnalyticsDate.classList.remove('hidden'); break;
+    case 'month':    inputAnalyticsMonth.classList.remove('hidden'); break;
+    case 'semester':
+      inputSemesterStart.classList.remove('hidden');
+      inputSemesterEnd.classList.remove('hidden');
+      break;
+    case 'year':     inputAnalyticsYear.classList.remove('hidden'); break;
+  }
+});
+
+// 6) Load Report
+btnLoadAnalytics.addEventListener('click', e => {
+  e.preventDefault();
+  // determine from/to
+  let from, to;
+  const t = selectAnalyticsType.value;
+  if (t === 'date') {
+    if (!inputAnalyticsDate.value) return alert('Pick a date');
+    from = to = inputAnalyticsDate.value;
+  }
+  else if (t === 'month') {
+    if (!inputAnalyticsMonth.value) return alert('Pick a month');
+    const [y,m] = inputAnalyticsMonth.value.split('-').map(Number);
+    from = `${inputAnalyticsMonth.value}-01`;
+    to   = `${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`;
+  }
+  else if (t === 'semester') {
+    if (!inputSemesterStart.value||!inputSemesterEnd.value) return alert('Pick semester range');
+    const [sy,sm] = inputSemesterStart.value.split('-').map(Number);
+    const [ey,em] = inputSemesterEnd.value.split('-').map(Number);
+    from = `${inputSemesterStart.value}-01`;
+    to   = `${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`;
+  }
+  else if (t === 'year') {
+    if (!inputAnalyticsYear.value) return alert('Pick year');
+    from = `${inputAnalyticsYear.value}-01-01`;
+    to   = `${inputAnalyticsYear.value}-12-31`;
+  } else return alert('Select period');
+
+  // build stats
+  let pool = [];
+  if (selectAnalyticsTarget.value==='class')   pool = students.filter(s=>s.cls===classSelect.value);
+  if (selectAnalyticsTarget.value==='section') pool = filteredStudents();
+  if (selectAnalyticsTarget.value==='student') {
+    const val = analyticsStudentInput.value;
+    pool = students.filter(s=> (analyticsFilter.value==='adm'? s.adm===val : s.name===val)
+                                && s.cls===classSelect.value && s.sec===sectionSelect.value);
+  }
+  const stats = pool.map(s=>({ name:s.name, roll:s.roll, P:0,A:0,Lt:0,HD:0,L:0, total:0 }));
+  Object.entries(attendanceData).forEach(([d,recs])=>{
+    if (d>=from && d<=to) stats.forEach(st=>{
+      const c = recs[st.roll]||'A';
+      st[c]++; st.total++;
     });
-    analyticsStudentInput.disabled = false; // enable student select 6
-    analyticsStudentInput.classList.remove('hidden');
-    analyticsStudentInput.onchange = () => selectAnalyticsType.disabled = false; // now allow period
-  };
-  selectAnalyticsType.onchange = () => {
-    hideAnalytics();
-    const t=selectAnalyticsType.value;
-    if (t==='date')      $('analyticsDate').classList.remove('hidden');
-    if (t==='month')     $('analyticsMonth').classList.remove('hidden');
-    if (t==='semester')  { $('semesterStart').classList.remove('hidden'); $('semesterEnd').classList.remove('hidden'); }
-    if (t==='year')      $('yearStart').classList.remove('hidden');
-    btnResetAnalytics.classList.remove('hidden');
-  };
-  btnLoadAnalytics.onclick = e => {
-    e.preventDefault();
-    let from,to; const t=selectAnalyticsType.value;
-    if (t==='date')      { from=to=inputAnalyticsDate.value; }
-    else if (t==='month') { const [y,m]=inputAnalyticsMonth.value.split('-'); from=`${inputAnalyticsMonth.value}-01`; to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if (t==='semester'){ const [sy,sm]=inputSemesterStart.value.split('-'); const [ey,em]=inputSemesterEnd.value.split('-'); from=`${inputSemesterStart.value}-01`; to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
-    else if (t==='year') { from=`${inputAnalyticsYear.value}-01-01`; to=`${inputAnalyticsYear.value}-12-31`; }
-    else return alert('Select period');
+  });
 
-    const stats = filteredStudents().map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
-    Object.entries(attendanceData).forEach(([d,recs])=>{
-      if (d>=from && d<=to) stats.forEach(st=>{ const c=recs[st.roll]||'A'; st[c]++; st.total++; });
-    });
+  // render table
+  divAnalyticsTable.innerHTML = `<table><thead><tr>
+    <th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th>
+  </tr></thead><tbody>${
+    stats.map(s=>{
+      const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
+      return `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td>
+              <td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${pct}</td></tr>`;
+    }).join('')
+  }</tbody></table>`;
+  divAnalyticsTable.classList.remove('hidden');
 
-    // render table
-    divAnalyticsTable.innerHTML = `<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead><tbody>${
-      stats.map(s=>`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total?((s.P/s.total)*100).toFixed(1):0}</td></tr>`).join('')
-    }</tbody></table>`;
-    divAnalyticsTable.classList.remove('hidden');
-    divInstructions.textContent = `Report: ${from} to ${to}`;
-    divInstructions.classList.remove('hidden');
+  divInstructions.textContent = `Report: ${from} to ${to}`;
+  divInstructions.classList.remove('hidden');
 
-    // charts (Chart.js) 7
-    const labels=stats.map(s=>s.name), dataPct=stats.map(s=> s.total? s.P/s.total*100:0 );
-    chartBar&&chartBar.destroy();
-    chartBar=new Chart(ctxBar,{type:'bar',data:{labels,datasets:[{label:'% Present',data:dataPct}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
-    const agg=stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
-    chartPie&&chartPie.destroy();
-    chartPie=new Chart(ctxPie,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
+  // charts
+  const labels = stats.map(s=>s.name),
+        dataPct = stats.map(s=> s.total? s.P/s.total*100:0 );
+  chartBar?.destroy();
+  chartBar = new Chart(ctxBar, { type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }] },
+    options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
+  const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]); return a; },
+                           {P:0,A:0,Lt:0,HD:0,L:0});
+  chartPie?.destroy();
+  chartPie = new Chart(ctxPie, { type:'pie', data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] } });
 
-    divGraphs.classList.remove('hidden');
-    $('analyticsActions').classList.remove('hidden');
-  };
-
+  divGraphs.classList.remove('hidden');
+  btnShareAnalytics.classList.remove('hidden');
+  btnDownloadAnalytics.classList.remove('hidden');
+});
   // — REGISTER —
   function genHeader(days) {
     headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>' +
