@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,7 +92,7 @@
       <input id="parentAddress" placeholder="Address" required />
       <button type="button" id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
-    <div class="table-wrapper saved?" id="studentTableWrapper">
+    <div class="table-wrapper" id="studentTableWrapper">
       <table id="studentTable">
         <thead>
           <tr>
@@ -150,9 +149,15 @@
       <label for="analyticsTarget">Report For:</label>
       <select id="analyticsTarget">
         <option value="class">Full Class</option>
+        <option value="section">Section</option>
         <option value="student">Individual Student</option>
       </select>
-      <input id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <select id="analyticsFilter" class="hidden">
+        <option value="" disabled selected>--Select Field--</option>
+        <option value="adm">Admission #</option>
+        <option value="name">Name</option>
+      </select>
+      <select id="analyticsStudentSelect" class="hidden"></select>
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
         <option disabled selected>--Select Period--</option>
