@@ -178,9 +178,9 @@
       <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
       <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
-    <div id="instructions" class="summary-block hidden"></div>
-    <div id="analyticsContainer" class="table-container hidden"></div>
-    <div id="graphs" class="graph-container hidden">
+    <div id="instructions" class="hidden"></div>
+    <div id="analyticsContainer" class="hidden"></div>
+    <div id="graphs" class="hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
@@ -219,6 +219,10 @@
       <button id="downloadRegisterPDF" class="save"><i class="fas fa-file-pdf"></i> PDF</button>
     </div>
   </section>
+
+  <!-- Error console (Eruda) -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
 
   <!-- Choices.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
