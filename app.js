@@ -376,4 +376,4 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnLoadReg.classList.remove('hidden'); btnChangeReg.classList.add('hidden');
   };
 });
-```8
+
