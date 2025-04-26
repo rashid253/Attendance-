@@ -162,14 +162,6 @@ canvas {
   max-width: 100%;
 }
 
-.selected {
-  background: var(--light);
-}
-
-.editing {
-  outline: 2px dashed var(--info);
-}
-
 .select-col {
   width: 40px;
 }
