@@ -29,10 +29,6 @@ header {
   margin-bottom: 10px;
 }
 
-header h1 {
-  margin: 0;
-}
-
 section {
   background: #fff;
   border: 1px solid #ccc;
@@ -162,6 +158,14 @@ canvas {
   max-width: 100%;
 }
 
+.selected {
+  background: var(--light);
+}
+
+.editing {
+  outline: 2px dashed var(--info);
+}
+
 .select-col {
   width: 40px;
 }
@@ -189,6 +193,17 @@ canvas {
 
 #register-section .row-inline > * {
   margin-right: 8px;
+}
+
+/* restore attendance-marking buttons */
+.attendance-actions .att-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: var(--dark);
+  font-weight: bold;
+  font-size: 1em;
 }
 
 /* ensure pie chart is perfectly round */
