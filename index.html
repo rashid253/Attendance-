@@ -20,14 +20,14 @@
     referrerpolicy="no-referrer"
   />
 
+  <!-- Choices.js CSS (searchable, scrollable select) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
+  />
+
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Inline attendance-actions tweak -->
-  <style>
-    .attendance-actions { display: flex; gap: 0.25em; }
-    .attendance-actions button { flex: 1; padding: 0.5em; font-size: 1rem; min-width: 0; }
-  </style>
 
   <!-- idb-keyval for storage -->
   <script type="module">
@@ -155,18 +155,14 @@
 
       <label for="analyticsFilter" class="hidden" id="labelFilter">By:</label>
       <select id="analyticsFilter" class="hidden">
-        <option value="" disabled selected>--Field--</option>
         <option value="adm">Admission #</option>
         <option value="name">Name</option>
       </select>
 
-      <select id="analyticsStudentInput" class="hidden" disabled>
-        <option value="" disabled selected>--Select student--</option>
-      </select>
+      <select id="analyticsStudentInput" class="hidden js-choice"></select>
 
       <label for="analyticsType">Period:</label>
-      <select id="analyticsType" disabled>
-        <option value="" disabled selected>--Period--</option>
+      <select id="analyticsType">
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
@@ -180,9 +176,8 @@
       <input type="number" id="yearStart" class="hidden" placeholder="Year" />
 
       <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
-      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change</button>
+      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
-
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
     <div id="graphs" class="graph-container hidden">
@@ -191,7 +186,7 @@
     </div>
     <div id="analyticsActions" class="row-inline hidden">
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> PDF</button>
+      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download</button>
     </div>
   </section>
 
@@ -225,13 +220,13 @@
     </div>
   </section>
 
-  <!-- External Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script type="module" src="app.js"></script>
+  <!-- Choices.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
 
-  <!-- Eruda console -->
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App JS -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
