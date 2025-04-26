@@ -15,12 +15,11 @@
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    integrity="sha512-p6O/q9E8lG0O5YH0vDvM2sI+2OQdBk1Fh7D1mY+0Nn+6uYgRiCTlHh8YFJ1s5GH3OQen6gJr+7uQm+XbjmEZ7w=="
     crossorigin="anonymous"
     referrerpolicy="no-referrer"
   />
 
-  <!-- Choices.js CSS (searchable, scrollable select) -->
+  <!-- Choices.js CSS -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
@@ -29,10 +28,10 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- idb-keyval for storage -->
+  <!-- idb-keyval -->
   <script type="module">
-    import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
-    window.idbKeyval = idbKeyvalModule;
+    import * as idb from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
+    window.idbKeyval = idb;
   </script>
 </head>
 <body>
@@ -47,9 +46,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
-        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
-        <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
-        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
+        <option>One</option><option>Two</option><option>Three</option>
       </select>
       <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
@@ -153,6 +150,11 @@
         <option value="student">Individual Student</option>
       </select>
 
+      <label for="analyticsSectionSelect" class="hidden" id="labelSection">Section:</label>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+      </select>
+
       <label for="analyticsFilter" class="hidden" id="labelFilter">By:</label>
       <select id="analyticsFilter" class="hidden">
         <option value="adm">Admission #</option>
@@ -162,7 +164,8 @@
       <select id="analyticsStudentInput" class="hidden js-choice"></select>
 
       <label for="analyticsType">Period:</label>
-      <select id="analyticsType">
+      <select id="analyticsType" disabled>
+        <option value="">--Select--</option>
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
@@ -201,7 +204,7 @@
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th><!-- days by JS --></tr></thead>
+        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th><!-- days added in JS --></tr></thead>
         <tbody id="registerBody"></tbody>
       </table>
     </div>
@@ -220,17 +223,12 @@
     </div>
   </section>
 
-  <!-- Error console (Eruda) -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
+  <!-- Eruda error console -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 
-  <!-- Choices.js -->
+  <!-- Choices.js & Chart.js & App -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- App JS -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
