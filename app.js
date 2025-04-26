@@ -6,24 +6,23 @@ window.idbKeyval = idbKeyvalModule;
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
 
-  // --- STORAGE ---
+  // — STORAGE —
   let students = await get('students') || [];
   let attendanceData = await get('attendanceData') || {};
 
   const saveStudents = () => set('students', students);
   const saveAttendanceData = () => set('attendanceData', attendanceData);
 
-  // --- ADM# GENERATOR ---
+  // — ADM# GENERATOR —
   const getLastAdmNo = async () => (await get('lastAdmissionNo')) || 0;
   const setLastAdmNo = n => set('lastAdmissionNo', n);
   const generateAdmNo = async () => {
-    const last = await getLastAdmNo();
-    const next = last + 1;
+    const last = await getLastAdmNo(), next = last + 1;
     setLastAdmNo(next);
     return String(next).padStart(4, '0');
   };
 
-  // --- ELEMENTS ---
+  // — ELEMENTS —
   const schoolInput    = $('schoolNameInput');
   const classSelect    = $('teacherClassSelect');
   const sectionSelect  = $('teacherSectionSelect');
@@ -91,8 +90,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
 
-  // --- HELPERS ---
-  const filteredStudents = () => students.filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value);
+  // — HELPERS —
+  const filteredStudents = () => students.filter(s => s.cls===classSelect.value && s.sec===sectionSelect.value);
 
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
@@ -101,39 +100,34 @@ window.addEventListener('DOMContentLoaded', async () => {
       function update() {
         count += step;
         span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(update);
+        if(count < target) requestAnimationFrame(update);
       }
       requestAnimationFrame(update);
     });
   }
 
   function updateTotals() {
-    const totalSchool  = students.length;
-    const totalClass   = students.filter(s=>s.cls===classSelect.value).length;
+    const totalSchool = students.length;
+    const totalClass  = students.filter(s=>s.cls===classSelect.value).length;
     const totalSection = filteredStudents().length;
     [['sectionCount', totalSection], ['classCount', totalClass], ['schoolCount', totalSchool]]
-      .forEach(([id,val])=>$(id).dataset.target = val);
+      .forEach(([id,val]) => $(id).dataset.target = val);
     animateCounters();
   }
 
   function bindRowSelection() {
     const boxes = Array.from(tbodyStudents.querySelectorAll('.sel'));
-    boxes.forEach(cb=>cb.onchange = ()=>{
+    boxes.forEach(cb => cb.onchange = () => {
       cb.closest('tr').classList.toggle('selected', cb.checked);
       const any = boxes.some(x=>x.checked);
       btnEditSel.disabled = btnDeleteSel.disabled = !any;
     });
-    chkAllStudents.onchange = ()=>{
-      boxes.forEach(cb=>{
-        cb.checked = chkAllStudents.checked;
-        cb.dispatchEvent(new Event('change'));
-      });
-    };
+    chkAllStudents.onchange = () => boxes.forEach(cb => { cb.checked = chkAllStudents.checked; cb.dispatchEvent(new Event('change')); });
   }
 
   function renderStudents() {
     tbodyStudents.innerHTML = '';
-    filteredStudents().forEach((st,idx)=>{
+    filteredStudents().forEach((st,idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="checkbox" class="sel" data-index="${idx}" ${btnSaveReg.classList.contains('hidden')?'':'disabled'}></td>
@@ -141,10 +135,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${st.contact}</td><td>${st.occupation}</td><td>${st.address}</td>
         <td>${btnSaveReg.classList.contains('hidden')?'<button class="share-one">Share</button>':''}</td>
       `;
-      if (btnSaveReg.classList.contains('hidden')) {
+      if(btnSaveReg.classList.contains('hidden')) {
         tr.querySelector('.share-one').onclick = ()=>{
           const hdr = `*Attendance Report*\\nSchool: ${schoolInput.value}\\nClass: ${classSelect.value}\\nSection: ${sectionSelect.value}`;
-          const msg = [hdr, `Name: ${st.name}`, `Adm#: ${st.adm}`, `Parent: ${st.parent}`, `Contact: ${st.contact}`, `Occupation: ${st.occupation}`, `Address: ${st.address}`].join('\\n');
+          const msg = [hdr, `Name: ${st.name}`, `Adm#: ${st.adm}`, `Parent: ${st.parent}`, `Contact: ${st.contact}`].join('\\n');
           window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
         };
       }
@@ -154,10 +148,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateTotals();
   }
 
-  // --- SETUP ---
-  async function loadSetup(){
+  // — SETUP —
+  async function loadSetup() {
     const school = await get('schoolName'), cls = await get('teacherClass'), sec = await get('teacherSection');
-    if (school && cls && sec) {
+    if(school && cls && sec) {
       schoolInput.value = school;
       classSelect.value = cls;
       sectionSelect.value = sec;
@@ -167,9 +161,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       renderStudents();
     }
   }
-  btnSaveSetup.onclick = async e=>{
+  btnSaveSetup.onclick = async e => {
     e.preventDefault();
-    if (!schoolInput.value||!classSelect.value||!sectionSelect.value) return alert('Complete setup');
+    if(!schoolInput.value||!classSelect.value||!sectionSelect.value) return alert('Complete setup');
     await set('schoolName', schoolInput.value);
     await set('teacherClass', classSelect.value);
     await set('teacherSection', sectionSelect.value);
@@ -178,8 +172,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnEditSetup.onclick = e=>{ e.preventDefault(); setupForm.classList.remove('hidden'); setupDisplay.classList.add('hidden'); };
   await loadSetup();
 
-  // --- ADD STUDENT ---
-  btnAddStudent.onclick = async e=>{
+  // — ADD STUDENT —
+  btnAddStudent.onclick = async e => {
     e.preventDefault();
     const name=nameInput.value.trim(), parent=parentInput.value.trim(),
           cont=contactInput.value.trim(), occ=occInput.value.trim(), addr=addrInput.value.trim();
@@ -192,23 +186,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     [nameInput,parentInput,contactInput,occInput,addrInput].forEach(i=>i.value='');
   };
 
-  // --- INLINE EDIT / DELETE / SAVE REGISTRATION ---
-  btnEditSel.onclick = e=>{/* inline edit logic omitted for brevity */};
-  btnDeleteSel.onclick = e=>{/* delete logic omitted */};
-  btnSaveReg.onclick = e=>{/* save reg logic omitted */};
-  btnEditReg.onclick = e=>{/* edit reg logic omitted */};
-  btnShareReg.onclick = e=>{/* share reg logic omitted */};
-  btnDownloadReg.onclick = e=>{/* download reg logic omitted */};
+  // — INLINE EDIT / DELETE / SAVE REGISTRATION —
+  btnEditSel.onclick = e=>{/* omitted for brevity */};
+  btnDeleteSel.onclick = e=>{/* omitted */};
+  btnSaveReg.onclick = e=>{/* omitted */};
+  btnEditReg.onclick = e=>{/* omitted */};
+  btnShareReg.onclick = e=>{/* omitted */};
+  btnDownloadReg.onclick = e=>{/* omitted */};
 
-  // --- ATTENDANCE MARKING & SUMMARY ---
-  btnLoadAtt.onclick = e=>{/* load attendance logic omitted */};
-  btnSaveAtt.onclick = e=>{/* save attendance logic omitted */};
-  btnResetAtt.onclick = ()=>{/* reset attendance logic omitted */};
-  btnShareAtt.onclick = ()=>{/* share attendance logic omitted */};
-  btnDownloadAtt.onclick = ()=>{/* download attendance logic omitted */};
+  // — ATTENDANCE —
+  btnLoadAtt.onclick = e=>{/* omitted */};
+  btnSaveAtt.onclick = e=>{/* omitted */};
+  btnResetAtt.onclick = ()=>{/* omitted */};
+  btnShareAtt.onclick = ()=>{/* omitted */};
+  btnDownloadAtt.onclick = ()=>{/* omitted */};
 
-  // --- ANALYTICS (full rework) ---
-  // initialize Choices.js on student select
+  // — ANALYTICS (reworked) —
   const choicesStudent = new Choices(analyticsStudentInput, {
     placeholderValue: '--Select student--',
     searchEnabled: true,
@@ -216,7 +209,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     shouldSort: false
   });
 
-  function resetAnalyticsControls() {
+  function resetAnalytics() {
     analyticsFilter.classList.add('hidden');
     analyticsStudentInput.classList.add('hidden');
     selectAnalyticsType.disabled = true;
@@ -227,25 +220,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnShareAnalytics.classList.add('hidden');
     btnDownloadAnalytics.classList.add('hidden');
   }
-  resetAnalyticsControls();
+  resetAnalytics();
 
   selectAnalyticsTarget.onchange = ()=>{
-    resetAnalyticsControls();
-    const t = selectAnalyticsTarget.value;
-    if (t==='class' || t==='section') {
+    resetAnalytics();
+    if(selectAnalyticsTarget.value==='class'||selectAnalyticsTarget.value==='section') {
       selectAnalyticsType.disabled = false;
-    } else if (t==='student') {
+    } else {
       analyticsFilter.classList.remove('hidden');
     }
   };
 
   analyticsFilter.onchange = ()=>{
-    const field = analyticsFilter.value;
-    const opts = filteredStudents().map(s=>({
-      value: s.roll,
-      label: `${s.name} — Parent: ${s.parent} — Adm#: ${s.adm}`
-    }));
-    choicesStudent.setChoices(opts, 'value','label', true);
+    const opts = filteredStudents().map(s=>({value:s.roll,label:`${s.name} — Parent: ${s.parent} — Adm#: ${s.adm}`}));
+    choicesStudent.setChoices(opts,'value','label',true);
     analyticsStudentInput.classList.remove('hidden');
     selectAnalyticsType.disabled = true;
     analyticsStudentInput.onchange = ()=> selectAnalyticsType.disabled = false;
@@ -264,28 +252,23 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   btnLoadAnalytics.onclick = e=>{
     e.preventDefault();
-    let from,to;
-    const t = selectAnalyticsType.value;
-    if (t==='date') { if(!inputAnalyticsDate.value) return alert('Pick date'); from=to=inputAnalyticsDate.value; }
-    else if (t==='month') { if(!inputAnalyticsMonth.value) return alert('Pick month'); const [y,m]=inputAnalyticsMonth.value.split('-').map(Number); from=`${inputAnalyticsMonth.value}-01`; to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if (t==='semester') { if(!inputSemesterStart.value||!inputSemesterEnd.value) return alert('Pick range'); const [sy,sm]=inputSemesterStart.value.split('-').map(Number); const [ey,em]=inputSemesterEnd.value.split('-').map(Number); from=`${inputSemesterStart.value}-01`; to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
-    else if (t==='year') { if(!inputAnalyticsYear.value) return alert('Pick year'); from=`${inputAnalyticsYear.value}-01-01`; to=`${inputAnalyticsYear.value}-12-31`; }
+    let from,to; const t=selectAnalyticsType.value;
+    if(t==='date'){ if(!inputAnalyticsDate.value) return alert('Pick date'); from=to=inputAnalyticsDate.value; }
+    else if(t==='month'){ if(!inputAnalyticsMonth.value) return alert('Pick month'); const [y,m]=inputAnalyticsMonth.value.split('-').map(Number); from=`${inputAnalyticsMonth.value}-01`; to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
+    else if(t==='semester'){ if(!inputSemesterStart.value||!inputSemesterEnd.value) return alert('Pick range'); const [sy,sm]=inputSemesterStart.value.split('-').map(Number); const [ey,em]=inputSemesterEnd.value.split('-').map(Number); from=`${inputSemesterStart.value}-01`; to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
+    else if(t==='year'){ if(!inputAnalyticsYear.value) return alert('Pick year'); from=`${inputAnalyticsYear.value}-01-01`; to=`${inputAnalyticsYear.value}-12-31`; }
     else return alert('Select period');
 
-    let pool = [];
-    if (selectAnalyticsTarget.value==='class') pool = students.filter(s=>s.cls===classSelect.value);
-    else if (selectAnalyticsTarget.value==='section') pool = filteredStudents();
-    else {
-      const roll = choicesStudent.getValue(true);
-      pool = students.filter(s=>s.roll==roll);
-    }
+    let pool=[];
+    if(selectAnalyticsTarget.value==='class') pool=students.filter(s=>s.cls===classSelect.value);
+    else if(selectAnalyticsTarget.value==='section') pool=filteredStudents();
+    else { const roll=choicesStudent.getValue(true); pool=students.filter(s=>s.roll==roll); }
 
-    const stats = pool.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
+    const stats=pool.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
     Object.entries(attendanceData).forEach(([d,recs])=>{
-      if (d>=from && d<=to) stats.forEach(st=>{ const c=recs[st.roll]||'A'; st[c]++; st.total++; });
+      if(d>=from&&d<=to) stats.forEach(st=>{const c=recs[st.roll]||'A';st[c]++;st.total++;});
     });
 
-    // render table
     divAnalyticsTable.innerHTML = `<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead><tbody>${
       stats.map(s=>`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total?((s.P/s.total)*100).toFixed(1):'0.0'}</td></tr>`).join('')
     }</tbody></table>`;
@@ -293,52 +276,46 @@ window.addEventListener('DOMContentLoaded', async () => {
     divInstructions.textContent = `Report: ${from} to ${to}`;
     divInstructions.classList.remove('hidden');
 
-    // charts
-    const labels = stats.map(s=>s.name), dataPct = stats.map(s=>s.total? s.P/s.total*100:0);
+    const labels=stats.map(s=>s.name), dataPct=stats.map(s=>s.total? s.P/s.total*100:0);
     chartBar?.destroy();
-    chartBar = new Chart(ctxBar, { type:'bar', data:{labels,datasets:[{label:'% Present',data:dataPct}]}, options:{scales:{y:{beginAtZero:true,max:100}}} });
-    const agg = stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
+    chartBar=new Chart(ctxBar,{type:'bar',data:{labels,datasets:[{label:'% Present',data:dataPct}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
+    const agg=stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
     chartPie?.destroy();
-    chartPie = new Chart(ctxPie, { type:'pie', data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]} });
+    chartPie=new Chart(ctxPie,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
 
     divGraphs.classList.remove('hidden');
     btnShareAnalytics.classList.remove('hidden');
     btnDownloadAnalytics.classList.remove('hidden');
   };
 
-  btnResetAnalytics.onclick = e=>{ e.preventDefault(); resetAnalyticsControls(); };
+  btnResetAnalytics.onclick = e=>{ e.preventDefault(); resetAnalytics(); };
 
-  // --- REGISTER ---
+  // — REGISTER —
   function genHeader(days) {
     headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>' +
       Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
   }
   btnLoadReg.onclick = e=>{
     e.preventDefault();
-    if (!monthInput.value) return alert('Select month');
-    const [y,m] = monthInput.value.split('-').map(Number);
-    const days = new Date(y,m,0).getDate();
-    genHeader(days);
-    tbodyReg.innerHTML = '';
-    tbodyRegSum.innerHTML = '';
+    if(!monthInput.value) return alert('Select month');
+    const [y,m]=monthInput.value.split('-').map(Number), days=new Date(y,m,0).getDate();
+    genHeader(days); tbodyReg.innerHTML=''; tbodyRegSum.innerHTML='';
     filteredStudents().forEach((s,i)=>{
       const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>` +
-        Array.from({length:days},(_,d)=>{ const code=(attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A'; return `<td style="background:${colors[code]};color:#fff">${code}</td>`; }).join('');
+      tr.innerHTML=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`+
+        Array.from({length:days},(_,d)=>{const code=(attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A';return`<td style="background:${colors[code]};color:#fff">${code}</td>`;}).join('');
       tbodyReg.appendChild(tr);
     });
     filteredStudents().forEach(s=>{
       let stat={P:0,A:0,Lt:0,HD:0,L:0,total:0};
-      for(let d=1;d<=days;d++){ const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A'; stat[code]++; stat.total++; }
+      for(let d=1;d<=days;d++){const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A';stat[code]++;stat.total++;}
       const pct=stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
       const tr=document.createElement('tr');
       tr.innerHTML=`<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
       tbodyRegSum.appendChild(tr);
     });
-    divRegTable.classList.remove('hidden');
-    divRegSummary.classList.remove('hidden');
-    btnLoadReg.classList.add('hidden');
-    btnChangeReg.classList.remove('hidden');
+    divRegTable.classList.remove('hidden'); divRegSummary.classList.remove('hidden');
+    btnLoadReg.classList.add('hidden'); btnChangeReg.classList.remove('hidden');
   };
   btnChangeReg.onclick = e=>{ e.preventDefault(); divRegTable.classList.add('hidden'); divRegSummary.classList.add('hidden'); btnLoadReg.classList.remove('hidden'); btnChangeReg.classList.add('hidden'); };
 });
