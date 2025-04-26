@@ -1,90 +1,110 @@
 /* style.css */
 
-/* 1. Light background on all collapsible cards and hover effect */
+/* Global Styling */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+header {
+  background: #2196F3;
+  color: #fff;
+  padding: 1em;
+  text-align: center;
+}
+header h1 {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Card Component */
 .card {
-  background-color: #f9f9f9;
-  transition: background-color 0.2s ease;
+  background: #fff;
+  border-radius: 1em;
+  margin: 1em;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
 }
-.card:hover {
-  background-color: #ffffff;
-}
-
-/* Ensure the inner card-body has matching light background */
-.card-body {
-  background-color: #fcfcfc;
-}
-
-/* 2. “Add Student” button: include text and icon spacing */
-#addStudent {
-  display: inline-flex;
+.card-header {
+  padding: 1em;
+  cursor: pointer;
+  display: flex;
   align-items: center;
+  background: #e3f2fd;
 }
-#addStudent i {
-  margin-left: 0.4em;
+.card-header h2 {
+  margin: 0;
+  font-size: 1.2em;
 }
-
-/* 3. Reveal edit/share/download buttons when table is saved */
-/* The JS adds class "saved" to #studentTableWrapper */
-#studentTableWrapper.saved + .d-flex .btn.d-none {
-  display: inline-block !important;
+.card-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
 }
-
-/* 4. Disable simulated placeholder on date inputs */
-input[type="date"]::before {
-  content: none !important;
-}
-
-/* 5. Attendance buttons full-width on narrow/mobile screens */
-.attendance-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  gap: 0.3rem;
-  margin-bottom: 1rem;
-}
-.attendance-actions button {
-  width: 100%;
-  padding: 0.5rem 0;
-  white-space: nowrap;
+.card.open .card-content {
+  max-height: 2000px; /* enough to show all content */
 }
 
-/* 6. Analytics controls wrap and smaller font */
-#analyticsActions {
+/* Responsive Layout */
+.row-inline {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.5em;
 }
-#analyticsActions .form-select,
-#analyticsActions input,
-#analyticsActions button {
-  font-size: 0.85rem;
-}
-
-/* 7. Hidden utility */
-.hidden,
-.d-none {
-  display: none !important;
+.row-inline input,
+.row-inline select,
+.row-inline button {
+  flex: 1;
+  min-width: 8em;
 }
 
-/* Highlight editable cells when inline editing */
-td.editing {
-  outline: 2px dashed #007bff;
+.table-wrapper {
+  overflow-x: auto;
+}
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table-wrapper th,
+.table-wrapper td {
+  padding: 0.5em;
+  border: 1px solid #ddd;
+  text-align: left;
 }
 
-/* Style the “saved” table wrapper border */
-#studentTableWrapper.saved {
-  border: 2px solid #28a745;
-  border-radius: 4px;
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  padding: 0.5em;
 }
 
-/* Ensure collapse headers show pointer */
-.card-header {
+button {
+  background: #2196F3;
+  color: #fff;
+  border: none;
+  border-radius: 0.5em;
+  padding: 0.75em 1em;
+  font-size: 1em;
   cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover {
+  background: #1976D2;
+}
+button.small {
+  padding: 0.3em 0.6em;
+  font-size: 0.9em;
+}
+button.save {
+  background: #4CAF50;
+}
+button.save:hover {
+  background: #388E3C;
 }
 
-/* Responsive tweaks */
-@media (max-width: 576px) {
-  #analyticsActions .form-select,
-  #analyticsActions input {
-    flex: 1 1 100%;
-  }
+.hidden {
+  display: none !important;
 }
