@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome for icons -->
+  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -20,16 +21,16 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Main Stylesheet -->
+  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Inline tweaks for attendance-buttons container -->
+  <!-- Inline attendance-actions tweak -->
   <style>
     .attendance-actions { display: flex; gap: 0.25em; }
     .attendance-actions button { flex: 1; padding: 0.5em; font-size: 1rem; min-width: 0; }
   </style>
 
-  <!-- Load idb-keyval -->
+  <!-- idb-keyval for storage -->
   <script type="module">
     import * as idbKeyvalModule from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
     window.idbKeyval = idbKeyvalModule;
@@ -92,7 +93,7 @@
       <input id="parentAddress" placeholder="Address" required />
       <button type="button" id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
-    <div class="table-wrapper" id="studentTableWrapper">
+    <div class="table-wrapper saved?" id="studentTableWrapper">
       <table id="studentTable">
         <thead>
           <tr>
@@ -105,12 +106,12 @@
       </table>
     </div>
     <div class="table-actions">
-      <button type="button" id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
-      <button type="button" id="deleteSelected" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
-      <button type="button" id="saveRegistration" class="save"><i class="fas fa-save"></i> Save Table</button>
-      <button type="button" id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share Table</button>
-      <button type="button" id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit Table</button>
-      <button type="button" id="downloadRegistrationPDF" class="hidden"><i class="fas fa-file-pdf"></i> Download PDF</button>
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+      <button id="saveRegistration" class="save"><i class="fas fa-save"></i> Save Table</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share Table</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit Table</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-file-pdf"></i> Download PDF</button>
     </div>
   </section>
 
@@ -120,10 +121,10 @@
     <div class="row-inline">
       <label for="dateInput">Select Date:</label>
       <input type="date" id="dateInput" />
-      <button type="button" id="loadAttendance"><i class="fas fa-sync-alt"></i> Load Attendance</button>
+      <button id="loadAttendance"><i class="fas fa-sync-alt"></i> Load Attendance</button>
     </div>
     <div id="attendanceList"></div>
-    <button type="button" id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+    <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
   </section>
 
   <!-- 5. Attendance Summary -->
@@ -136,9 +137,9 @@
       </table>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareAttendanceSummary"><i class="fas fa-share-alt"></i> Share Table</button>
-      <button type="button" id="downloadAttendancePDF"><i class="fas fa-file-pdf"></i> Download PDF</button>
-      <button type="button" id="resetAttendance" class="small"><i class="fas fa-undo"></i> Reset</button>
+      <button id="shareAttendanceSummary"><i class="fas fa-share-alt"></i> Share Table</button>
+      <button id="downloadAttendancePDF"><i class="fas fa-file-pdf"></i> Download PDF</button>
+      <button id="resetAttendance" class="small"><i class="fas fa-undo"></i> Reset</button>
     </div>
   </section>
 
@@ -151,22 +152,22 @@
         <option value="class">Full Class</option>
         <option value="student">Individual Student</option>
       </select>
-      <input type="text" id="studentAdmInput" placeholder="Admission #" class="hidden" />
+      <input id="studentAdmInput" placeholder="Admission #" class="hidden" />
       <label for="analyticsType">Period:</label>
       <select id="analyticsType">
-        <option value="" disabled selected>--Select Period--</option>
+        <option disabled selected>--Select Period--</option>
         <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-      <button type="button" id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load Analytics</button>
-      <button type="button" id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change</button>
+      <input id="analyticsDate" type="date" class="hidden" />
+      <input id="analyticsMonth" type="month" class="hidden" />
+      <input id="semesterStart" type="month" class="hidden" />
+      <input id="semesterEnd" type="month" class="hidden" />
+      <input id="yearStart" type="number" placeholder="Year" class="hidden" />
+      <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load Analytics</button>
+      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
     <div id="instructions" class="summary-block hidden"></div>
     <div id="analyticsContainer" class="table-container hidden"></div>
@@ -175,8 +176,8 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div id="analyticsActions" class="row-inline hidden">
-      <button type="button" id="shareAnalytics"><i class="fas fa-share-alt"></i> Share as Text</button>
-      <button type="button" id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download Analytics PDF</button>
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share as Text</button>
+      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download Analytics PDF</button>
     </div>
   </section>
 
@@ -185,45 +186,30 @@
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
       <label for="registerMonth">Select Month:</label>
-      <input type="month" id="registerMonth" />
-      <button type="button" id="loadRegister" class="save"><i class="fas fa-sync-alt"></i> Load Register</button>
-      <button type="button" id="changeRegister" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
+      <input id="registerMonth" type="month" />
+      <button id="loadRegister" class="save"><i class="fas fa-sync-alt"></i> Load Register</button>
+      <button id="changeRegister" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
-    <div class="table-wrapper hidden" id="registerTableWrapper">
-      <table id="registerTable">
-        <thead>
-          <tr>
-            <th>Sr#</th><th>Adm#</th><th>Name</th>
-          </tr>
-        </thead>
-        <tbody id="registerBody"></tbody>
-      </table>
+    <div id="registerTableWrapper" class="table-wrapper hidden">
+      <table id="registerTable"><thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead><tbody id="registerBody"></tbody></table>
     </div>
     <div id="registerSummarySection" class="hidden">
       <h3>Summary</h3>
       <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
-          </thead>
-          <tbody id="registerSummaryBody"></tbody>
-        </table>
+        <table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead><tbody id="registerSummaryBody"></tbody></table>
       </div>
     </div>
     <div class="table-actions">
-      <button type="button" id="shareRegister" class="save"><i class="fas fa-share-alt"></i> Share Summary</button>
-      <button type="button" id="downloadRegisterPDF" class="save"><i class="fas fa-file-pdf"></i> Download PDF</button>
+      <button id="shareRegister" class="save"><i class="fas fa-share-alt"></i> Share Summary</button>
+      <button id="downloadRegisterPDF" class="save"><i class="fas fa-file-pdf"></i> Download PDF</button>
     </div>
   </section>
 
-  <!-- External Libraries + Main Script -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="app.js"></script>
-
-  <!-- Mobile-friendly error console -->
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 </body>
 </html>
