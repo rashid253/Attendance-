@@ -6,7 +6,7 @@ window.idbKeyval = idbKeyvalModule;
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
 
-  // — STORAGE —
+  // — STORAGE (idb-keyval) —
   let students       = await get('students')       || [];
   let attendanceData = await get('attendanceData') || {};
 
@@ -23,7 +23,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     return String(next).padStart(4, '0');
   };
 
-  // — ELEMENTS —
+  // — ELEMENT REFS —
   const schoolInput    = $('schoolNameInput');
   const classSelect    = $('teacherClassSelect');
   const sectionSelect  = $('teacherSectionSelect');
@@ -61,7 +61,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const selectAnalyticsTarget = $('analyticsTarget');
   const analyticsFilter       = $('analyticsFilter');
   const analyticsStudentInput = $('analyticsStudentInput');
-  const studentDatalist       = $('studentDatalist');
   const selectAnalyticsType   = $('analyticsType');
   const inputAnalyticsDate    = $('analyticsDate');
   const inputAnalyticsMonth   = $('analyticsMonth');
@@ -93,10 +92,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
 
   // — HELPERS —
-  const getCurrentClassSection = () => ({
-    cls: classSelect.value,
-    sec: sectionSelect.value
-  });
   const filteredStudents = () =>
     students.filter(s => s.cls===classSelect.value && s.sec===sectionSelect.value);
 
@@ -112,6 +107,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       requestAnimationFrame(update);
     });
   }
+
   function updateTotals() {
     const totalSchool  = students.length;
     const totalClass   = students.filter(s=>s.cls===classSelect.value).length;
@@ -156,13 +152,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateTotals();
   }
 
-  // — SETUP —
+  // — SETUP LOAD/SAVE —
   async function loadSetup(){
-    const school=await get('schoolName'), cls=await get('teacherClass'), sec=await get('teacherSection');
+    const school=await get('schoolName'),
+          cls   =await get('teacherClass'),
+          sec   =await get('teacherSection');
     if (school && cls && sec) {
-      schoolInput.value=school; classSelect.value=cls; sectionSelect.value=sec;
+      schoolInput.value=school;
+      classSelect.value=cls;
+      sectionSelect.value=sec;
       setupText.textContent = `${school} | Class: ${cls} | Section: ${sec}`;
-      setupForm.classList.add('hidden'); setupDisplay.classList.remove('hidden');
+      setupForm.classList.add('hidden');
+      setupDisplay.classList.remove('hidden');
       renderStudents();
     }
   }
@@ -185,18 +186,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   // — ADD STUDENT —
   btnAddStudent.onclick = async e => {
     e.preventDefault();
-    const name = nameInput.value.trim(), parent = parentInput.value.trim(),
-          cont = contactInput.value.trim(), occ = occInput.value.trim(), addr = addrInput.value.trim();
+    const name   = nameInput.value.trim(),
+          parent = parentInput.value.trim(),
+          cont   = contactInput.value.trim(),
+          occ    = occInput.value.trim(),
+          addr   = addrInput.value.trim();
     if (!name||!parent||!cont||!occ||!addr) return alert('All fields required');
-    if (!/^\d{7,15}$/.test(cont)) return alert('Contact must be 7–15 digits');
+    if (!/^\d{7,15}$/.test(cont))      return alert('Contact must be 7–15 digits');
     const adm = await generateAdmNo();
-    students.push({name,adm,parent,contact:cont,occupation:occ,address:addr,roll:Date.now(),cls:classSelect.value,sec:sectionSelect.value});
+    students.push({ name, adm, parent, contact:cont, occupation:occ, address:addr,
+                    roll:Date.now(), cls:classSelect.value, sec:sectionSelect.value });
     await saveStudents();
     renderStudents();
     [nameInput,parentInput,contactInput,occInput,addrInput].forEach(i=>i.value='');
   };
 
-  // — REGISTRATION CONTROLS —
+  // — SAVE / EDIT REGISTRATION —
   btnSaveReg.onclick = e => {
     e.preventDefault();
     ['editSelected','deleteSelected','selectAllStudents','saveRegistration']
@@ -219,20 +224,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+lines.join('\n'))}`);
   };
 
-  // — ATTENDANCE —
+  // — ATTENDANCE MARKING —
   btnLoadAtt.onclick = e => {
     e.preventDefault();
     if (!dateInput.value) return alert('Pick a date');
     divAttList.innerHTML='';
     filteredStudents().forEach(s => {
-      const row = document.createElement('div'), actions = document.createElement('div');
-      row.textContent = s.name;
-      actions.className = 'attendance-actions';
-      ['P','A','Lt','HD','L'].forEach(code => {
-        const b = document.createElement('button');
+      const row=document.createElement('div'), actions=document.createElement('div');
+      row.textContent=s.name;
+      actions.className='attendance-actions';
+      ['P','A','Lt','HD','L'].forEach(code=>{
+        const b=document.createElement('button');
         b.textContent=code; b.dataset.code=code;
-        b.onclick = () => {
-          actions.querySelectorAll('button').forEach(x=>{x.style.background='';x.style.color='';});
+        b.onclick=()=>{
+          actions.querySelectorAll('button').forEach(x=>{x.style='';});
           b.style.background=colors[code]; b.style.color='#fff';
         };
         actions.appendChild(b);
@@ -244,19 +249,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnSaveAtt.onclick = async () => {
     const d = dateInput.value; attendanceData[d]={};
     document.querySelectorAll('.attendance-actions').forEach((actions,i)=>{
-      const btn = actions.querySelector('button[style]');
-      attendanceData[d][filteredStudents()[i].roll] = btn?btn.dataset.code:'A';
+      const btn=actions.querySelector('button[style]'),
+            code=btn?btn.dataset.code:'A';
+      attendanceData[d][filteredStudents()[i].roll]=code;
     });
     await saveAttendanceData();
     $('attendance-section').classList.add('hidden');
     sectionResult.classList.remove('hidden');
     tbodySummary.innerHTML='';
     filteredStudents().forEach(s=>{
-      const code = attendanceData[dateInput.value][s.roll]||'A';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${code}</td><td><button class="send-btn">Send</button></td>`;
-      tr.querySelector('.send-btn').onclick = () =>
-        window.open(`https://wa.me/?text=${encodeURIComponent(`${s.name}: ${code}`)}`);
+      const code=attendanceData[d][s.roll]||'A';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${s.name}</td><td>${code}</td><td><button class="send-btn">Send</button></td>`;
+      tr.querySelector('.send-btn').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent(`${s.name}: ${code}`)}`);
       tbodySummary.appendChild(tr);
     });
   };
@@ -266,85 +271,71 @@ window.addEventListener('DOMContentLoaded', async () => {
     divAttList.innerHTML=''; btnSaveAtt.classList.add('hidden');
   };
 
-  // — ANALYTICS —
+  // — ANALYTICS (fixed select & enable logic) —
   const hideAnalytics = () => {
-    ['analyticsFilter','analyticsStudentInput','analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart','instructions','analyticsContainer','graphs','analyticsActions']
+    ['analyticsFilter','analyticsStudentInput','analyticsType','analyticsDate','analyticsMonth',
+     'semesterStart','semesterEnd','yearStart','instructions','analyticsContainer','graphs','analyticsActions']
       .forEach(id=>$(id).classList.add('hidden'));
   };
   selectAnalyticsTarget.onchange = () => {
     hideAnalytics();
+    if (selectAnalyticsTarget.value==='section') {
+      selectAnalyticsType.disabled = false;  // allow period for section 5
+    }
     if (selectAnalyticsTarget.value==='student') {
-      analyticsFilter.classList.remove('hidden');
-      $('labelFilter').classList.remove('hidden');
+      analyticsFilter.classList.remove('hidden'); // show By: field
     }
   };
   analyticsFilter.onchange = () => {
-    studentDatalist.innerHTML='';
-    const field = analyticsFilter.value;
+    analyticsStudentInput.innerHTML = '<option value="" disabled selected>--Select student--</option>';
     filteredStudents().forEach(s=>{
-      const v = field==='adm'?s.adm:s.name;
-      studentDatalist.insertAdjacentHTML('beforeend', `<option value="${v}">`);
+      const opt=document.createElement('option');
+      opt.value=opt.textContent = analyticsFilter.value==='adm'? s.adm : s.name;
+      analyticsStudentInput.appendChild(opt);
     });
+    analyticsStudentInput.disabled = false; // enable student select 6
     analyticsStudentInput.classList.remove('hidden');
+    analyticsStudentInput.onchange = () => selectAnalyticsType.disabled = false; // now allow period
   };
   selectAnalyticsType.onchange = () => {
     hideAnalytics();
-    const t = selectAnalyticsType.value;
-    if (t==='date') $('analyticsDate').classList.remove('hidden');
-    if (t==='month') $('analyticsMonth').classList.remove('hidden');
-    if (t==='semester'){ $('semesterStart').classList.remove('hidden'); $('semesterEnd').classList.remove('hidden'); }
-    if (t==='year') $('yearStart').classList.remove('hidden');
+    const t=selectAnalyticsType.value;
+    if (t==='date')      $('analyticsDate').classList.remove('hidden');
+    if (t==='month')     $('analyticsMonth').classList.remove('hidden');
+    if (t==='semester')  { $('semesterStart').classList.remove('hidden'); $('semesterEnd').classList.remove('hidden'); }
+    if (t==='year')      $('yearStart').classList.remove('hidden');
     btnResetAnalytics.classList.remove('hidden');
   };
   btnLoadAnalytics.onclick = e => {
     e.preventDefault();
-    let from, to; const t=selectAnalyticsType.value;
-    if (t==='date') { from=to=inputAnalyticsDate.value; }
-    else if (t==='month') {
-      const [y,m]=inputAnalyticsMonth.value.split('-');
-      from=`${inputAnalyticsMonth.value}-01`;
-      to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`;
-    }
-    else if (t==='semester') {
-      const [sy,sm]=inputSemesterStart.value.split('-');
-      const [ey,em]=inputSemesterEnd.value.split('-');
-      from=`${inputSemesterStart.value}-01`;
-      to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`;
-    }
-    else if (t==='year') {
-      from=`${inputAnalyticsYear.value}-01-01`;
-      to=`${inputAnalyticsYear.value}-12-31`;
-    } else return alert('Select period');
+    let from,to; const t=selectAnalyticsType.value;
+    if (t==='date')      { from=to=inputAnalyticsDate.value; }
+    else if (t==='month') { const [y,m]=inputAnalyticsMonth.value.split('-'); from=`${inputAnalyticsMonth.value}-01`; to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
+    else if (t==='semester'){ const [sy,sm]=inputSemesterStart.value.split('-'); const [ey,em]=inputSemesterEnd.value.split('-'); from=`${inputSemesterStart.value}-01`; to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
+    else if (t==='year') { from=`${inputAnalyticsYear.value}-01-01`; to=`${inputAnalyticsYear.value}-12-31`; }
+    else return alert('Select period');
 
     const stats = filteredStudents().map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
     Object.entries(attendanceData).forEach(([d,recs])=>{
-      if (d>=from && d<=to)
-        stats.forEach(st=>{ const c=recs[st.roll]||'A'; st[c]++; st.total++; });
+      if (d>=from && d<=to) stats.forEach(st=>{ const c=recs[st.roll]||'A'; st[c]++; st.total++; });
     });
 
     // render table
-    divAnalyticsTable.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th>
-    </tr></thead><tbody>${
-      stats.map(s=>{
-        const pct = s.total?((s.P/s.total)*100).toFixed(1):'0.0';
-        return `<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td>
-                <td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${pct}</td></tr>`;
-      }).join('')
+    divAnalyticsTable.innerHTML = `<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead><tbody>${
+      stats.map(s=>`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total?((s.P/s.total)*100).toFixed(1):0}</td></tr>`).join('')
     }</tbody></table>`;
     divAnalyticsTable.classList.remove('hidden');
     divInstructions.textContent = `Report: ${from} to ${to}`;
     divInstructions.classList.remove('hidden');
 
-    // charts
-    const labels = stats.map(s=>s.name);
-    const dataPct = stats.map(s=> s.total? s.P/s.total*100:0 );
-    chartBar && chartBar.destroy();
-    chartBar = new Chart(ctxBar, { type:'bar', data:{ labels, datasets:[{ label:'% Present', data:dataPct }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
-    const agg = stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
-    chartPie && chartPie.destroy();
-    chartPie = new Chart(ctxPie, { type:'pie', data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] } });
+    // charts (Chart.js) 7
+    const labels=stats.map(s=>s.name), dataPct=stats.map(s=> s.total? s.P/s.total*100:0 );
+    chartBar&&chartBar.destroy();
+    chartBar=new Chart(ctxBar,{type:'bar',data:{labels,datasets:[{label:'% Present',data:dataPct}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
+    const agg=stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
+    chartPie&&chartPie.destroy();
+    chartPie=new Chart(ctxPie,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
+
     divGraphs.classList.remove('hidden');
     $('analyticsActions').classList.remove('hidden');
   };
@@ -363,36 +354,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     tbodyReg.innerHTML = '';
     tbodyRegSum.innerHTML = '';
     filteredStudents().forEach((s,i)=>{
-      const tr = document.createElement('tr');
+      const tr=document.createElement('tr');
       tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>` +
-        Array.from({length:days},(_,d)=> {
-          const code = (attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A';
-          return `<td style="background:${colors[code]};color:#fff">${code}</td>`;
-        }).join('');
+        Array.from({length:days},(_,d)=>{ const code = (attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A'; return `<td style="background:${colors[code]};color:#fff">${code}</td>`; }).join('');
       tbodyReg.appendChild(tr);
     });
     filteredStudents().forEach(s=>{
       let stat={P:0,A:0,Lt:0,HD:0,L:0,total:0};
-      for(let d=1;d<=days;d++){
-        const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A';
-        stat[code]++; stat.total++;
-      }
-      const pct = stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td>
-                      <td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
+      for(let d=1;d<=days;d++){ const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A'; stat[code]++; stat.total++; }
+      const pct=stat.total?((stat.P/stat.total)*100).toFixed(1):0;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
       tbodyRegSum.appendChild(tr);
     });
-    divRegTable.classList.remove('hidden');
-    divRegSummary.classList.remove('hidden');
-    btnLoadReg.classList.add('hidden');
-    btnChangeReg.classList.remove('hidden');
+    divRegTable.classList.remove('hidden'); divRegSummary.classList.remove('hidden');
+    btnLoadReg.classList.add('hidden'); btnChangeReg.classList.remove('hidden');
   };
   btnChangeReg.onclick = e => {
     e.preventDefault();
-    divRegTable.classList.add('hidden');
-    divRegSummary.classList.add('hidden');
-    btnLoadReg.classList.remove('hidden');
-    btnChangeReg.classList.add('hidden');
+    divRegTable.classList.add('hidden'); divRegSummary.classList.add('hidden');
+    btnLoadReg.classList.remove('hidden'); btnChangeReg.classList.add('hidden');
   };
 });
+```8
