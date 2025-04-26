@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,7 +47,9 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
+        <option>Pre-Play</option><option>Pre-Prep</option><option>Nursery</option><option>Pre-One</option>
         <option>One</option><option>Two</option><option>Three</option><option>Four</option><option>Five</option>
+        <option>Six</option><option>Seven</option><option>Eight</option><option>Nine</option><option>Ten</option>
       </select>
       <select id="teacherSectionSelect">
         <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
@@ -203,7 +204,7 @@
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th> <!-- days added in JS --></tr></thead>
+        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th> <!-- days added by JS --></tr></thead>
         <tbody id="registerBody"></tbody>
       </table>
     </div>
@@ -229,6 +230,7 @@
   <script type="module" src="app.js"></script>
 
   <!-- Eruda console -->
-  <script src="//cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
 </body>
 </html>
