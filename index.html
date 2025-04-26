@@ -17,11 +17,14 @@
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- small inline tweaks for attendance buttons and totals bar -->
+  <!-- small inline tweaks for attendance buttons and totals layout -->
   <style>
     .attendance-actions { display: flex; gap: 0.25em; }
     .attendance-actions button { flex: 1; padding: 0.5em; font-size: 1rem; min-width: 0; }
-    .totals-bar { display: flex; gap: 1.5em; font-weight: bold; padding: 0.5em 0; border-bottom: 1px solid #ccc; margin-bottom: 1em; }
+    .totals-bar { display: flex; gap: 1.5em; font-weight: bold; padding: 0.5em 0; border-bottom: 1px solid #ccc; margin-bottom: 0; }
+    .totals-desc { background: #000; color: #fff; text-align: center; padding: 0.5em 0; }
+    .totals-desc .totals-label { font-weight: bold; margin-bottom: 0.25em; }
+    .totals-desc .totals-words { display: flex; justify-content: center; gap: 2em; font-size: 1em; }
   </style>
 
   <!-- Load idb-keyval as ES module, then expose it globally -->
@@ -37,6 +40,14 @@
       <span><i class="fas fa-school fa-lg"></i> <span id="totalSchoolCount">0</span></span>
       <span><i class="fas fa-users fa-lg"></i> <span id="totalClassCount">0</span></span>
       <span><i class="fas fa-layer-group fa-lg"></i> <span id="totalSectionCount">0</span></span>
+    </div>
+    <div class="totals-desc">
+      <div class="totals-label">Total:</div>
+      <div class="totals-words">
+        <span>School Students</span>
+        <span>Class Students</span>
+        <span>Section Students</span>
+      </div>
     </div>
   </header>
 
