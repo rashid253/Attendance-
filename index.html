@@ -37,9 +37,9 @@
   <header>
     <h1><i class="fas fa-school"></i></h1>
     <div class="totals-bar">
-      <span title="Total School Students"><i class="fas fa-users"></i><span id="totalSchoolCount" class="count">0</span></span>
-      <span title="Total Class Students"><i class="fas fa-chalkboard-teacher"></i><span id="totalClassCount" class="count">0</span></span>
-      <span title="Total Section Students"><i class="fas fa-layer-group"></i><span id="totalSectionCount" class="count">0</span></span>
+      <span title="School"><i class="fas fa-school"></i><span id="totalSchoolCount" class="count">0</span></span>
+      <span title="Class"><i class="fas fa-chalkboard-teacher"></i><span id="totalClassCount" class="count">0</span></span>
+      <span title="Section"><i class="fas fa-layer-group"></i><span id="totalSectionCount" class="count">0</span></span>
     </div>
   </header>
 
@@ -210,20 +210,5 @@
   <!-- Mobile‐friendly error console -->
   <script src="//cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
-  <!-- Inline Error-Console (Eruda) Loader -->
-  <script>
-    (function () {
-      // create the <script> element
-      var erudaScript = document.createElement('script');
-      // point to the eruda CDN
-      erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-      // once loaded, initialize the console
-      erudaScript.onload = function () {
-        eruda.init();
-      };
-      // inject into body
-      document.body.appendChild(erudaScript);
-    })();
-  </script>
 </body>
 </html>
