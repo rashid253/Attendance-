@@ -1,24 +1,24 @@
 // app.js
 
-// grab the global IIFE export explicitly
+// Grab the global idbKeyval created by the v3 IIFE bundle
 const { get, set } = window.idbKeyval;
 
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
 
   // --- STORAGE ---
-  let students = await get('students') || [];
+  let students       = await get('students')       || [];
   let attendanceData = await get('attendanceData') || {};
-  const saveStudents = () => set('students', students);
+  const saveStudents       = () => set('students', students);
   const saveAttendanceData = () => set('attendanceData', attendanceData);
 
   // --- ADM# GENERATOR ---
-  const getLastAdmNo = async () => (await get('lastAdmissionNo')) || 0;
-  const setLastAdmNo = n => set('lastAdmissionNo', n);
+  const getLastAdmNo  = async () => (await get('lastAdmissionNo')) || 0;
+  const setLastAdmNo  = n => set('lastAdmissionNo', n);
   const generateAdmNo = async () => {
     const last = await getLastAdmNo(), next = last + 1;
     setLastAdmNo(next);
-    return String(next).padStart(4, '0');
+    return String(next).padStart(4,'0');
   };
 
   // --- ELEMENT REFERENCES ---
@@ -92,7 +92,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
 
   // --- HELPERS ---
-  const filteredStudents = () => students.filter(s=>s.cls===classSelect.value && s.sec===sectionSelect.value);
+  const filteredStudents = () =>
+    students.filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value);
 
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
@@ -108,7 +109,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   function updateTotals() {
     const totalSchool  = students.length;
-    const totalClass   = students.filter(s=>s.cls===classSelect.value).length;
+    const totalClass   = students.filter(s => s.cls === classSelect.value).length;
     const totalSection = filteredStudents().length;
     [['sectionCount', totalSection], ['classCount', totalClass], ['schoolCount', totalSchool]]
       .forEach(([id,val]) => $(id).dataset.target = val);
@@ -119,7 +120,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const boxes = Array.from(tbodyStudents.querySelectorAll('.sel'));
     boxes.forEach(cb => cb.onchange = () => {
       cb.closest('tr').classList.toggle('selected', cb.checked);
-      const any = boxes.some(x=>x.checked);
+      const any = boxes.some(x => x.checked);
       btnEditSel.disabled = btnDeleteSel.disabled = !any;
     });
     chkAllStudents.onchange = () => boxes.forEach(cb => {
@@ -130,7 +131,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   function renderStudents() {
     tbodyStudents.innerHTML = '';
-    filteredStudents().forEach((st,idx) => {
+    filteredStudents().forEach((st, idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="checkbox" class="sel" data-index="${idx}" ${btnSaveReg.classList.contains('hidden')?'':'disabled'}></td>
@@ -151,14 +152,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateTotals();
   }
 
-  // --- SETUP LOAD/SAVE/EDIT ---
+  // --- SETUP ---
   async function loadSetup() {
     const school = await get('schoolName'),
           cls    = await get('teacherClass'),
           sec    = await get('teacherSection');
     if (school && cls && sec) {
-      schoolInput.value = school;
-      classSelect.value = cls;
+      schoolInput.value   = school;
+      classSelect.value   = cls;
       sectionSelect.value = sec;
       setupText.textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
       setupForm.classList.add('hidden');
@@ -168,7 +169,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   btnSaveSetup.onclick = async e => {
     e.preventDefault();
-    if (!schoolInput.value||!classSelect.value||!sectionSelect.value) return alert('Complete setup');
+    if (!schoolInput.value || !classSelect.value || !sectionSelect.value) return alert('Complete setup');
     await set('schoolName', schoolInput.value);
     await set('teacherClass', classSelect.value);
     await set('teacherSection', sectionSelect.value);
@@ -177,7 +178,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnEditSetup.onclick = e => { e.preventDefault(); setupForm.classList.remove('hidden'); setupDisplay.classList.add('hidden'); };
   await loadSetup();
 
-  // --- STUDENT REGISTRATION: ADD/EDIT/DELETE/SAVE/SHARE/DOWNLOAD ---
+  // --- STUDENT REGISTRATION ---
   btnAddStudent.onclick = async e => {
     e.preventDefault();
     const name   = nameInput.value.trim(),
@@ -194,7 +195,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     [nameInput,parentInput,contactInput,occInput,addrInput].forEach(i=>i.value='');
   };
 
-  // Inline edit
   btnEditSel.onclick = e => {
     e.preventDefault();
     Array.from(tbodyStudents.querySelectorAll('.sel:checked')).forEach(cb => {
@@ -281,23 +281,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     await saveAttendanceData();
     sectionResult.classList.remove('hidden'); tbodySummary.innerHTML='';
     filteredStudents().forEach(s=>{
-      const code=attendanceData[dateInput.value][s.roll]||'A';
+      const code=attendanceData[d][s.roll]||'A';
       const status={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
       const tr=document.createElement('tr');
       tr.innerHTML=`<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
-      tr.querySelector('.send-btn').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent([`Date: ${dateInput.value}`,`Name: ${s.name}`,`Status: ${status}`].join('\n'))}`,'_blank');
+      tr.querySelector('.send-btn').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent([`Date: ${d}`,`Name: ${s.name}`,`Status: ${status}`].join('\n'))}`,'_blank');
       tbodySummary.appendChild(tr);
     });
   };
   btnResetAtt.onclick = ()=>{ sectionResult.classList.add('hidden'); divAttList.innerHTML=''; btnSaveAtt.classList.add('hidden'); };
-  btnShareAtt.onclick = ()=>{ const d=dateInput.value; const hdr=`*Attendance*\nDate: ${d}`; const lines=filteredStudents().map(s=>`${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[attendanceData[d][s.roll]||'A'] }`); window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+lines.join('\n'))}`,'_blank'); };
-  btnDownloadAtt.onclick = ()=>{ const d=dateInput.value; const { jsPDF }=window.jspdf; const doc=new jsPDF(); doc.text('Attendance Summary',10,10); doc.autoTable({ head:[['Name','Status']], body:filteredStudents().map(s=>{const code=attendanceData[d][s.roll]||'A'; return [s.name,{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];}), startY:20 }); doc.save('attendance.pdf'); };
+  btnShareAtt.onclick = ()=>{ const d=dateInput.value; const hdr=`*Attendance*\nDate: ${d}`; const lines=filteredStudents().map(s=>`${s.name}: ${ {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[(attendanceData[d]||{})[s.roll]||'A'] }`); window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+lines.join('\n'))}`,'_blank'); };
+  btnDownloadAtt.onclick = ()=>{ const d=dateInput.value; const { jsPDF }=window.jspdf; const doc=new jsPDF(); doc.text('Attendance Summary',10,10); doc.autoTable({ head:[['Name','Status']], body:filteredStudents().map(s=>{ const code=(attendanceData[d]||{})[s.roll]||'A'; return [s.name,{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];}), startY:20 }); doc.save('attendance.pdf'); };
 
   // --- ANALYTICS ---
   function resetAnalyticsUI() {
     ['labelSection','analyticsSectionSelect','labelFilter','analyticsFilter','analyticsStudentInput'].forEach(id=>$(id).classList.add('hidden'));
     selectAnalyticsType.disabled=true;
-    [inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear,btnResetAnalytics,divAnalyticsTable,divGraphs,btnShareAnalytics,btnDownloadAnalytics].forEach(el=>el.classList.add('hidden'));
+    [inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear,btnResetAnalytics,divAnalyticsTable,divGraphs,btnShareAnalytics,btnDownloadAnalytics]
+      .forEach(el=>el.classList.add('hidden'));
   }
   resetAnalyticsUI(); selectAnalyticsTarget.value='class'; selectAnalyticsTarget.dispatchEvent(new Event('change'));
   selectAnalyticsTarget.onchange=()=>{ resetAnalyticsUI(); if(selectAnalyticsTarget.value!=='student') selectAnalyticsType.disabled=false; if(selectAnalyticsTarget.value==='section'){ $('labelSection').classList.remove('hidden'); analyticsSectionSelect.classList.remove('hidden'); } if(selectAnalyticsTarget.value==='student'){ $('labelFilter').classList.remove('hidden'); analyticsFilter.classList.remove('hidden'); } };
