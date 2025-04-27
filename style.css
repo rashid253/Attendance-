@@ -50,7 +50,9 @@ label {
   font-weight: bold;
 }
 
-input, select, button {
+input,
+select,
+button {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -95,7 +97,8 @@ table {
   table-layout: auto;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #ccc;
   padding: 8px;
   white-space: nowrap;
@@ -184,21 +187,32 @@ th {
   overflow-y: auto;
 }
 
-/* Hide stray Choices UI when original select is hidden */
-#analyticsSectionSelect.hidden + .choices,
-#analyticsFilter.hidden + .choices,
-#analyticsStudentInput.hidden + .choices {
-  display: none !important;
+/* Analytics section spacing and results table */
+#analytics-section .row-inline > * {
+  margin-right: 8px;
 }
 
-/* Analytics table & graph containers */
-#analyticsContainer, #graphs {
+#analyticsResult {
   margin-top: 15px;
+}
+
+#analyticsResult table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#analyticsResult th,
+#analyticsResult td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: center;
 }
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .row-inline input, .row-inline select, .row-inline button {
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
     flex: 1 1 100%;
   }
   .counter-grid {
