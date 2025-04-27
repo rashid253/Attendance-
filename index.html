@@ -28,7 +28,7 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- idb-keyval v3 IIFE (defines global window.idbKeyval) -->
+  <!-- idb-keyval v3 IIFE (defines window.idbKeyval) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 </head>
 <body>
@@ -59,21 +59,9 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <i class="fas fa-layer-group"></i>
-      <span class="number" data-target="0" id="sectionCount">0</span>
-      <div class="label">Section Students</div>
-    </div>
-    <div class="counter-card">
-      <i class="fas fa-chalkboard-teacher"></i>
-      <span class="number" data-target="0" id="classCount">0</span>
-      <div class="label">Class Students</div>
-    </div>
-    <div class="counter-card">
-      <i class="fas fa-users"></i>
-      <span class="number" data-target="0" id="schoolCount">0</span>
-      <div class="label">School Students</div>
-    </div>
+    <div class="counter-card"><i class="fas fa-layer-group"></i><span class="number" data-target="0" id="sectionCount">0</span><div class="label">Section Students</div></div>
+    <div class="counter-card"><i class="fas fa-chalkboard-teacher"></i><span class="number" data-target="0" id="classCount">0</span><div class="label">Class Students</div></div>
+    <div class="counter-card"><i class="fas fa-users"></i><span class="number" data-target="0" id="schoolCount">0</span><div class="label">School Students</div></div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -155,6 +143,7 @@
         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
 
+      <!-- replaced filter + dropdown with direct admission# input -->
       <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Admission #" />
 
       <label for="analyticsType">Period:</label>
