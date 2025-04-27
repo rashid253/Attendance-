@@ -53,7 +53,7 @@ select {
   font-size: 0.9rem;
 }
 
-/* Restore original button sizing and prevent wrapping */
+/* Restore original button sizing and ensure buttons sit above other elements */
 button {
   padding: 8px;
   border: 1px solid #ccc;
@@ -66,6 +66,8 @@ button {
   align-items: center;
   gap: 5px;
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .hidden {
@@ -153,7 +155,7 @@ td {
   border-radius: 4px;
 }
 
-/* All section action buttons in one horizontal row, no wrapping */
+/* All section action buttons in one horizontal row */
 .table-actions {
   display: flex;
   gap: 10px;
@@ -164,26 +166,6 @@ td {
 .table-actions button {
   flex: none;
   white-space: nowrap;
-}
-
-/* Specific adjustments for student-registration action buttons */
-#student-registration .table-actions {
-  gap: 5px;
-}
-#student-registration .table-actions button {
-  flex-shrink: 1;
-}
-#editSelected,
-#deleteSelected,
-#saveRegistration {
-  padding: 6px 8px;
-  font-size: 0.85rem;
-}
-
-/* Reduce padding for mark attendance action buttons if needed */
-#attendance-section .table-actions button {
-  padding: 6px 10px;
-  font-size: 0.88rem;
 }
 
 @media (max-width: 600px) {
