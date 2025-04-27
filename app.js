@@ -1,413 +1,220 @@
-// app.js
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classwise Attendance Management</title>
 
-// Grab the global idbKeyval created by the v3 IIFE bundle
-const { get, set } = window.idbKeyval;
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
 
-window.addEventListener('DOMContentLoaded', async () => {
-  const $ = id => document.getElementById(id);
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
 
-  // --- STORAGE ---
-  let students       = await get('students')       || [];
-  let attendanceData = await get('attendanceData') || {};
-  const saveStudents       = () => set('students', students);
-  const saveAttendanceData = () => set('attendanceData', attendanceData);
+  <!-- Choices.js CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
+  />
 
-  // --- ADM# GENERATOR ---
-  const getLastAdmNo  = async () => (await get('lastAdmissionNo')) || 0;
-  const setLastAdmNo  = n => set('lastAdmissionNo', n);
-  const generateAdmNo = async () => {
-    const last = await getLastAdmNo(), next = last + 1;
-    setLastAdmNo(next);
-    return String(next).padStart(4,'0');
-  };
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
 
-  // --- ELEMENT REFERENCES ---
-  const schoolInput    = $('schoolNameInput'),
-        classSelect    = $('teacherClassSelect'),
-        sectionSelect  = $('teacherSectionSelect'),
-        btnSaveSetup   = $('saveSetup'),
-        setupForm      = $('setupForm'),
-        setupDisplay   = $('setupDisplay'),
-        setupText      = $('setupText'),
-        btnEditSetup   = $('editSetup');
+  <!-- idb-keyval v3 IIFE (defines window.idbKeyval) -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
-  const nameInput      = $('studentName'),
-        parentInput    = $('parentName'),
-        contactInput   = $('parentContact'),
-        occInput       = $('parentOccupation'),
-        addrInput      = $('parentAddress'),
-        btnAddStudent  = $('addStudent'),
-        tbodyStudents  = $('studentsBody'),
-        chkAllStudents = $('selectAllStudents'),
-        btnEditSel     = $('editSelected'),
-        btnDeleteSel   = $('deleteSelected'),
-        btnSaveReg     = $('saveRegistration'),
-        btnShareReg    = $('shareRegistration'),
-        btnEditReg     = $('editRegistration'),
-        btnDownloadReg = $('downloadRegistrationPDF');
+  <!-- 1. Setup -->
+  <section id="teacher-setup">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected value="">-- Select Class --</option>
+        <option>One</option><option>Two</option><option>Three</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected value="">-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <h3 id="setupText"></h3>
+      <button id="editSetup" class="small"><i class="fas fa-edit"></i> Edit</button>
+    </div>
+  </section>
 
-  const dateInput      = $('dateInput'),
-        btnLoadAtt     = $('loadAttendance'),
-        divAttList     = $('attendanceList'),
-        btnSaveAtt     = $('saveAttendance'),
-        sectionResult  = $('attendance-result'),
-        tbodySummary   = $('summaryBody'),
-        btnResetAtt    = $('resetAttendance'),
-        btnShareAtt    = $('shareAttendanceSummary'),
-        btnDownloadAtt = $('downloadAttendancePDF');
+  <!-- 2. Counters -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card"><i class="fas fa-layer-group"></i><span class="number" data-target="0" id="sectionCount">0</span><div class="label">Section Students</div></div>
+    <div class="counter-card"><i class="fas fa-chalkboard-teacher"></i><span class="number" data-target="0" id="classCount">0</span><div class="label">Class Students</div></div>
+    <div class="counter-card"><i class="fas fa-users"></i><span class="number" data-target="0" id="schoolCount">0</span><div class="label">School Students</div></div>
+  </section>
 
-  const selectAnalyticsTarget  = $('analyticsTarget'),
-        analyticsSectionSelect = $('analyticsSectionSelect'),
-        analyticsAdmInput      = $('analyticsAdmInput'),
-        selectAnalyticsType    = $('analyticsType'),
-        inputAnalyticsDate     = $('analyticsDate'),
-        inputAnalyticsMonth    = $('analyticsMonth'),
-        inputSemesterStart     = $('semesterStart'),
-        inputSemesterEnd       = $('semesterEnd'),
-        inputAnalyticsYear     = $('yearStart'),
-        btnLoadAnalytics       = $('loadAnalytics'),
-        btnResetAnalytics      = $('resetAnalytics'),
-        divInstructions        = $('instructions'),
-        divAnalyticsTable      = $('analyticsContainer'),
-        divGraphs              = $('graphs'),
-        btnShareAnalytics      = $('shareAnalytics'),
-        btnDownloadAnalytics   = $('downloadAnalytics'),
-        ctxBar                 = $('barChart').getContext('2d'),
-        ctxPie                 = $('pieChart').getContext('2d');
+  <!-- 3. Student Registration -->
+  <section id="student-registration">
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+    <div id="regForm" class="row-inline">
+      <input id="studentName" placeholder="Name" required />
+      <input id="parentName" placeholder="Parent Name" required />
+      <input id="parentContact" placeholder="Parent Contact" required />
+      <input id="parentOccupation" placeholder="Occupation" required />
+      <input id="parentAddress" placeholder="Address" required />
+      <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents" /></th>
+            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+      <button id="saveRegistration" class="save"><i class="fas fa-save"></i> Save</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+  </section>
 
-  let chartBar, chartPie;
+  <!-- 4. Attendance Marking -->
+  <section id="attendance-section">
+    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+    <div class="row-inline">
+      <label for="dateInput">Date:</label>
+      <input type="date" id="dateInput" />
+      <button id="loadAttendance"><i class="fas fa-sync-alt"></i> Load</button>
+    </div>
+    <div id="attendanceList"></div>
+    <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+  </section>
 
-  const monthInput      = $('registerMonth'),
-        btnLoadReg      = $('loadRegister'),
-        btnChangeReg    = $('changeRegister'),
-        divRegTable     = $('registerTableWrapper'),
-        tbodyReg        = $('registerBody'),
-        divRegSummary   = $('registerSummarySection'),
-        tbodyRegSum     = $('registerSummaryBody'),
-        btnShareReg2    = $('shareRegister'),
-        btnDownloadReg2 = $('downloadRegisterPDF'),
-        headerRegRowEl  = document.querySelector('#registerTable thead tr');
+  <!-- 5. Attendance Summary -->
+  <section id="attendance-result" class="hidden">
+    <h2><i class="fas fa-clipboard-list"></i> Attendance Summary</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="shareAttendanceSummary"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAttendancePDF"><i class="fas fa-file-pdf"></i> PDF</button>
+      <button id="resetAttendance" class="small"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+  </section>
 
-  const colors = { P:'#4CAF50', A:'#f44336', Lt:'#FFEB3B', HD:'#FF9800', L:'#03a9f4' };
+  <!-- 6. Analytics -->
+  <section id="analytics-section">
+    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+    <div class="row-inline">
+      <label for="analyticsTarget">Report For:</label>
+      <select id="analyticsTarget">
+        <option disabled selected value="">— Select Report —</option>
+        <option value="class">Full Class</option>
+        <option value="section">Section</option>
+        <option value="student">Individual Student</option>
+      </select>
 
-  // --- HELPERS ---
-  const filteredStudents = () =>
-    students.filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value);
+      <label id="labelSection" class="hidden" for="analyticsSectionSelect">Section:</label>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected value="">— Select Section —</option>
+        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+      </select>
 
-  function animateCounters() {
-    document.querySelectorAll('.number').forEach(span => {
-      const target = +span.dataset.target;
-      let count = 0, step = Math.max(1, target/100);
-      (function update() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(update);
-      })();
-    });
-  }
+      <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Admission #" />
 
-  function updateTotals() {
-    const totalSchool  = students.length;
-    const totalClass   = students.filter(s => s.cls === classSelect.value).length;
-    const totalSection = filteredStudents().length;
-    [['sectionCount', totalSection], ['classCount', totalClass], ['schoolCount', totalSchool]]
-      .forEach(([id,val]) => $(id).dataset.target = val);
-    animateCounters();
-  }
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType" disabled>
+        <option disabled selected value="">— Select Period —</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
 
-  function bindRowSelection() {
-    const boxes = Array.from(tbodyStudents.querySelectorAll('.sel'));
-    boxes.forEach(cb => cb.onchange = () => {
-      cb.closest('tr').classList.toggle('selected', cb.checked);
-      const any = boxes.some(x => x.checked);
-      btnEditSel.disabled = btnDeleteSel.disabled = !any;
-    });
-    chkAllStudents.onchange = () => boxes.forEach(cb => {
-      cb.checked = chkAllStudents.checked;
-      cb.dispatchEvent(new Event('change'));
-    });
-  }
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
 
-  function renderStudents() {
-    tbodyStudents.innerHTML = '';
-    filteredStudents().forEach((st, idx) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel" data-index="${idx}" ${btnSaveReg.classList.contains('hidden')?'':'disabled'}></td>
-        <td>${idx+1}</td><td>${st.name}</td><td>${st.adm}</td><td>${st.parent}</td>
-        <td>${st.contact}</td><td>${st.occupation}</td><td>${st.address}</td>
-        <td>${btnSaveReg.classList.contains('hidden')?'<button class="share-one">Share</button>':''}</td>
-      `;
-      if (btnSaveReg.classList.contains('hidden')) {
-        tr.querySelector('.share-one').onclick = () => {
-          const hdr = `*Attendance Report*\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
-          const msg = [hdr, `Name: ${st.name}`, `Adm#: ${st.adm}`].join('\n');
-          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-        };
-      }
-      tbodyStudents.appendChild(tr);
-    });
-    bindRowSelection();
-    updateTotals();
-  }
+      <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
+      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
+    </div>
+    <div id="instructions" class="hidden summary-block"></div>
+    <div id="analyticsContainer" class="table-wrapper hidden"></div>
+    <div id="graphs" class="graph-container hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download</button>
+    </div>
+  </section>
 
-  // --- SETUP ---
-  async function loadSetup() {
-    const school = await get('schoolName'),
-          cls    = await get('teacherClass'),
-          sec    = await get('teacherSection');
-    if (school && cls && sec) {
-      schoolInput.value   = school;
-      classSelect.value   = cls;
-      sectionSelect.value = sec;
-      setupText.textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
-      setupForm.classList.add('hidden');
-      setupDisplay.classList.remove('hidden');
-      renderStudents();
-    }
-  }
-  btnSaveSetup.onclick = async e => {
-    e.preventDefault();
-    if (!schoolInput.value || !classSelect.value || !sectionSelect.value) return alert('Complete setup');
-    await set('schoolName', schoolInput.value);
-    await set('teacherClass', classSelect.value);
-    await set('teacherSection', sectionSelect.value);
-    await loadSetup();
-  };
-  btnEditSetup.onclick = e => { e.preventDefault(); setupForm.classList.remove('hidden'); setupDisplay.classList.add('hidden'); };
-  await loadSetup();
+  <!-- 7. Attendance Register -->
+  <section id="register-section">
+    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <label for="registerMonth">Month:</label>
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister" class="save"><i class="fas fa-sync-alt"></i> Load</button>
+      <button id="changeRegister" class="small hidden"><i class="fas fa-undo"></i> Change</button>
+    </div>
+    <div class="table-wrapper hidden" id="registerTableWrapper">
+      <table id="registerTable">
+        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div id="registerSummarySection" class="hidden">
+      <h3>Summary</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead>
+          <tbody id="registerSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-actions">
+      <button id="shareRegister" class="save"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegisterPDF" class="save"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+  </section>
 
-  // --- STUDENT REGISTRATION ---
-  btnAddStudent.onclick = async e => {
-    e.preventDefault();
-    const name   = nameInput.value.trim(),
-          parent = parentInput.value.trim(),
-          cont   = contactInput.value.trim(),
-          occ    = occInput.value.trim(),
-          addr   = addrInput.value.trim();
-    if (!name||!parent||!cont||!occ||!addr) return alert('All fields required');
-    if (!/^\d{7,15}$/.test(cont)) return alert('Contact must be 7–15 digits');
-    const adm = await generateAdmNo();
-    students.push({ name, adm, parent, contact:cont, occupation:occ, address:addr, roll:Date.now(), cls:classSelect.value, sec:sectionSelect.value });
-    await saveStudents();
-    renderStudents();
-    [nameInput,parentInput,contactInput,occInput,addrInput].forEach(i=>i.value='');
-  };
+  <!-- Eruda console -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 
-  btnEditSel.onclick = e => {
-    e.preventDefault();
-    Array.from(tbodyStudents.querySelectorAll('.sel:checked')).forEach(cb => {
-      const tr = cb.closest('tr');
-      tr.querySelectorAll('td').forEach((td,ci) => {
-        if (ci>=2 && ci<=7) {
-          td.contentEditable = true;
-          td.classList.add('editing');
-          td.onblur = () => {
-            const idx = +cb.dataset.index;
-            const keys = ['name','adm','parent','contact','occupation','address'];
-            const val = td.textContent.trim();
-            if (ci===3 && !/^\d+$/.test(val)) { alert('Adm# numeric'); renderStudents(); return; }
-            filteredStudents()[idx][keys[ci-2]] = val;
-            saveStudents();
-          };
-        }
-      });
-    });
-  };
-  btnDeleteSel.onclick = async e => {
-    e.preventDefault();
-    if (!confirm('Delete selected?')) return;
-    const toRemove = Array.from(tbodyStudents.querySelectorAll('.sel:checked')).map(cb => filteredStudents()[+cb.dataset.index].roll);
-    students = students.filter(s=>!toRemove.includes(s.roll));
-    await saveStudents();
-    renderStudents();
-  };
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  // --- REGISTRATION SAVE/EDIT/SHARE/DOWNLOAD ---
-  btnSaveReg.onclick = e => {
-    e.preventDefault();
-    ['saveRegistration','editSelected','deleteSelected','selectAllStudents'].forEach(id => $(id).classList.add('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id => $(id).classList.remove('hidden'));
-    renderStudents();
-  };
-  btnEditReg.onclick = e => {
-    e.preventDefault();
-    ['saveRegistration','editSelected','deleteSelected','selectAllStudents'].forEach(id => $(id).classList.remove('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id => $(id).classList.add('hidden'));
-    renderStudents();
-  };
-  btnDownloadReg.onclick = e => {
-    e.preventDefault();
-    const jsPDF = window.jspdf?.jsPDF || window.jsPDF;
-    const doc = new jsPDF();
-    doc.autoTable({ html: '#studentTable', startY: 10, styles: { fontSize: 8 } });
-    doc.save('student_registration.pdf');
-  };
-
-  // --- ATTENDANCE MARKING & SUMMARY ---
-  btnLoadAtt.onclick = e => {
-    e.preventDefault();
-    if (!dateInput.value) return alert('Pick a date');
-    divAttList.innerHTML = '';
-    filteredStudents().forEach(s=>{
-      const row=document.createElement('div'); row.className='attendance-item'; row.textContent=s.name;
-      const actions=document.createElement('div'); actions.className='attendance-actions';
-      ['P','A','Lt','HD','L'].forEach(code=>{
-        const b=document.createElement('button'); b.textContent=code; b.dataset.code=code;
-        b.onclick=()=>{ actions.querySelectorAll('button').forEach(x=>{x.style.background='';x.style.color='';}); b.style.background=colors[code];b.style.color='#fff'; };
-        actions.appendChild(b);
-      });
-      divAttList.append(row,actions);
-    });
-    btnSaveAtt.classList.remove('hidden');
-  };
-  btnSaveAtt.onclick = async e => {
-    e.preventDefault();
-    const d=dateInput.value; attendanceData[d]={};
-    divAttList.querySelectorAll('.attendance-actions').forEach((actions,i)=>{
-      const b=actions.querySelector('button[style*="background"]');
-      attendanceData[d][filteredStudents()[i].roll] = b?b.dataset.code:'A';
-    });
-    await saveAttendanceData();
-    sectionResult.classList.remove('hidden'); tbodySummary.innerHTML='';
-    filteredStudents().forEach(s=>{
-      const code=attendanceData[d][s.roll]||'A', status={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
-      tr.querySelector('.send-btn').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent([`Date: ${d}`,`Name: ${s.name}`,`Status: ${status}`].join('\n'))}`,'_blank');
-      tbodySummary.appendChild(tr);
-    });
-  };
-  btnResetAtt.onclick = ()=>{ sectionResult.classList.add('hidden'); divAttList.innerHTML=''; btnSaveAtt.classList.add('hidden'); };
-  btnDownloadAtt.onclick = ()=>{
-    const d=dateInput.value; const jsPDF = window.jspdf?.jsPDF || window.jsPDF; const doc=new jsPDF();
-    doc.autoTable({ head:[['Name','Status']], body:filteredStudents().map(s=>{ const code=(attendanceData[d]||{})[s.roll]||'A'; return [s.name,{P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code]];}), startY:10 });
-    doc.save('attendance_summary.pdf');
-  };
-
-  // --- ANALYTICS ---
-  function resetAnalyticsUI() {
-    ['labelSection','analyticsSectionSelect','analyticsAdmInput'].forEach(id=>$(id).classList.add('hidden'));
-    selectAnalyticsType.disabled=true;
-    [inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear,
-     btnResetAnalytics,divAnalyticsTable,divGraphs,btnShareAnalytics,btnDownloadAnalytics]
-      .forEach(el=>el.classList.add('hidden'));
-    selectAnalyticsTarget.value='';
-    analyticsAdmInput.value='';
-    selectAnalyticsType.value='';
-  }
-  resetAnalyticsUI();
-
-  selectAnalyticsTarget.onchange=()=>{
-    resetAnalyticsUI();
-    selectAnalyticsType.disabled=false;
-    if(selectAnalyticsTarget.value==='section'){ $('labelSection').classList.remove('hidden'); analyticsSectionSelect.classList.remove('hidden'); }
-    if(selectAnalyticsTarget.value==='student'){ analyticsAdmInput.classList.remove('hidden'); }
-  };
-
-  selectAnalyticsType.onchange=()=>{
-    [inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear]
-      .forEach(i=>i.classList.add('hidden'));
-    btnResetAnalytics.classList.remove('hidden');
-    if(selectAnalyticsType.value==='date') inputAnalyticsDate.classList.remove('hidden');
-    if(selectAnalyticsType.value==='month') inputAnalyticsMonth.classList.remove('hidden');
-    if(selectAnalyticsType.value==='semester'){ inputSemesterStart.classList.remove('hidden'); inputSemesterEnd.classList.remove('hidden'); }
-    if(selectAnalyticsType.value==='year') inputAnalyticsYear.classList.remove('hidden');
-  };
-
-  btnLoadAnalytics.onclick=e=>{
-    e.preventDefault();
-    let from,to;
-    const t=selectAnalyticsType.value;
-    if(t==='date'){ from=to=inputAnalyticsDate.value||alert('Pick date'); }
-    else if(t==='month'){ const [y,m]=inputAnalyticsMonth.value.split('-').map(Number); from=`${inputAnalyticsMonth.value}-01`; to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if(t==='semester'){ const [sy,sm]=inputSemesterStart.value.split('-').map(Number); const [ey,em]=inputSemesterEnd.value.split('-').map(Number); from=`${inputSemesterStart.value}-01`; to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
-    else if(t==='year'){ from=`${inputAnalyticsYear.value}-01-01`; to=`${inputAnalyticsYear.value}-12-31`; }
-    else return alert('Select period');
-
-    let pool = [];
-    if(selectAnalyticsTarget.value==='class') pool = students.filter(s=>s.cls===classSelect.value);
-    if(selectAnalyticsTarget.value==='section') pool = filteredStudents();
-    if(selectAnalyticsTarget.value==='student') pool = students.filter(s=>s.adm===analyticsAdmInput.value.trim());
-
-    const stats = pool.map(s=>({name:s.name,roll:s.roll,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
-    Object.entries(attendanceData).forEach(([d,recs])=>{
-      if(d>=from&&d<=to) stats.forEach(st=>{ const c=recs[st.roll]||'A'; st[c]++; st.total++; });
-    });
-
-    divAnalyticsTable.innerHTML = `<table><thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead><tbody>${
-      stats.map(s=>`<tr><td>${s.name}</td><td>${s.P}</td><td>${s.A}</td><td>${s.Lt}</td><td>${s.HD}</td><td>${s.L}</td><td>${s.total?((s.P/s.total)*100).toFixed(1):'0.0'}</td></tr>`).join('')
-    }</tbody></table>`;
-    divAnalyticsTable.classList.remove('hidden');
-    divInstructions.textContent = `Report: ${from} to ${to}`;
-    divInstructions.classList.remove('hidden');
-
-    const labels = stats.map(s=>s.name), dataPct = stats.map(s=>s.total? s.P/s.total*100:0);
-    chartBar?.destroy();
-    chartBar = new Chart(ctxBar,{type:'bar',data:{labels,datasets:[{label:'% Present',data:dataPct}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
-    const agg = stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(c=>a[c]+=s[c]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
-    chartPie?.destroy();
-    chartPie = new Chart(ctxPie,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
-
-    divGraphs.classList.remove('hidden');
-    btnShareAnalytics.classList.remove('hidden');
-    btnDownloadAnalytics.classList.remove('hidden');
-  };
-
-  btnResetAnalytics.onclick=e=>{ e.preventDefault(); resetAnalyticsUI(); };
-
-  // --- REGISTER ---
-  function generateRegisterHeader(days) {
-    headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>' +
-      Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
-  }
-  btnLoadReg.onclick=e=>{
-    e.preventDefault();
-    if(!monthInput.value) return alert('Select month');
-    const [y,m]=monthInput.value.split('-').map(Number), days=new Date(y,m,0).getDate();
-    generateRegisterHeader(days);
-    tbodyReg.innerHTML=''; tbodyRegSum.innerHTML='';
-    filteredStudents().forEach((s,i)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`+
-        Array.from({length:days},(_,d)=>{ const code=(attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A'; return `<td style="background:${colors[code]};color:#fff">${code}</td>`; }).join('');
-      tbodyReg.appendChild(tr);
-    });
-    filteredStudents().forEach(s=>{
-      let stat={P:0,A:0,Lt:0,HD:0,L:0,total:0};
-      for(let d=1;d<=days;d++){ const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A'; stat[code]++; stat.total++; }
-      const pct=stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
-      tbodyRegSum.appendChild(tr);
-    });
-    divRegTable.classList.remove('hidden');
-    divRegSummary.classList.remove('hidden');
-    btnLoadReg.classList.add('hidden');
-    btnChangeReg.classList.remove('hidden');
-  };
-  btnChangeReg.onclick=e=>{ e.preventDefault(); divRegTable.classList.add('hidden'); divRegSummary.classList.add('hidden'); btnLoadReg.classList.remove('hidden'); btnChangeReg.classList.add('hidden'); };
-
-  btnShareReg2.onclick=e=>{
-    e.preventDefault();
-    const hdr=`*Attendance Register* for ${monthInput.value}\nSchool: ${schoolInput.value}\nClass: ${classSelect.value}\nSection: ${sectionSelect.value}`;
-    const lines=Array.from(tbodyRegSum.querySelectorAll('tr')).map(r=>{
-      const [name,p,a,lt,hd,l,pct]=Array.from(r.querySelectorAll('td')).map(td=>td.textContent);
-      return `${name}: P:${p}, A:${a}, Lt:${lt}, HD:${hd}, L:${l}, %:${pct}`;
-    });
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+lines.join('\n'))}`,'_blank');
-  };
-  btnDownloadReg2.onclick=e=>{
-    e.preventDefault();
-    const jsPDF = window.jspdf?.jsPDF || window.jsPDF;
-    const doc=new jsPDF('landscape');
-    doc.autoTable({ html:'#registerTable', startY:10, styles:{fontSize:6} });
-    doc.autoTable({ html:'#registerSummarySection table', startY:doc.lastAutoTable.finalY+10, styles:{fontSize:8} });
-    doc.save('attendance_register.pdf');
-  };
-
-  // --- SERVICE WORKER ---
-  if('serviceWorker' in navigator) {
-    window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
-  }
-});
+  <!-- App logic -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
