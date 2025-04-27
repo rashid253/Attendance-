@@ -1,89 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Attendance Management</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classwise Attendance Management</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
+  <!-- Choices.js CSS (for future filters) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
+  />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- idb-keyval IIFE -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Attendance Management</h1>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
-  <!-- Student Registration -->
-  <section id="registrationSection">
-    <h2>Student Registration</h2>
-    <input type="text" id="studentName" placeholder="Name">
-    <input type="text" id="studentAdm" placeholder="Admission #">
-    <input type="text" id="studentParent" placeholder="Parent Name">
-    <input type="text" id="studentContact" placeholder="Contact">
-    <input type="text" id="studentOccupation" placeholder="Occupation">
-    <input type="text" id="studentAddress" placeholder="Address">
-    <button id="btnAddStudent">Add Student</button>
-
-    <div class="table-controls">
-      <button id="btnEditSelected">Edit Selected</button>
-      <button id="btnDeleteSelected">Delete Selected</button>
-      <button id="btnSaveTable" style="display:none;">Save Table</button>
+  <!-- 1. Setup -->
+  <section id="teacher-setup">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected value="">-- Select Class --</option>
+        <option>One</option><option>Two</option><option>Three</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected value="">-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
     </div>
-
-    <table id="studentTable">
-      <thead>
-        <tr>
-          <th>Select</th><th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div id="shareButtons" style="display:none;">
-      <button id="btnShareStudents">Share</button>
-      <button id="btnDownloadStudents">Download PDF</button>
+    <div id="setupDisplay" class="hidden">
+      <h3 id="setupText"></h3>
+      <button id="editSetup" class="small"><i class="fas fa-edit"></i> Edit</button>
     </div>
   </section>
 
-  <!-- Mark Attendance -->
-  <section id="attendanceSection">
-    <h2>Mark Attendance</h2>
-    <button id="btnLoadAttendance">Load Students</button>
+  <!-- 2. Counters -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card">
+      <i class="fas fa-layer-group"></i>
+      <span class="number" data-target="0" id="sectionCount">0</span>
+      <div class="label">Section Students</div>
+    </div>
+    <div class="counter-card">
+      <i class="fas fa-chalkboard-teacher"></i>
+      <span class="number" data-target="0" id="classCount">0</span>
+      <div class="label">Class Students</div>
+    </div>
+    <div class="counter-card">
+      <i class="fas fa-users"></i>
+      <span class="number" data-target="0" id="schoolCount">0</span>
+      <div class="label">School Students</div>
+    </div>
+  </section>
+
+  <!-- 3. Student Registration -->
+  <section id="student-registration">
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+    <div id="regForm" class="row-inline">
+      <input id="studentName" placeholder="Name" required />
+      <input id="parentName" placeholder="Parent Name" required />
+      <input id="parentContact" placeholder="Parent Contact" required />
+      <input id="parentOccupation" placeholder="Occupation" required />
+      <input id="parentAddress" placeholder="Address" required />
+      <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="studentsTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents" /></th>
+            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+      <button id="saveRegistration" class="save"><i class="fas fa-save"></i> Save</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+  </section>
+
+  <!-- 4. Attendance Marking -->
+  <section id="attendance-section">
+    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+    <div class="row-inline">
+      <label for="dateInput">Date:</label>
+      <input type="date" id="dateInput" />
+      <button id="loadAttendance"><i class="fas fa-sync-alt"></i> Load</button>
+    </div>
     <div id="attendanceList"></div>
+    <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+    <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
   </section>
 
-  <!-- Attendance Summary -->
-  <section id="summarySection">
-    <h2>Attendance Summary</h2>
-    <button id="btnLoadSummary">Load Summary</button>
-    <table id="summaryTable">
-      <thead>
-        <tr><th>Name</th><th>Status</th></tr>
-      </thead>
-      <tbody id="summaryTableBody"></tbody>
-    </table>
-  </section>
+  <!-- 5. Analytics -->
+  <section id="analytics-section">
+    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+    <div class="row-inline">
+      <label for="analyticsTarget">Report For:</label>
+      <select id="analyticsTarget">
+        <option disabled selected value="">-- Select Report --</option>
+        <option value="class">Full Class</option>
+        <option value="section">Section</option>
+        <option value="student">Individual Student</option>
+      </select>
 
-  <!-- Analytics -->
-  <section id="analyticsSection">
-    <h2>Analytics</h2>
-    <label>Report For:</label>
-    <select id="reportSelect">
-      <option value="">-- Select Report --</option>
-      <option value="full">Full Class</option>
-      <option value="section">Section</option>
-      <option value="individual">Individual Student</option>
-    </select>
+      <label id="labelSection" class="hidden" for="analyticsSectionSelect">Section:</label>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected value="">-- Section --</option>
+        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+      </select>
 
-    <div id="filterRow" style="display:none;">
-      <label>Admission #:</label>
-      <div id="filterField"></div>
+      <label id="labelAdm" class="hidden" for="analyticsAdmInput">Adm#:</label>
+      <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Adm#" />
+
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType" disabled>
+        <option disabled selected value="">-- Select Period --</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+
+      <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
+      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
 
-    <button id="btnGenerateReport">Generate Report</button>
-    <div id="analyticsContainer"></div>
-    <canvas id="pieChart" width="300" height="300"></canvas>
-    <button id="btnDownloadReport">Download PDF</button>
+    <div id="analyticsInstructions" class="hidden"></div>
+
+    <div class="table-wrapper hidden" id="analyticsContainer"></div>
+
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+
+    <div class="table-actions row-inline hidden" id="analyticsActions">
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download</button>
+    </div>
   </section>
 
-  <script src="app.js"></script>
+  <!-- 6. Attendance Register -->
+  <section id="register-section">
+    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <label for="registerMonth">Month:</label>
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister" class="save"><i class="fas fa-sync-alt"></i> Load</button>
+      <button id="changeRegister" class="small hidden"><i class="fas fa-undo"></i> Change</button>
+    </div>
+    <div class="table-wrapper hidden" id="registerTableWrapper">
+      <table id="registerTable">
+        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div id="registerSummarySection" class="hidden">
+      <h3>Summary</h3>
+      <div class="table-wrapper">
+        <table id="registerSummaryTable">
+          <thead>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
+          </thead>
+          <tbody id="registerSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-actions">
+      <button id="shareRegister" class="save"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegisterPDF" class="save"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+  </section>
+
+  <!-- Eruda console -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
+  <!-- Choices.js (for future use) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
+  <!-- Your App -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
