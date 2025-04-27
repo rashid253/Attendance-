@@ -10,7 +10,7 @@
   --dark: #333;
 }
 
-/* Remove tap highlight and focus outlines */
+/* Remove tap highlight & focus outlines */
 * {
   -webkit-tap-highlight-color: transparent;
   outline: none;
@@ -187,6 +187,13 @@ th {
 .choices__list--dropdown {
   max-height: 200px;
   overflow-y: auto;
+}
+
+/* Hide stray Choices UI when original select is hidden */
+#analyticsSectionSelect.hidden + .choices,
+#analyticsFilter.hidden + .choices,
+#analyticsStudentInput.hidden + .choices {
+  display: none !important;
 }
 
 /* Analytics table & graph containers */
