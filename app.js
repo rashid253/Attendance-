@@ -1,22 +1,25 @@
 // app.js
-import { Choices } from 'https://cdn.jsdelivr.net/npm/choices.js/+esm';
 
-// idb-keyval
+// idb-keyval (global window.idbKeyval)
 const { get, set } = window.idbKeyval;
 
 window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
 
   // STORAGE
-  let students       = await get('students')       || [];
+  let students = await get('students') || [];
   let attendanceData = await get('attendanceData') || {};
-  const saveStudents       = () => set('students', students);
+  const saveStudents = () => set('students', students);
   const saveAttendanceData = () => set('attendanceData', attendanceData);
 
   // ADM# GENERATOR
-  const getLastAdmNo  = async () => (await get('lastAdmissionNo')) || 0;
-  const setLastAdmNo  = n => set('lastAdmissionNo', n);
-  const generateAdmNo = async () => { const last = await getLastAdmNo(), next = last+1; setLastAdmNo(next); return String(next).padStart(4,'0'); };
+  const getLastAdmNo = async () => (await get('lastAdmissionNo')) || 0;
+  const setLastAdmNo = n => set('lastAdmissionNo', n);
+  const generateAdmNo = async () => {
+    const last = await getLastAdmNo(), next = last + 1;
+    setLastAdmNo(next);
+    return String(next).padStart(4, '0');
+  };
 
   // ELEMENTS
   const schoolInput    = $('schoolNameInput'),
@@ -92,20 +95,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span=>{
       const target=+span.dataset.target; let count=0,step=Math.max(1,target/100);
-      (function upd(){ count+=step; span.textContent=count<target?Math.ceil(count):target; if(count<target) requestAnimationFrame(upd); })();
+      (function upd(){ count+=step; span.textContent=count<target?Math.ceil(count):target; if(count<target)requestAnimationFrame(upd); })();
     });
   }
   function updateTotals(){
     const totalSchool=students.length,
           totalClass=students.filter(s=>s.cls===classSelect.value).length,
           totalSection=filteredStudents().length;
-    [['sectionCount',totalSection],['classCount',totalClass],['schoolCount',totalSchool]].forEach(([id,v])=>$(id).dataset.target=v);
+    [['sectionCount',totalSection],['classCount',totalClass],['schoolCount',totalSchool]]
+      .forEach(([id,v])=>$(id).dataset.target=v);
     animateCounters();
   }
   function bindRowSelection(){
     const boxes=Array.from(tbodyStudents.querySelectorAll('.sel'));
-    boxes.forEach(cb=>cb.onchange=()=>{cb.closest('tr').classList.toggle('selected',cb.checked);
-      const any=boxes.some(x=>x.checked); btnEditSel.disabled=btnDeleteSel.disabled=!any;});
+    boxes.forEach(cb=>cb.onchange=()=>{
+      cb.closest('tr').classList.toggle('selected',cb.checked);
+      const any=boxes.some(x=>x.checked); btnEditSel.disabled=btnDeleteSel.disabled=!any;
+    });
     chkAllStudents.onchange=()=>boxes.forEach(cb=>{cb.checked=chkAllStudents.checked;cb.dispatchEvent(new Event('change'));});
   }
   function renderStudents(){
@@ -125,14 +131,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   // SETUP
   async function loadSetup(){
     const school=await get('schoolName'),cls=await get('teacherClass'),sec=await get('teacherSection');
-    if(school&&cls&&sec){schoolInput.value=school;classSelect.value=cls;sectionSelect.value=sec;
+    if(school&&cls&&sec){
+      schoolInput.value=school;classSelect.value=cls;sectionSelect.value=sec;
       setupText.textContent=`${school} | Class:${cls} | Sec:${sec}`;
-      setupForm.classList.add('hidden');setupDisplay.classList.remove('hidden');renderStudents();}
+      setupForm.classList.add('hidden');setupDisplay.classList.remove('hidden');renderStudents();
+    }
   }
   btnSaveSetup.onclick=async e=>{e.preventDefault();
     if(!schoolInput.value||!classSelect.value||!sectionSelect.value)return alert('Complete setup');
     await set('schoolName',schoolInput.value);await set('teacherClass',classSelect.value);await set('teacherSection',sectionSelect.value);
-    await loadSetup();};
+    await loadSetup();
+  };
   btnEditSetup.onclick=e=>{e.preventDefault();setupForm.classList.remove('hidden');setupDisplay.classList.add('hidden');};
   await loadSetup();
 
@@ -160,13 +169,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   btnSaveReg.onclick=e=>{e.preventDefault();registrationSaved=true;
     ['saveRegistration','editSelected','deleteSelected','selectAllStudents'].forEach(id=>$(id).classList.add('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.remove('hidden'));
-    renderStudents();
+    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.remove('hidden'));renderStudents();
   };
   btnEditReg.onclick=e=>{e.preventDefault();registrationSaved=false;
     ['saveRegistration','editSelected','deleteSelected','selectAllStudents'].forEach(id=>$(id).classList.remove('hidden'));
-    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.add('hidden'));
-    renderStudents();
+    ['shareRegistration','editRegistration','downloadRegistrationPDF'].forEach(id=>$(id).classList.add('hidden'));renderStudents();
   };
   btnShareReg.onclick=e=>{e.preventDefault();const hdr=`Students:${classSelect.value}-${sectionSelect.value}`;const lines=filteredStudents().map(s=>`${s.name}(${s.adm})`);window.open(`https://wa.me/?text=${encodeURIComponent(hdr+"\\n"+lines.join("\\n"))}`);};
   btnDownloadReg.onclick=e=>{e.preventDefault();const { jsPDF }=window.jspdf;const doc=new jsPDF();doc.autoTable({html:'#studentTable',startY:10});doc.save('registration.pdf');};
@@ -182,7 +189,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnSaveAtt.onclick=async e=>{e.preventDefault();const d=dateInput.value;attendanceData[d]={};
     divAttList.querySelectorAll('.attendance-actions').forEach((acts,i)=>{const b=acts.querySelector('button[style]');attendanceData[d][filteredStudents()[i].roll]=b?b.dataset.code:'A';});
     await saveAttendanceData();sectionResult.classList.remove('hidden');tbodySummary.innerHTML='';
-    filteredStudents().forEach(s=>{const code=attendanceData[dateInput.value][s.roll],status={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
+    filteredStudents().forEach(s=>{const code=attendanceData[d][s.roll],status={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'}[code];
       const tr=document.createElement('tr');tr.innerHTML=`<td>${s.name}</td><td>${status}</td><td><button class="send-btn">Send</button></td>`;
       tr.querySelector('.send-btn').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent(`Name:${s.name}\\nStatus:${status}`)}`);
       tbodySummary.appendChild(tr);
@@ -193,11 +200,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ANALYTICS
   function resetAnalyticsUI(){['labelSection','analyticsSectionSelect','analyticsAdmInput'].forEach(id=>$(id).classList.add('hidden'));selectAnalyticsType.disabled=true;[inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear,btnResetAnalytics,divAnalyticsTable,divGraphs,btnShareAnalytics,btnDownloadAnalytics].forEach(el=>el.classList.add('hidden'));selectAnalyticsTarget.value='';analyticsAdmInput.value='';selectAnalyticsType.value='';}
   resetAnalyticsUI();
-  selectAnalyticsTarget.onchange=()=>{
-    resetAnalyticsUI();selectAnalyticsType.disabled=false;
-    if(selectAnalyticsTarget.value==='section'){$('labelSection').classList.remove('hidden');analyticsSectionSelect.classList.remove('hidden');}
-    if(selectAnalyticsTarget.value==='student')analyticsAdmInput.classList.remove('hidden');
-  };
+  selectAnalyticsTarget.onchange=()=>{resetAnalyticsUI();selectAnalyticsType.disabled=false;if(selectAnalyticsTarget.value==='section'){ $('labelSection').classList.remove('hidden');analyticsSectionSelect.classList.remove('hidden');}if(selectAnalyticsTarget.value==='student')analyticsAdmInput.classList.remove('hidden');};
   selectAnalyticsType.onchange=()=>{[inputAnalyticsDate,inputAnalyticsMonth,inputSemesterStart,inputSemesterEnd,inputAnalyticsYear].forEach(i=>i.classList.add('hidden'));btnResetAnalytics.classList.remove('hidden');if(selectAnalyticsType.value==='date')inputAnalyticsDate.classList.remove('hidden');if(selectAnalyticsType.value==='month')inputAnalyticsMonth.classList.remove('hidden');if(selectAnalyticsType.value==='semester'){inputSemesterStart.classList.remove('hidden');inputSemesterEnd.classList.remove('hidden');}if(selectAnalyticsType.value==='year')inputAnalyticsYear.classList.remove('hidden');};
   btnLoadAnalytics.onclick=e=>{e.preventDefault();let from,to;const t=selectAnalyticsType.value;if(t==='date'){from=to=inputAnalyticsDate.value||alert('Pick date');}else if(t==='month'){const [y,m]=inputAnalyticsMonth.value.split('-').map(Number);from=`${inputAnalyticsMonth.value}-01`;to=`${inputAnalyticsMonth.value}-${new Date(y,m,0).getDate()}`;}else if(t==='semester'){const [sy,sm]=inputSemesterStart.value.split('-').map(Number);const [ey,em]=inputSemesterEnd.value.split('-').map(Number);from=`${inputSemesterStart.value}-01`;to=`${inputSemesterEnd.value}-${new Date(ey,em,0).getDate()}`;}else if(t==='year'){from=`${inputAnalyticsYear.value}-01-01`;to=`${inputAnalyticsYear.value}-12-31`;}else return alert('Select period');
     let pool=[];if(selectAnalyticsTarget.value==='class')pool=students.filter(s=>s.cls===classSelect.value);if(selectAnalyticsTarget.value==='section')pool=filteredStudents();if(selectAnalyticsTarget.value==='student')pool=students.filter(s=>s.adm===analyticsAdmInput.value.trim());
@@ -214,7 +217,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   // REGISTER
   function generateRegisterHeader(days){headerRegRowEl.innerHTML='<th>Sr#</th><th>Adm#</th><th>Name</th>'+Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');}
   btnLoadReg.onclick=e=>{e.preventDefault();if(!monthInput.value)return alert('Select month');const [y,m]=monthInput.value.split('-').map(Number),days=new Date(y,m,0).getDate();generateRegisterHeader(days);tbodyReg.innerHTML='';tbodyRegSum.innerHTML='';filteredStudents().forEach((s,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`+Array.from({length:days},(_,d)=>{const code=(attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll]||'A';return`<td style="background:${colors[code]};color:#fff">${code}</td>`;}).join('');tbodyReg.appendChild(tr);});filteredStudents().forEach(s=>{let stat={P:0,A:0,Lt:0,HD:0,L:0,total:0};for(let d=1;d<=days;d++){const code=(attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll]||'A';stat[code]++;stat.total++;}const pct=stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';const tr=document.createElement('tr');tr.innerHTML=`<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;tbodyRegSum.appendChild(tr);});divRegTable.classList.remove('hidden');divRegSummary.classList.remove('hidden');btnLoadReg.classList.add('hidden');btnChangeReg.classList.remove('hidden');};
-  btnChangeReg.onclick=e=>{e.preventDefault();divRegTable.classList.add('hidden');divRegSummary.classList.add('hidden');btnLoadReg.classList.remove('hidden');btnChangeReg.classList.add('hidden');};
   btnDownloadReg2.onclick=e=>{e.preventDefault();const { jsPDF }=window.jspdf;const doc=new jsPDF('landscape');doc.autoTable({html:'#registerTable',startY:10,styles:{fontSize:6}});doc.autoTable({html:'#registerSummarySection table',startY:doc.lastAutoTable.finalY+10,styles:{fontSize:8}});doc.save('register.pdf');};
   btnShareReg2.onclick=e=>{e.preventDefault();const hdr=`Register ${monthInput.value}`;const lines=Array.from(tbodyRegSum.querySelectorAll('tr')).map(r=>Array.from(r.querySelectorAll('td')).join(' '));window.open(`https://wa.me/?text=${encodeURIComponent(hdr+"\\n"+lines.join("\\n"))}`);};
 
