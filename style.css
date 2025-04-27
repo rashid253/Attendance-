@@ -53,7 +53,7 @@ select {
   font-size: 0.9rem;
 }
 
-/* Restore original button sizing */
+/* Restore original button sizing and ensure labels don’t wrap */
 button {
   padding: 8px;
   border: 1px solid #ccc;
@@ -65,6 +65,7 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .hidden {
@@ -137,6 +138,7 @@ td {
   cursor: pointer;
   display: flex;
   justify-content: center;
+  white-space: nowrap;
 }
 .att-btn.selected {
   background: var(--primary);
@@ -151,7 +153,7 @@ td {
   border-radius: 4px;
 }
 
-/* All section action buttons in one horizontal row, underneath content */
+/* All section action buttons in one horizontal row, no wrapping */
 .table-actions {
   display: flex;
   gap: 10px;
@@ -161,13 +163,7 @@ td {
 }
 .table-actions button {
   flex: none;
-}
-
-/* Hide icons only in these three student-registration buttons */
-#editSelected i,
-#deleteSelected i,
-#saveRegistration i {
-  display: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
