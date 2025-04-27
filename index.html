@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,13 +76,12 @@
       <input id="parentAddress" placeholder="Address" required />
       <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
-    <div class="table-wrapper" id="studentTableWrapper">
+    <div class="table-wrapper">
       <table id="studentTable">
         <thead>
           <tr>
             <th><input type="checkbox" id="selectAllStudents" /></th>
-            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
@@ -143,7 +143,6 @@
         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
 
-      <!-- replaced filter + dropdown with direct admission# input -->
       <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Admission #" />
 
       <label for="analyticsType">Period:</label>
@@ -209,9 +208,13 @@
   <!-- Eruda console -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
 
-  <!-- Choices.js & Chart.js & App -->
+  <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- App logic -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
