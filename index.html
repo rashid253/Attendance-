@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
-  <!-- PWA manifest -->
+  <!-- PWA manifest & meta -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -19,24 +20,18 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Choices.js CSS -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
-  />
-
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- idb-keyval IIFE -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- jsPDF UMD + AutoTable plugin -->
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
@@ -116,25 +111,22 @@
     </div>
   </section>
 
-  <!-- 4. Attendance Marking -->
+  <!-- 4. Mark Attendance (updated) -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
       <label for="dateInput">Date:</label>
       <input type="date" id="dateInput" />
-      <button id="loadAttendance"><i class="fas fa-sync-alt"></i> Load</button>
+      <button id="loadAttendance" class="save"><i class="fas fa-sync-alt"></i> Load</button>
     </div>
-    <div class="table-wrapper">
-      <table id="attendanceTable">
-        <thead><tr><th>Name</th><th>Action</th></tr></thead>
-        <tbody id="attendanceBody"></tbody>
-      </table>
-    </div>
+    <div id="attendanceBody" class="attendance-grid"></div>
     <div class="table-actions">
-      <button id="saveAttendance" class="save"><i class="fas fa-save"></i> Save</button>
-      <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
+      <button id="saveAttendance" class="save hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="resetAttendance" class="small hidden"><i class="fas fa-undo"></i> Reset</button>
+      <button id="downloadAttendancePDF" class="save hidden"><i class="fas fa-file-pdf"></i> Download</button>
+      <button id="shareAttendanceSummary" class="save hidden"><i class="fas fa-share-alt"></i> Share</button>
     </div>
+    <div id="attendanceSummary" class="hidden summary-box"></div>
   </section>
 
   <!-- 5. Analytics -->
@@ -148,20 +140,17 @@
         <option value="section">Section</option>
         <option value="student">Individual Student</option>
       </select>
-
       <label id="labelSection" class="hidden" for="analyticsSectionSelect">Section:</label>
       <select id="analyticsSectionSelect" class="hidden">
         <option disabled selected value="">-- Section --</option>
         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
-
       <label id="labelFilter" class="hidden" for="analyticsFilter">Filter By:</label>
       <select id="analyticsFilter" class="hidden">
         <option disabled selected value="">-- Field --</option>
         <option value="adm">Admission #</option><option value="name">Name</option>
       </select>
-      <select id="analyticsStudentInput" class="hidden js-choice"></select>
-
+      <select id="analyticsStudentInput" class="hidden"></select>
       <label for="analyticsType">Period:</label>
       <select id="analyticsType" disabled>
         <option disabled selected value="">-- Period --</option>
@@ -170,22 +159,18 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-
       <input type="date" id="analyticsDate" class="hidden" />
       <input type="month" id="analyticsMonth" class="hidden" />
       <input type="month" id="semesterStart" class="hidden" />
       <input type="month" id="semesterEnd" class="hidden" />
       <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-
       <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
       <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
     <div id="instructions" class="hidden"></div>
     <div class="table-wrapper hidden" id="analyticsContainer">
       <table id="analyticsTable">
-        <thead>
-          <tr><th>#</th><th>Name</th><th>Adm#</th><th>Status</th></tr>
-        </thead>
+        <thead><tr></tr></thead>
         <tbody id="analyticsBody"></tbody>
       </table>
     </div>
@@ -210,7 +195,7 @@
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th></tr></thead>
+        <thead><tr></tr></thead>
         <tbody id="registerBody"></tbody>
       </table>
     </div>
@@ -229,11 +214,6 @@
     </div>
   </section>
 
-  <!-- Eruda console -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
-
-  <!-- Choices.js & App.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
