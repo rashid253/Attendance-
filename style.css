@@ -33,6 +33,14 @@ th, td { border:1px solid #ccc; padding:8px; text-align:left; white-space:nowrap
 .att-btn.selected { background:var(--primary); color:#fff; }
 .summary-box { margin-top:1rem; padding:1rem; background:#fafafa; border:1px solid #ddd; border-radius:4px; }
 .table-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+/* Force register-section buttons in one row */
+#register-section .table-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+#register-section .table-actions button {
+  flex: none;
+}
 @media(max-width:600px) {
   .row-inline input, .row-inline select, .row-inline button, .table-actions button { flex:1 1 100%; }
 }
