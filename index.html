@@ -19,7 +19,7 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- Choices.js CSS -->
+  <!-- Choices.js CSS (for future filters) -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/styles/css/choices.min.css"
@@ -31,7 +31,7 @@
   <!-- idb-keyval IIFE -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- jsPDF UMD + AutoTable plugin -->
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
@@ -124,17 +124,10 @@
       <input type="date" id="dateInput" />
       <button id="loadAttendance"><i class="fas fa-sync-alt"></i> Load</button>
     </div>
-    <div class="table-wrapper">
-      <table id="attendanceTable">
-        <thead><tr><th>Name</th><th>Action</th></tr></thead>
-        <tbody id="attendanceBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="saveAttendance" class="save"><i class="fas fa-save"></i> Save</button>
-      <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
-    </div>
+    <div id="attendanceList"></div>
+    <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+    <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
   </section>
 
   <!-- 5. Analytics -->
@@ -155,17 +148,13 @@
         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
 
-      <label id="labelFilter" class="hidden" for="analyticsFilter">Filter By:</label>
-      <select id="analyticsFilter" class="hidden">
-        <option disabled selected value="">-- Field --</option>
-        <option value="adm">Admission #</option><option value="name">Name</option>
-      </select>
-      <select id="analyticsStudentInput" class="hidden js-choice"></select>
+      <label id="labelAdm" class="hidden" for="analyticsAdmInput">Adm#:</label>
+      <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Adm#" />
 
       <label for="analyticsType">Period:</label>
       <select id="analyticsType" disabled>
-        <option disabled selected value="">-- Period --</option>
-        <option value="date">Date</option>
+        <option disabled selected value="">-- Select Period --</option>
+        <option value="date">Specific Date</option>
         <option value="month">Month</option>
         <option value="semester">Semester</option>
         <option value="year">Year</option>
@@ -180,19 +169,16 @@
       <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
       <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
-    <div id="instructions" class="hidden"></div>
-    <div class="table-wrapper hidden" id="analyticsContainer">
-      <table id="analyticsTable">
-        <thead>
-          <tr><th>#</th><th>Name</th><th>Adm#</th><th>Status</th></tr>
-        </thead>
-        <tbody id="analyticsBody"></tbody>
-      </table>
-    </div>
+
+    <div id="analyticsInstructions" class="hidden"></div>
+
+    <div class="table-wrapper hidden" id="analyticsContainer"></div>
+
     <div id="graphs" class="hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
+
     <div class="table-actions row-inline hidden" id="analyticsActions">
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
       <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download</button>
@@ -218,7 +204,9 @@
       <h3>Summary</h3>
       <div class="table-wrapper">
         <table id="registerSummaryTable">
-          <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead>
+          <thead>
+            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
+          </thead>
           <tbody id="registerSummaryBody"></tbody>
         </table>
       </div>
@@ -231,9 +219,9 @@
 
   <!-- Eruda console -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
-
-  <!-- Choices.js & App.js -->
+  <!-- Choices.js (for future use) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
+  <!-- Your App -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
