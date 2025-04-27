@@ -215,5 +215,14 @@
   </section>
 
   <script type="module" src="app.js"></script>
+  <!-- Paste this just before the closing </body> tag to add a floating error console (Eruda) -->
+<script src="https://cdn.jsdelivr.net/npm/eruda@2.4.1"></script>
+<script>
+  // Initialize Eruda
+  eruda.init({
+    // Optional: specify position
+    tool: ['console','elements','network','resources','scripts','info']
+  });
+</script>
 </body>
 </html>
