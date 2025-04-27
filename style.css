@@ -1,60 +1,230 @@
+:root {
+  --primary: #2196F3;
+  --success: #4CAF50;
+  --danger: #f44336;
+  --warning: #FFEB3B;
+  --info: #03a9f4;
+  --light: #f2f2f2;
+  --dark: #333;
+}
+
+/* Remove tap highlight & focus outlines */
+* {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
 body {
   font-family: Arial, sans-serif;
-  margin: 20px;
+  color: var(--dark);
+  background: var(--light);
+  margin: 0;
+  padding: 10px;
 }
 
-h1, h2 {
-  color: #333;
+header {
+  background: var(--primary);
+  color: #fff;
+  padding: 15px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-input, select, button {
-  margin: 5px;
-  padding: 5px 10px;
-  font-size: 14px;
+section {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 15px;
+}
+
+.row-inline {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input,
+select,
+button {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+button {
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.save {
+  background: var(--success);
+}
+
+button.small {
+  background: var(--info);
+  padding: 4px 8px;
+  font-size: 0.9em;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+th {
+  background: var(--light);
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-top: 10px;
 }
 
-table, th, td {
-  border: 1px solid #aaa;
+/* Counters */
+.counter-grid {
+  display: flex;
+  justify-content: space-between;
+  margin: 1rem 0;
 }
 
-th, td {
-  padding: 8px;
+.counter-card {
+  flex: 1;
+  margin-right: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
   text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.table-controls {
-  margin: 10px 0;
+.counter-card:last-child {
+  margin-right: 0;
 }
 
+.counter-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.counter-card i {
+  font-size: 1.5rem;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.counter-card .number {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.counter-card .label {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Attendance List */
 #attendanceList {
   margin-top: 10px;
 }
 
 .attendance-item {
-  margin: 5px 0;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 5px;
 }
 
 .attendance-actions button {
-  margin-left: 5px;
+  flex: none;
+  padding: 0.5em;
+  font-size: 1rem;
+  background: rgba(242,242,242,0.5);
+  color: rgba(51,51,51,0.7);
+  font-weight: bold;
 }
 
-#shareButtons {
-  margin-top: 10px;
+.attendance-actions button:hover {
+  background: rgba(242,242,242,0.8);
+}
+
+/* Analytics table & graph containers */
+#analyticsContainer {
+  margin-top: 15px;
 }
 
 #analyticsContainer table {
-  margin-top: 10px;
   width: 100%;
+  border-collapse: collapse;
 }
 
-canvas {
-  margin-top: 20px;
+#analyticsContainer th,
+#analyticsContainer td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: center;
+}
+
+#graphs {
+  margin-top: 15px;
+}
+
+/* Attendance Register */
+#registerTableWrapper {
+  margin-top: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
+    flex: 1 1 100%;
+  }
+  .counter-grid {
+    flex-direction: column;
+  }
 }
