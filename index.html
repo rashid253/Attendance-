@@ -6,20 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
-  <!-- idb-keyval (IIFE build) -->
+  <!-- idb-keyval IIFE -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
   <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Eruda -->
+  <!-- Eruda (floating console) -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
+
+  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header><h1>Attendance Management</h1></header>
+  <header>
+    <h1>Attendance Management</h1>
+  </header>
 
   <!-- 1. Setup -->
   <section id="teacher-setup">
@@ -27,11 +31,11 @@
     <div id="setupForm" class="row-inline">
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
-        <option disabled selected>-- Class --</option>
+        <option disabled selected value="">-- Class --</option>
         <option>One</option><option>Two</option><option>Three</option>
       </select>
       <select id="teacherSectionSelect">
-        <option disabled selected>-- Section --</option>
+        <option disabled selected value="">-- Section --</option>
         <option>A</option><option>B</option><option>C</option>
       </select>
       <button id="saveSetup">Save</button>
@@ -44,9 +48,18 @@
 
   <!-- 2. Counters -->
   <section class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section</div></div>
-    <div class="counter-card"><span id="classCount"   class="number" data-target="0">0</span><div>Class</div></div>
-    <div class="counter-card"><span id="schoolCount"  class="number" data-target="0">0</span><div>School</div></div>
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -77,7 +90,7 @@
       <button id="deleteSelected" disabled>Delete Selected</button>
       <button id="saveRegistration">Save</button>
       <button id="shareRegistration" class="hidden">Share</button>
-      <button id="editRegistration"  class="hidden">Edit</button>
+      <button id="editRegistration" class="hidden">Edit</button>
       <button id="downloadRegistrationPDF" class="hidden">PDF</button>
     </div>
   </section>
@@ -92,21 +105,78 @@
     <div id="attendanceBody"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
-      <button id="saveAttendance"        class="hidden">Save</button>
-      <button id="resetAttendance"       class="hidden">Reset</button>
+      <button id="saveAttendance" class="hidden">Save</button>
+      <button id="resetAttendance" class="hidden">Reset</button>
       <button id="downloadAttendancePDF" class="hidden">Download PDF</button>
-      <button id="shareAttendanceSummary"class="hidden">Share</button>
+      <button id="shareAttendanceSummary" class="hidden">Share</button>
     </div>
   </section>
 
   <!-- 5. Analytics -->
   <section id="analytics-section">
-    <!-- omitted for brevity; unchanged -->
+    <h2>Analytics</h2>
+    <div class="row-inline">
+      <select id="analyticsTarget">
+        <option disabled selected>-- Report For --</option>
+        <option value="class">Full Class</option>
+        <option value="section">Section</option>
+        <option value="student">Student</option>
+      </select>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected>-- Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <select id="analyticsFilter" class="hidden">
+        <option disabled selected>-- Filter --</option>
+        <option value="adm">Adm#</option><option value="name">Name</option>
+      </select>
+      <select id="analyticsStudentInput" class="hidden"></select>
+      <select id="analyticsType" disabled>
+        <option disabled selected>-- Period --</option>
+        <option value="date">Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <button id="loadAnalytics">Load</button>
+      <button id="resetAnalytics" class="hidden">Change</button>
+    </div>
+    <div id="instructions" class="hidden"></div>
+    <div class="table-wrapper hidden" id="analyticsContainer">
+      <table id="analyticsTable">
+        <thead><tr></tr></thead>
+        <tbody id="analyticsBody"></tbody>
+      </table>
+    </div>
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="table-actions hidden" id="analyticsActions">
+      <button id="shareAnalytics">Share</button>
+      <button id="downloadAnalytics">Download</button>
+    </div>
   </section>
 
   <!-- 6. Attendance Register -->
   <section id="register-section">
-    <!-- omitted for brevity; unchanged -->
+    <h2>Attendance Register</h2>
+    <div class="row-inline">
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister">Load</button>
+      <button id="changeRegister" class="hidden">Change</button>
+    </div>
+    <div class="table-wrapper hidden" id="registerTableWrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
   </section>
 
   <script src="app.js"></script>
