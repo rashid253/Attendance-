@@ -46,7 +46,7 @@ section {
   margin-bottom: 10px;
 }
 
-/* Ensure controls don’t shrink and overlap */
+/* Prevent controls from shrinking and overlapping */
 .row-inline > * {
   flex-shrink: 0;
   min-width: 120px;
@@ -190,26 +190,9 @@ th {
 #analyticsMonth,
 #semesterStart,
 #semesterEnd,
-#yearStart {
+#yearStart,
+#analyticsAdmInput {
   margin-bottom: 0.5em;
-}
-
-/* Choices.js dropdown scroll */
-.choices__list--dropdown {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-/* Hide Choices UI when original select is hidden */
-#analyticsSectionSelect.hidden + .choices,
-#analyticsFilter.hidden + .choices,
-#analyticsStudentInput.hidden + .choices {
-  display: none !important;
-}
-
-/* Analytics table & graph containers */
-#analyticsContainer, #graphs {
-  margin-top: 15px;
 }
 
 /* Responsive */
