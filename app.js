@@ -28,10 +28,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cls    = await get('teacherClass');
     const sec    = await get('teacherSection');
     if (school && cls && sec) {
-      $('schoolNameInput').value        = school;
-      $('teacherClassSelect').value     = cls;
-      $('teacherSectionSelect').value   = sec;
-      $('setupText').textContent        = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
+      $('schoolNameInput').value      = school;
+      $('teacherClassSelect').value   = cls;
+      $('teacherSectionSelect').value = sec;
+      $('setupText').textContent      = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
       hide($('setupForm'));
       show($('setupDisplay'));
       renderStudents();
@@ -338,10 +338,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       from = `${m}-01`;
       to   = `${m}-${new Date(y, mm, 0).getDate()}`;
     } else if (typ === 'semester') {
-      const s = $('semesterStart').value;
-      const e = $('semesterEnd').value;
-      const [sy, sm] = s.split('-').map(Number);
-      const [ey, em] = e.split('-').map(Number);
+      const s = $('semesterStart').value, e = $('semesterEnd').value;
+      const [sy, sm] = s.split('-').map(Number), [ey, em] = e.split('-').map(Number);
       from = `${s}-01`;
       to   = `${e}-${new Date(ey, em, 0).getDate()}`;
     } else if (typ === 'year') {
@@ -382,7 +380,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('analyticsContainer'));
     show($('graphs'));
     show($('analyticsActions'));
-    hide($('resetAnalytics'));
+    // KEEP the Change Period button visible
+    show($('resetAnalytics'));
 
     // Bar chart
     chartBar?.destroy();
@@ -411,10 +410,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('analyticsContainer'));
     hide($('graphs'));
     hide($('analyticsActions'));
-    hide($('resetAnalytics'));
     ['analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart']
       .forEach(id => hide($(id)));
     $('analyticsType').value = '';
+    // keep resetAnalytics itself visible until user changes period again
   };
 
   $('downloadAnalytics').onclick = () => {
