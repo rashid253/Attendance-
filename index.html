@@ -30,8 +30,9 @@
 
   <!-- idb-keyval v3 IIFE -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-  <!-- jsPDF UMD build -->
+  <!-- jsPDF UMD build + AutoTable plugin -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <header><h1><i class="fas fa-school"></i> Attendance Management</h1></header>
@@ -43,15 +44,11 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected value="">-- Select Class --</option>
-        <option>One</option>
-        <option>Two</option>
-        <option>Three</option>
+        <option>One</option><option>Two</option><option>Three</option>
       </select>
       <select id="teacherSectionSelect">
         <option disabled selected value="">-- Select Section --</option>
-        <option>A</option>
-        <option>B</option>
-        <option>C</option>
+        <option>A</option><option>B</option><option>C</option>
       </select>
       <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
     </div>
@@ -63,18 +60,15 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <i class="fas fa-layer-group"></i>
+    <div class="counter-card"><i class="fas fa-layer-group"></i>
       <span class="number" data-target="0" id="sectionCount">0</span>
       <div class="label">Section Students</div>
     </div>
-    <div class="counter-card">
-      <i class="fas fa-chalkboard-teacher"></i>
+    <div class="counter-card"><i class="fas fa-chalkboard-teacher"></i>
       <span class="number" data-target="0" id="classCount">0</span>
       <div class="label">Class Students</div>
     </div>
-    <div class="counter-card">
-      <i class="fas fa-users"></i>
+    <div class="counter-card"><i class="fas fa-users"></i>
       <span class="number" data-target="0" id="schoolCount">0</span>
       <div class="label">School Students</div>
     </div>
@@ -96,22 +90,20 @@
         <thead>
           <tr>
             <th><input type="checkbox" id="selectAllStudents" /></th>
-            <th>Sr#</th>
-            <th>Name</th>
-            <th>Adm#</th>
-            <th>Parent</th>
-            <th>Contact</th>
-            <th>Occupation</th>
-            <th>Address</th>
+            <th>Sr#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="editRegistration"><i class="fas fa-edit"></i> Edit</button>
-      <button id="saveRegistration" class="hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
       <button id="deleteSelected" disabled><i class="fas fa-trash-alt"></i> Delete Selected</button>
+      <button id="saveRegistration" class="save"><i class="fas fa-save"></i> Save</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-file-pdf"></i> PDF</button>
     </div>
   </section>
 
@@ -132,9 +124,7 @@
     <h2><i class="fas fa-clipboard-list"></i> Attendance Summary</h2>
     <div class="table-wrapper">
       <table>
-        <thead>
-          <tr><th>Name</th><th>Status</th><th>Send</th></tr>
-        </thead>
+        <thead><tr><th>Name</th><th>Status</th><th>Send</th></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
     </div>
@@ -157,24 +147,48 @@
         <option value="student">Individual Student</option>
       </select>
 
-      <label for="analyticsSectionSelect" id="labelSection" class="hidden">Section:</label>
+      <label id="labelSection" class="hidden" for="analyticsSectionSelect">Section:</label>
       <select id="analyticsSectionSelect" class="hidden">
         <option disabled selected value="">-- Select Section --</option>
-        <option value="A">A</option>
-        <option value="B">B</option>
-        <option value="C">C</option>
+        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
 
-      <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Adm#">
+      <label id="labelFilter" class="hidden" for="analyticsFilter">By:</label>
+      <select id="analyticsFilter" class="hidden">
+        <option disabled selected value="">-- Select Field --</option>
+        <option value="adm">Admission #</option><option value="name">Name</option>
+      </select>
 
-      <label for="analyticsMonth">Month:</label>
-      <input type="month" id="analyticsMonth">
+      <select id="analyticsStudentInput" class="hidden js-choice"></select>
+
+      <label for="analyticsType">Period:</label>
+      <select id="analyticsType" disabled>
+        <option disabled selected value="">-- Select Period --</option>
+        <option value="date">Specific Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
 
       <button id="loadAnalytics"><i class="fas fa-sync-alt"></i> Load</button>
-      <button id="shareAnalytics" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAnalytics" class="hidden"><i class="fas fa-file-pdf"></i> Download</button>
+      <button id="resetAnalytics" class="small hidden"><i class="fas fa-undo"></i> Change Period</button>
     </div>
-    <div id="analyticsResult" class="table-wrapper hidden"></div>
+    <div id="instructions" class="hidden"></div>
+    <div id="analyticsContainer" class="hidden"></div>
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div id="analyticsActions" class="row-inline hidden">
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-file-pdf"></i> Download</button>
+    </div>
   </section>
 
   <!-- 7. Attendance Register -->
@@ -196,9 +210,7 @@
       <h3>Summary</h3>
       <div class="table-wrapper">
         <table>
-          <thead>
-            <tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr>
-          </thead>
+          <thead><tr><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>%</th></tr></thead>
           <tbody id="registerSummaryBody"></tbody>
         </table>
       </div>
@@ -211,8 +223,7 @@
 
   <!-- Eruda console -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script><script>eruda.init();</script>
-
-  <!-- Choices.js, Chart.js & App -->
+  <!-- Choices.js & Chart.js & App -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/choices.js/1.1.6/choices.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="app.js"></script>
