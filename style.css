@@ -53,7 +53,7 @@ select {
   font-size: 0.9rem;
 }
 
-/* Restore original button sizing */
+/* Restore original button sizing and prevent wrapping */
 button {
   padding: 8px;
   border: 1px solid #ccc;
@@ -166,12 +166,24 @@ td {
   white-space: nowrap;
 }
 
-/* Reduce padding & font-size for the three student-registration buttons to prevent overflow */
+/* Specific adjustments for student-registration action buttons */
+#student-registration .table-actions {
+  gap: 5px;
+}
+#student-registration .table-actions button {
+  flex-shrink: 1;
+}
 #editSelected,
 #deleteSelected,
 #saveRegistration {
-  padding: 6px 10px;
+  padding: 6px 8px;
   font-size: 0.85rem;
+}
+
+/* Reduce padding for mark attendance action buttons if needed */
+#attendance-section .table-actions button {
+  padding: 6px 10px;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 600px) {
