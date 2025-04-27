@@ -28,11 +28,8 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- idb-keyval -->
-  <script type="module">
-    import * as idb from 'https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm';
-    window.idbKeyval = idb;
-  </script>
+  <!-- idb-keyval as IIFE so `idbKeyval` is globally defined -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval-iife.min.js"></script>
 </head>
 <body>
   <header>
@@ -46,10 +43,15 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option value="">--Class--</option>
-        <option>One</option><option>Two</option><option>Three</option>
+        <option>One</option>
+        <option>Two</option>
+        <option>Three</option>
       </select>
       <select id="teacherSectionSelect">
-        <option value="">--Section--</option><option>A</option><option>B</option><option>C</option>
+        <option value="">--Section--</option>
+        <option>A</option>
+        <option>B</option>
+        <option>C</option>
       </select>
       <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
     </div>
@@ -204,7 +206,7 @@
     </div>
     <div class="table-wrapper hidden" id="registerTableWrapper">
       <table id="registerTable">
-        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th><!-- days added in JS --></tr></thead>
+        <thead><tr><th>Sr#</th><th>Adm#</th><th>Name</th><!-- days added by JS --></tr></thead>
         <tbody id="registerBody"></tbody>
       </table>
     </div>
