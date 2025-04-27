@@ -440,7 +440,75 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+"\n"+rows.join("\n"))}`);
   };
 
-  // REGISTER (unchanged)...
+  // REGISTER
+  function generateRegisterHeader(days) {
+    headerRegRowEl.innerHTML = '<th>Sr#</th><th>Adm#</th><th>Name</th>' +
+      Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
+  }
+
+  btnLoadReg.onclick = e => {
+    e.preventDefault();
+    if (!monthInput.value) return alert('Select month');
+    const [y,m] = monthInput.value.split('-').map(Number),
+          days  = new Date(y,m,0).getDate();
+
+    generateRegisterHeader(days);
+    tbodyReg.innerHTML = '';
+    tbodyRegSum.innerHTML = '';
+
+    filteredStudents().forEach((s,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>` +
+        Array.from({length:days},(_,d)=>{
+          const code = (attendanceData[`${monthInput.value}-${String(d+1).padStart(2,'0')}`]||{})[s.roll] || 'A';
+          return `<td style="background:${colors[code]};color:#fff">${code}</td>`;
+        }).join('');
+      tbodyReg.appendChild(tr);
+    });
+
+    filteredStudents().forEach(s=>{
+      let stat={P:0,A:0,Lt:0,HD:0,L:0,total:0};
+      for(let d=1;d<=days;d++){
+        const code = (attendanceData[`${monthInput.value}-${String(d).padStart(2,'0')}`]||{})[s.roll] || 'A';
+        stat[code]++; stat.total++;
+      }
+      const pct = stat.total?((stat.P/stat.total)*100).toFixed(1):'0.0';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${s.name}</td><td>${stat.P}</td><td>${stat.A}</td><td>${stat.Lt}</td><td>${stat.HD}</td><td>${stat.L}</td><td>${pct}</td>`;
+      tbodyRegSum.appendChild(tr);
+    });
+
+    divRegTable.classList.remove('hidden');
+    divRegSummary.classList.remove('hidden');
+    btnLoadReg.classList.add('hidden');
+    btnChangeReg.classList.remove('hidden');
+  };
+
+  btnChangeReg.onclick = e => {
+    e.preventDefault();
+    divRegTable.classList.add('hidden');
+    divRegSummary.classList.add('hidden');
+    btnLoadReg.classList.remove('hidden');
+    btnChangeReg.classList.add('hidden');
+  };
+
+  btnDownloadReg2.onclick = e => {
+    e.preventDefault();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    doc.autoTable({ html:'#registerTable', startY:10, styles:{fontSize:6} });
+    doc.autoTable({ html:'#registerSummarySection table', startY:doc.lastAutoTable.finalY+10, styles:{fontSize:8} });
+    doc.save('register.pdf');
+  };
+
+  btnShareReg2.onclick = e => {
+    e.preventDefault();
+    const hdr = `Register ${monthInput.value}`;
+    const lines = Array.from(tbodyRegSum.querySelectorAll('tr')).map(r =>
+      Array.from(r.querySelectorAll('td')).map(td=>td.textContent).join(' ')
+    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+"\n"+lines.join("\n"))}`);
+  };
 
   // SERVICE WORKER
   if ('serviceWorker' in navigator) {
