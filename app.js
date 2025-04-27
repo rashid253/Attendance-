@@ -1,3 +1,4 @@
+```js
 // app.js
 
 // Grab the global idbKeyval created by the v3 IIFE bundle
@@ -362,3 +363,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- SERVICE WORKER ---
   if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
 });
+``` 
+
