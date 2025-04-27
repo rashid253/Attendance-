@@ -1,7 +1,7 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // --- Eruda Debug Console ---
+  // Eruda Debug Console
   (function(){
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/eruda';
@@ -9,7 +9,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(s);
   })();
 
-  // --- idb-keyval IndexedDB ---
+  // idb-keyval IndexedDB
   if (!window.idbKeyval) { console.error('idbKeyval not found'); return; }
   const { get, set } = window.idbKeyval;
 
