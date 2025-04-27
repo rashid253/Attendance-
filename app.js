@@ -353,6 +353,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 6. ATTENDANCE REGISTER ---
+  const downloadRegister = $('downloadRegister'),
+        shareRegister    = $('shareRegister');
+
   $('loadRegister').onclick = () => {
     const m = $('registerMonth').value; if(!m) return alert('Pick month');
     const [y,mm] = m.split('-').map(Number), days=new Date(y,mm,0).getDate();
@@ -365,10 +368,30 @@ window.addEventListener('DOMContentLoaded', async () => {
                      Array.from({length:days},()=>`<td>A</td>`).join('');
       tb.appendChild(tr);
     });
-    show($('registerTableWrapper')); show($('changeRegister')); hide($('loadRegister'));
+    show($('registerTableWrapper'));
+    show($('changeRegister'));
+    show(downloadRegister);
+    show(shareRegister);
+    hide($('loadRegister'));
   };
   $('changeRegister').onclick = () => {
-    hide($('registerTableWrapper')); hide($('changeRegister')); show($('loadRegister'));
+    hide($('registerTableWrapper'));
+    hide($('changeRegister'));
+    hide(downloadRegister);
+    hide(shareRegister);
+    show($('loadRegister'));
+  };
+  downloadRegister.onclick = () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.autoTable({ html: '#registerTable' });
+    doc.save('attendance_register.pdf');
+  };
+  shareRegister.onclick = () => {
+    const hdr = `Attendance Register: ${$('registerMonth').value}`;
+    const rows = Array.from($('registerBody').querySelectorAll('tr'))
+      .map(tr => Array.from(tr.children).map(td => td.textContent).join(' '));
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n' + rows.join('\n'))}`, '_blank');
   };
 
   // --- SERVICE WORKER (optional) ---
