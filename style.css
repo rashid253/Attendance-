@@ -50,9 +50,7 @@ label {
   font-weight: bold;
 }
 
-input,
-select,
-button {
+input, select, button {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -97,8 +95,7 @@ table {
   table-layout: auto;
 }
 
-th,
-td {
+th, td {
   border: 1px solid #ccc;
   padding: 8px;
   white-space: nowrap;
@@ -187,28 +184,25 @@ th {
   overflow-y: auto;
 }
 
-/* Analytics section spacing and results table */
+/* Analytics spacing & table */
 #analytics-section .row-inline > * {
   margin-right: 8px;
 }
 
-#analyticsResult {
-  margin-top: 15px;
-}
-
-#analyticsResult table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-#analyticsResult th,
-#analyticsResult td {
+#analyticsContainer table,
+#analyticsContainer th,
+#analyticsContainer td {
   border: 1px solid #ccc;
+  border-collapse: collapse;
   padding: 6px;
   text-align: center;
 }
 
-/* Responsive adjustments */
+#graphs {
+  margin-top: 15px;
+}
+
+/* Responsive */
 @media (max-width: 600px) {
   .row-inline input,
   .row-inline select,
