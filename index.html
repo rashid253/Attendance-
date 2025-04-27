@@ -155,13 +155,7 @@
         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
       </select>
 
-      <label id="labelFilter" class="hidden" for="analyticsFilter">By:</label>
-      <select id="analyticsFilter" class="hidden">
-        <option disabled selected value="">— Select Field —</option>
-        <option value="adm">Admission #</option><option value="name">Name</option>
-      </select>
-
-      <select id="analyticsStudentInput" class="hidden js-choice" placeholder="Type or select…"></select>
+      <input type="text" id="analyticsAdmInput" class="hidden" placeholder="Enter Admission #" />
 
       <label for="analyticsType">Period:</label>
       <select id="analyticsType" disabled>
@@ -232,3 +226,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+```
