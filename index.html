@@ -2,7 +2,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
   <!-- PWA manifest & meta -->
@@ -12,7 +13,12 @@
   <meta name="application-name" content="Attendance Mgmt" />
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
 
   <!-- idb-keyval IIFE -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
@@ -59,9 +65,18 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
-    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
-    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -79,7 +94,7 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th><input type="checkbox" id="selectAllStudents" /></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
             <th>Contact</th><th>Occupation</th><th>Address</th>
           </tr>
@@ -88,8 +103,8 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected"><i class="fas fa-edit"></i> Edit Selected</button>
-      <button id="deleteSelected"><i class="fas fa-trash"></i> Delete Selected</button>
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete Selected</button>
       <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
       <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
       <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
@@ -101,13 +116,13 @@
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
-      <input type="date" id="dateInput"/>
+      <input type="date" id="dateInput" />
       <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
     <div id="attendanceBody"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
-      <button id="saveAttendance"><i class="fas fa-save"></i> Save</button>
+      <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
       <button id="resetAttendance" class="hidden"><i class="fas fa-undo"></i> Reset</button>
       <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-download"></i> Download PDF</button>
       <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
@@ -130,7 +145,7 @@
       </select>
       <select id="analyticsFilter" class="hidden">
         <option disabled selected>-- Filter --</option>
-        <option value="adm">Reg#</option>
+        <option value="adm">Adm#</option><option value="name">Name</option>
       </select>
       <select id="analyticsStudentInput" class="hidden"></select>
       <select id="analyticsType" disabled>
@@ -140,11 +155,11 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
@@ -169,7 +184,7 @@
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
-      <input type="month" id="registerMonth"/>
+      <input type="month" id="registerMonth" />
       <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
     <div id="registerTableWrapper" class="hidden table-wrapper">
@@ -185,13 +200,6 @@
     </div>
   </section>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
   <script src="app.js"></script>
 </body>
 </html>
