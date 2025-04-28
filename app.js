@@ -126,13 +126,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('editSelected').disabled=!any;
     $('deleteSelected').disabled=!any;
   }
-  $('studentsBody').addEventListener('change', e=>{
-    if(e.target.classList.contains('sel')) toggleButtons();
-  });
-  $('selectAllStudents').onclick=()=>{
-    document.querySelectorAll('.sel').forEach(cb=>cb.checked=$('selectAllStudents').checked);
-    toggleButtons();
-  };
+  $('studentsBody').addEventListener('change', e=>{ if(e.target.classList.contains('sel')) toggleButtons(); });
+  $('selectAllStudents').onclick=()=>{ document.querySelectorAll('.sel').forEach(cb=>cb.checked=$('selectAllStudents').checked); toggleButtons(); };
 
   $('addStudent').onclick=async e=>{
     e.preventDefault();
@@ -152,14 +147,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id=>$(id).value='');
   };
 
-  $('deleteSelected').onclick=async ()=>{
-    if(!confirm('Delete selected?'))return;
-    const toDel=Array.from(document.querySelectorAll('.sel:checked'))
-      .map(cb=>+cb.closest('tr').dataset.index);
-    students=students.filter((_,i)=>!toDel.includes(i));
-    await saveStudents();
-    renderStudents(); updateCounters();
-  };
+  $('deleteSelected').onclick=async ()=>{ if(!confirm('Delete selected?'))return; const toDel=Array.from(document.querySelectorAll('.sel:checked')).map(cb=>+cb.closest('tr').dataset.index); students=students.filter((_,i)=>!toDel.includes(i)); await saveStudents(); renderStudents(); updateCounters(); };
 
   $('editSelected').onclick=()=>{
     document.querySelectorAll('.sel:checked').forEach(cb=>{
@@ -191,8 +179,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     await saveStudents();
     hide($('doneEditing'));
-    show($('editSelected'),$('deleteSelected'));
-    show($('saveRegistration'));
+    show($('editSelected'),$('deleteSelected'),$('saveRegistration'));
     renderStudents(); updateCounters();
   };
 
@@ -205,18 +192,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('shareRegistration').onclick=()=>{
     const cls=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
     const header=`*Students List*\nClass ${cls} Section ${sec}`;
-    const lines=students
-      .filter(s=>s.cls===cls&&s.sec===sec)
-      .map(s=>`*${s.name}*\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`)
-      .join('\n\n');
+    const lines=students.filter(s=>s.cls===cls&&s.sec===sec).map(s=>`*${s.name}*\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`).join('\n\n');
     lastShareText=header+'\n\n'+lines;
     window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank');
   };
-  $('downloadRegistrationPDF').onclick=()=>{
-    const doc=new window.jspdf.jsPDF();
-    doc.autoTable({html:'#studentsTable'});
-    doc.save('registration.pdf');
-  };
+  $('downloadRegistrationPDF').onclick=()=>{ const doc=new window.jspdf.jsPDF(); doc.autoTable({html:'#studentsTable'}); doc.save('registration.pdf'); };
 
   // 4. MARK ATTENDANCE
   const dateInput=$('dateInput'),
@@ -227,7 +207,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         shareAttendanceSummary=$('shareAttendanceSummary'),
         attendanceBody=$('attendanceBody'),
         attendanceSummary=$('attendanceSummary');
-
   const statusNames={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
   const statusColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
 
@@ -241,10 +220,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const btn=document.createElement('button');
         btn.className='att-btn'; btn.textContent=code;
         btn.onclick=()=>{
-          btns.querySelectorAll('.att-btn').forEach(b=>{
-            b.classList.remove('selected');
-            b.style.background='';b.style.color='';
-          });
+          btns.querySelectorAll('.att-btn').forEach(b=>{ b.classList.remove('selected'); b.style.background=''; b.style.color=''; });
           btn.classList.add('selected');
           btn.style.background=statusColors[code];
           btn.style.color='#fff';
@@ -257,7 +233,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     show(saveAttendance);
     hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
   };
-
   saveAttendance.onclick=async ()=>{
     const date=dateInput.value; if(!date) return alert('Pick a date');
     attendanceData[date]={};
@@ -266,96 +241,70 @@ window.addEventListener('DOMContentLoaded', async () => {
       attendanceData[date][s.adm]=code;
     });
     await saveAttendanceData();
-    // build summary table and shareText
     const header=`Attendance Report: ${date}\n`;
-    let lines=students.map(s=>{
-      const st=statusNames[attendanceData[date][s.adm]||'A'];
-      return `${s.name}: ${st}`;
-    }).join('\n');
+    const lines=students.map(s=>`${s.name}: ${statusNames[attendanceData[date][s.adm]||'A']}`).join('\n');
     lastShareText=header+lines;
     const tbl=document.createElement('table');
-    tbl.innerHTML='<tr><th>Name</th><th>Status</th></tr>'+students.map(s=>{
-      const st=statusNames[attendanceData[date][s.adm]||'A'];
-      return `<tr><td>${s.name}</td><td>${st}</td></tr>`;
-    }).join('');
-    attendanceSummary.innerHTML=`<h3>Attendance Report: ${date}</h3>`;
-    attendanceSummary.appendChild(tbl);
-
+    tbl.innerHTML='<tr><th>Name</th><th>Status</th></tr>'+students.map(s=>`<tr><td>${s.name}</td><td>${statusNames[attendanceData[date][s.adm]||'A']}</td></tr>`).join('');
+    attendanceSummary.innerHTML=`<h3>Attendance Report: ${date}</h3>`; attendanceSummary.appendChild(tbl);
     hide(saveAttendance,attendanceBody);
     show(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
   };
-
-  downloadAttendancePDF.onclick=()=>{
-    const doc=new window.jspdf.jsPDF();
-    doc.autoTable({html:'#attendanceSummary table'});
-    doc.save('attendance_summary.pdf');
-  };
-  shareAttendanceSummary.onclick=()=>{
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank');
-  };
-  resetAttendance.onclick=()=>{
-    show(attendanceBody,saveAttendance);
-    hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
-  };
+  downloadAttendancePDF.onclick=()=>{ const doc=new window.jspdf.jsPDF(); doc.autoTable({html:'#attendanceSummary table'}); doc.save('attendance_summary.pdf'); };
+  shareAttendanceSummary.onclick=()=>{ window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank'); };
+  resetAttendance.onclick=()=>{ show(attendanceBody,saveAttendance); hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary); };
 
   // 5. ANALYTICS
-  const analyticsTarget      = $('analyticsTarget'),
-        analyticsSectionSel  = $('analyticsSectionSelect'),
-        analyticsType        = $('analyticsType'),
-        analyticsDate        = $('analyticsDate'),
-        analyticsMonth       = $('analyticsMonth'),
-        semesterStart        = $('semesterStart'),
-        semesterEnd          = $('semesterEnd'),
-        yearStart            = $('yearStart'),
-        analyticsSearch      = $('analyticsSearch'),
-        analyticsDropdown    = $('analyticsDropdown'),
-        loadAnalyticsBtn     = $('loadAnalytics'),
-        resetAnalyticsBtn    = $('resetAnalytics'),
-        instructionsEl       = $('instructions'),
-        analyticsContainerEl = $('analyticsContainer'),
-        graphsEl             = $('graphs'),
-        analyticsActionsEl   = $('analyticsActions'),
-        shareAnalyticsBtn    = $('shareAnalytics'),
-        downloadAnalyticsBtn = $('downloadAnalytics'),
-        barCtx               = $('barChart').getContext('2d'),
-        pieCtx               = $('pieChart').getContext('2d');
+  const analyticsTarget     = $('analyticsTarget'),
+        analyticsSectionSel = $('analyticsSectionSelect'),
+        analyticsType       = $('analyticsType'),
+        analyticsDate       = $('analyticsDate'),
+        analyticsMonth      = $('analyticsMonth'),
+        semesterStart       = $('semesterStart'),
+        semesterEnd         = $('semesterEnd'),
+        yearStart           = $('yearStart'),
+        analyticsSearch     = $('analyticsSearch'),
+        loadAnalyticsBtn    = $('loadAnalytics'),
+        resetAnalyticsBtn   = $('resetAnalytics'),
+        instructionsEl      = $('instructions'),
+        analyticsContainer  = $('analyticsContainer'),
+        graphsEl            = $('graphs'),
+        analyticsActions    = $('analyticsActions'),
+        shareAnalyticsBtn   = $('shareAnalytics'),
+        downloadAnalyticsBtn= $('downloadAnalytics'),
+        barCtx              = $('barChart').getContext('2d'),
+        pieCtx              = $('pieChart').getContext('2d');
   let barChart, pieChart, lastAnalyticsShare='';
 
   function hideAnalyticsControls(){
-    hide(analyticsSectionSel,analyticsSearch,analyticsDropdown);
+    hide(analyticsSectionSel, analyticsSearch);
   }
   analyticsTarget.onchange=()=>{
     analyticsType.disabled=false;
     hideAnalyticsControls();
     if(analyticsTarget.value==='section') show(analyticsSectionSel);
-    if(analyticsTarget.value==='student') show(analyticsSearch,analyticsDropdown);
-    hide(instructionsEl,analyticsContainerEl,graphsEl,analyticsActionsEl,resetAnalyticsBtn);
-  };
-  analyticsDropdown.onclick=()=>{
-    analyticsSearch.value='';
-    analyticsSearch.focus();
+    if(analyticsTarget.value==='student') show(analyticsSearch);
+    hide(instructionsEl, analyticsContainer, graphsEl, analyticsActions, resetAnalyticsBtn);
   };
   analyticsType.onchange=()=>{
-    hide(instructionsEl,analyticsContainerEl,graphsEl,analyticsActionsEl,resetAnalyticsBtn,analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);
+    hide(instructionsEl, analyticsContainer, graphsEl, analyticsActions, resetAnalyticsBtn, analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart);
     if(analyticsType.value==='date') show(analyticsDate);
     if(analyticsType.value==='month') show(analyticsMonth);
-    if(analyticsType.value==='semester') show(semesterStart,semesterEnd);
+    if(analyticsType.value==='semester') show(semesterStart, semesterEnd);
     if(analyticsType.value==='year') show(yearStart);
     show(resetAnalyticsBtn);
   };
   resetAnalyticsBtn.onclick=e=>{
     e.preventDefault();
     analyticsType.value='';
-    hide(instructionsEl,analyticsContainerEl,graphsEl,analyticsActionsEl,resetAnalyticsBtn,analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);
+    hide(instructionsEl, analyticsContainer, graphsEl, analyticsActions, resetAnalyticsBtn, analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart);
   };
-
   loadAnalyticsBtn.onclick=()=>{
-    if(analyticsTarget.value==='student' && !analyticsSearch.value.trim()) {
+    if(analyticsTarget.value==='student' && !analyticsSearch.value.trim()){
       return alert('Please enter Adm# or Name');
     }
-    // determine date range
-    let from, to;
-    const typ=analyticsType.value;
+    // compute range...
+    let from, to, typ=analyticsType.value;
     if(typ==='date') from=to=analyticsDate.value;
     else if(typ==='month'){
       const [y,m]=analyticsMonth.value.split('-').map(Number);
@@ -372,15 +321,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       return alert('Select period');
     }
-    // filter pool
     let pool=students.slice();
     if(analyticsTarget.value==='section') pool=pool.filter(s=>s.sec===analyticsSectionSel.value);
     if(analyticsTarget.value==='student'){
       const q=analyticsSearch.value.trim().toLowerCase();
       pool=pool.filter(s=>(s.adm===q) || s.name.toLowerCase().includes(q));
     }
-    // stats
-    const stats=pool.map(s=>({name:s.name,adm:s.adm,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
+    const stats=pool.map(s=>({name:s.name, adm:s.adm, P:0,A:0,Lt:0,HD:0,L:0,total:0}));
     Object.entries(attendanceData).forEach(([d,recs])=>{
       if(d<from||d>to) return;
       stats.forEach(st=>{
@@ -388,50 +335,72 @@ window.addEventListener('DOMContentLoaded', async () => {
         st[c]++; st.total++;
       });
     });
-    // render table
-    const head=$('analyticsTable').querySelector('thead tr');
-    head.innerHTML='<th>#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
-    const body=$('analyticsBody');
-    body.innerHTML='';
+    const head = $('analyticsTable').querySelector('thead tr');
+    head.innerHTML = '<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
+    const body = $('analyticsBody'); body.innerHTML='';
     stats.forEach((st,i)=>{
-      const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';
+      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${i+1}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td>
-        <td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;
+      tr.innerHTML = `<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td>
+                      <td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;
       body.appendChild(tr);
     });
     instructionsEl.textContent = `Period: ${from} to ${to}`;
-    show(instructionsEl, analyticsContainerEl, graphsEl, analyticsActionsEl);
-    // charts
+    show(instructionsEl, analyticsContainer, graphsEl, analyticsActions);
     barChart?.destroy();
-    barChart=new Chart(barCtx,{
-      type:'bar',
-      data:{ labels:stats.map(s=>s.name), datasets:[{ label:'% Present', data:stats.map(s=>s.total? s.P/s.total*100 :0) }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
-    const agg=stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
+    barChart=new Chart(barCtx,{ type:'bar', data:{ labels:stats.map(s=>s.name),
+      datasets:[{ label:'% Present', data:stats.map(s=>s.total? s.P/s.total*100:0) }] },
+      options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
+    const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]); return a; },{P:0,A:0,Lt:0,HD:0,L:0});
     pieChart?.destroy();
-    pieChart=new Chart(pieCtx,{
-      type:'pie',
-      data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] }
+    pieChart=new Chart(pieCtx,{ type:'pie', data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] } });
+    lastAnalyticsShare = `Analytics (${from} to ${to})\n` + stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
+  };
+  shareAnalyticsBtn.onclick=()=>{ window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,'_blank'); };
+  downloadAnalyticsBtn.onclick=()=>{ const doc=new window.jspdf.jsPDF(); doc.autoTable({html:'#analyticsTable'}); doc.save('analytics.pdf'); };
+
+  // 6. ATTENDANCE REGISTER (ensure load button is active)
+  const loadRegisterBtn = $('loadRegister'),
+        changeRegisterBtn  = $('changeRegister'),
+        downloadRegister   = $('downloadRegister'),
+        shareRegister      = $('shareRegister'),
+        monthInput         = $('registerMonth');
+
+  loadRegisterBtn.onclick = () => {
+    const m = monthInput.value;
+    if (!m) return alert('Pick month');
+    const [y,mm] = m.split('-').map(Number),
+          days = new Date(y,mm,0).getDate();
+    $('registerHeader').innerHTML = '<th>#</th><th>Adm#</th><th>Name</th>' +
+      Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
+    const tb = $('registerBody'); tb.innerHTML = '';
+    students.forEach((s,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>` +
+                     Array.from({length:days},()=>`<td class="reg-cell">A<i class="fas fa-times error-icon"></i></td>`).join('');
+      tb.appendChild(tr);
     });
-    // share text
-    const header=`Analytics Report (${from} to ${to})\n`;
-    const lines=stats.map((st,i)=>`${i+1}. ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`);
-    lastAnalyticsShare=header+lines.join('\n');
+    show($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister);
+    hide(loadRegisterBtn);
+    // interactive cells as before...
   };
-
-  shareAnalyticsBtn.onclick=()=>{
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,'_blank');
+  changeRegisterBtn.onclick = () => {
+    hide($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister);
+    show(loadRegisterBtn);
   };
-  downloadAnalyticsBtn.onclick=()=>{
+  downloadRegister.onclick = () => {
     const doc=new window.jspdf.jsPDF();
-    doc.autoTable({ html:'#analyticsTable' });
-    doc.save('analytics.pdf');
+    doc.autoTable({html:'#registerTable'});
+    doc.save('attendance_register.pdf');
   };
-
-  // 6. ATTENDANCE REGISTER (unchanged)...
+  shareRegister.onclick = () => {
+    const hdr = `Attendance Register: ${monthInput.value}`;
+    const rows = Array.from($('registerBody').children).map(tr =>
+      Array.from(tr.children).map(td=>td.textContent.trim()).join(' ')
+    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+rows.join('\n'))}`,'_blank');
+  };
 
   // SERVICE WORKER
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
 });
