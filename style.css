@@ -43,22 +43,27 @@ section {
   margin-bottom: 8px;
 }
 
+/* Restore fields size */
 input,
-select,
-button {
-  padding: 6px;
+select {
+  padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
+/* Reduce button size */
 button {
+  padding: 2px 4px;
+  font-size: 0.7rem;
   background: var(--primary);
   color: #fff;
   cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   white-space: nowrap;
 }
 
@@ -96,7 +101,7 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 
 .att-btn {
   flex: 1;
-  padding: 4px;
+  padding: 2px 4px;
   border: 1px solid var(--primary);
   border-radius: 4px;
   background: rgba(33,150,243,0.1);
@@ -105,7 +110,7 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
   cursor: pointer;
   display: flex;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 .att-btn.selected { background: var(--primary); color: #fff; }
 
@@ -129,10 +134,10 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 }
 .table-actions button {
   flex: 0 0 auto;
-  min-width: 80px;
-  max-width: 120px;
-  padding: 4px 6px;
-  font-size: 0.8rem;
+  min-width: 60px;
+  max-width: 100px;
+  padding: 2px 4px;
+  font-size: 0.7rem;
 }
 
 /* Student Registration overrides to keep buttons aligned left */
@@ -151,10 +156,8 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 #teacher-setup .row-inline button,
 #student-registration .row-inline button,
 #student-registration .table-actions #saveRegistration {
-  flex: none;
-  width: auto;
-  padding: 4px 8px;
-  font-size: 0.8rem;
+  padding: 2px 4px;
+  font-size: 0.7rem;
 }
 
 /* Icon-only buttons remain compact */
@@ -164,16 +167,15 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 #analytics-section .table-actions button,
 #register-section .row-inline button,
 #register-section .table-actions button {
-  flex: none;
-  width: auto;
-  padding: 4px 6px;
-  font-size: 0.8rem;
+  padding: 2px 4px;
+  font-size: 0.7rem;
 }
 
 @media (max-width: 600px) {
   .row-inline input,
-  .row-inline select,
-  .row-inline button,
+  .row-inline select {
+    flex: 1 1 auto;
+  }
   .table-actions button {
     flex: 1 1 auto;
   }
@@ -184,7 +186,7 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
   #analytics-section .table-actions button,
   #register-section .row-inline button,
   #register-section .table-actions button {
-    flex: none;
-    width: auto;
+    padding: 2px 4px;
+    font-size: 0.7rem;
   }
 }
