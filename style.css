@@ -155,48 +155,57 @@ td {
   flex-wrap: wrap;
   margin-top: 10px;
 }
-
 .table-actions button {
   flex: none;
   white-space: nowrap;
 }
 
-/* Student Registration: first two buttons on line one, Save button on its own line */
+/* Student Registration: Edit & Delete on first row, Save on second */
 #student-registration .table-actions {
   flex-wrap: wrap;
 }
 #student-registration .table-actions button:nth-child(-n+2) {
-  /* First two (Edit, Delete) stay on line 1 */
   flex: none;
 }
 #student-registration .table-actions button:nth-child(3) {
-  /* Save wraps onto its own second row */
   flex-basis: 100%;
   margin-top: 5px;
 }
 
-/* Icon-only attendance buttons (Load, Save, Download, Share) stay compact */
-#loadAttendance,
-#saveAttendance,
-#downloadAttendancePDF,
-#shareAttendanceSummary {
-  width: auto;
+/* Mark Attendance: standardize all buttons to compact icon style */
+#attendance-section .row-inline button,
+#attendance-section .table-actions button {
   flex: none;
-  padding: 6px;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.9rem;
 }
 
-/* Responsive adjustments */
+/* Analytics & Register Sections: keep icon-buttons compact */
+#analytics-section .row-inline button,
+#analytics-section .table-actions button,
+#register-section .row-inline button,
+#register-section .table-actions button {
+  flex: none;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 600px) {
   .row-inline input,
   .row-inline select,
-  .row-inline button {
+  .row-inline button,
+  .table-actions button {
     flex: 1 1 100%;
   }
-  /* But keep icon-only buttons small */
-  #loadAttendance,
-  #saveAttendance,
-  #downloadAttendancePDF,
-  #shareAttendanceSummary {
+  /* But preserve compact size for icon-only buttons */
+  #attendance-section .row-inline button,
+  #attendance-section .table-actions button,
+  #analytics-section .row-inline button,
+  #analytics-section .table-actions button,
+  #register-section .row-inline button,
+  #register-section .table-actions button {
     flex: none;
     width: auto;
   }
