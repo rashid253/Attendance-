@@ -116,29 +116,32 @@ th, td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: no
   border-radius: 4px;
 }
 
-/* Flex row for action buttons, mobile-friendly */
+/* Flex row for action buttons, aligned left, single row */
 .table-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 10px;
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 10px;
 }
 .table-actions button {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 120px;
   max-width: 180px;
 }
 
-/* Student Registration overrides to keep buttons aligned */
+/* Student Registration overrides to keep buttons aligned left */
 #student-registration .table-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 10px;
-  justify-content: center;
+  justify-content: flex-start;
 }
-#student-registration .table-actions button:nth-child(-n+2) { flex: 1 1 auto; }
-#student-registration .table-actions button:nth-child(3) { flex: 1 1 auto; }
+#student-registration .table-actions button {
+  flex: 0 0 auto;
+}
 
 /* Compact setup & registration buttons */
 #teacher-setup .row-inline button,
@@ -168,7 +171,7 @@ th, td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: no
   .row-inline select,
   .row-inline button,
   .table-actions button {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
   }
   /* Icon-only buttons stay auto-sized */
   #attendance-section .row-inline button,
