@@ -457,7 +457,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('shareAnalytics').onclick = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
   $('downloadAnalytics').onclick = () => {
