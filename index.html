@@ -1,31 +1,18 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
-
-  <!-- PWA manifest & meta -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
-
-  <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
-
-  <!-- Main CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1><i class="fas fa-school"></i> Attendance Management</h1>
-  </header>
+  <header><h1><i class="fas fa-school"></i> Attendance Management</h1></header>
 
   <!-- 1. Setup -->
   <section id="teacher-setup">
@@ -50,18 +37,9 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
+    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
+    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
+    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -79,7 +57,7 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents" /></th>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
             <th>Contact</th><th>Occupation</th><th>Address</th>
           </tr>
@@ -88,9 +66,9 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected">Edit Selected</button>
-      <button id="deleteSelected">Delete Selected</button>
-      <button id="saveRegistration">Save</button>
+      <button id="editSelected"><i class="fas fa-edit"></i> Edit</button>
+      <button id="deleteSelected"><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
       <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
       <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
       <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> PDF</button>
@@ -101,7 +79,7 @@
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
-      <input type="date" id="dateInput" />
+      <input type="date" id="dateInput"/>
       <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
     <div id="attendanceBody"></div>
@@ -140,20 +118,17 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <input type="date" id="analyticsDate" class="hidden"/>
+      <input type="month" id="analyticsMonth" class="hidden"/>
+      <input type="month" id="semesterStart" class="hidden"/>
+      <input type="month" id="semesterEnd" class="hidden"/>
+      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
     <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable">
-        <thead><tr></tr></thead>
-        <tbody id="analyticsBody"></tbody>
-      </table>
+      <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
     </div>
     <div id="graphs" class="hidden">
       <canvas id="barChart"></canvas>
@@ -169,7 +144,7 @@
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
-      <input type="month" id="registerMonth" />
+      <input type="month" id="registerMonth"/>
       <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
     <div id="registerTableWrapper" class="hidden table-wrapper">
@@ -185,13 +160,6 @@
     </div>
   </section>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
   <script src="app.js"></script>
 </body>
 </html>
