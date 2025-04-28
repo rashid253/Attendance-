@@ -43,29 +43,22 @@ section {
   margin-bottom: 8px;
 }
 
-/* Restore fields size */
 input,
-select {
-  padding: 8px;
+select,
+button {
+  padding: 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
-/* Increase button height */
 button {
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  height: auto;
-  min-height: 36px;
   background: var(--primary);
   color: #fff;
   cursor: pointer;
-  border: 1px solid #ccc;
-  border-radius: 4px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -103,7 +96,7 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 
 .att-btn {
   flex: 1;
-  padding: 6px 8px;
+  padding: 4px;
   border: 1px solid var(--primary);
   border-radius: 4px;
   background: rgba(33,150,243,0.1);
@@ -112,8 +105,7 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
   cursor: pointer;
   display: flex;
   justify-content: center;
-  font-size: 0.9rem;
-  min-height: 32px;
+  font-size: 0.8rem;
 }
 .att-btn.selected { background: var(--primary); color: #fff; }
 
@@ -139,9 +131,8 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
   flex: 0 0 auto;
   min-width: 80px;
   max-width: 120px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  min-height: 36px;
+  padding: 4px 6px;
+  font-size: 0.8rem;
 }
 
 /* Student Registration overrides to keep buttons aligned left */
@@ -160,40 +151,40 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
 #teacher-setup .row-inline button,
 #student-registration .row-inline button,
 #student-registration .table-actions #saveRegistration {
-  padding: 6px 10px;
-  font-size: 0.9rem;
-  min-height: 36px;
+  flex: none;
+  width: auto;
+  padding: 4px 8px;
+  font-size: 0.8rem;
 }
 
-/* Icon-only buttons remain compact but taller */
+/* Icon-only buttons remain compact */
 #attendance-section .row-inline button,
 #attendance-section .table-actions button,
 #analytics-section .row-inline button,
 #analytics-section .table-actions button,
 #register-section .row-inline button,
 #register-section .table-actions button {
-  padding: 6px 8px;
-  font-size: 0.9rem;
-  min-height: 36px;
+  flex: none;
+  width: auto;
+  padding: 4px 6px;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 600px) {
   .row-inline input,
-  .row-inline select {
-    flex: 1 1 auto;
-  }
+  .row-inline select,
+  .row-inline button,
   .table-actions button {
     flex: 1 1 auto;
   }
-  /* Icon-only buttons stay auto-sized and taller */
+  /* Icon-only buttons stay auto-sized */
   #attendance-section .row-inline button,
   #attendance-section .table-actions button,
   #analytics-section .row-inline button,
   #analytics-section .table-actions button,
   #register-section .row-inline button,
   #register-section .table-actions button {
-    padding: 6px 8px;
-    font-size: 0.9rem;
-    min-height: 36px;
+    flex: none;
+    width: auto;
   }
 }
