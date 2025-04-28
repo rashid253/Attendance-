@@ -37,15 +37,12 @@ section {
   border-radius: 6px;
 }
 
-/* Flex rows wrap by default, scroll only if overflow */
 .row-inline {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
   margin-bottom: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 input,
@@ -97,7 +94,6 @@ button {
 
 .table-wrapper {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   margin-top: 10px;
 }
 
@@ -135,7 +131,7 @@ td {
   border-radius: 4px;
   background: rgba(33, 150, 243, 0.1);
   color: var(--dark);
-  transition: background .2s;
+  transition: background 0.2s;
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -155,15 +151,11 @@ td {
   border-radius: 4px;
 }
 
-/* Actions row: wrap by default, scroll only if overflow */
 .table-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
 }
 
 .table-actions button {
@@ -171,16 +163,19 @@ td {
   white-space: nowrap;
 }
 
-/* Student Registration: Edit & Delete on first row, Save on second */
+/* Student Registration: single scrollable row of action buttons */
 #student-registration .table-actions {
-  flex-wrap: wrap;
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+  white-space: nowrap;
 }
-#student-registration .table-actions button:nth-child(-n+2) {
-  flex: none;
-}
-#student-registration .table-actions button:nth-child(3) {
-  flex-basis: 100%;
-  margin-top: 5px;
+
+#student-registration .table-actions button {
+  flex: 0 0 auto;
 }
 
 /* Standardize Setup Save, Registration Add & Save to compact style */
