@@ -9,213 +9,155 @@
   --dark: #333;
 }
 
-* {
-  outline: none;
-}
+* { outline:none; }
 
 body {
-  margin: 0;
-  padding: 10px;
-  font-family: Arial, sans-serif;
-  background: var(--light);
-  color: var(--dark);
+  margin:0; padding:10px;
+  font-family:Arial,sans-serif;
+  background:var(--light); color:var(--dark);
 }
 
 header h1 {
-  background: var(--primary);
-  color: #fff;
-  text-align: center;
-  padding: 10px;
-  margin: 0 0 20px;
+  background:var(--primary); color:#fff;
+  text-align:center; padding:10px;
+  margin:0 0 20px;
 }
 
 section {
-  background: #fff;
-  padding: 15px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  background:#fff; padding:15px;
+  margin-bottom:20px;
+  border:1px solid #ccc; border-radius:6px;
 }
 
 .row-inline {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
+  display:flex; gap:10px;
+  flex-wrap:wrap; align-items:center;
+  margin-bottom:10px;
 }
 
-input,
-select,
-button {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
+input, select, button {
+  padding:8px; border:1px solid #ccc;
+  border-radius:4px; font-size:0.9rem;
 }
 
 button {
-  background: var(--primary);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
+  background:var(--primary); color:#fff;
+  cursor:pointer; display:flex;
+  align-items:center; gap:5px;
+  white-space:nowrap;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display:none!important; }
 
 .counter-grid {
-  display: flex;
-  justify-content: space-between;
+  display:flex; justify-content:space-between;
 }
 
 .counter-card {
-  flex: 1;
-  background: #fff;
-  padding: 1rem;
-  text-align: center;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
-  margin-right: 1rem;
+  flex:1; background:#fff; padding:1rem;
+  text-align:center; border-radius:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  margin-right:1rem;
 }
 
-.counter-card:last-child {
-  margin-right: 0;
-}
+.counter-card:last-child { margin-right:0; }
 
-.number {
-  font-size: 2rem;
-  font-weight: bold;
-}
+.number { font-size:2rem; font-weight:bold; }
 
 .table-wrapper {
-  overflow-x: auto;
-  margin-top: 10px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-top:10px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+table { width:100%; border-collapse:collapse; }
+
+th, td {
+  border:1px solid #ccc; padding:8px;
+  text-align:left; white-space:nowrap;
 }
 
-th,
-td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.attendance-row {
-  margin-bottom: 1rem;
-}
+.attendance-row { margin-bottom:1rem; }
 
 .attendance-name {
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-weight:bold; margin-bottom:0.5rem;
 }
 
-.attendance-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
+.attendance-buttons { display:flex; gap:0.5rem; }
 
 .att-btn {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid var(--primary);
-  border-radius: 4px;
-  background: rgba(33, 150, 243, 0.1);
-  color: var(--dark);
-  transition: background 0.2s;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  white-space: nowrap;
+  flex:1; padding:0.5rem;
+  border:1px solid var(--primary);
+  border-radius:4px;
+  background:rgba(33,150,243,0.1);
+  color:var(--dark);
+  transition:background 0.2s;
+  cursor:pointer; display:flex;
+  justify-content:center; white-space:nowrap;
 }
 
 .att-btn.selected {
-  background: var(--primary);
-  color: #fff;
+  background:var(--primary); color:#fff;
 }
 
 .summary-box {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  margin-top:1rem; padding:1rem;
+  background:#fafafa; border:1px solid #ddd;
+  border-radius:4px;
 }
 
 .table-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 10px;
+  display:flex; gap:10px;
+  flex-wrap:wrap; margin-top:10px;
 }
 
 .table-actions button {
-  flex: none;
-  white-space: nowrap;
+  flex:none; white-space:nowrap;
 }
 
-/* Student Registration: single scrollable row of action buttons */
+/* Student Registration: scrollable actions */
 #student-registration .table-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-top: 10px;
-  white-space: nowrap;
+  flex-wrap:nowrap; overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
 }
 
 #student-registration .table-actions button {
-  flex: 0 0 auto;
+  flex:0 0 auto;
 }
 
-/* Standardize Setup Save, Registration Add & Save to compact style */
+/* Register section: interactive cells */
+.reg-cell {
+  position:relative; cursor:pointer;
+  padding-right:20px;
+}
+.error-icon {
+  position:absolute;
+  top:2px; right:2px;
+  font-size:0.8rem;
+  color:var(--danger);
+  display:none;
+}
+.reg-cell:hover .error-icon { display:block; }
+
+/* Compact buttons */
 #teacher-setup .row-inline button,
 #student-registration .row-inline button,
-#student-registration .table-actions #saveRegistration {
-  flex: none;
-  width: auto;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-}
-
-/* Standardize icon-only buttons across sections */
 #attendance-section .row-inline button,
-#attendance-section .table-actions button,
 #analytics-section .row-inline button,
-#analytics-section .table-actions button,
 #register-section .row-inline button,
+#attendance-section .table-actions button,
+#analytics-section .table-actions button,
 #register-section .table-actions button {
-  flex: none;
-  width: auto;
-  padding: 6px 10px;
-  font-size: 0.9rem;
+  padding:6px 10px; font-size:0.9rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width:600px) {
   .row-inline input,
-  .row-inline select,
+  .row-inline select {
+    flex:1 1 100%;
+  }
   .row-inline button,
   .table-actions button {
-    flex: 1 1 100%;
-  }
-  /* Keep icon-only buttons compact */
-  #attendance-section .row-inline button,
-  #attendance-section .table-actions button,
-  #analytics-section .row-inline button,
-  #analytics-section .table-actions button,
-  #register-section .row-inline button,
-  #register-section .table-actions button {
-    flex: none;
-    width: auto;
+    flex:0 0 auto;
   }
 }
