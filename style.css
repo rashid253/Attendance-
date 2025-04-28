@@ -90,7 +90,7 @@ th, td {
   white-space:nowrap;
 }
 
-/* Attendance Buttons: horizontal */
+/* Attendance Buttons */
 .attendance-buttons {
   display: flex;
   gap: 0.5rem;
@@ -128,13 +128,6 @@ th, td {
 }
 .table-actions button { flex: 0 0 auto; }
 
-/* Analytics search & dropdown align */
-#analyticsSearch,
-#analyticsDropdown {
-  flex: 0 0 auto;
-}
-
-/* Share icon cell */
 .share-row {
   cursor: pointer;
   color: var(--primary);
