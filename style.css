@@ -1,19 +1,255 @@
-<!-- 4. Mark Attendance (updated Save button) -->
-<section id="attendance-section">
-  <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
-  <div class="row-inline">
-    <input type="date" id="dateInput" />
-    <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
-  </div>
-  <div id="attendanceBody"></div>
-  <div id="attendanceSummary" class="hidden summary-box"></div>
-  <div class="table-actions">
-    <!-- Only icon, no "Save" text -->
-    <button id="saveAttendance" aria-label="Save">
-      <i class="fas fa-save"></i>
-    </button>
-    <button id="resetAttendance" class="hidden"><i class="fas fa-undo"></i> Reset</button>
-    <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-download"></i> Download PDF</button>
-    <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-  </div>
-</section>
+/* ========== RESET & BASE ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  background: #f5f7fa;
+  color: #333;
+  padding: 1rem;
+}
+
+/* Utility */
+.hidden {
+  display: none !important;
+}
+
+/* ========== TYPOGRAPHY & HEADERS ========== */
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+header h1 {
+  font-size: 1.75rem;
+  color: #2196F3;
+}
+
+section {
+  background: #fff;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #555;
+}
+
+/* ========== FORMS & CONTROLS ========== */
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.row-inline input,
+.row-inline select,
+.row-inline button {
+  font-size: 1rem;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="month"],
+input[type="number"],
+select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  flex: 1 1 150px;
+}
+
+button {
+  cursor: pointer;
+  background: #2196F3;
+  color: #fff;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+}
+
+button:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled),
+button:focus:not(:disabled) {
+  background: #1976d2;
+  outline: none;
+}
+
+/* ========== COUNTERS ========== */
+.counter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.counter-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.counter-card .number {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2196F3;
+}
+
+/* ========== TABLES ========== */
+.table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f0f0f0;
+}
+
+th,
+td {
+  padding: 0.5rem;
+  text-align: left;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+th:first-child,
+td:first-child {
+  text-align: center;
+}
+
+/* ========== TABLE ACTION BUTTONS ========== */
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.table-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+/* Icon-only Save button sizing */
+#saveAttendance {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+/* ========== ATTENDANCE ROWS ========== */
+.attendance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 0;
+}
+
+.attendance-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.attendance-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.att-btn {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background: rgba(33,150,243,0.1);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.att-btn.selected {
+  color: #fff !important;
+}
+
+/* These are set inline via JS:
+   P → var(--success)
+   A → var(--danger)
+   Lt→ var(--warning)
+   HD→ #FF9800
+   L → var(--info)
+*/
+
+/* ========== SUMMARY BOX ========== */
+.summary-box {
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+/* ========== ANALYTICS & CHARTS ========== */
+#graphs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+#graphs canvas {
+  flex: 1 1 300px;
+  max-width: 100%;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 600px) {
+  .row-inline {
+    flex-direction: column;
+  }
+
+  .attendance-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attendance-buttons {
+    margin-top: 0.5rem;
+  }
+
+  .counter-card .number {
+    font-size: 1.5rem;
+  }
+}
