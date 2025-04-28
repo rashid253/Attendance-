@@ -12,8 +12,7 @@
 * { outline: none; }
 
 body {
-  margin: 0;
-  padding: 10px;
+  margin: 0; padding: 10px;
   font-family: Arial, sans-serif;
   background: var(--light);
   color: var(--dark);
@@ -41,17 +40,14 @@ section {
   flex-wrap: wrap;
   align-items: center;
   margin-bottom: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
-input,
-select,
-button {
+input, select, button {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 0.9rem;
+  flex: 0 0 auto;
 }
 
 button {
@@ -72,17 +68,13 @@ button {
 }
 
 .counter-card {
-  flex: 1;
-  background: #fff;
-  padding: 1rem;
-  text-align: center;
+  flex: 1; background: #fff;
+  padding: 1rem; text-align:center;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   margin-right: 1rem;
 }
-
 .counter-card:last-child { margin-right: 0; }
-
 .number { font-size: 2rem; font-weight: bold; }
 
 .table-wrapper {
@@ -90,59 +82,68 @@ button {
   -webkit-overflow-scrolling: touch;
   margin-top: 10px;
 }
-
-table { width: 100%; border-collapse: collapse; }
-
-th,
-td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-  white-space: nowrap;
+table { width:100%; border-collapse:collapse; }
+th, td {
+  border:1px solid #ccc;
+  padding:8px;
+  text-align:left;
+  white-space:nowrap;
 }
 
-/* Actions row */
-.table-actions {
+/* Attendance Buttons: horizontal */
+.attendance-buttons {
   display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
-  margin-top: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
+  gap: 0.5rem;
+}
+.att-btn {
+  flex: none;
+  padding: 0.5rem 1rem;
+  border:1px solid var(--primary);
+  border-radius:4px;
+  background: rgba(33,150,243,0.1);
+  color: var(--dark);
+  cursor:pointer;
+  white-space:nowrap;
+}
+.att-btn.selected {
+  background: var(--primary);
+  color: #fff;
+}
+
+.summary-box {
+  margin-top:1rem;
+  padding:1rem;
+  background:#fafafa;
+  border:1px solid #ddd;
+  border-radius:4px;
+}
+
+.table-actions {
+  display:flex;
+  gap:10px;
+  flex-wrap:nowrap;
+  margin-top:10px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
 }
 .table-actions button { flex: 0 0 auto; }
 
-/* Student Registration: keep actions scrollable */
-#student-registration .table-actions {
-  flex-wrap: nowrap;
+/* Analytics search & dropdown align */
+#analyticsSearch,
+#analyticsDropdown {
+  flex: 0 0 auto;
 }
 
-/* Share icon in table */
+/* Share icon cell */
 .share-row {
   cursor: pointer;
   color: var(--primary);
+  font-size: 1.2rem;
 }
 
-/* Register section: interactive cells */
-.reg-cell {
-  position: relative;
-  cursor: pointer;
-  padding-right: 20px;
-}
-.error-icon {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 0.8rem;
-  color: var(--danger);
-  display: none;
-}
-.reg-cell:hover .error-icon { display: block; }
-
-@media (max-width: 600px) {
+@media (max-width:600px) {
   .row-inline input,
-  .row-inline select { flex: 1 1 100%; }
+  .row-inline select { flex:1 1 100%; }
   .row-inline button,
-  .table-actions button { flex: 0 0 auto; }
+  .table-actions button { flex:0 0 auto; }
 }
