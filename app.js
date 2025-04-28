@@ -166,13 +166,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   loadAttendance.onclick = () => {
     attendanceBody.innerHTML = '';
-    students.forEach((stu,idx)=>{
+    students.forEach((stu)=>{
       const row = document.createElement('div'); row.className='attendance-row';
       const nameDiv = document.createElement('div'); nameDiv.className='attendance-name'; nameDiv.textContent=stu.name;
       const btns = document.createElement('div'); btns.className='attendance-buttons';
       ['P','A','Lt','HD','L'].forEach(code=>{
         const btn = document.createElement('button');
-        btn.className='att-btn'; btn.textContent=code; btn.style.background='rgba(33,150,243,0.1)';
+        btn.className='att-btn'; btn.textContent=code;
         btn.onclick=()=>{
           btns.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('selected'));
           btn.classList.add('selected');
@@ -214,110 +214,153 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // 5. ANALYTICS SECTION
-  const analyticsTarget = $('analyticsTarget'),
-        analyticsSection = $('analyticsSectionSelect'),
-        analyticsFilter  = $('analyticsFilter'),
-        analyticsStudent = $('analyticsStudentInput'),
-        analyticsType    = $('analyticsType'),
-        analyticsDate    = $('analyticsDate'),
-        analyticsMonth   = $('analyticsMonth'),
-        semesterStart   = $('semesterStart'),
-        semesterEnd     = $('semesterEnd'),
-        yearStart       = $('yearStart'),
-        loadAnalytics   = $('loadAnalytics'),
-        resetAnalytics  = $('resetAnalytics'),
-        instructionsEl  = $('instructions'),
-        analyticsContainer = $('analyticsContainer'),
-        graphsEl        = $('graphs'),
-        analyticsActions = $('analyticsActions'),
-        shareAnalytics  = $('shareAnalytics'),
-        downloadAnalytics = $('downloadAnalytics'),
-        barCtx = $('barChart').getContext('2d'),
-        pieCtx = $('pieChart').getContext('2d');
+  const analyticsTarget      = $('analyticsTarget'),
+        analyticsSection     = $('analyticsSectionSelect'),
+        analyticsType        = $('analyticsType'),
+        analyticsDate        = $('analyticsDate'),
+        analyticsMonth       = $('analyticsMonth'),
+        semesterStart        = $('semesterStart'),
+        semesterEnd          = $('semesterEnd'),
+        yearStart            = $('yearStart'),
+        analyticsSearch      = $('analyticsSearch'),
+        analyticsDropdown    = $('analyticsDropdown'),
+        loadAnalyticsBtn     = $('loadAnalytics'),
+        resetAnalyticsBtn    = $('resetAnalytics'),
+        instructionsEl       = $('instructions'),
+        analyticsContainerEl = $('analyticsContainer'),
+        graphsEl             = $('graphs'),
+        analyticsActionsEl   = $('analyticsActions'),
+        shareAnalyticsBtn    = $('shareAnalytics'),
+        downloadAnalyticsBtn = $('downloadAnalytics'),
+        barCtx               = $('barChart').getContext('2d'),
+        pieCtx               = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  function hideAllAnalytics() {
+  function hideAnalyticsAll() {
     [analyticsDate, analyticsMonth, semesterStart, semesterEnd,
-     yearStart, instructionsEl, analyticsContainer, graphsEl,
-     analyticsActions, resetAnalytics].forEach(hide);
+     yearStart, instructionsEl, analyticsContainerEl,
+     graphsEl, analyticsActionsEl, resetAnalyticsBtn].forEach(hide);
   }
+
   analyticsTarget.onchange = () => {
-    analyticsType.disabled = false; hideAllAnalytics();
-    analyticsSection.classList.toggle('hidden', analyticsTarget.value!=='section');
-    analyticsFilter.classList.toggle('hidden', analyticsTarget.value!=='student');
-    analyticsStudent.classList.add('hidden');
+    analyticsType.disabled = false;
+    analyticsSection.classList.toggle('hidden', analyticsTarget.value !== 'section');
+    hideAnalyticsAll();
   };
-  analyticsFilter.onchange = () => {
-    analyticsStudent.innerHTML = '<option disabled selected>-- Pick --</option>' +
-      students.map(s=>`<option value="${s.adm}">${s.name} (${s.adm})</option>`).join('');
-    show(analyticsStudent);
-  };
+
   analyticsType.onchange = () => {
-    hideAllAnalytics();
-    if (analyticsType.value==='date') show(analyticsDate);
-    if (analyticsType.value==='month') show(analyticsMonth);
-    if (analyticsType.value==='semester') { show(semesterStart); show(semesterEnd); }
-    if (analyticsType.value==='year') show(yearStart);
-    show(resetAnalytics);
+    hideAnalyticsAll();
+    if (analyticsType.value === 'date') show(analyticsDate);
+    if (analyticsType.value === 'month') show(analyticsMonth);
+    if (analyticsType.value === 'semester') { show(semesterStart); show(semesterEnd); }
+    if (analyticsType.value === 'year') show(yearStart);
+    show(resetAnalyticsBtn);
   };
-  resetAnalytics.onclick = e => { e.preventDefault(); hideAllAnalytics(); analyticsType.value=''; };
-  loadAnalytics.onclick = () => {
-    const tgt = analyticsTarget.value, typ = analyticsType.value;
-    let from, to;
-    if (typ==='date')      from=to=analyticsDate.value;
-    else if (typ==='month'){ const [y,m]=analyticsMonth.value.split('-').map(Number);
-      from=`${analyticsMonth.value}-01`; to=`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if (typ==='semester'){ const [sy,sm]=semesterStart.value.split('-').map(Number),
-          [ey,em]=semesterEnd.value.split('-').map(Number);
-      from=`${semesterStart.value}-01`;
-      to  =`${semesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
-    else if (typ==='year')  { from=`${yearStart.value}-01-01`; to=`${yearStart.value}-12-31`; }
-    else return alert('Select period');
 
+  resetAnalyticsBtn.onclick = e => {
+    e.preventDefault();
+    hideAnalyticsAll();
+    analyticsType.value = '';
+  };
+
+  loadAnalyticsBtn.onclick = () => {
+    // build date range
+    let from, to, typ = analyticsType.value;
+    if (typ === 'date')      from = to = analyticsDate.value;
+    else if (typ === 'month') {
+      const [y,m] = analyticsMonth.value.split('-').map(Number);
+      from = `${analyticsMonth.value}-01`;
+      to   = `${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;
+    } else if (typ === 'semester') {
+      const [sy,sm] = semesterStart.value.split('-').map(Number);
+      const [ey,em] = semesterEnd.value.split('-').map(Number);
+      from = `${semesterStart.value}-01`;
+      to   = `${semesterEnd.value}-${new Date(ey,em,0).getDate()}`;
+    } else if (typ === 'year') {
+      from = `${yearStart.value}-01-01`;
+      to   = `${yearStart.value}-12-31`;
+    } else {
+      alert('Select period');
+      return;
+    }
+
+    // filter students by search or all
+    const q = analyticsSearch.value.trim().toLowerCase();
     let pool = students.slice();
-    if (tgt==='section') pool = pool.filter(s=>s.sec===analyticsSection.value);
-    if (tgt==='student') pool = pool.filter(s=>s.adm===analyticsStudent.value);
+    if (q) {
+      if (/^\d+$/.test(q)) pool = students.filter(s => s.adm === q);
+      else pool = students.filter(s => s.name.toLowerCase().includes(q));
+    }
 
-    const stats = pool.map(s=>({ name:s.name, adm:s.adm, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
-    Object.entries(attendanceData).forEach(([d,recs])=>{
-      if (d<from||d>to) return;
-      stats.forEach(st=>{ const c=recs[st.adm]||'A'; st[c]++; st.total++; });
+    // stats calc
+    const stats = pool.map(s => ({ name: s.name, adm: s.adm, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    Object.entries(attendanceData).forEach(([d, recs]) => {
+      if (d < from || d > to) return;
+      stats.forEach(st => {
+        const c = recs[st.adm] || 'A';
+        st[c]++;
+        st.total++;
+      });
     });
 
-    const thead = $('analyticsTable').querySelector('thead tr');
-    thead.innerHTML = '<th>#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
-    const tbody = $('analyticsBody'); tbody.innerHTML = '';
-    stats.forEach((st,i)=>{
-      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
+    // render table
+    const head = $('analyticsTable').querySelector('thead tr');
+    head.innerHTML = '<th>#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
+    const body = $('analyticsBody');
+    body.innerHTML = '';
+    stats.forEach((st,i) => {
+      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${i+1}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td>
                       <td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;
-      tbody.appendChild(tr);
+      body.appendChild(tr);
     });
 
     instructionsEl.textContent = `Period: ${from} to ${to}`;
-    show(instructionsEl); show(analyticsContainer); show(graphsEl); show(analyticsActions);
+    show(instructionsEl); show(analyticsContainerEl); show(graphsEl); show(analyticsActionsEl);
 
+    // charts
     barChart?.destroy();
-    barChart = new Chart(barCtx, { type:'bar', data:{ labels:stats.map(s=>s.name), datasets:[{ label:'% Present', data:stats.map(s=>s.total? s.P/s.total*100:0 ) }] }, options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
-    const agg = stats.reduce((a,s)=>{ ['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]); return a; }, { P:0,A:0,Lt:0,HD:0,L:0 });
+    barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: stats.map(s=>s.name),
+        datasets: [{ label: '% Present', data: stats.map(s=> s.total ? s.P/s.total*100 : 0 ) }]
+      },
+      options: { scales: { y: { beginAtZero: true, max: 100 } } }
+    });
+
+    const agg = stats.reduce((a,s) => {
+      ['P','A','Lt','HD','L'].forEach(k => a[k]+=s[k]);
+      return a;
+    }, { P:0,A:0,Lt:0,HD:0,L:0 });
     pieChart?.destroy();
-    pieChart = new Chart(pieCtx, { type:'pie', data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:Object.values(agg) }] } });
+    pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: { labels: ['P','A','Lt','HD','L'], datasets: [{ data: Object.values(agg) }] }
+    });
   };
-  $('shareAnalytics').onclick = () => {
+
+  analyticsDropdown.onclick = () => {
+    analyticsSearch.value = '';
+    loadAnalyticsBtn.click();
+  };
+
+  shareAnalyticsBtn.onclick = () => {
     const hdr = instructionsEl.textContent;
     const rows = Array.from($('analyticsBody').children).map(tr=>tr.textContent.trim());
     window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+rows.join('\n'))}`,'_blank');
   };
-  $('downloadAnalytics').onclick = () => {
+
+  downloadAnalyticsBtn.onclick = () => {
     const doc = new window.jspdf.jsPDF();
-    doc.autoTable({ html:'#analyticsTable' });
+    doc.autoTable({ html: '#analyticsTable' });
     doc.save('analytics.pdf');
   };
 
   // 6. ATTENDANCE REGISTER
-  const downloadRegister = $('downloadRegister'),
-        shareRegister    = $('shareRegister');
+  const downloadRegisterBtn = $('downloadRegister'),
+        shareRegisterBtn    = $('shareRegister');
 
   $('loadRegister').onclick = () => {
     const m = $('registerMonth').value; if(!m) return alert('Pick month');
@@ -332,20 +375,20 @@ window.addEventListener('DOMContentLoaded', async () => {
       tb.appendChild(tr);
     });
     show($('registerTableWrapper'));
-    show($('changeRegister')); show(downloadRegister); show(shareRegister);
+    show($('changeRegister')); show(downloadRegisterBtn); show(shareRegisterBtn);
     hide($('loadRegister'));
   };
   $('changeRegister').onclick = () => {
     hide($('registerTableWrapper'));
-    hide($('changeRegister')); hide(downloadRegister); hide(shareRegister);
+    hide($('changeRegister')); hide(downloadRegisterBtn); hide(shareRegisterBtn);
     show($('loadRegister'));
   };
-  downloadRegister.onclick = () => {
+  downloadRegisterBtn.onclick = () => {
     const doc = new window.jspdf.jsPDF();
     doc.autoTable({ html: '#registerTable' });
     doc.save('attendance_register.pdf');
   };
-  shareRegister.onclick = () => {
+  shareRegisterBtn.onclick = () => {
     const hdr = `Attendance Register: ${$('registerMonth').value}`;
     const rows = Array.from($('registerBody').children).map(tr =>
       Array.from(tr.children).map(td=>td.textContent).join(' ')
