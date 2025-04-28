@@ -1,3 +1,5 @@
+// app.js
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Eruda Debug Console
   (function(){
@@ -167,8 +169,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       alert('All fields required');
       return;
     }
-    if (!/^
-   \\d{7,15}$/.test(contact)) {
+    if (!/^\d{7,15}$/.test(contact)) {
       alert('Contact must be 7–15 digits');
       return;
     }
@@ -438,4 +439,124 @@ window.addEventListener('DOMContentLoaded', async () => {
       type: 'bar',
       data: {
         labels: stats.map(s => s.name),
-        datasets: [{ label: '% Present', data: stats.map(s => s.total ? s.P/s.total*100 : 0
+        datasets: [{ label: '% Present', data: stats.map(s => s.total ? s.P/s.total*100 : 0) }]
+      },
+      options: { scales: { y: { beginAtZero:true, max:100 } } }
+    });
+    const agg = stats.reduce((a, s) => { ['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]); return a; }, {P:0,A:0,Lt:0,HD:0,L:0});
+    pieChart?.destroy();
+    pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: { labels:['P','A','Lt','HD','L'], datasets:[{ data: Object.values(agg) }] }
+    });
+    lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
+      stats.map((st,i) => `${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
+  };
+
+  $('shareAnalytics').onclick = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank`);
+  };
+
+  $('downloadAnalytics').onclick = () => {
+    const doc = new window.jspdf.jsPDF();
+    doc.autoTable({ html: '#analyticsTable' });
+    doc.save('analytics.pdf');
+  };
+
+  // --- 6. ATTENDANCE REGISTER ---
+  const loadRegisterBtn   = $('loadRegister'),
+        saveRegisterBtn   = $('saveRegister'),
+        changeRegisterBtn = $('changeRegister'),
+        downloadRegister  = $('downloadRegister'),
+        shareRegister     = $('shareRegister'),
+        monthInput        = $('registerMonth'),
+        registerBody      = $('registerBody'),
+        registerHeader    = $('registerHeader');
+  const regCodes   = ['A','P','Lt','HD','L'];
+  const regColors  = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+
+  loadRegisterBtn.onclick = () => {
+    const m = monthInput.value;
+    if (!m) { alert('Pick month'); return; }
+    const [y, mm] = m.split('-').map(Number);
+    const days = new Date(y, mm, 0).getDate();
+    registerHeader.innerHTML =
+      '<th>#</th><th>Adm#</th><th>Name</th>' +
+      Array.from({ length: days }, (_, i) => `<th>${i+1}</th>`).join('');
+    registerBody.innerHTML = '';
+    students.forEach((s, i) => {
+      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      for (let d = 1; d <= days; d++) {
+        const key = `${m}-${String(d).padStart(2,'0')}`;
+        const code = (attendanceData[key] && attendanceData[key][s.adm]) || 'A';
+        const style = code==='A' ? '' : ` style="background:${regColors[code]};color:#fff"`;
+        row += `<td class="reg-cell"${style}><span class="status-text">${code}</span></td>`;
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = row;
+      registerBody.appendChild(tr);
+    });
+    // attach click to cycle
+    registerBody.querySelectorAll('.reg-cell').forEach(cell => {
+      const span = cell.querySelector('.status-text');
+      cell.onclick = () => {
+        let idx = regCodes.indexOf(span.textContent);
+        idx = (idx + 1) % regCodes.length;
+        const code = regCodes[idx];
+        span.textContent = code;
+        if (code==='A') {
+          cell.style.background=''; cell.style.color='';
+        } else {
+          cell.style.background=regColors[code]; cell.style.color='#fff';
+        }
+      };
+    });
+    show($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister, saveRegisterBtn);
+    hide(loadRegisterBtn);
+  };
+
+  saveRegisterBtn.onclick = async () => {
+    const m = monthInput.value;
+    const [y, mm] = m.split('-').map(Number);
+    const days = new Date(y, mm, 0).getDate();
+    // read all cells
+    Array.from(registerBody.children).forEach(tr => {
+      const adm = tr.children[1].textContent;
+      for (let d = 0; d < days; d++) {
+        const code = tr.children[3+d].querySelector('.status-text').textContent;
+        const key = `${m}-${String(d+1).padStart(2,'0')}`;
+        attendanceData[key] = attendanceData[key]||{};
+        attendanceData[key][adm] = code;
+      }
+    });
+    await saveAttendanceData();
+    alert('Register saved');
+  };
+
+  changeRegisterBtn.onclick = () => {
+    hide($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister, saveRegisterBtn);
+    show(loadRegisterBtn);
+  };
+
+  downloadRegister.onclick = () => {
+    const doc = new window.jspdf.jsPDF();
+    doc.autoTable({ html: '#registerTable' });
+    doc.save('attendance_register.pdf');
+  };
+
+  shareRegister.onclick = () => {
+    const hdr = `Attendance Register: ${monthInput.value}`;
+    const rows = Array.from(registerBody.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('td')).map(td => {
+        const st = td.querySelector('.status-text');
+        return st ? st.textContent.trim() : td.textContent.trim();
+      }).join(' ')
+    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n' + rows.join('\n'))}`, '_blank');
+  };
+
+  // service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
+});
