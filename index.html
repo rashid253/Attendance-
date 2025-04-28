@@ -96,18 +96,18 @@
           <tr>
             <th><input type="checkbox" id="selectAllStudents" /></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
-      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete Selected</button>
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
       <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
-      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share All</button>
       <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> PDF</button>
     </div>
   </section>
