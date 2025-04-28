@@ -177,13 +177,15 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: left; white-space: no
   .table-actions button {
     flex: 1 1 auto;
   }
-  /* Icon-only buttons stay auto-sized */
+  /* Icon-only and registration buttons stay auto-sized */
   #attendance-section .row-inline button,
   #attendance-section .table-actions button,
   #analytics-section .row-inline button,
   #analytics-section .table-actions button,
   #register-section .row-inline button,
-  #register-section .table-actions button {
+  #register-section .table-actions button,
+  #student-registration .row-inline button,
+  #student-registration .table-actions button {
     flex: none;
     width: auto;
   }
