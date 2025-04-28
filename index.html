@@ -49,21 +49,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected value="">-- Select Class --</option>
-        <option>Play</option>
-        <option>Nursery</option>
-        <option>KG</option>
-        <option>Pre One</option>
-        <option>One</option>
-        <option>Two</option>
-        <option>Three</option>
-        <option>Four</option>
-        <option>Five</option>
-        <option>Six</option>
-        <option>Seven</option>
-        <option>Eight</option>
-        <option>Nine</option>
-        <option>Ten</option>
-      </select>
+        <option>One</option><option>Two</option><option>Three</option>
       </select>
       <select id="teacherSectionSelect">
         <option disabled selected value="">-- Select Section --</option>
@@ -157,11 +143,6 @@
         <option disabled selected>-- Section --</option>
         <option>A</option><option>B</option><option>C</option>
       </select>
-      <select id="analyticsFilter" class="hidden">
-        <option disabled selected>-- Filter --</option>
-        <option value="adm">Adm#</option><option value="name">Name</option>
-      </select>
-      <select id="analyticsStudentInput" class="hidden"></select>
       <select id="analyticsType" disabled>
         <option disabled selected>-- Period --</option>
         <option value="date">Date</option>
@@ -174,6 +155,8 @@
       <input type="month" id="semesterStart" class="hidden" />
       <input type="month" id="semesterEnd" class="hidden" />
       <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <input type="text" id="analyticsSearch" placeholder="Enter Reg# or Name" />
+      <button id="analyticsDropdown"><i class="fas fa-caret-down"></i></button>
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
