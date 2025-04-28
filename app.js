@@ -1,5 +1,3 @@
-// app.js
-
 window.addEventListener('DOMContentLoaded', async () => {
   // Eruda Debug Console
   (function(){
@@ -169,7 +167,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       alert('All fields required');
       return;
     }
-    if (!/^\d{7,15}$/.test(contact)) {
+    if (!/^
+   \\d{7,15}$/.test(contact)) {
       alert('Contact must be 7–15 digits');
       return;
     }
@@ -386,7 +385,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       alert('Please enter Adm# or Name');
       return;
     }
-    // determine date range
     let from, to;
     const typ = analyticsType.value;
     if (typ === 'date') from = to = analyticsDate.value;
@@ -406,7 +404,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       alert('Select period');
       return;
     }
-    // filter students
     let pool = students.slice();
     if (analyticsTarget.value === 'section') {
       pool = pool.filter(s => s.sec === analyticsSectionSel.value);
@@ -415,7 +412,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       const q = analyticsSearch.value.trim().toLowerCase();
       pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
     }
-    // compute stats
     const stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
     Object.entries(attendanceData).forEach(([d,recs]) => {
       if (d < from || d > to) return;
@@ -424,7 +420,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         st[c]++; st.total++;
       });
     });
-    // render table
     const head = $('analyticsTable').querySelector('thead tr');
     head.innerHTML = '<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
     const body = $('analyticsBody');
@@ -438,117 +433,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     instructionsEl.textContent = `Period: ${from} to ${to}`;
     show(instructionsEl, analyticsContainer, graphsEl, analyticsActions);
-    // bar chart
     barChart?.destroy();
     barChart = new Chart(barCtx, {
       type: 'bar',
       data: {
         labels: stats.map(s => s.name),
-        datasets: [{ label: '% Present', data: stats.map(s => s.total ? s.P/s.total*100 : 0) }]
-      },
-      options: { scales: { y: { beginAtZero:true, max:100 } } }
-    });
-    // pie chart
-    const agg = stats.reduce((a, s) => { ['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]); return a; }, {P:0,A:0,Lt:0,HD:0,L:0});
-    pieChart?.destroy();
-    pieChart = new Chart(pieCtx, {
-      type: 'pie',
-      data: { labels:['P','A','Lt','HD','L'], datasets:[{ data: Object.values(agg) }] }
-    });
-    lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
-      stats.map((st,i) => `${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
-  };
-
-  $('shareAnalytics').onclick = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
-  };
-
-  $('downloadAnalytics').onclick = () => {
-    const doc = new window.jspdf.jsPDF();
-    doc.autoTable({ html: '#analyticsTable' });
-    doc.save('analytics.pdf');
-  };
-
-  // --- 6. ATTENDANCE REGISTER ---
-  const loadRegisterBtn   = $('loadRegister'),
-        changeRegisterBtn = $('changeRegister'),
-        downloadRegister  = $('downloadRegister'),
-        shareRegister     = $('shareRegister'),
-        monthInput        = $('registerMonth'),
-        registerBody      = $('registerBody'),
-        registerHeader    = $('registerHeader');
-  const regCodes   = ['A','P','Lt','HD','L'];
-  const regColors  = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
-
-  loadRegisterBtn.onclick = () => {
-    const m = monthInput.value;
-    if (!m) { alert('Pick month'); return; }
-    const [y, mm] = m.split('-').map(Number);
-    const days = new Date(y, mm, 0).getDate();
-
-    // header
-    registerHeader.innerHTML =
-      '<th>#</th><th>Adm#</th><th>Name</th>' +
-      Array.from({ length: days }, (_, i) => `<th>${i+1}</th>`).join('');
-
-    // body
-    registerBody.innerHTML = '';
-    students.forEach((s, i) => {
-      const tr = document.createElement('tr');
-      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d = 0; d < days; d++) {
-        row += `<td class="reg-cell"><span class="status-text">A</span></td>`;
-      }
-      tr.innerHTML = row;
-      registerBody.appendChild(tr);
-    });
-
-    // cycle statuses
-    registerBody.querySelectorAll('.reg-cell').forEach(cell => {
-      const span = cell.querySelector('.status-text');
-      cell.addEventListener('click', () => {
-        let idx = regCodes.indexOf(span.textContent);
-        idx = (idx + 1) % regCodes.length;
-        const code = regCodes[idx];
-        span.textContent = code;
-        if (code === 'A') {
-          cell.style.background = '';
-          cell.style.color = '';
-        } else {
-          cell.style.background = regColors[code];
-          cell.style.color = '#fff';
-        }
-      });
-    });
-
-    show($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister);
-    hide(loadRegisterBtn);
-  };
-
-  changeRegisterBtn.onclick = () => {
-    hide($('registerTableWrapper'), changeRegisterBtn, downloadRegister, shareRegister);
-    show(loadRegisterBtn);
-  };
-
-  downloadRegister.onclick = () => {
-    const doc = new window.jspdf.jsPDF();
-    doc.autoTable({ html: '#registerTable' });
-    doc.save('attendance_register.pdf');
-  };
-
-  shareRegister.onclick = () => {
-    const hdr = `Attendance Register: ${monthInput.value}`;
-    const rows = Array.from(registerBody.querySelectorAll('tr')).map(tr =>
-      Array.from(tr.querySelectorAll('td')).map(td => {
-        const st = td.querySelector('.status-text');
-        return st ? st.textContent.trim() : td.textContent.trim();
-      }).join(' ')
-    );
-    window.open(`https://wa.me/?text=${encodeURIComponent(hdr + '\n' + rows.join('\n'))}`, '_blank');
-  };
-
-  // service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
-});
+        datasets: [{ label: '% Present', data: stats.map(s => s.total ? s.P/s.total*100 : 0
