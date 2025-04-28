@@ -37,18 +37,15 @@ section {
   border-radius: 6px;
 }
 
-/* Flex rows with horizontal scrolling if needed */
+/* Flex rows wrap by default, no scrolling */
 .row-inline {
   display: flex;
   gap: 10px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   margin-bottom: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
-/* Standard form elements */
 input,
 select,
 button {
@@ -157,11 +154,11 @@ td {
   border-radius: 4px;
 }
 
-/* Table actions: horizontal scrolling if too wide */
+/* Actions row: wrap by default, scroll only if overflow */
 .table-actions {
   display: flex;
   gap: 10px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-top: 10px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -174,18 +171,21 @@ td {
 
 /* Student Registration: keep all action buttons on one line */
 #student-registration .table-actions {
-  /* inherits overflow-x scrolling */
+  flex-wrap: nowrap;
 }
 
-/* Compact buttons in forms */
+/* Load buttons on their own line in these sections */
+#attendance-section .row-inline button#loadAttendance,
+#analytics-section .row-inline button#loadAnalytics,
+#register-section .row-inline button#loadRegister {
+  flex-basis: 100%;
+  margin-top: 5px;
+}
+
+/* Compact button styling */
 #teacher-setup .row-inline button,
 #student-registration .row-inline button,
-#student-registration .table-actions #saveRegistration {
-  padding: 6px 10px;
-  font-size: 0.9rem;
-}
-
-/* Icon-only buttons compact style */
+#student-registration .table-actions #saveRegistration,
 #attendance-section .row-inline button,
 #attendance-section .table-actions button,
 #analytics-section .row-inline button,
@@ -197,12 +197,12 @@ td {
 }
 
 @media (max-width: 600px) {
-  /* Stack inputs & selects vertically on small screens */
+  /* On small screens, inputs & selects take full width */
   .row-inline input,
   .row-inline select {
     flex: 1 1 100%;
   }
-  /* Buttons still scroll horizontally */
+  /* Buttons still auto-size and scroll if needed */
   .row-inline button,
   .table-actions button {
     flex: 0 0 auto;
