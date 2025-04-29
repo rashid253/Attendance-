@@ -9,13 +9,14 @@
   --dark: #333;
 }
 
-* { outline: none; box-sizing: border-box; }
+* { box-sizing: border-box; outline: none; }
 body {
   margin: 0; padding: 10px;
   font-family: Arial, sans-serif;
   background: var(--light);
   color: var(--dark);
 }
+
 header h1 {
   background: var(--primary);
   color: #fff;
@@ -23,6 +24,7 @@ header h1 {
   padding: 10px;
   margin: 0 0 20px;
 }
+
 section {
   background: #fff;
   padding: 15px;
@@ -30,6 +32,7 @@ section {
   border: 1px solid #ccc;
   border-radius: 6px;
 }
+
 .row-inline {
   display: flex;
   gap: 10px;
@@ -37,13 +40,16 @@ section {
   align-items: center;
   margin-bottom: 10px;
 }
+
 input, select, button, label {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 0.9rem;
 }
+
 label { display: flex; align-items: center; gap: 5px; }
+
 button {
   background: var(--primary);
   color: #fff;
@@ -52,11 +58,14 @@ button {
   align-items: center;
   gap: 5px;
 }
+
 .hidden { display: none !important; }
+
 .counter-grid {
   display: flex;
   justify-content: space-between;
 }
+
 .counter-card {
   flex: 1; background: #fff;
   padding: 1rem; text-align:center;
@@ -64,13 +73,16 @@ button {
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   margin-right: 1rem;
 }
+
 .counter-card:last-child { margin-right: 0; }
 .number { font-size: 2rem; font-weight: bold; }
+
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-top: 10px;
 }
+
 table { width:100%; border-collapse:collapse; }
 th, td {
   border:1px solid #ccc;
@@ -78,6 +90,7 @@ th, td {
   text-align:left;
   white-space:nowrap;
 }
+
 .table-actions {
   display:flex;
   gap:10px;
@@ -85,6 +98,7 @@ th, td {
   margin-top:10px;
   overflow-x:auto;
 }
+
 .modal {
   position: fixed;
   top:0; left:0; right:0; bottom:0;
@@ -94,23 +108,26 @@ th, td {
   justify-content:center;
   z-index:1000;
 }
+
 .modal-content {
   background: #fff;
   padding:20px;
   border-radius:8px;
   width: 300px;
-  box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
+
 .modal-actions {
   display:flex;
   justify-content:flex-end;
   gap:10px;
   margin-top:10px;
 }
+
 .attendance-buttons {
   display: flex;
   gap: 0.5rem;
 }
+
 .att-btn {
   padding: 0.5rem 1rem;
   border:1px solid var(--primary);
@@ -119,10 +136,12 @@ th, td {
   color: var(--dark);
   cursor:pointer;
 }
+
 .att-btn.selected {
   background: var(--primary);
   color: #fff;
 }
+
 .summary-box {
   margin-top:1rem;
   padding:1rem;
@@ -130,11 +149,16 @@ th, td {
   border:1px solid #ddd;
   border-radius:4px;
 }
+
+.no-print { display: inline-block; }
+
 .share-row, .share-individual, .add-payment-btn {
   cursor: pointer;
   color: var(--primary);
   font-size: 1rem;
 }
+
 @media (max-width:600px) {
   .row-inline input, .row-inline select { flex:1 1 100%; }
+  .table-actions button { flex:0 0 auto; }
 }
