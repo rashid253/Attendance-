@@ -1,200 +1,234 @@
-/* style.css */
-:root {
-  --primary: #2196F3;
-  --success: #4caf50;
-  --danger: #f44336;
-  --warning: #ffeb3b;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Management</title>
 
-* {
-  box-sizing: border-box;
-  outline: none;
-}
+  <!-- PWA & Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
 
-body {
-  margin: 0;
-  padding: 10px;
-  font-family: Arial, sans-serif;
-  background: var(--light);
-  color: var(--dark);
-}
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
 
-header h1 {
-  background: var(--primary);
-  color: #fff;
-  text-align: center;
-  padding: 10px;
-  margin: 0 0 20px;
-}
+  <!-- idb-keyval -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-section {
-  background: #fff;
-  padding: 15px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-.row-inline {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
-}
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-input,
-select,
-button,
-label {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
 
-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+  <!-- Hide in PDF/print -->
+  <style>
+    @media print { .no-print { display: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
-button {
-  background: var(--primary);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+  <!-- 1. SETUP -->
+  <section id="teacher-setup">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected>-- Select Class --</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option><option>Prep</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected>-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <h3>
+        <i class="fas fa-school no-print"></i>
+        <span id="setupText"></span>
+      </h3>
+      <button id="editSetup"><i class="fas fa-edit"></i> Edit</button>
+    </div>
+  </section>
 
-.hidden {
-  display: none !important;
-}
+  <!-- 2. FINANCIAL SETTINGS -->
+  <section id="financial-settings">
+    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
+    <div class="row-inline grid-fines">
+      <label>Fine/Absent (₨):<input id="fineAbsent" type="number"/></label>
+      <label>Fine/Late (₨):<input id="fineLate" type="number"/></label>
+      <label>Fine/Leave (₨):<input id="fineLeave" type="number"/></label>
+      <label>Fine/Half-Day (₨):<input id="fineHalfDay" type="number"/></label>
+      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
+      <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </section>
 
-/* grid layout for fines & eligibility */
-.grid-fines {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
+  <!-- 3. COUNTERS -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
+  </section>
 
-.grid-fines label,
-.grid-fines button {
-  width: 100%;
-}
+  <!-- 4. STUDENT REGISTRATION -->
+  <section id="student-registration">
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+    <div class="row-inline">
+      <input id="studentName" placeholder="Name" />
+      <input id="parentName" placeholder="Parent Name" />
+      <input id="parentContact" placeholder="Contact" />
+      <input id="parentOccupation" placeholder="Occupation" />
+      <input id="parentAddress" placeholder="Address" />
+      <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="studentsTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (₨)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-undo"></i> Restore</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </section>
 
-.counter-grid {
-  display: flex;
-  justify-content: space-between;
-}
+  <!-- 5. MARK ATTENDANCE -->
+  <section id="attendance-section">
+    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+    <div class="row-inline">
+      <input type="date" id="dateInput" />
+      <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
+    </div>
+    <div id="attendanceBody"></div>
+    <div id="attendanceSummary" class="hidden summary-box"></div>
+    <div class="table-actions">
+      <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="resetAttendance" class="hidden"><i class="fas fa-undo"></i> Reset</button>
+      <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
 
-.counter-card {
-  flex: 1;
-  background: #fff;
-  padding: 1rem;
-  text-align: center;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  margin-right: 1rem;
-}
+  <!-- 6. ANALYTICS -->
+  <section id="analytics-section">
+    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+    <div class="row-inline">
+      <select id="analyticsTarget">
+        <option disabled selected>-- Report For --</option>
+        <option value="class">Class</option>
+        <option value="section">Section</option>
+        <option value="student">Student</option>
+      </select>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected>-- Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <select id="analyticsType" disabled>
+        <option disabled selected>-- Period --</option>
+        <option value="date">Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden"/>
+      <input type="month" id="analyticsMonth" class="hidden"/>
+      <input type="month" id="semesterStart" class="hidden"/>
+      <input type="month" id="semesterEnd" class="hidden"/>
+      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+      <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
+      <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
+    </div>
+    <div id="instructions" class="hidden"></div>
+    <div id="analyticsContainer" class="table-wrapper hidden">
+      <table id="analyticsTable">
+        <thead><tr></tr></thead>
+        <tbody id="analyticsBody"></tbody>
+      </table>
+    </div>
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="table-actions hidden" id="analyticsActions">
+      <button id="generateFineReport"><i class="fas fa-file-pdf"></i> Fine Report</button>
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </section>
 
-.counter-card:last-child {
-  margin-right: 0;
-}
+  <!-- 7. ATTENDANCE REGISTER -->
+  <section id="register-section">
+    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
+    </div>
+    <div id="registerTableWrapper" class="hidden table-wrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="changeRegister" class="hidden"><i class="fas fa-undo"></i> Reset</button>
+      <button id="saveRegister" class="hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegister" class="hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="shareRegister" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
 
-.number {
-  font-size: 2rem;
-  font-weight: bold;
-}
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (₨): <input id="paymentAmount" type="number"/></label>
+      <div class="modal-actions">
+        <button id="savePayment"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
 
-.table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-top: 10px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.table-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
-  margin-top: 10px;
-  overflow-x: auto;
-}
-
-.modal {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 300px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.attendance-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.att-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--primary);
-  border-radius: 4px;
-  background: rgba(33,150,243,0.1);
-  color: var(--dark);
-  cursor: pointer;
-}
-
-.att-btn.selected {
-  background: var(--primary);
-  color: #fff;
-}
-
-.summary-box {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.no-print {
-  display: inline-block;
-}
-
-@media (max-width: 600px) {
-  .row-inline input,
-  .row-inline select {
-    flex: 1 1 100%;
-  }
-}
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
