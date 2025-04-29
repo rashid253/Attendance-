@@ -12,13 +12,13 @@
 body { margin:0; padding:10px; font-family:Arial,sans-serif; background:var(--light); color:var(--dark); }
 header h1 { background:var(--primary); color:#fff; text-align:center; padding:10px; margin:0 0 20px; }
 
-/* 1. Buttons small & standard */
+/* 1. All buttons small */
 button, .att-btn {
   padding: 4px 8px;
   font-size: 0.85rem;
 }
 
-/* 2. Horizontal button rows */
+/* 2. Horizontal rows */
 .row-inline {
   display: flex;
   gap: 8px;
