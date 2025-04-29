@@ -75,7 +75,7 @@ button {
   display: none !important;
 }
 
-/* GRID FOR FINES & ELIGIBILITY */
+/* grid layout for fines & eligibility */
 .grid-fines {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -87,7 +87,110 @@ button {
   width: 100%;
 }
 
-/* ... rest of existing styles unchanged ... */
+.counter-grid {
+  display: flex;
+  justify-content: space-between;
+}
+
+.counter-card {
+  flex: 1;
+  background: #fff;
+  padding: 1rem;
+  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-right: 1rem;
+}
+
+.counter-card:last-child {
+  margin-right: 0;
+}
+
+.number {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 300px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.attendance-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.att-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: rgba(33,150,243,0.1);
+  color: var(--dark);
+  cursor: pointer;
+}
+
+.att-btn.selected {
+  background: var(--primary);
+  color: #fff;
+}
+
+.summary-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.no-print {
+  display: inline-block;
+}
 
 @media (max-width: 600px) {
   .row-inline input,
