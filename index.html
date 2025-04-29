@@ -26,7 +26,9 @@
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css">
-  <style>@media print { .no-print { display: none !important; } }</style>
+  <style>
+    @media print { .no-print { display: none !important; } }
+  </style>
 </head>
 <body>
   <header>
@@ -91,7 +93,13 @@
     </div>
     <div class="table-wrapper">
       <table id="studentsTable">
-        <thead><tr><th><input type="checkbox" id="selectAllStudents"></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Fine (Rs)</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th><th>Fine (Rs)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
@@ -129,19 +137,44 @@
     <div class="row-inline">
       <select id="analyticsTarget">
         <option disabled selected>-- Report For --</option>
-        <option value="class">Class</option><option value="section">Section</option><option value="student">Student</option>
+        <option value="class">Class</option>
+        <option value="section">Section</option>
+        <option value="student">Student</option>
       </select>
-      <select id="analyticsSectionSelect" class="hidden"><option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option></select>
-      <select id="analyticsType" disabled><option disabled selected>-- Period --</option><option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option></select>
-      <input type="date" id="analyticsDate" class="hidden"><input type="month" id="analyticsMonth" class="hidden">
-      <input type="month" id="semesterStart" class="hidden"><input type="month" id="semesterEnd" class="hidden">
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"><input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name">
-      <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button><button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option>
+      </select>
+      <select id="analyticsType" disabled>
+        <option disabled selected>-- Period --</option>
+        <option value="date">Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden">
+      <input type="month" id="analyticsMonth" class="hidden">
+      <input type="month" id="semesterStart" class="hidden">
+      <input type="month" id="semesterEnd" class="hidden">
+      <input type="number" id="yearStart" class="hidden" placeholder="Year">
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name">
+      <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
+      <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
     <div id="instructions" class="hidden"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden"><table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table></div>
-    <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></	canvas></div>
-    <div class="table-actions hidden" id="analyticsActions"><button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button><button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button></div>
+    <div id="analyticsContainer" class="table-wrapper hidden">
+      <table id="analyticsTable">
+        <thead><tr></tr></thead>
+        <tbody id="analyticsBody"></tbody>
+      </table>
+    </div>
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="table-actions hidden" id="analyticsActions">
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
+    </div>
   </section>
 
   <!-- 7. ATTENDANCE REGISTER -->
@@ -151,7 +184,12 @@
       <input type="month" id="registerMonth">
       <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper"><table id="registerTable"><thead><tr id="registerHeader"></tr></thead><tbody id="registerBody"></tbody></table></div>
+    <div id="registerTableWrapper" class="hidden table-wrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
     <div class="table-actions">
       <button id="changeRegister" class="hidden"><i class="fas fa-undo"></i> Reset</button>
       <button id="saveRegister" class="hidden"><i class="fas fa-save"></i> Save</button>
@@ -161,10 +199,18 @@
   </section>
 
   <!-- PAYMENT MODAL -->
-  <div id="paymentModal" class="modal hidden"><div class="modal-content"><h3>Payment for Adm# <span id="payAdm"></span></h3><label>Amount (Rs): <input id="paymentAmount" type="number"></label><div class="modal-actions"><button id="savePayment"><i class="fas fa-check"></i> Save</button><button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button></div></div></div>
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (Rs): <input id="paymentAmount" type="number"></label>
+      <div class="modal-actions">
+        <button id="savePayment"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- App JS -->
   <script src="app.js"></script>
 </body>
 </html>
-
