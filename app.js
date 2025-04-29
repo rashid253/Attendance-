@@ -1,7 +1,7 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 0. Eruda Debug Console
+  // Eruda debug console
   (function(){
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/eruda';
@@ -9,48 +9,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(s);
   })();
 
-  // 1. idb-keyval IndexedDB
-  if (typeof idbKeyval === 'undefined') {
-    console.error('idbKeyval not found');
-    return;
-  }
-  const { get, set } = idbKeyval;
+  // idb-keyval
+  if (!window.idbKeyval) { console.error('idbKeyval not found'); return; }
+  const { get, set } = window.idbKeyval;
 
-  // 2. State
+  // state
   let students       = await get('students')       || [];
   let attendanceData = await get('attendanceData') || {};
   let lastAdmNo      = await get('lastAdmissionNo')|| 0;
   let lastShareText  = '';
   let lastAnalyticsShare = '';
 
-  // 3. Helpers
+  // helpers
   const saveStudents       = () => set('students', students);
   const saveAttendanceData = () => set('attendanceData', attendanceData);
   const saveLastAdmNo      = () => set('lastAdmissionNo', lastAdmNo);
   async function generateAdmNo() {
-    lastAdmNo++;
-    await saveLastAdmNo();
+    lastAdmNo++; await saveLastAdmNo();
     return String(lastAdmNo).padStart(4, '0');
   }
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(el => el && el.classList.remove('hidden'));
   const hide = (...els) => els.forEach(el => el && el.classList.add('hidden'));
 
-  // --- 1. SETUP ---
+  // 1. SETUP
   async function loadSetup() {
     const [school, cls, sec] = await Promise.all([
       get('schoolName'), get('teacherClass'), get('teacherSection')
     ]);
     if (school && cls && sec) {
-      $('schoolNameInput').value      = school;
-      $('teacherClassSelect').value   = cls;
+      $('schoolNameInput').value = school;
+      $('teacherClassSelect').value = cls;
       $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
+      $('setupText').textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
       hide($('setupForm'));
       show($('setupDisplay'));
-      renderStudents();
-      updateCounters();
     }
+    renderStudents();
+    updateCounters();
   }
   $('saveSetup').onclick = async e => {
     e.preventDefault();
@@ -68,7 +64,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
   await loadSetup();
 
-  // --- 2. COUNTERS ---
+  // 2. COUNTERS
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
       const target = +span.dataset.target;
@@ -90,11 +86,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); };
   $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); };
 
-  // --- 3. STUDENT REGISTRATION ---
+  // 3. STUDENT REGISTRATION
   function renderStudents() {
     const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const tbody = $('studentsBody');
-    tbody.innerHTML = '';
+    const tbody = $('studentsBody'); tbody.innerHTML = '';
     students.filter(s=>s.cls===cls&&s.sec===sec).forEach((stu,i)=>{
       const tr = document.createElement('tr'); tr.dataset.index=i;
       tr.innerHTML=`
@@ -117,10 +112,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   function toggleButtons() {
     const any=!!document.querySelector('.sel:checked');
-    $('editSelected').disabled=!any;
-    $('deleteSelected').disabled=!any;
+    $('editSelected').disabled=!any; $('deleteSelected').disabled=!any;
   }
-  $('studentsBody').addEventListener('change', e=>{ if(e.target.classList.contains('sel')) toggleButtons(); });
+  $('studentsBody').addEventListener('change',e=>{ if(e.target.classList.contains('sel')) toggleButtons(); });
   $('selectAllStudents').onclick=()=>{ document.querySelectorAll('.sel').forEach(cb=>cb.checked=$('selectAllStudents').checked); toggleButtons(); };
   $('addStudent').onclick=async e=>{
     e.preventDefault();
@@ -135,7 +129,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id=>$(id).value='');
   };
   $('deleteSelected').onclick=async()=>{
-    if(!confirm('Delete selected?')) return;
+    if(!confirm('Delete selected?'))return;
     const toDel=Array.from(document.querySelectorAll('.sel:checked')).map(cb=>+cb.closest('tr').dataset.index);
     students=students.filter((_,i)=>!toDel.includes(i));
     await saveStudents(); renderStudents(); updateCounters();
@@ -155,28 +149,23 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td></td>
       `;
     });
-    hide($('editSelected'),$('deleteSelected'));
-    show($('doneEditing'));
+    hide($('editSelected'),$('deleteSelected')); show($('doneEditing'));
   };
   $('doneEditing').onclick=async()=>{
     document.querySelectorAll('#studentsBody tr').forEach(tr=>{
       const inputs=tr.querySelectorAll('input:not(.sel)');
       if(inputs.length===5){
         const [name,parent,contact,occupation,address]=Array.from(inputs).map(i=>i.value.trim());
-        const adm=tr.children[3].textContent; const idx=students.findIndex(s=>s.adm===adm);
+        const adm=tr.children[3].textContent, idx=students.findIndex(s=>s.adm===adm);
         if(idx>-1) students[idx]={...students[idx],name,parent,contact,occupation,address};
       }
     });
-    await saveStudents();
-    hide($('doneEditing'));
-    show($('editSelected'),$('deleteSelected'),$('saveRegistration'));
+    await saveStudents(); hide($('doneEditing')); show($('editSelected'),$('deleteSelected'),$('saveRegistration'));
     renderStudents(); updateCounters();
   };
   $('saveRegistration').onclick=async()=>{
-    await saveStudents();
-    hide($('editSelected'),$('deleteSelected'),$('selectAllStudents'),$('saveRegistration'));
-    show($('shareRegistration'),$('downloadRegistrationPDF'));
-    renderStudents();
+    await saveStudents(); hide($('editSelected'),$('deleteSelected'),$('selectAllStudents'),$('saveRegistration'));
+    show($('shareRegistration'),$('downloadRegistrationPDF')); renderStudents();
   };
   $('shareRegistration').onclick=()=>{
     const cls=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
@@ -184,12 +173,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const lines=students.filter(s=>s.cls===cls&&s.sec===sec)
       .map(s=>`*${s.name}*\nAdm#: ${s.adm}\nParent: ${s.parent}\nContact: ${s.contact}\nOccupation: ${s.occupation}\nAddress: ${s.address}`)
       .join('\n\n');
-    lastShareText=header+'\n\n'+lines;
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank');
+    lastShareText=header+'\n\n'+lines; window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank');
   };
-  $('downloadRegistrationPDF').onclick=()=>{
-    const doc=new jsPDF(); doc.autoTable({html:'#studentsTable'}); doc.save('registration.pdf');
-  };
+  $('downloadRegistrationPDF').onclick=()=>{const doc=new jsPDF();doc.autoTable({html:'#studentsTable'});doc.save('registration.pdf');};
 
   // --- 4. MARK ATTENDANCE ---
   const dateInput=$('dateInput'), loadAttendance=$('loadAttendance'),
@@ -202,105 +188,89 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadAttendance.onclick=()=>{
     attendanceBody.innerHTML='';
     students.forEach(stu=>{
-      const row=document.createElement('div'); row.className='attendance-row';
-      const nameDiv=document.createElement('div'); nameDiv.className='attendance-name'; nameDiv.textContent=stu.name;
-      const btns=document.createElement('div'); btns.className='attendance-buttons';
+      const row=document.createElement('div');row.className='attendance-row';
+      const nameDiv=document.createElement('div');nameDiv.className='attendance-name';nameDiv.textContent=stu.name;
+      const btns=document.createElement('div');btns.className='attendance-buttons';
       Object.keys(statusNames).forEach(code=>{
-        const btn=document.createElement('button'); btn.className='att-btn'; btn.textContent=code;
-        btn.onclick=()=>{
-          btns.querySelectorAll('.att-btn').forEach(b=>{b.classList.remove('selected');b.style.background='';b.style.color='';});
-          btn.classList.add('selected'); btn.style.background=statusColors[code]; btn.style.color='#fff';
-        };
+        const btn=document.createElement('button');btn.className='att-btn';btn.textContent=code;
+        btn.onclick=()=>{btns.querySelectorAll('.att-btn').forEach(b=>{b.classList.remove('selected');b.style.background='';b.style.color='';});btn.classList.add('selected');btn.style.background=statusColors[code];btn.style.color='#fff';};
         btns.appendChild(btn);
       });
-      row.append(nameDiv,btns); attendanceBody.appendChild(row);
+      row.append(nameDiv,btns);attendanceBody.appendChild(row);
     });
-    show(saveAttendance); hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
+    show(saveAttendance);hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
   };
   saveAttendance.onclick=async()=>{
     const date=dateInput.value; if(!date){alert('Pick a date');return;}
     attendanceData[date]={};
     students.forEach((s,i)=>{
       const sel=attendanceBody.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm]=sel? sel.textContent:'A';
+      attendanceData[date][s.adm]=sel?sel.textContent:'A';
     });
     await saveAttendanceData();
-    const header=`Attendance Report: ${date}\n`;
-    const lines=students.map(s=>`${s.name}: ${statusNames[attendanceData[date][s.adm]]}`);
+    const header=`Attendance Report: ${date}\n`, lines=students.map(s=>`${s.name}: ${statusNames[attendanceData[date][s.adm]]}`);
     lastShareText=header+lines.join('\n');
     const tbl=document.createElement('table');
     tbl.innerHTML='<tr><th>Name</th><th>Status</th></tr>'+students.map(s=>`<tr><td>${s.name}</td><td>${statusNames[attendanceData[date][s.adm]]}</td></tr>`).join('');
-    attendanceSummary.innerHTML=`<h3>Attendance Report: ${date}</h3>`; attendanceSummary.appendChild(tbl);
-    hide(saveAttendance,attendanceBody); show(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
+    attendanceSummary.innerHTML=`<h3>Attendance Report: ${date}</h3>`;attendanceSummary.appendChild(tbl);
+    hide(saveAttendance,attendanceBody);show(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);
   };
   downloadAttendancePDF.onclick=()=>{const doc=new jsPDF();doc.autoTable({html:'#attendanceSummary table'});doc.save('attendance_summary.pdf');};
   shareAttendanceSummary.onclick=()=>{window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank');};
-  resetAttendance.onclick=()=>{show(attendanceBody,saveAttendance); hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);};
+  resetAttendance.onclick=()=>{show(attendanceBody,saveAttendance);hide(resetAttendance,downloadAttendancePDF,shareAttendanceSummary,attendanceSummary);};
 
   // --- 5. ANALYTICS ---
-  const analyticsTarget=$('analyticsTarget'), analyticsSectionSel=$('analyticsSectionSelect'),
-        analyticsType=$('analyticsType'), analyticsDate=$('analyticsDate'),
-        analyticsMonth=$('analyticsMonth'), semesterStart=$('semesterStart'),
-        semesterEnd=$('semesterEnd'), yearStart=$('yearStart'),
-        analyticsSearch=$('analyticsSearch'), loadAnalyticsBtn=$('loadAnalytics'),
-        resetAnalyticsBtn=$('resetAnalytics'), instructionsEl=$('instructions'),
-        analyticsContainer=$('analyticsContainer'), graphsEl=$('graphs'),
-        analyticsActions=$('analyticsActions'), shareAnalyticsBtn=$('shareAnalytics'),
-        downloadAnalyticsBtn=$('downloadAnalytics'), barCtx=$('barChart').getContext('2d'),
+  const analyticsTarget=$('analyticsTarget'),analyticsSectionSel=$('analyticsSectionSelect'),
+        analyticsType=$('analyticsType'),analyticsDate=$('analyticsDate'),
+        analyticsMonth=$('analyticsMonth'),semesterStart=$('semesterStart'),
+        semesterEnd=$('semesterEnd'),yearStart=$('yearStart'),
+        analyticsSearch=$('analyticsSearch'),loadAnalyticsBtn=$('loadAnalytics'),
+        resetAnalyticsBtn=$('resetAnalytics'),instructionsEl=$('instructions'),
+        analyticsContainer=$('analyticsContainer'),graphsEl=$('graphs'),
+        analyticsActions=$('analyticsActions'),shareAnalyticsBtn=$('shareAnalytics'),
+        downloadAnalyticsBtn=$('downloadAnalytics'),barCtx=$('barChart').getContext('2d'),
         pieCtx=$('pieChart').getContext('2d');
   let barChart,pieChart;
-  function hideAnalyticsControls(){hide(analyticsSectionSel, analyticsSearch);}
   analyticsTarget.onchange=()=>{
-    analyticsType.disabled=false; hideAnalyticsControls();
-    if(analyticsTarget.value==='section') show(analyticsSectionSel);
-    if(analyticsTarget.value==='student') show(analyticsSearch);
+    analyticsType.disabled=false;hide(analyticsSectionSel,analyticsSearch);
+    if(analyticsTarget.value==='section')show(analyticsSectionSel);
+    if(analyticsTarget.value==='student')show(analyticsSearch);
     hide(instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn);
   };
   analyticsType.onchange=()=>{
-    hide(instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn,
-         analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);
-    if(analyticsType.value==='date') show(analyticsDate);
-    if(analyticsType.value==='month') show(analyticsMonth);
-    if(analyticsType.value==='semester') show(semesterStart,semesterEnd);
-    if(analyticsType.value==='year') show(yearStart);
+    hide(instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn,analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);
+    if(analyticsType.value==='date')show(analyticsDate);
+    if(analyticsType.value==='month')show(analyticsMonth);
+    if(analyticsType.value==='semester')show(semesterStart,semesterEnd);
+    if(analyticsType.value==='year')show(yearStart);
     show(resetAnalyticsBtn);
   };
-  resetAnalyticsBtn.onclick=e=>{e.preventDefault(); analyticsType.value=''; hide(instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn,
-         analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);};
+  resetAnalyticsBtn.onclick=e=>{e.preventDefault();analyticsType.value='';hide(instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn,analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart);};
   loadAnalyticsBtn.onclick=()=>{
     if(analyticsTarget.value==='student'&&!analyticsSearch.value.trim()){alert('Enter Adm# or Name');return;}
-    let from,to; const typ=analyticsType.value;
-    if(typ==='date') from=to=analyticsDate.value;
-    else if(typ==='month'){ const [y,m]=analyticsMonth.value.split('-').map(Number); from=`${analyticsMonth.value}-01`; to=`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`; }
-    else if(typ==='semester'){ const [sy,sm]=semesterStart.value.split('-').map(Number),[ey,em]=semesterEnd.value.split('-').map(Number); from=`${semesterStart.value}-01`; to=`${semesterEnd.value}-${new Date(ey,em,0).getDate()}`; }
-    else if(typ==='year'){ from=`${yearStart.value}-01-01`; to=`${yearStart.value}-12-31`;}
+    let from,to;const typ=analyticsType.value;
+    if(typ==='date')from=to=analyticsDate.value;
+    else if(typ==='month'){const [y,m]=analyticsMonth.value.split('-').map(Number);from=`${analyticsMonth.value}-01`;to=`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;}
+    else if(typ==='semester'){const [sy,sm]=semesterStart.value.split('-').map(Number),[ey,em]=semesterEnd.value.split('-').map(Number);from=`${semesterStart.value}-01`;to=`${semesterEnd.value}-${new Date(ey,em,0).getDate()}`;}
+    else if(typ==='year'){from=`${yearStart.value}-01-01`;to=`${yearStart.value}-12-31`;}
     else{alert('Select period');return;}
     let pool=students.slice();
-    if(analyticsTarget.value==='section') pool=pool.filter(s=>s.sec===analyticsSectionSel.value);
-    if(analyticsTarget.value==='student'){ const q=analyticsSearch.value.trim().toLowerCase(); pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q)); }
+    if(analyticsTarget.value==='section')pool=pool.filter(s=>s.sec===analyticsSectionSel.value);
+    if(analyticsTarget.value==='student'){const q=analyticsSearch.value.trim().toLowerCase();pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));}
     const stats=pool.map(s=>({adm:s.adm,name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
-    Object.entries(attendanceData).forEach(([d,recs])=>{ if(d<from||d>to) return; stats.forEach(st=>{ const c=recs[st.adm]||'A'; st[c]++; st.total++; }); });
-    const head=$('analyticsTable').querySelector('thead tr');
-    head.innerHTML='<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
-    const body=$('analyticsBody'); body.innerHTML='';
-    stats.forEach((st,i)=>{ const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0'; const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;
-      body.appendChild(tr);
-    });
-    instructionsEl.textContent=`Period: ${from} to ${to}`;
-    show(instructionsEl,analyticsContainer,graphsEl,analyticsActions);
-    barChart?.destroy();
-    barChart=new Chart(barCtx,{type:'bar',data:{labels:stats.map(s=>s.name),datasets:[{label:'% Present',data:stats.map(s=>s.total?s.P/s.total*100:0)}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
+    Object.entries(attendanceData).forEach(([d,r])=>{if(d<from||d>to)return;stats.forEach(st=>{const c=r[st.adm]||'A';st[c]++;st.total++;});});
+    const head=$('analyticsTable').querySelector('thead tr');head.innerHTML='<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
+    const body=$('analyticsBody');body.innerHTML='';
+    stats.forEach((st,i)=>{const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;body.appendChild(tr);});
+    instructionsEl.textContent=`Period: ${from} to ${to}`;show(instructionsEl,analyticsContainer,graphsEl,analyticsActions);
+    barChart?.destroy();barChart=new Chart(barCtx,{type:'bar',data:{labels:stats.map(s=>s.name),datasets:[{label:'% Present',data:stats.map(s=>s.total?s.P/s.total*100:0)}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
     const agg=stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
-    pieChart?.destroy();
-    pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});  
+    pieChart?.destroy();pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
     lastAnalyticsShare=`Analytics (${from} to ${to})\n`+stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
   };
   $('shareAnalytics').onclick=()=>{window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,'_blank');};
-  $('downloadAnalytics').onclick=()=>{ const doc=new jsPDF(); doc.autoTable({html:'#analyticsTable'}); doc.save('analytics.pdf'); };
+  $('downloadAnalytics').onclick=()=>{const doc=new jsPDF();doc.autoTable({html:'#analyticsTable'});doc.save('analytics.pdf');};
 
   // --- Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js').catch(console.error);
 });
