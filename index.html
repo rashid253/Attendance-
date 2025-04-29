@@ -20,7 +20,7 @@
     referrerpolicy="no-referrer"
   />
 
-  <!-- idb-keyval IIFE -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
   <!-- jsPDF + AutoTable -->
@@ -30,11 +30,10 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Eruda debug console -->
+  <!-- Eruda -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
 
-  <!-- Main CSS -->
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -65,9 +64,18 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section</div></div>
-    <div class="counter-card"><span id="classCount"   class="number" data-target="0">0</span><div>Class</div></div>
-    <div class="counter-card"><span id="schoolCount"  class="number" data-target="0">0</span><div>School</div></div>
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School</div>
+    </div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -93,7 +101,7 @@
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
-    <div class="table-actions">
+    <div class="table-actions" id="studentButtons">
       <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
       <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
       <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
@@ -142,11 +150,11 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date"   id="analyticsDate" class="hidden" />
-      <input type="month"  id="analyticsMonth" class="hidden" />
-      <input type="month"  id="semesterStart" class="hidden" />
-      <input type="month"  id="semesterEnd"   class="hidden" />
-      <input type="number" id="yearStart"     class="hidden" placeholder="Year" />
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
