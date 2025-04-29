@@ -1,24 +1,24 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // --- Eruda debug console (single) ---
+  // Eruda debug console
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
   erudaScript.onload = () => eruda.init();
   document.body.appendChild(erudaScript);
 
-  // --- idb-keyval IndexedDB ---
+  // idb-keyval
   if (!window.idbKeyval) { console.error('idbKeyval not found'); return; }
   const { get, set } = window.idbKeyval;
 
-  // --- State ---
+  // State
   let students       = await get('students')       || [];
   let attendanceData = await get('attendanceData') || {};
   let lastAdmNo      = await get('lastAdmissionNo')|| 0;
   let lastShareText      = '';
   let lastAnalyticsShare = '';
 
-  // --- Helpers ---
+  // Helpers
   const saveStudents       = () => set('students', students);
   const saveAttendanceData = () => set('attendanceData', attendanceData);
   const saveLastAdmNo      = () => set('lastAdmissionNo', lastAdmNo);
@@ -27,7 +27,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(el=>el&&el.classList.remove('hidden'));
   const hide = (...els) => els.forEach(el=>el.classList.add('hidden'));
 
-  // --- 1. SETUP ---
+  // 1. SETUP
   async function loadSetup() {
     const [school, cls, sec] = await Promise.all([
       get('schoolName'), get('teacherClass'), get('teacherSection')
@@ -57,7 +57,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
   await loadSetup();
 
-  // --- 2. COUNTERS ---
+  // 2. COUNTERS
   function animateCounters(){
     document.querySelectorAll('.number').forEach(span=>{
       const target = +span.dataset.target; let count = 0, step = Math.max(1, target/100);
@@ -78,7 +78,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
   $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
 
-  // hide dynamic sections
   function resetViews(){
     hide(
       $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
@@ -90,7 +89,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('loadRegister'));
   }
 
-  // --- 3. STUDENT REGISTRATION ---
+  // 3. STUDENT REGISTRATION
   function renderStudents(){
     const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, tbody = $('studentsBody');
     tbody.innerHTML = ''; let disp = 0;
@@ -152,9 +151,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('#studentsBody tr').forEach(tr=>{
       const inp=tr.querySelectorAll('input:not(.sel)');
       if(inp.length===5){
-        const [n,p,c,o,a]=Array.from(inp).map(i=>i.value.trim()),
-              adm=tr.children[3].textContent,
-              idx=students.findIndex(s=>s.adm===adm);
+        const [n,p,c,o,a] = Array.from(inp).map(i=>i.value.trim()),
+              adm = tr.children[3].textContent,
+              idx = students.findIndex(s=>s.adm===adm);
         if(idx>-1) students[idx] = {...students[idx], name:n, parent:p, contact:c, occupation:o, address:a};
       }
     });
@@ -171,7 +170,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('saveRegistration').onclick = async () => {
-    // prevent saving while editing
     if (!$('doneEditing').classList.contains('hidden')) {
       alert('Please finish editing first (click Done) before saving.'); return;
     }
@@ -204,13 +202,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('registration.pdf');
   };
 
-  // --- 4. MARK ATTENDANCE ---
-  const dateInput=$('dateInput'), loadAttendance=$('loadAttendance'),
-        saveAttendance=$('saveAttendance'), resetAttendance=$('resetAttendance'),
-        downloadAttendancePDF=$('downloadAttendancePDF'),
+  // 4. MARK ATTENDANCE
+  const dateInput=$('dateInput'), loadAttendance=$('loadAttendance'), saveAttendance=$('saveAttendance'),
+        resetAttendance=$('resetAttendance'), downloadAttendancePDF=$('downloadAttendancePDF'),
         shareAttendanceSummary=$('shareAttendanceSummary'),
-        attendanceBody=$('attendanceBody'),
-        attendanceSummary=$('attendanceSummary');
+        attendanceBody=$('attendanceBody'), attendanceSummary=$('attendanceSummary');
   const statusNames={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'},
         statusColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
 
@@ -264,16 +260,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   shareAttendanceSummary.onclick=()=>{ window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank'); };
 
-  // --- 5. ANALYTICS ---
-  const analyticsTarget=$('analyticsTarget'),analyticsSectionSel=$('analyticsSectionSelect'),analyticsType=$('analyticsType'),
-        analyticsDate=$('analyticsDate'),analyticsMonth=$('analyticsMonth'),
-        semesterStart=$('semesterStart'),semesterEnd=$('semesterEnd'),yearStart=$('yearStart'),
-        analyticsSearch=$('analyticsSearch'),
-        loadAnalyticsBtn=$('loadAnalytics'),resetAnalyticsBtn=$('resetAnalytics'),
-        instructionsEl=$('instructions'),analyticsContainer=$('analyticsContainer'),
-        graphsEl=$('graphs'),analyticsActions=$('analyticsActions'),
-        barCtx=$('barChart').getContext('2d'),pieCtx=$('pieChart').getContext('2d');
-  let barChart,pieChart;
+  // 5. ANALYTICS
+  const analyticsTarget=$('analyticsTarget'), analyticsSectionSel=$('analyticsSectionSelect'),
+        analyticsType=$('analyticsType'), analyticsDate=$('analyticsDate'),
+        analyticsMonth=$('analyticsMonth'), semesterStart=$('semesterStart'),
+        semesterEnd=$('semesterEnd'), yearStart=$('yearStart'),
+        analyticsSearch=$('analyticsSearch'), loadAnalyticsBtn=$('loadAnalytics'),
+        resetAnalyticsBtn=$('resetAnalytics'), instructionsEl=$('instructions'),
+        analyticsContainer=$('analyticsContainer'), graphsEl=$('graphs'),
+        analyticsActions=$('analyticsActions'),
+        barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
+  let barChart, pieChart;
 
   analyticsTarget.onchange=()=>{ analyticsType.disabled=false; hide(analyticsSectionSel,analyticsSearch,instructionsEl,analyticsContainer,graphsEl,analyticsActions); if(analyticsTarget.value==='section')show(analyticsSectionSel); if(analyticsTarget.value==='student')show(analyticsSearch); };
   analyticsType.onchange=()=>{ hide(analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart,instructionsEl,analyticsContainer,graphsEl,analyticsActions); if(analyticsType.value==='date')show(analyticsDate); if(analyticsType.value==='month')show(analyticsMonth); if(analyticsType.value==='semester')show(semesterStart,semesterEnd); if(analyticsType.value==='year')show(yearStart); show(resetAnalyticsBtn); };
@@ -313,14 +310,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html:'#analyticsTable' });
     const barImg=barCtx.canvas.toDataURL(), pieImg=pieCtx.canvas.toDataURL();
-    doc.addPage(); doc.setFontSize(18); doc.text('Attendance Report',14,16); doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.addImage(barImg,'PNG',14,32,180,80);
-    doc.addPage(); doc.addImage(pieImg,'PNG',14,16,180,80);
-    const pc=doc.getNumberOfPages(); for(let i=1;i<=pc;i++){doc.setPage(i); doc.setFontSize(10); doc.text('FAIQTECH SOL',doc.internal.pageSize.getWidth()/2,doc.internal.pageSize.getHeight()-10,{align:'center'});}
-    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('analytics.pdf');
+    doc.addPage(); doc.setFontSize(20); doc.text('Bar Chart',14,20); doc.addImage(barImg,'PNG',14,28,180,100);
+    doc.addPage(); doc.setFontSize(20); doc.text('Pie Chart',14,20); doc.addImage(pieImg,'PNG',14,28,100,100);
+    const pc=doc.getNumberOfPages(); for(let i=1;i<=pc;i++){ doc.setPage(i); doc.setFontSize(10); doc.text('FAIQTECH SOL',doc.internal.pageSize.getWidth()/2,doc.internal.pageSize.getHeight()-10,{align:'center'}); }
+    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('analytics_report.pdf');
   };
 
-  // --- 6. ATTENDANCE REGISTER ---
+  // 6. ATTENDANCE REGISTER
   const loadRegisterBtn=$('loadRegister'),changeRegisterBtn=$('changeRegister'),saveRegisterBtn=$('saveRegister'),
         downloadRegister=$('downloadRegister'),shareRegister=$('shareRegister'),
         monthInput=$('registerMonth'),registerHeader=$('registerHeader'),
@@ -342,13 +338,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   saveRegisterBtn.onclick=async()=>{
     const m=monthInput.value,[y,mm]=m.split('-').map(Number),days=new Date(y,mm,0).getDate();
     Array.from(registerBody.children).forEach(tr=>{const adm=tr.children[1].textContent;for(let d=0;d<days;d++){const code=tr.children[3+d].querySelector('.status-text').textContent,key=`${m}-${String(d+1).padStart(2,'0')}`;attendanceData[key]=attendanceData[key]||{};attendanceData[key][adm]=code;}});await saveAttendanceData();
-    hide(saveRegisterBtn); show(changeRegisterBtn,downloadRegister,shareRegister);
+    hide(saveRegisterBtn);show(changeRegisterBtn,downloadRegister,shareRegister);
   };
 
   changeRegisterBtn.onclick=()=>{hide(changeRegisterBtn,downloadRegister,shareRegister);show(saveRegisterBtn);};
   downloadRegister.onclick=()=>{const doc=new jspdf.jsPDF();doc.setFontSize(18);doc.text('Attendance Report',14,16);doc.setFontSize(12);doc.text($('setupText').textContent,14,24);doc.autoTable({ startY:32, html:'#registerTable' });const url=doc.output('bloburl');window.open(url,'_blank');doc.save('attendance_register.pdf');};
   shareRegister.onclick=()=>{const hdr=`Attendance Report\n${$('setupText').textContent}`,rows=Array.from(registerBody.querySelectorAll('tr')).map(tr=>Array.from(tr.querySelectorAll('td')).map(td=>td.querySelector('.status-text')?td.querySelector('.status-text').textContent:td.textContent).join(' '));window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+rows.join('\n'))}`,'_blank');};
 
-  // Service Worker
   if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
 });
