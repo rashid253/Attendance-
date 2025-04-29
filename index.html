@@ -6,21 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classwise Attendance Management</title>
 
-  <!-- PWA manifest & meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
-
   <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- idb-keyval IIFE -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
   <!-- jsPDF + AutoTable -->
@@ -64,24 +53,15 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
+    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
+    <div class="counter-card"><span id="classCount"   class="number" data-target="0">0</span><div>Class Students</div></div>
+    <div class="counter-card"><span id="schoolCount"  class="number" data-target="0">0</span><div>School Students</div></div>
   </section>
 
   <!-- 3. Student Registration -->
   <section id="student-registration">
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
-    <div class="row-inline">
+    <div class="row-inline" id="regForm">
       <input id="studentName" placeholder="Name" />
       <input id="parentName" placeholder="Parent Name" />
       <input id="parentContact" placeholder="Parent Contact" />
@@ -91,13 +71,10 @@
     </div>
     <div class="table-wrapper">
       <table id="studentsTable">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th><input type="checkbox" id="selectAllStudents"/></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+          <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+        </tr></thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
@@ -132,43 +109,33 @@
   <!-- 5. Analytics -->
   <section id="analytics-section">
     <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
-    <div class="row-inline">
+    <div class="row-inline" id="analyticsControls">
       <select id="analyticsTarget">
         <option disabled selected>-- Report For --</option>
-        <option value="class">Full Class</option>
-        <option value="section">Section</option>
-        <option value="student">Student</option>
+        <option value="class">Full Class</option><option value="section">Section</option><option value="student">Student</option>
       </select>
       <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option>
-        <option>A</option><option>B</option><option>C</option>
+        <option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option>
       </select>
       <select id="analyticsType" disabled>
         <option disabled selected>-- Period --</option>
-        <option value="date">Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
+        <option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option>
       </select>
       <input type="date" id="analyticsDate" class="hidden"/>
       <input type="month" id="analyticsMonth" class="hidden"/>
       <input type="month" id="semesterStart" class="hidden"/>
       <input type="month" id="semesterEnd" class="hidden"/>
       <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Enter Adm# or Name"/>
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
-      <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
+      <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Reset</button>
     </div>
     <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable">
-        <thead><tr></tr></thead>
-        <tbody id="analyticsBody"></tbody>
-      </table>
+      <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
     </div>
     <div id="graphs" class="hidden">
-      <canvas id="barChart"></canvas>
-      <canvas id="pieChart"></canvas>
+      <canvas id="barChart"></canvas><canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
@@ -179,15 +146,12 @@
   <!-- 6. Attendance Register -->
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
-    <div class="row-inline">
+    <div class="row-inline" id="registerControls">
       <input type="month" id="registerMonth"/>
       <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
     <div id="registerTableWrapper" class="hidden table-wrapper">
-      <table id="registerTable">
-        <thead><tr id="registerHeader"></tr></thead>
-        <tbody id="registerBody"></tbody>
-      </table>
+      <table id="registerTable"><thead><tr id="registerHeader"></tr></thead><tbody id="registerBody"></tbody></table>
     </div>
     <div class="table-actions">
       <button id="changeRegister" class="hidden"><i class="fas fa-undo"></i> Reset</button>
