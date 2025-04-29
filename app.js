@@ -45,7 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       $('schoolNameInput').value = school;
       $('teacherClassSelect').value = cls;
       $('teacherSectionSelect').value = sec;
-      $('setupText').textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
+      $('setupText').textContent = `${school}| Class: ${cls} | Section: ${sec}`;
       hide($('setupForm')); show($('setupDisplay'));
       renderStudents(); updateCounters(); resetViews();
     }
