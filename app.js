@@ -1,382 +1,205 @@
-// app.js
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classwise Attendance Management</title>
 
-window.addEventListener('DOMContentLoaded', async () => {
-  // Eruda debug console
-  const erudaScript = document.createElement('script');
-  erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
+  <!-- PWA manifest & meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
 
-  // idb-keyval
-  if (!window.idbKeyval) { console.error('idbKeyval not found'); return; }
-  const { get, set } = window.idbKeyval;
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
 
-  // State & DataStores
-  let students        = await get('students')       || [];
-  let attendanceData  = await get('attendanceData') || {};
-  let finesData       = await get('finesData')     || {};
-  let paymentsData    = await get('paymentsData')  || {};
-  let lastAdmNo       = await get('lastAdmissionNo')|| 0;
-  let fineRates       = await get('fineRates')     || { A:50, Lt:20, L:10, HD:0 };
-  let eligibilityPct  = await get('eligibilityPct')|| 75;
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  // Helpers
-  const save = (key,val) => set(key,val);
-  async function genAdmNo() { lastAdmNo++; await save('lastAdmissionNo', lastAdmNo); return String(lastAdmNo).padStart(4,'0'); }
-  const $ = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  // Cache registration form container
-  const registrationFormDiv = document.querySelector('#student-registration .row-inline');
+  <!-- idb-keyval IIFE -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  // 1. SETTINGS (Optional)
-  $('fineAbsent').value   = fineRates.A;
-  $('fineLate').value     = fineRates.Lt;
-  $('fineLeave').value    = fineRates.L;
-  $('fineHalfDay').value  = fineRates.HD;
-  $('eligibilityPct').value = eligibilityPct;
-  $('saveSettings').onclick = async () => {
-    fineRates = {
-      A  : Number($('fineAbsent').value)   || 0,
-      Lt : Number($('fineLate').value)     || 0,
-      L  : Number($('fineLeave').value)    || 0,
-      HD : Number($('fineHalfDay').value)  || 0
-    };
-    eligibilityPct = Number($('eligibilityPct').value) || 0;
-    await Promise.all([
-      save('fineRates', fineRates),
-      save('eligibilityPct', eligibilityPct)
-    ]);
-    alert('Settings saved!');
-  };
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
 
-  // 2. SETUP
-  async function loadSetup() {
-    const [sc, cl, sec] = await Promise.all([
-      get('schoolName'),
-      get('teacherClass'),
-      get('teacherSection')
-    ]);
-    if (sc && cl && sec) {
-      $('schoolNameInput').value = sc;
-      $('teacherClassSelect').value = cl;
-      $('teacherSectionSelect').value = sec;
-      $('setupText').textContent = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide($('setupForm')); show($('setupDisplay'));
-      renderStudents(); updateCounters(); resetViews();
-    }
-  }
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    const sc = $('schoolNameInput').value.trim(),
-          cl = $('teacherClassSelect').value,
-          sec= $('teacherSectionSelect').value;
-    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
-    await Promise.all([
-      save('schoolName', sc),
-      save('teacherClass', cl),
-      save('teacherSection', sec)
-    ]);
-    await loadSetup();
-  };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
-  await loadSetup();
-
-  // 3. COUNTERS
-  function animateCounters() {
-    document.querySelectorAll('.number').forEach(span => {
-      const target = +span.dataset.target;
-      let count = 0, step = Math.max(1, target / 100);
-      (function update() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(update);
-      })();
-    });
-  }
-  function updateCounters() {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    $('sectionCount').dataset.target = students.filter(s => s.cls===cl && s.sec===sec).length;
-    $('classCount').dataset.target   = students.filter(s => s.cls===cl).length;
-    $('schoolCount').dataset.target  = students.length;
-    animateCounters();
-  }
-  $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
-  $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
-
-  function resetViews() {
-    hide(
-      $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
-      $('attendanceSummary'), $('downloadAttendancePDF'), $('shareAttendanceSummary'),
-      $('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'),
-      $('registerTableWrapper'), $('changeRegister'), $('saveRegister'),
-      $('downloadRegister'), $('shareRegister')
-    );
-    show($('loadRegister'));
-  }
-
-  // 4. STUDENT REGISTRATION
-  function renderStudents() {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const tbody = $('studentsBody');
-    tbody.innerHTML = '';
-    let idx = 0;
-    students.forEach((s,i) => {
-      if (s.cls!==cl||s.sec!==sec) return;
-      idx++;
-      // calculate fines & status
-      const totalFine = (finesData[s.adm]||[]).reduce((sum,f)=>sum+f.amount,0);
-      const totalPaid= (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
-      const outstanding = totalFine - totalPaid;
-      const totalDays = Object.keys(attendanceData).length;
-      const presentCount = Object.values(attendanceData).filter(r=>r[s.adm]==='P').length;
-      const pct = totalDays ? (presentCount/totalDays)*100 : 0;
-      const status = (outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
-
-      const tr = document.createElement('tr');
-      tr.dataset.index = i;
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel"></td>
-        <td>${idx}</td>
-        <td>${s.name}</td>
-        <td>${s.adm}</td>
-        <td>${s.parent}</td>
-        <td>${s.contact}</td>
-        <td>${s.occupation}</td>
-        <td>${s.address}</td>
-        <td>₹ ${outstanding}</td>
-        <td>${status}</td>
-        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>`;
-      tbody.appendChild(tr);
-    });
-    $('selectAllStudents').checked = false;
-    toggleButtons();
-    document.querySelectorAll('.add-payment-btn').forEach(btn => {
-      btn.onclick = () => openPaymentModal(btn.dataset.adm);
-    });
-  }
-  function toggleButtons() {
-    const any = !!document.querySelector('.sel:checked');
-    $('editSelected').disabled = !any;
-    $('deleteSelected').disabled = !any;
-  }
-  $('studentsBody').addEventListener('change', e => {
-    if (e.target.classList.contains('sel')) toggleButtons();
-  });
-  $('selectAllStudents').onclick = () => {
-    document.querySelectorAll('.sel').forEach(cb => cb.checked = $('selectAllStudents').checked);
-    toggleButtons();
-  };
-
-  $('addStudent').onclick = async e => {
-    e.preventDefault();
-    const n = $('studentName').value.trim(),
-          p = $('parentName').value.trim(),
-          c = $('parentContact').value.trim(),
-          o = $('parentOccupation').value.trim(),
-          a = $('parentAddress').value.trim(),
-          cl = $('teacherClassSelect').value,
-          sec= $('teacherSectionSelect').value;
-    if (!n||!p||!c||!o||!a) { alert('All fields required'); return; }
-    if (!/^\d{7,15}$/.test(c)) { alert('Contact must be 7–15 digits'); return; }
-    const adm = await genAdmNo();
-    students.push({ name:n, adm, parent:p, contact:c, occupation:o, address:a, cls:cl, sec });
-    await save('students', students);
-    renderStudents(); updateCounters(); resetViews();
-    ['studentName','parentName','parentContact','parentOccupation','parentAddress']
-      .forEach(id => $(id).value = '');
-  };
-
-  $('editSelected').onclick = () => {
-    document.querySelectorAll('.sel:checked').forEach(cb => {
-      const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel" checked></td>
-        <td>${tr.children[1].textContent}</td>
-        <td><input value="${s.name}"></td>
-        <td>${s.adm}</td>
-        <td><input value="${s.parent}"></td>
-        <td><input value="${s.contact}"></td>
-        <td><input value="${s.occupation}"></td>
-        <td><input value="${s.address}"></td>
-        <td colspan="3"></td>`;
-    });
-    hide($('editSelected')); show($('doneEditing'));
-  };
-  $('doneEditing').onclick = async () => {
-    document.querySelectorAll('#studentsBody tr').forEach(tr => {
-      const inp = tr.querySelectorAll('input:not(.sel)');
-      if (inp.length === 5) {
-        const [n,p,c,o,a] = [...inp].map(i => i.value.trim());
-        const adm = tr.children[3].textContent;
-        const idx = students.findIndex(s => s.adm === adm);
-        if (idx > -1) students[idx] = { ...students[idx], name:n, parent:p, contact:c, occupation:o, address:a };
+  <!-- Print-media rule to hide icons in PDF/print -->
+  <style>
+    @media print {
+      .no-print {
+        display: none !important;
       }
-    });
-    await save('students', students);
-    hide($('doneEditing')); show($('editSelected'), $('deleteSelected'), $('saveRegistration'));
-    renderStudents(); updateCounters();
-  };
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
-  $('deleteSelected').onclick = async () => {
-    if (!confirm('Delete selected?')) return;
-    const toDel = [...document.querySelectorAll('.sel:checked')]
-      .map(cb => +cb.closest('tr').dataset.index);
-    students = students.filter((_,i) => !toDel.includes(i));
-    await save('students', students);
-    renderStudents(); updateCounters(); resetViews();
-  };
+  <!-- SETTINGS -->
+  <section id="settings-section">
+    <h2><i class="fas fa-cog"></i> Settings (Optional)</h2>
+    <div class="row-inline">
+      <label>Fine per Absent (₹): <input type="number" id="fineAbsent" /></label>
+      <label>Fine per Late (₹):   <input type="number" id="fineLate" /></label>
+      <label>Fine per Leave (₹):  <input type="number" id="fineLeave" /></label>
+      <label>Fine per Half-Day (₹):<input type="number" id="fineHalfDay"/></label>
+      <label>Eligibility % Threshold: <input type="number" id="eligibilityPct" min="0" max="100"/></label>
+      <button id="saveSettings"><i class="fas fa-save"></i> Save Settings</button>
+    </div>
+  </section>
 
-  $('saveRegistration').onclick = async () => {
-    if (!$('doneEditing').classList.contains('hidden')) { alert('Finish editing'); return; }
-    await save('students', students);
-    hide(registrationFormDiv, $('editSelected'), $('deleteSelected'), $('selectAllStudents'), $('saveRegistration'));
-    show($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
-    renderStudents(); updateCounters();
-  };
-  $('editRegistration').onclick = () => {
-    show(registrationFormDiv, $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration'));
-    hide($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
-    renderStudents(); updateCounters();
-  };
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Record Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (₹): <input type="number" id="paymentAmount" /></label>
+      <div class="modal-actions">
+        <button id="savePayment"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
 
-  $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const header = `*Students List*\nClass ${cl} Section ${sec}`;
-    const lines = students.filter(s => s.cls===cl && s.sec===sec).map(s => {
-      const totalFine = (finesData[s.adm]||[]).reduce((sum,f)=>sum+f.amount,0);
-      const totalPaid = (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
-      const outstanding = totalFine - totalPaid;
-      const totalDays = Object.keys(attendanceData).length;
-      const presentCount = Object.values(attendanceData).filter(r=>r[s.adm]==='P').length;
-      const pct = totalDays? (presentCount/totalDays)*100:0;
-      const status = (outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
-      return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: ₹${outstanding}\nStatus: ${status}`;
-    }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-  };
+  <!-- 1. Setup -->
+  <section id="teacher-setup">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected value="">-- Select Class --</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option><option>Prep</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
+        <!-- etc. -->
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected value="">-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <h3>
+        <i class="fas fa-school no-print"></i>
+        <span id="setupText"></span>
+      </h3>
+      <button id="editSetup"><i class="fas fa-edit"></i> Edit</button>
+    </div>
+  </section>
 
-  $('downloadRegistrationPDF').onclick = () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Student List',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#studentsTable' });
-    const url=doc.output('bloburl'); window.open(url,'_blank');
-    doc.save('registration.pdf');
-  };
+  <!-- 2. Counters -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
+  </section>
 
-  // 5. MARK ATTENDANCE
-  const dateInput = $('dateInput'), loadAttendance=$('loadAttendance'),
-        saveAttendance=$('saveAttendance'), resetAttendance=$('resetAttendance'),
-        downloadAttendancePDF=$('downloadAttendancePDF'),
-        shareAttendanceSummary=$('shareAttendanceSummary'),
-        attendanceBody=$('attendanceBody'),
-        attendanceSummary=$('attendanceSummary');
-  const statusNames = {P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'};
-  const statusColors= {P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
+  <!-- 3. Student Registration -->
+  <section id="student-registration">
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+    <div class="row-inline">
+      <input id="studentName" placeholder="Name" />
+      <input id="parentName" placeholder="Parent Name" />
+      <input id="parentContact" placeholder="Parent Contact" />
+      <input id="parentOccupation" placeholder="Occupation" />
+      <input id="parentAddress" placeholder="Address" />
+      <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="studentsTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (₹)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-undo"></i> Restore</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share All</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </section>
 
-  loadAttendance.onclick = () => {
-    attendanceBody.innerHTML = ''; attendanceSummary.innerHTML = '';
-    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    const roster = students.filter(s=>s.cls===cl&&s.sec===sec);
-    roster.forEach(stu=>{
-      const row = document.createElement('div'); row.className='attendance-row';
-      const nd  = document.createElement('div'); nd.className='attendance-name'; nd.textContent=stu.name;
-      const btns= document.createElement('div'); btns.className='attendance-buttons';
-      Object.keys(statusNames).forEach(code=>{
-        const btn = document.createElement('button'); btn.className='att-btn'; btn.textContent=code;
-        btn.onclick = () => {
-          btns.querySelectorAll('.att-btn').forEach(b=>{ b.classList.remove('selected'); b.style.background=''; b.style.color=''; });
-          btn.classList.add('selected'); btn.style.background=statusColors[code]; btn.style.color='#fff';
-        };
-        btns.appendChild(btn);
-      });
-      row.append(nd, btns); attendanceBody.append(row);
-    });
-    show(attendanceBody, saveAttendance);
-    hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
-  };
+  <!-- 4. Mark Attendance -->
+  <section id="attendance-section">
+    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+    <div id="attendanceForm">
+      <!-- ... form to mark attendance -->
+      <table id="attendanceTable">
+        <thead>
+          <tr>
+            <th>Student Name</th><th>Present</th><th>Absent</th><th>Leave</th><th>Late</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceBody"></tbody>
+      </table>
+      <button id="saveAttendance"><i class="fas fa-save"></i> Save Attendance</button>
+    </div>
+  </section>
 
-  saveAttendance.onclick = async () => {
-    const date = dateInput.value; if(!date){ alert('Pick a date'); return; }
-    attendanceData[date] = {};
-    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    const roster = students.filter(s=>s.cls===cl&&s.sec===sec);
-    roster.forEach((s,i)=>{
-      const btn = attendanceBody.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = btn?btn.textContent:'A';
-    });
-    await save('attendanceData', attendanceData);
+  <!-- 5. Analytics -->
+  <section id="analytics-section">
+    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+    <div id="attendanceChartContainer">
+      <canvas id="attendanceChart"></canvas>
+    </div>
+    <button id="generateAnalyticsPDF"><i class="fas fa-download"></i> Download Report</button>
+  </section>
 
-    attendanceSummary.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
-    const tbl = document.createElement('table');
-    tbl.innerHTML = `<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
-    roster.forEach(s=>{
-      const code = attendanceData[date][s.adm];
-      tbl.innerHTML +=
-        `<tr>
-           <td>${s.name}</td>
-           <td>${statusNames[code]}</td>
-           <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
-         </tr>`;
-    });
-    attendanceSummary.append(tbl);
+  <!-- 6. Attendance Register -->
+  <section id="register-section">
+    <h2><i class="fas fa-book"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <select id="classSelect">
+        <option>Select Class</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
+      </select>
+      <select id="sectionSelect">
+        <option>Select Section</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="viewRegister"><i class="fas fa-eye"></i> View</button>
+    </div>
+    <div id="registerTableWrapper" class="hidden">
+      <table id="attendanceRegisterTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Status</th><th>Fine</th><th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody id="registerTableBody"></tbody>
+      </table>
+    </div>
+  </section>
 
-    attendanceSummary.querySelectorAll('.share-individual').forEach(ic=>{
-      ic.onclick = () => {
-        const adm=ic.dataset.adm;
-        const student=students.find(x=>x.adm===adm);
-        const code=attendanceData[date][adm];
-        const msg=`Dear Parent, your child was ${statusNames[code]} on ${date}.`;
-        window.open(`https://wa.me/${student.contact}?text=${encodeURIComponent(msg)}`,'_blank');
-      };
-    });
-
-    hide(saveAttendance, attendanceBody);
-    show(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
-  };
-
-  resetAttendance.onclick = ()=>{ show(attendanceBody, saveAttendance); hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary); };
-
-  downloadAttendancePDF.onclick = ()=>{
-    const doc=new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text(`Attendance Report - ${$('setupText').textContent}`,14,16);
-    doc.setFontSize(12); doc.text(`Date: ${dateInput.value}`,14,24);
-    doc.autoTable({ startY:32, html:'#attendanceSummary table' });
-    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save(`attendance_${dateInput.value}.pdf`);
-  };
-
-  shareAttendanceSummary.onclick = ()=>{
-    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value, date=dateInput.value;
-    const header=`*Attendance Report*\nClass ${cl} Section ${sec} - Date: ${date}`;
-    const lines=students.filter(s=>s.cls===cl&&s.sec===sec)
-      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`)
-      .join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
-  };
-
-  // 6. ANALYTICS (omitted for brevity – integrate similar to above with fine report hook)
-
-  // 7. ATTENDANCE REGISTER (unchanged)
-
-  // PAYMENT MODAL Logic
-  function openPaymentModal(adm) {
-    $('payAdm').textContent = adm;
-    $('paymentAmount').value = '';
-    show($('paymentModal'));
-  }
-  $('savePayment').onclick = async () => {
-    const adm = $('payAdm').textContent;
-    const amt = Number($('paymentAmount').value) || 0;
-    paymentsData[adm] = paymentsData[adm] || [];
-    paymentsData[adm].push({ date: new Date().toISOString().split('T')[0], amount: amt });
-    await save('paymentsData', paymentsData);
-    hide($('paymentModal'));
-    renderStudents();
-  };
-  $('cancelPayment').onclick = () => hide($('paymentModal'));
-
-  // Service Worker
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
-});
+  <script src="app.js"></script>
+</body>
+</html>
