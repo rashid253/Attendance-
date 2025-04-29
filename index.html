@@ -38,6 +38,31 @@
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
 
+  <!-- SETTINGS -->
+  <section id="settings-section">
+    <h2><i class="fas fa-cog"></i> Settings (Optional)</h2>
+    <div class="row-inline">
+      <label>Fine per Absent (₹): <input type="number" id="fineAbsent" /></label>
+      <label>Fine per Late (₹):   <input type="number" id="fineLate" /></label>
+      <label>Fine per Leave (₹):  <input type="number" id="fineLeave" /></label>
+      <label>Fine per Half-Day (₹):<input type="number" id="fineHalfDay"/></label>
+      <label>Eligibility % Threshold: <input type="number" id="eligibilityPct" min="0" max="100"/></label>
+      <button id="saveSettings"><i class="fas fa-save"></i> Save Settings</button>
+    </div>
+  </section>
+
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Record Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (₹): <input type="number" id="paymentAmount" /></label>
+      <div class="modal-actions">
+        <button id="savePayment"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. Setup -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
@@ -45,10 +70,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected value="">-- Select Class --</option>
-        <option>Play Group</option><option>Nursery</option><option>KG</option><option>Prep</option><option>Pre One</option>
-        <option>Class One</option><option>Class Two</option><option>Class Three</option><option>Class Four</option>
-        <option>Class Five</option><option>Class Six</option><option>Class Seven</option><option>Class Eight</option>
-        <option>Class Nine</option><option>Class Ten</option>
+        <!-- options... -->
       </select>
       <select id="teacherSectionSelect">
         <option disabled selected value="">-- Select Section --</option>
@@ -95,7 +117,8 @@
           <tr>
             <th><input type="checkbox" id="selectAllStudents"/></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (₹)</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
@@ -106,7 +129,7 @@
       <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
       <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
       <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Restore</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-undo"></i> Restore</button>
       <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share All</button>
       <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> Download</button>
     </div>
@@ -171,6 +194,7 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
+      <button id="generateFineReport"><i class="fas fa-file-pdf"></i> Fine Report</button>
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
       <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
     </div>
