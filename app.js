@@ -1,96 +1,235 @@
-// app.js
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Management</title>
 
-window.addEventListener('DOMContentLoaded', async () => {
-  // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) return console.error('idb-keyval not found');
-  const { get, set } = window.idbKeyval;
-  const save = (key, val) => set(key, val);
+  <!-- PWA & Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
 
-  // --- 2. State & Defaults (Half-Day default = 30) ---
-  let students        = await get('students')       || [];
-  let attendanceData  = await get('attendanceData')|| {};
-  let finesData       = await get('finesData')     || {};
-  let paymentsData    = await get('paymentsData')  || {};
-  let lastAdmNo       = await get('lastAdmissionNo')|| 0;
-  let fineRates       = await get('fineRates')     || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct  = await get('eligibilityPct')|| 75;
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
 
-  // --- 3. Update settings UI ---
-  $('fineAbsent').value    = fineRates.A;
-  $('fineLate').value      = fineRates.Lt;
-  $('fineLeave').value     = fineRates.L;
-  $('fineHalfDay').value   = fineRates.HD;
-  $('eligibilityPct').value= eligibilityPct;
-  $('saveSettings').onclick = async () => {
-    fineRates = {
-      A : Number($('fineAbsent').value)   || 0,
-      Lt: Number($('fineLate').value)     || 0,
-      L : Number($('fineLeave').value)    || 0,
-      HD: Number($('fineHalfDay').value)  || 0,
-    };
-    eligibilityPct = Number($('eligibilityPct').value) || 0;
-    await Promise.all([ save('fineRates', fineRates), save('eligibilityPct', eligibilityPct) ]);
-    alert('Fines & eligibility settings saved');
-  };
+  <!-- idb-keyval -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  // ... rest of your existing code unchanged until share individual attendance ...
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  // --- Share individual attendance with professional messages & "Rs" sign ---
-  attendanceSummaryDiv.querySelectorAll('.share-individual')
-    .forEach(ic => ic.onclick = () => {
-      const date    = dateInput.value;
-      const adm     = ic.dataset.adm;
-      const student = students.find(x => x.adm === adm);
-      const code    = attendanceData[date][adm];
-      let msg = `Dear Parent,\n\n`;
-      switch(code) {
-        case 'P':
-          msg += `${student.name} was Present on ${date}.\nKeep up the good attendance!`;
-          break;
-        case 'A':
-          msg += `${student.name} was Absent on ${date}.\nPlease send a leave note upon return.`;
-          break;
-        case 'Lt':
-          msg += `${student.name} was Late on ${date}.\nEnsure arrival by 08:00 AM.`;
-          break;
-        case 'HD':
-          msg += `${student.name} attended a Half-Day on ${date}.\nInform office in advance next time.`;
-          break;
-        case 'L':
-          msg += `${student.name} was on Leave on ${date}.\nSubmit assignments and expected return date.`;
-          break;
-        default:
-          msg += `Status on ${date}: ${code}.`;
-      }
-      msg += `\n\nRegards,\n${$('schoolNameInput').value}`;
-      window.open(`https://wa.me/${student.contact}?text=${encodeURIComponent(msg)}`, '_blank');
-    });
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  // --- Attendance Register Download in Landscape ---
-  $('downloadRegister').onclick = () => {
-    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-    doc.setFontSize(18); doc.text('Attendance Register', 14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#registerTable', theme:'grid' });
-    doc.save('attendance_register.pdf');
-  };
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
 
-  // --- Analytics Download with embedded charts ---
-  $('downloadAnalytics').onclick = () => {
-    const doc = new jspdf.jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-    doc.setFontSize(18); doc.text('Analytics Report',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    // embed charts
-    const barImg = document.getElementById('barChart').toDataURL('image/png');
-    const pieImg = document.getElementById('pieChart').toDataURL('image/png');
-    doc.addImage(barImg,'PNG',14,32,300,150);
-    doc.addImage(pieImg,'PNG',330,32,150,150);
-    // table below
-    doc.autoTable({ startY:200, html:'#analyticsTable', theme:'grid' });
-    doc.save('analytics_report.pdf');
-  };
+  <!-- Hide in PDF/print -->
+  <style>
+    @media print { .no-print { display: none !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
-  // helper
-  function $(id){ return document.getElementById(id); }
-  // ... rest of your code ...
-});
+  <!-- 1. SETUP -->
+  <section id="teacher-setup">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div id="setupForm" class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected>-- Select Class --</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option><option>Prep</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected>-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
+    </div>
+    <div id="setupDisplay" class="hidden">
+      <h3>
+        <i class="fas fa-school no-print"></i>
+        <span id="setupText"></span>
+      </h3>
+      <button id="editSetup"><i class="fas fa-edit"></i> Edit</button>
+    </div>
+  </section>
+
+  <!-- 2. FINANCIAL SETTINGS -->
+  <section id="financial-settings">
+    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
+    <div class="grid-two-col">
+      <label>Fine/Absent (Rs):<input id="fineAbsent" type="number"/></label>
+      <label>Fine/Late (Rs):<input id="fineLate" type="number"/></label>
+      <label>Fine/Leave (Rs):<input id="fineLeave" type="number"/></label>
+      <label>Fine/Half-Day (Rs):<input id="fineHalfDay" type="number"/></label>
+      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
+      <div></div>
+      <button id="saveSettings" class="full-width"><i class="fas fa-save"></i> Save</button>
+      <div></div>
+    </div>
+  </section>
+
+  <!-- 3. COUNTERS -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
+  </section>
+
+  <!-- 4. STUDENT REGISTRATION -->
+  <section id="student-registration">
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+    <div class="row-inline">
+      <input id="studentName" placeholder="Name" />
+      <input id="parentName" placeholder="Parent Name" />
+      <input id="parentContact" placeholder="Contact" />
+      <input id="parentOccupation" placeholder="Occupation" />
+      <input id="parentAddress" placeholder="Address" />
+      <button id="addStudent"><i class="fas fa-plus-circle"></i> Add</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="studentsTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (Rs)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
+      <button id="editRegistration" class="hidden"><i class="fas fa-undo"></i> Restore</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </section>
+
+  <!-- 5. MARK ATTENDANCE -->
+  <section id="attendance-section">
+    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+    <div class="row-inline">
+      <input type="date" id="dateInput" />
+      <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
+    </div>
+    <div id="attendanceBody"></div>
+    <div id="attendanceSummary" class="hidden summary-box"></div>
+    <div class="table-actions">
+      <button id="saveAttendance" class="hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="resetAttendance" class="hidden"><i class="fas fa-undo"></i> Reset</button>
+      <button id="downloadAttendancePDF" class="hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="shareAttendanceSummary" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
+
+  <!-- 6. ANALYTICS -->
+  <section id="analytics-section">
+    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+    <div class="row-inline">
+      <select id="analyticsTarget">
+        <option disabled selected>-- Report For --</option>
+        <option value="class">Class</option>
+        <option value="section">Section</option>
+        <option value="student">Student</option>
+      </select>
+      <select id="analyticsSectionSelect" class="hidden">
+        <option disabled selected>-- Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <select id="analyticsType" disabled>
+        <option disabled selected>-- Period --</option>
+        <option value="date">Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
+      </select>
+      <input type="date" id="analyticsDate" class="hidden"/>
+      <input type="month" id="analyticsMonth" class="hidden"/>
+      <input type="month" id="semesterStart" class="hidden"/>
+      <input type="month" id="semesterEnd" class="hidden"/>
+      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+      <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
+      <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
+    </div>
+    <div id="instructions" class="hidden"></div>
+    <div id="analyticsContainer" class="table-wrapper hidden">
+      <table id="analyticsTable">
+        <thead><tr></tr></thead>
+        <tbody id="analyticsBody"></tbody>
+      </table>
+    </div>
+    <div id="graphs" class="hidden">
+      <canvas id="barChart"></canvas>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="table-actions hidden" id="analyticsActions">
+      <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
+    </div>
+  </section>
+
+  <!-- 7. ATTENDANCE REGISTER -->
+  <section id="register-section">
+    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
+    </div>
+    <div id="registerTableWrapper" class="hidden table-wrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="changeRegister" class="hidden"><i class="fas fa-undo"></i> Reset</button>
+      <button id="saveRegister" class="hidden"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegister" class="hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="shareRegister" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
+
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (Rs): <input id="paymentAmount" type="number"/></label>
+      <div class="modal-actions">
+        <button id="savePayment"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
