@@ -145,7 +145,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     students.forEach((s, i) => {
       if (s.cls!==cl || s.sec!==sec) return;
       idx++;
-      // attendance stats
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
       Object.values(attendanceData).forEach(recs => {
         stats[ recs[s.adm] || 'A' ]++;
@@ -153,9 +152,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       const totalFine   = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
       const totalPaid   = (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
       const outstanding = totalFine - totalPaid;
-      const totalDays   = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
-      const pctPresent  = totalDays ? (stats.P/totalDays)*100 : 0;
-      const status      = (outstanding>0 || pctPresent<eligibilityPct) ? 'Debarred' : 'Eligible';
+      const days        = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+      const pct         = days ? (stats.P/days)*100 : 0;
+      const status      = (outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
 
       const tr = document.createElement('tr');
       tr.dataset.index = i;
@@ -176,59 +175,181 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     $('selectAllStudents').checked = false;
+    toggleRegButtons();
     document.querySelectorAll('.add-payment-btn')
       .forEach(btn => btn.onclick = () => openPaymentModal(btn.dataset.adm));
   }
 
-  document.getElementById('studentsBody').addEventListener('change', e => {
-    if (e.target.classList.contains('sel')) {
-      const any = !!document.querySelector('.sel:checked');
-      $('editSelected').disabled = !any;
-      $('deleteSelected').disabled = !any;
-    }
+  function toggleRegButtons() {
+    const any = !!document.querySelector('.sel:checked');
+    $('editSelected').disabled = !any;
+    $('deleteSelected').disabled = !any;
+  }
+
+  $('studentsBody').addEventListener('change', e => {
+    if (e.target.classList.contains('sel')) toggleRegButtons();
   });
   $('selectAllStudents').onclick = () => {
     document.querySelectorAll('.sel').forEach(cb => cb.checked = $('selectAllStudents').checked);
-    const any = $('selectAllStudents').checked;
-    $('editSelected').disabled = !any;
-    $('deleteSelected').disabled = !any;
+    toggleRegButtons();
   };
 
-  // add/edit/delete student handlers (omitted for brevity)...
+  // Add a new student
+  $('addStudent').onclick = async e => {
+    e.preventDefault();
+    const n = $('studentName'), p = $('parentName'),
+          c = $('parentContact'), o = $('parentOccupation'),
+          a = $('parentAddress');
+    if (![n,p,c,o,a].every(i => i.value.trim())) {
+      return alert('All fields are required');
+    }
+    if (!/^\d{7,15}$/.test(c.value.trim())) {
+      return alert('Contact must be 7–15 digits');
+    }
+    const adm = await genAdmNo();
+    students.push({
+      name: n.value.trim(),
+      parent: p.value.trim(),
+      contact: c.value.trim(),
+      occupation: o.value.trim(),
+      address: a.value.trim(),
+      adm,
+      cls: $('teacherClassSelect').value,
+      sec: $('teacherSectionSelect').value
+    });
+    await save('students', students);
+    [n,p,c,o,a].forEach(i => i.value = '');
+    renderStudents(); updateCounters(); resetViews();
+  };
+
+  // Edit selected students
+  $('editSelected').onclick = () => {
+    document.querySelectorAll('.sel:checked').forEach(cb => {
+      const tr = cb.closest('tr'), idx = +tr.dataset.index, s = students[idx];
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sel" checked></td>
+        <td>${tr.children[1].textContent}</td>
+        <td><input value="${s.name}"></td>
+        <td>${s.adm}</td>
+        <td><input value="${s.parent}"></td>
+        <td><input value="${s.contact}"></td>
+        <td><input value="${s.occupation}"></td>
+        <td><input value="${s.address}"></td>
+        <td colspan="3"></td>
+      `;
+    });
+    hide($('editSelected'));
+    show($('doneEditing'));
+  };
+
+  // Finish editing
+  $('doneEditing').onclick = async () => {
+    document.querySelectorAll('#studentsBody tr').forEach(tr => {
+      const inputs = tr.querySelectorAll('td input:not(.sel)');
+      if (inputs.length === 5) {
+        const [n,p,c,o,a] = Array.from(inputs).map(i => i.value.trim());
+        const adm = tr.children[3].textContent;
+        const idx = students.findIndex(s => s.adm === adm);
+        students[idx] = { ...students[idx], name:n, parent:p, contact:c, occupation:o, address:a };
+      }
+    });
+    await save('students', students);
+    hide($('doneEditing'));
+    show($('editSelected'), $('deleteSelected'), $('saveRegistration'));
+    renderStudents(); updateCounters(); resetViews();
+  };
+
+  // Delete selected
+  $('deleteSelected').onclick = async () => {
+    if (!confirm('Delete selected students?')) return;
+    const toDel = Array.from(document.querySelectorAll('.sel:checked')).map(cb => +cb.closest('tr').dataset.index);
+    students = students.filter((_,i) => !toDel.includes(i));
+    await save('students', students);
+    renderStudents(); updateCounters(); resetViews();
+  };
+
+  // Save registration (lock UI)
+  $('saveRegistration').onclick = async () => {
+    if (!$('doneEditing').classList.contains('hidden')) {
+      return alert('Finish editing first');
+    }
+    await save('students', students);
+    hide($('addStudent'), $('selectAllStudents'), $('editSelected'),
+         $('deleteSelected'), $('saveRegistration'));
+    show($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+  };
+
+  // Re-enable registration editing
+  $('editRegistration').onclick = () => {
+    show($('addStudent'), $('selectAllStudents'), $('editSelected'),
+         $('deleteSelected'), $('saveRegistration'));
+    hide($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+  };
+
+  // Share registration via WhatsApp
+  $('shareRegistration').onclick = () => {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const header = `*Students List*\nClass ${cl} Section ${sec}`;
+    const lines = students.filter(s=>s.cls===cl&&s.sec===sec).map(s => {
+      const tf = (finesData[s.adm]||[]).reduce((sum,f)=>sum+f.amount,0);
+      const tp = (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
+      const out = tf - tp;
+      const days = Object.keys(attendanceData).length;
+      const pres = Object.values(attendanceData).filter(r=>r[s.adm]==='P').length;
+      const pct  = days? (pres/days)*100 : 0;
+      const st   = (out>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: ₨${out}\nStatus: ${st}`;
+    }).join('\n\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank');
+  };
+
+  // Download registration PDF (landscape)
+  $('downloadRegistrationPDF').onclick = () => {
+    const doc = new jspdf.jsPDF({ orientation: 'landscape', format: 'a4' });
+    doc.setFontSize(18); doc.text('Student List', 14, 16);
+    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY: 32, html: '#studentsTable', styles:{ fontSize:7 } });
+    doc.save('registration.pdf');
+  };
+
+  // --- 8. PAYMENT MODAL ---
+  function openPaymentModal(adm) {
+    $('payAdm').textContent = adm;
+    $('paymentAmount').value = '';
+    show($('paymentModal'));
+  }
+  $('savePayment').onclick = async () => {
+    const adm = $('payAdm').textContent;
+    const amt = Number($('paymentAmount').value) || 0;
+    paymentsData[adm] = paymentsData[adm]||[];
+    paymentsData[adm].push({ date:new Date().toISOString().split('T')[0], amount:amt });
+    await save('paymentsData', paymentsData);
+    hide($('paymentModal'));
+    renderStudents();
+  };
+  $('cancelPayment').onclick = () => hide($('paymentModal'));
 
   // --- 9. MARK ATTENDANCE ---
-  const statusNames   = { P:'Present', A:'Absent', Lt:'Late', HD:'Half Day', L:'Leave' };
-  const statusColors  = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+  const statusNames  = { P:'Present', A:'Absent', Lt:'Late', HD:'Half Day', L:'Leave' };
+  const statusColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
 
   $('loadAttendance').onclick = () => {
-    const roster = students.filter(s => s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
-    const container = $('attendanceBody');
-    container.innerHTML = '';
-    roster.forEach(stu => {
-      const row = document.createElement('div');
-      row.className = 'attendance-row';
-      const nameDiv = document.createElement('div');
-      nameDiv.className = 'attendance-name';
-      nameDiv.textContent = stu.name;
-      const btnsDiv = document.createElement('div');
-      btnsDiv.className = 'attendance-buttons';
-      Object.entries(statusNames).forEach(([code, label]) => {
-        const btn = document.createElement('button');
-        btn.className = 'att-btn';
-        btn.textContent = code;
-        btn.onclick = () => {
-          btnsDiv.querySelectorAll('.att-btn').forEach(b => {
-            b.classList.remove('selected');
-            b.style.background=''; b.style.color='';
-          });
-          btn.classList.add('selected');
-          btn.style.background = statusColors[code];
-          btn.style.color = '#fff';
+    const roster = students.filter(s=>s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
+    const c = $('attendanceBody');
+    c.innerHTML = '';
+    roster.forEach(stu=>{
+      const row = document.createElement('div'); row.className='attendance-row';
+      const name = document.createElement('div'); name.className='attendance-name'; name.textContent=stu.name;
+      const btns = document.createElement('div'); btns.className='attendance-buttons';
+      Object.keys(statusNames).forEach(code=>{
+        const b = document.createElement('button'); b.className='att-btn'; b.textContent=code;
+        b.onclick = ()=>{
+          btns.querySelectorAll('.att-btn').forEach(x=>{ x.classList.remove('selected'); x.style=''; });
+          b.classList.add('selected'); b.style.background=statusColors[code]; b.style.color='#fff';
         };
-        btnsDiv.appendChild(btn);
+        btns.appendChild(b);
       });
-      row.append(nameDiv, btnsDiv);
-      container.appendChild(row);
+      row.append(name, btns); c.appendChild(row);
     });
     show($('attendanceBody'), $('saveAttendance'));
     hide($('resetAttendance'), $('downloadAttendancePDF'), $('shareAttendanceSummary'), $('attendanceSummary'));
@@ -238,19 +359,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     const date = $('dateInput').value;
     if (!date) return alert('Please pick a date');
     attendanceData[date] = {};
-    const roster = students.filter(s => s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
-    roster.forEach((s,i) => {
+    const roster = students.filter(s=>s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
+    roster.forEach((s,i)=>{
       const sel = $('attendanceBody').children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = sel ? sel.textContent : 'A';
+      attendanceData[date][s.adm] = sel? sel.textContent : 'A';
     });
     await save('attendanceData', attendanceData);
 
-    // build summary
-    const summary = $('attendanceSummary');
-    summary.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
+    const sum = $('attendanceSummary');
+    sum.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
     const tbl = document.createElement('table');
     tbl.innerHTML = `<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
-    roster.forEach(s => {
+    roster.forEach(s=>{
       const code = attendanceData[date][s.adm];
       tbl.innerHTML += `<tr>
         <td>${s.name}</td>
@@ -258,14 +378,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
       </tr>`;
     });
-    summary.append(tbl);
-    summary.querySelectorAll('.share-individual').forEach(ic => {
-      ic.onclick = () => {
-        const adm = ic.dataset.adm;
-        const student = students.find(x=>x.adm===adm);
+    sum.append(tbl);
+    sum.querySelectorAll('.share-individual').forEach(ic=>{
+      ic.onclick = ()=>{
+        const adm = ic.dataset.adm, stu = students.find(x=>x.adm===adm);
         const code = attendanceData[date][adm];
         const msg = `Dear Parent, your child was ${statusNames[code]} on ${date}.`;
-        window.open(`https://wa.me/${student.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/${stu.contact}?text=${encodeURIComponent(msg)}`, '_blank');
       };
     });
 
@@ -280,123 +399,102 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('downloadAttendancePDF').onclick = () => {
     const date = $('dateInput').value;
-    const doc = new jspdf.jsPDF({ orientation: 'portrait', format: 'a4' });
-    doc.setFontSize(18);
-    doc.text(`Attendance Report`, 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table', styles: { fontSize: 8 } });
+    const doc = new jspdf.jsPDF({ orientation:'portrait', format:'a4' });
+    doc.setFontSize(18); doc.text('Attendance Report',14,16);
+    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
+    doc.autoTable({ startY:32, html:'#attendanceSummary table', styles:{fontSize:8} });
     doc.save(`attendance_${date}.pdf`);
   };
 
   $('shareAttendanceSummary').onclick = () => {
     const date = $('dateInput').value;
-    const roster = students.filter(s => s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
+    const roster = students.filter(s=>s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
     const header = `*Attendance Report*\nClass ${$('teacherClassSelect').value} Section ${$('teacherSectionSelect').value} - ${date}`;
-    const lines = roster.map(s => `*${s.name}*: ${statusNames[ attendanceData[date][s.adm] ]}`).join('\n');
+    const lines = roster.map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`).join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank');
   };
 
   // --- 10. ANALYTICS ---
-  const atg    = $('analyticsTarget');
-  const asel   = $('analyticsSectionSelect');
-  const atype  = $('analyticsType');
-  const adate  = $('analyticsDate');
-  const amonth = $('analyticsMonth');
-  const sems   = $('semesterStart');
-  const seme   = $('semesterEnd');
-  const ayear  = $('yearStart');
-  const asearch= $('analyticsSearch');
-  const loadA  = $('loadAnalytics');
-  const resetA = $('resetAnalytics');
-  const instr  = $('instructions');
-  const acont  = $('analyticsContainer');
-  const graphs = $('graphs');
-  const aacts  = $('analyticsActions');
-  const barCtx = $('barChart').getContext('2d');
-  const pieCtx = $('pieChart').getContext('2d');
+  const atg    = $('analyticsTarget'), asel   = $('analyticsSectionSelect'),
+        atype  = $('analyticsType'),     adate  = $('analyticsDate'),
+        amonth = $('analyticsMonth'),    sems   = $('semesterStart'),
+        seme   = $('semesterEnd'),       ayear  = $('yearStart'),
+        asearch= $('analyticsSearch'),   loadA  = $('loadAnalytics'),
+        resetA = $('resetAnalytics'),    instr  = $('instructions'),
+        acont  = $('analyticsContainer'),graphs = $('graphs'),
+        aacts  = $('analyticsActions'),  barCtx = $('barChart').getContext('2d'),
+        pieCtx = $('pieChart').getContext('2d');
   let barChart, pieChart, lastAnalyticsShare = '';
 
   atg.onchange = () => {
     atype.disabled = false;
-    [asel, asearch].forEach(x => x.classList.add('hidden'));
-    [acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
-    if (atg.value === 'section') asel.classList.remove('hidden');
-    if (atg.value === 'student') asearch.classList.remove('hidden');
+    [asel, asearch, instr, acont, graphs, aacts].forEach(x=>x.classList.add('hidden'));
+    if (atg.value==='section') asel.classList.remove('hidden');
+    if (atg.value==='student') asearch.classList.remove('hidden');
   };
 
   atype.onchange = () => {
-    [adate, amonth, sems, seme, ayear].forEach(x => x.classList.add('hidden'));
-    [instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
+    [adate, amonth, sems, seme, ayear, instr, acont, graphs, aacts].forEach(x=>x.classList.add('hidden'));
     resetA.classList.remove('hidden');
-    if (atype.value === 'date')     adate.classList.remove('hidden');
-    if (atype.value === 'month')    amonth.classList.remove('hidden');
-    if (atype.value === 'semester') { sems.classList.remove('hidden'); seme.classList.remove('hidden'); }
-    if (atype.value === 'year')     ayear.classList.remove('hidden');
+    if (atype.value==='date')      adate.classList.remove('hidden');
+    if (atype.value==='month')     amonth.classList.remove('hidden');
+    if (atype.value==='semester')  { sems.classList.remove('hidden'); seme.classList.remove('hidden'); }
+    if (atype.value==='year')      ayear.classList.remove('hidden');
   };
 
   resetA.onclick = e => {
     e.preventDefault();
-    atype.value = '';
-    [adate, amonth, sems, seme, ayear, instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
+    atype.value=''; [adate,amonth,sems,seme,ayear,instr,acont,graphs,aacts].forEach(x=>x.classList.add('hidden'));
     resetA.classList.add('hidden');
   };
 
   loadA.onclick = () => {
-    // build date range
     let from, to;
-    if (atype.value === 'date') {
-      from = to = adate.value;
-    } else if (atype.value === 'month') {
-      const [y, m] = amonth.value.split('-').map(Number);
+    if (atype.value==='date') {
+      from=to= adate.value;
+    } else if (atype.value==='month') {
+      const [y,m]= amonth.value.split('-').map(Number);
       from = `${amonth.value}-01`;
       to   = `${amonth.value}-${new Date(y,m,0).getDate()}`;
-    } else if (atype.value === 'semester') {
-      const [sy, sm] = sems.value.split('-').map(Number);
-      const [ey, em] = seme.value.split('-').map(Number);
+    } else if (atype.value==='semester') {
+      const [sy,sm] = sems.value.split('-').map(Number);
+      const [ey,em] = seme.value.split('-').map(Number);
       from = `${sems.value}-01`;
       to   = `${seme.value}-${new Date(ey,em,0).getDate()}`;
-    } else if (atype.value === 'year') {
-      from = `${ayear.value}-01-01`;
-      to   = `${ayear.value}-12-31`;
-    } else {
-      return alert('Select a period');
-    }
+    } else if (atype.value==='year') {
+      from = `${ayear.value}-01-01`; to = `${ayear.value}-12-31`;
+    } else return alert('Select a period');
 
-    // filter pool
-    let pool = students.filter(s => s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
-    if (atg.value === 'section') pool = pool.filter(s => s.sec === asel.value);
-    if (atg.value === 'student') {
+    let pool = students.filter(s=>s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
+    if (atg.value==='section') pool = pool.filter(s=>s.sec===asel.value);
+    if (atg.value==='student'){
       const q = asearch.value.trim().toLowerCase();
-      pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
+      pool = pool.filter(s=>s.adm===q || s.name.toLowerCase().includes(q));
     }
 
-    // compute stats
-    const stats = pool.map(s => ({ adm:s.adm, name:s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    Object.entries(attendanceData).forEach(([d, recs]) => {
-      if (d < from || d > to) return;
-      stats.forEach(st => {
-        const c = recs[st.adm] || 'A';
+    const stats = pool.map(s=>({ adm:s.adm, name:s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    Object.entries(attendanceData).forEach(([d,recs])=>{
+      if (d<from||d>to) return;
+      stats.forEach(st=>{
+        const c = recs[st.adm]||'A';
         st[c]++; st.total++;
       });
     });
 
-    // compute fines & status
-    stats.forEach(st => {
-      const tf = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
-      const tp = (paymentsData[st.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
+    stats.forEach(st=>{
+      const tf=st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
+      const tp=(paymentsData[st.adm]||[]).reduce((s,p)=>s+p.amount,0);
       st.outstanding = tf - tp;
-      const pct = st.total ? (st.P/st.total)*100 : 0;
-      st.status = (st.outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
+      const pct = st.total? (st.P/st.total)*100 : 0;
+      st.status = (st.outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
     });
 
-    // render table
     const thead = $('analyticsTable').querySelector('thead tr');
     thead.innerHTML = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding (₨)','Status']
-      .map(h => `<th>${h}</th>`).join('');
-    const tbody = $('analyticsBody'); tbody.innerHTML = '';
-    stats.forEach((st,i) => {
-      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
+      .map(h=>`<th>${h}</th>`).join('');
+    const tbody = $('analyticsBody'); tbody.innerHTML='';
+    stats.forEach((st,i)=>{
+      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${i+1}</td>
@@ -418,12 +516,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     instr.textContent = `Period: ${from} to ${to}`;
     show(instr, acont, graphs, aacts);
 
-    // charts
     barChart?.destroy();
     barChart = new Chart(barCtx, {
       type: 'bar',
-      data: { labels: stats.map(st=>st.name),
-              datasets:[{ label:'% Present', data: stats.map(st=> st.total? (st.P/st.total)*100 : 0 ) }] },
+      data: {
+        labels: stats.map(st=>st.name),
+        datasets:[{ label:'% Present', data: stats.map(st=> st.total? (st.P/st.total)*100 : 0 ) }]
+      },
       options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
     });
 
@@ -442,6 +541,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('shareAnalytics').onclick = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent("Analytics Report\n"+ lastAnalyticsShare)}`, '_blank');
   };
+
   $('downloadAnalytics').onclick = () => {
     const doc = new jspdf.jsPDF({ orientation:'portrait', format:'a4' });
     doc.setFontSize(18); doc.text('Analytics Report',14,16);
@@ -461,41 +561,47 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('registerHeader').innerHTML = header;
     const roster = students.filter(s=>s.cls=== $('teacherClassSelect').value && s.sec=== $('teacherSectionSelect').value);
     $('registerBody').innerHTML = '';
-    roster.forEach((s,i) => {
+    roster.forEach((s,i)=>{
       let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d=1; d<=days; d++) {
+      for (let d=1; d<=days; d++){
         const key = `${m}-${String(d).padStart(2,'0')}`;
-        const c = (attendanceData[key]||{})[s.adm] || 'A';
-        const style = c==='A'?'':` style="background:var(--${c==='P'?'success':c==='Lt'?'warning':c==='HD'?'warning':'danger'});color:#fff"`;
-        row += `<td class="reg-cell"${style}><span class="status-text">${c}</span></td>`;
+        const c = (attendanceData[key]||{})[s.adm]||'A';
+        const colStyle = c==='A'?'':
+          ` style="background:${
+            c==='P'?'var(--success)':
+            c==='Lt'?'var(--warning)':
+            c==='HD'?'var(--warning)':'var(--danger)'
+          };color:#fff"`;
+        row += `<td class="reg-cell"${colStyle}><span class="status-text">${c}</span></td>`;
       }
-      const tr = document.createElement('tr'); tr.innerHTML = row;
+      const tr = document.createElement('tr'); tr.innerHTML=row;
       $('registerBody').appendChild(tr);
     });
-    $('registerBody').querySelectorAll('.reg-cell').forEach(cell => {
-      cell.onclick = () => {
-        const span = cell.querySelector('.status-text');
-        const codes = ['A','P','Lt','HD','L'];
-        let idx = codes.indexOf(span.textContent);
-        idx = (idx+1)%codes.length; span.textContent = codes[idx];
-        if (codes[idx]==='A') { cell.style.background=''; cell.style.color=''; }
-        else { cell.style.background = statusColors[codes[idx]]; cell.style.color='#fff'; }
+    $('registerBody').querySelectorAll('.reg-cell').forEach(cell=>{
+      cell.onclick = ()=>{
+        const span=cell.querySelector('.status-text');
+        const codes=['A','P','Lt','HD','L'];
+        let idx=codes.indexOf(span.textContent);
+        idx=(idx+1)%codes.length; span.textContent=codes[idx];
+        if (codes[idx]==='A'){ cell.style.background=''; cell.style.color=''; }
+        else { cell.style.background=statusColors[codes[idx]]; cell.style.color='#fff'; }
       };
     });
     show($('registerTableWrapper'), $('saveRegister'));
     hide($('loadRegister'), $('changeRegister'), $('downloadRegister'), $('shareRegister'));
   };
 
+  // Save register
   $('saveRegister').onclick = async () => {
     const m = $('registerMonth').value;
     const [y,mm] = m.split('-').map(Number);
     const days = new Date(y,mm,0).getDate();
-    Array.from($('registerBody').children).forEach(tr => {
+    Array.from($('registerBody').children).forEach(tr=>{
       const adm = tr.children[1].textContent;
-      for (let d=1; d<=days; d++) {
+      for (let d=1; d<=days; d++){
         const code = tr.children[3+d-1].querySelector('.status-text').textContent;
         const key = `${m}-${String(d).padStart(2,'0')}`;
-        attendanceData[key] = attendanceData[key] || {};
+        attendanceData[key] = attendanceData[key]||{};
         attendanceData[key][adm] = code;
       }
     });
@@ -509,6 +615,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('changeRegister'), $('downloadRegister'), $('shareRegister'));
   };
 
+  // Download register PDF landscape
   $('downloadRegister').onclick = () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', format:'a4' });
     doc.setFontSize(18); doc.text('Attendance Register',14,16);
@@ -517,14 +624,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_register.pdf');
   };
 
+  // Share register
   $('shareRegister').onclick = () => {
     const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from($('registerBody').children).map(tr =>
-      Array.from(tr.children).map(td =>
+    const rows = Array.from($('registerBody').children).map(tr=>
+      Array.from(tr.children).map(td=>
         td.querySelector('.status-text')? td.querySelector('.status-text').textContent : td.textContent
       ).join(' ')
     ).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows)}`, '_blank');
   };
 
   // --- 12. Service Worker ---
