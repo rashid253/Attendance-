@@ -23,9 +23,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1><i class="fas fa-school"></i> Attendance Management</h1>
-  </header>
+  <header><h1><i class="fas fa-school"></i> Attendance Management</h1></header>
 
   <!-- 1. Setup -->
   <section id="teacher-setup">
@@ -114,13 +112,8 @@
         <option disabled selected>-- Report For --</option>
         <option value="class">Full Class</option><option value="section">Section</option><option value="student">Student</option>
       </select>
-      <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option>
-      </select>
-      <select id="analyticsType" disabled>
-        <option disabled selected>-- Period --</option>
-        <option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option>
-      </select>
+      <select id="analyticsSectionSelect" class="hidden"><option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option></select>
+      <select id="analyticsType" disabled><option disabled selected>-- Period --</option><option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option></select>
       <input type="date" id="analyticsDate" class="hidden"/>
       <input type="month" id="analyticsMonth" class="hidden"/>
       <input type="month" id="semesterStart" class="hidden"/>
@@ -134,9 +127,7 @@
     <div id="analyticsContainer" class="table-wrapper hidden">
       <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
     </div>
-    <div id="graphs" class="hidden">
-      <canvas id="barChart"></canvas><canvas id="pieChart"></canvas>
-    </div>
+    <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
     <div class="table-actions hidden" id="analyticsActions">
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
       <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
