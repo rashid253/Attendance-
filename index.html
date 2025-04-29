@@ -30,6 +30,9 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Eruda debug console -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -45,21 +48,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected value="">-- Select Class --</option>
-        <option>Play Group</option>
-        <option>Nursery</option>
-        <option>KG</option>
-        <option>Prep</option>
-        <option>Pre One</option>
-        <option>Class One</option>
-        <option>Class Two</option>
-        <option>Class Three</option>
-        <option>Class Four</option>
-        <option>Class Five</option>
-        <option>Class Six</option>
-        <option>Class Seven</option>
-        <option>Class Eight</option>
-        <option>Class Nine</option>
-        <option>Class Ten</option>
+        <option>One</option><option>Two</option><option>Three</option>
       </select>
       <select id="teacherSectionSelect">
         <option disabled selected value="">-- Select Section --</option>
@@ -75,18 +64,9 @@
 
   <!-- 2. Counters -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
+    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
+    <div class="counter-card"><span id="classCount"   class="number" data-target="0">0</span><div>Class Students</div></div>
+    <div class="counter-card"><span id="schoolCount"  class="number" data-target="0">0</span><div>School Students</div></div>
   </section>
 
   <!-- 3. Student Registration -->
@@ -94,7 +74,7 @@
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
       <input id="studentName" placeholder="Name" />
-      <input id="parentName" placeholder="Parent Name" />
+      <input id="parentName"  placeholder="Parent Name" />
       <input id="parentContact" placeholder="Parent Contact" />
       <input id="parentOccupation" placeholder="Occupation" />
       <input id="parentAddress" placeholder="Address" />
@@ -104,7 +84,7 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th><input type="checkbox" id="selectAllStudents" /></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
             <th>Contact</th><th>Occupation</th><th>Address</th><th>Share</th>
           </tr>
@@ -113,12 +93,11 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
+      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit Selected</button>
+      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete Selected</button>
       <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
       <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Restore</button>
-      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share All</button>
+      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
       <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> PDF</button>
     </div>
   </section>
@@ -127,7 +106,7 @@
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
-      <input type="date" id="dateInput"/>
+      <input type="date" id="dateInput" />
       <button id="loadAttendance"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
     <div id="attendanceBody"></div>
@@ -154,6 +133,7 @@
         <option disabled selected>-- Section --</option>
         <option>A</option><option>B</option><option>C</option>
       </select>
+      <input id="analyticsSearch" class="hidden" placeholder="Enter Adm# or Name" />
       <select id="analyticsType" disabled>
         <option disabled selected>-- Period --</option>
         <option value="date">Date</option>
@@ -161,12 +141,11 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Enter Adm# or Name"/>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" placeholder="Start" />
+      <input type="month" id="semesterEnd" class="hidden" placeholder="End" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
@@ -191,7 +170,7 @@
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
-      <input type="month" id="registerMonth"/>
+      <input type="month" id="registerMonth" />
       <button id="loadRegister"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
     <div id="registerTableWrapper" class="hidden table-wrapper">
@@ -202,7 +181,6 @@
     </div>
     <div class="table-actions">
       <button id="changeRegister" class="hidden"><i class="fas fa-undo"></i> Change</button>
-      <button id="saveRegister" class="hidden"><i class="fas fa-save"></i> Save</button>
       <button id="downloadRegister" class="hidden"><i class="fas fa-download"></i> Download</button>
       <button id="shareRegister" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
     </div>
