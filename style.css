@@ -1,39 +1,4 @@
 /* style.css */
-
-/* 1. Standardize all buttons to small size */
-button,
-.att-btn {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-}
-
-/* 2. Layout tweaks */
-.row-inline {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-/* 3. Student Registration: ensure table-actions are one horizontal row */
-#student-registration .table-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: nowrap !important;
-  overflow-x: auto;
-}
-#student-registration .table-actions button {
-  flex: none;
-  margin: 0;
-}
-
-/* 4. Attendance buttons */
-.att-btn {
-  /* keep small, already set */
-}
-
-/* 5. Other existing rules below (unchanged) */
 :root {
   --primary: #2196F3;
   --success: #4CAF50;
@@ -46,26 +11,47 @@ button,
 * { outline: none; }
 body { margin:0; padding:10px; font-family:Arial,sans-serif; background:var(--light); color:var(--dark); }
 header h1 { background:var(--primary); color:#fff; text-align:center; padding:10px; margin:0 0 20px; }
+
+/* 1. Buttons small & standard */
+button, .att-btn {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+/* 2. Horizontal button rows */
+.row-inline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+}
+
+/* Core styles */
 section { background:#fff; padding:15px; margin-bottom:20px; border:1px solid #ccc; border-radius:6px; }
 input, select { padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem; }
 .hidden { display:none!important; }
 .counter-grid { display:flex; gap:10px; }
 .counter-card { flex:1; padding:1rem; text-align:center; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.1); }
+.number { font-size:2rem; font-weight:bold; }
 .table-wrapper { overflow-x:auto; margin-top:10px; }
 table { width:100%; border-collapse:collapse; }
 th, td { border:1px solid #ccc; padding:8px; text-align:left; white-space:nowrap; }
-.attendance-row { display:flex; align-items:center; margin-bottom:0.5rem; }
+.attendance-row { display:flex; align-items:center; margin-bottom:5px; }
 .attendance-name { width:30%; font-weight:bold; }
 .attendance-buttons { display:flex; gap:5px; flex-wrap:wrap; }
+.att-btn { border:1px solid var(--primary); border-radius:4px; background:rgba(33,150,243,0.1); color:var(--dark); cursor:pointer; }
+.att-btn.selected { background:var(--primary); color:#fff; }
 .summary-box { margin-top:1rem; padding:1rem; background:#fafafa; border:1px solid #ddd; border-radius:4px; }
-.table-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-.table-actions button { white-space:nowrap; }
 
-@media (max-width: 600px) {
-  .row-inline input,
-  .row-inline select,
-  .row-inline button,
-  .table-actions button {
-    flex: 1 1 100%;
+@media (max-width:600px) {
+  .row-inline input, .row-inline select, .row-inline button, .table-actions button {
+    flex:1 1 100%;
   }
 }
