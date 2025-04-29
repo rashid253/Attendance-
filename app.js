@@ -12,11 +12,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { get, set } = window.idbKeyval;
 
   // State
-  let students       = await get('students')       || [];
-  let attendanceData = await get('attendanceData') || {};
-  let lastAdmNo      = await get('lastAdmissionNo')|| 0;
-  let lastShareText      = '';
+  let students         = await get('students')       || [];
+  let attendanceData   = await get('attendanceData') || {};
+  let lastAdmNo        = await get('lastAdmissionNo')|| 0;
+  let lastShareText    = '';
   let lastAnalyticsShare = '';
+
+  // Instruction messages per attendance code
+  const instructionTexts = {
+    P: date => `Dear Parent, your child was present on ${date}. Thank you for your cooperation.`,
+    A: date => `Dear Parent, unfortunately your child was absent on ${date}. Kindly inform us of the reason at your earliest convenience.`,
+    Lt: date => `Dear Parent, your child arrived late on ${date}. Please ensure timely arrival going forward.`,
+    HD: date => `Dear Parent, your child had a half-day on ${date}. Please refer to the school office for details.`,
+    L: date => `Dear Parent, your child was on leave on ${date}. Kindly provide leave documentation if not already submitted.`
+  };
 
   // Helpers
   const saveStudents       = () => set('students', students);
@@ -25,7 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   async function generateAdmNo() { lastAdmNo++; await saveLastAdmNo(); return String(lastAdmNo).padStart(4,'0'); }
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(el=>el&&el.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(el=>el.classList.add('hidden'));
+  const hide = (...els) => els.forEach(el=>el&&el.classList.add('hidden'));
 
   // 1. SETUP
   async function loadSetup() {
@@ -36,7 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       $('schoolNameInput').value = school;
       $('teacherClassSelect').value = cls;
       $('teacherSectionSelect').value = sec;
-      $('setupText').textContent = `${school} 🏫 | Class: ${cls} | Section: ${sec}`;
+      $('setupText').textContent = `${school} | Class: ${cls} | Section: ${sec}`;
       hide($('setupForm')); show($('setupDisplay'));
       renderStudents(); updateCounters(); resetViews();
     }
@@ -171,7 +180,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('saveRegistration').onclick = async () => {
     if (!$('doneEditing').classList.contains('hidden')) {
-      alert('Please finish editing first (click Done) before saving.'); return;
+      alert('Please finish editing first'); return;
     }
     await saveStudents();
     hide($('editSelected'),$('deleteSelected'),$('selectAllStudents'),$('saveRegistration'));
@@ -194,19 +203,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   $('downloadRegistrationPDF').onclick = () => {
     const doc=new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report',14,16);
+    doc.setFontSize(18); doc.text('Student List',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html:'#studentsTable' });
     const pc=doc.getNumberOfPages();
-    for(let i=1;i<=pc;i++){ doc.setPage(i); doc.setFontSize(10); doc.text('FAIQTECH SOL', doc.internal.pageSize.getWidth()/2, doc.internal.pageSize.getHeight()-10, {align:'center'}); }
-    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('registration.pdf');
+    for(let i=1;i<=pc;i++){
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text('FAIQTECH SOL', doc.internal.pageSize.getWidth()/2, doc.internal.pageSize.getHeight()-10, {align:'center'});
+    }
+    doc.save('registration.pdf');
   };
 
   // 4. MARK ATTENDANCE
   const dateInput=$('dateInput'), loadAttendance=$('loadAttendance'), saveAttendance=$('saveAttendance'),
         resetAttendance=$('resetAttendance'), downloadAttendancePDF=$('downloadAttendancePDF'),
-        shareAttendanceSummary=$('shareAttendanceSummary'),
-        attendanceBody=$('attendanceBody'), attendanceSummary=$('attendanceSummary');
+        shareAttendanceSummary=$('shareAttendanceSummary'), attendanceBody=$('attendanceBody'),
+        attendanceSummary=$('attendanceSummary');
   const statusNames={P:'Present',A:'Absent',Lt:'Late',HD:'Half Day',L:'Leave'},
         statusColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
 
@@ -228,122 +241,337 @@ window.addEventListener('DOMContentLoaded', async () => {
       });
       row.append(nd,btns); attendanceBody.append(row);
     });
-    show(attendanceBody, saveAttendance); hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
+    show(attendanceBody, saveAttendance);
+    hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
   };
 
   saveAttendance.onclick = async () => {
-    const date=dateInput.value; if(!date){alert('Pick a date');return;}
-    attendanceData[date]={};
-    const cls=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    const roster=students.filter(s=>s.cls===cls&&s.sec===sec);
+    const date = dateInput.value; if(!date){ alert('Pick a date'); return; }
+    attendanceData[date] = {};
+    const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const roster = students.filter(s=>s.cls===cls&&s.sec===sec);
     roster.forEach((s,i)=>{
-      const btn=attendanceBody.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm]=btn?btn.textContent:'A';
+      const btn = attendanceBody.children[i].querySelector('.att-btn.selected');
+      const code = btn ? btn.textContent : 'A';
+      attendanceData[date][s.adm] = code;
     });
     await saveAttendanceData();
-    attendanceSummary.innerHTML=`<h3>Attendance Report: ${date}</h3>`;
-    const tbl=document.createElement('table');
-    tbl.innerHTML='<tr><th>Name</th><th>Status</th></tr>';
-    roster.forEach(s=>tbl.innerHTML+=`<tr><td>${s.name}</td><td>${statusNames[attendanceData[date][s.adm]]}</td></tr>`);
+
+    // Render summary with individual share icons
+    attendanceSummary.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
+    const tbl = document.createElement('table');
+    tbl.innerHTML = `<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
+    roster.forEach(s=>{
+      const code = attendanceData[date][s.adm];
+      tbl.innerHTML +=
+        `<tr>
+           <td>${s.name}</td>
+           <td>${statusNames[code]}</td>
+           <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
+         </tr>`;
+    });
     attendanceSummary.append(tbl);
-    hide(saveAttendance, attendanceBody); show(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
+
+    // Attach click handlers for individual sharing
+    attendanceSummary.querySelectorAll('.share-individual').forEach(ic => {
+      ic.onclick = () => {
+        const adm = ic.dataset.adm;
+        const student = students.find(st => st.adm === adm);
+        const code = attendanceData[date][adm];
+        const msg = instructionTexts[code](date);
+        window.open(`https://wa.me/${student.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+      };
+    });
+
+    hide(saveAttendance, attendanceBody);
+    show(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
   };
-  resetAttendance.onclick=()=>{ show(attendanceBody, saveAttendance); hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary); };
-  downloadAttendancePDF.onclick=()=>{
-    const doc=new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#attendanceSummary table' });
-    const pc=doc.getNumberOfPages();
-    for(let i=1;i<=pc;i++){ doc.setPage(i); doc.setFontSize(10); doc.text('FAIQTECH SOL', doc.internal.pageSize.getWidth()/2, doc.internal.pageSize.getHeight()-10, {align:'center'}); }
-    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('attendance_summary.pdf');
+
+  resetAttendance.onclick = () => {
+    show(attendanceBody, saveAttendance);
+    hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
   };
-  shareAttendanceSummary.onclick=()=>{ window.open(`https://wa.me/?text=${encodeURIComponent(lastShareText)}`,'_blank'); };
+
+  downloadAttendancePDF.onclick = () => {
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18);
+    doc.text(`Attendance Report - ${$('setupText').textContent}`, 14, 16);
+    doc.setFontSize(12);
+    const date = dateInput.value;
+    doc.text(`Date: ${date}`, 14, 24);
+    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
+    const pc = doc.getNumberOfPages();
+    for(let i = 1; i <= pc; i++){
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text('FAIQTECH SOL', doc.internal.pageSize.getWidth()/2, doc.internal.pageSize.getHeight()-10, { align: 'center' });
+    }
+    doc.save(`attendance_${date}.pdf`);
+  };
+
+  shareAttendanceSummary.onclick = () => {
+    const cls=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    const date = dateInput.value;
+    const header = `*Attendance Report*\nClass ${cls} Section ${sec} - Date: ${date}`;
+    const lines = students.filter(s=>s.cls===cls&&s.sec===sec)
+      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`)
+      .join('\n');
+    const text = `${header}\n\n${lines}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   // 5. ANALYTICS
-  const analyticsTarget=$('analyticsTarget'), analyticsSectionSel=$('analyticsSectionSelect'),
-        analyticsType=$('analyticsType'), analyticsDate=$('analyticsDate'),
-        analyticsMonth=$('analyticsMonth'), semesterStart=$('semesterStart'),
-        semesterEnd=$('semesterEnd'), yearStart=$('yearStart'),
-        analyticsSearch=$('analyticsSearch'), loadAnalyticsBtn=$('loadAnalytics'),
-        resetAnalyticsBtn=$('resetAnalytics'), instructionsEl=$('instructions'),
-        analyticsContainer=$('analyticsContainer'), graphsEl=$('graphs'),
-        analyticsActions=$('analyticsActions'),
-        barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
+  const analyticsTarget      = $('analyticsTarget'),
+        analyticsSectionSel  = $('analyticsSectionSelect'),
+        analyticsType        = $('analyticsType'),
+        analyticsDate        = $('analyticsDate'),
+        analyticsMonth       = $('analyticsMonth'),
+        semesterStart        = $('semesterStart'),
+        semesterEnd          = $('semesterEnd'),
+        yearStart            = $('yearStart'),
+        analyticsSearch      = $('analyticsSearch'),
+        loadAnalyticsBtn     = $('loadAnalytics'),
+        resetAnalyticsBtn    = $('resetAnalytics'),
+        instructionsEl       = $('instructions'),
+        analyticsContainer   = $('analyticsContainer'),
+        graphsEl             = $('graphs'),
+        analyticsActions     = $('analyticsActions'),
+        barCtx               = $('barChart').getContext('2d'),
+        pieCtx               = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  analyticsTarget.onchange=()=>{ analyticsType.disabled=false; hide(analyticsSectionSel,analyticsSearch,instructionsEl,analyticsContainer,graphsEl,analyticsActions); if(analyticsTarget.value==='section')show(analyticsSectionSel); if(analyticsTarget.value==='student')show(analyticsSearch); };
-  analyticsType.onchange=()=>{ hide(analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart,instructionsEl,analyticsContainer,graphsEl,analyticsActions); if(analyticsType.value==='date')show(analyticsDate); if(analyticsType.value==='month')show(analyticsMonth); if(analyticsType.value==='semester')show(semesterStart,semesterEnd); if(analyticsType.value==='year')show(yearStart); show(resetAnalyticsBtn); };
-  resetAnalyticsBtn.onclick=e=>{e.preventDefault();analyticsType.value=''; hide(analyticsDate,analyticsMonth,semesterStart,semesterEnd,yearStart,instructionsEl,analyticsContainer,graphsEl,analyticsActions,resetAnalyticsBtn); };
-
-  loadAnalyticsBtn.onclick=()=>{
-    if(analyticsTarget.value==='student'&&!analyticsSearch.value.trim()){alert('Enter Adm# or Name');return;}
-    let from,to,typ=analyticsType.value;
-    if(typ==='date')from=to=analyticsDate.value;
-    else if(typ==='month'){const[y,m]=analyticsMonth.value.split('-').map(Number);from=`${analyticsMonth.value}-01`;to=`${analyticsMonth.value}-${new Date(y,m,0).getDate()}`;}
-    else if(typ==='semester'){const[sy,sm]=semesterStart.value.split('-').map(Number),[ey,em]=semesterEnd.value.split('-').map(Number);from=`${semesterStart.value}-01`;to=`${semesterEnd.value}-${new Date(ey,em,0).getDate()}`;}
-    else if(typ==='year'){from=`${yearStart.value}-01-01`;to=`${yearStart.value}-12-31`;}
-    else{alert('Select period');return;}
-    const cls=$('teacherClassSelect').value,sec=$('teacherSectionSelect').value;
-    let pool=students.filter(s=>s.cls===cls&&s.sec===sec);
-    if(analyticsTarget.value==='section')pool=pool.filter(s=>s.sec===analyticsSectionSel.value);
-    if(analyticsTarget.value==='student'){const q=analyticsSearch.value.trim().toLowerCase();pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));}
-
-    const stats=pool.map(s=>({adm:s.adm,name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
-    Object.entries(attendanceData).forEach(([d,recs])=>{if(d<from||d>to)return;stats.forEach(st=>{const c=recs[st.adm]||'A';st[c]++;st.total++;});});
-
-    const head=$('analyticsTable').querySelector('thead tr'); head.innerHTML='<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
-    const body=$('analyticsBody'); body.innerHTML=''; stats.forEach((st,i)=>{const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;body.appendChild(tr);});
-
-    instructionsEl.textContent=`Period: ${from} to ${to}`; show(instructionsEl,analyticsContainer,graphsEl,analyticsActions);
-
-    barChart?.destroy(); barChart=new Chart(barCtx,{type:'bar',data:{labels:stats.map(s=>s.name),datasets:[{label:'% Present',data:stats.map(s=>s.total?s.P/s.total*100:0)}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
-    const agg=stats.reduce((a,s)=>{['P','A','Lt','HD','L'].forEach(k=>a[k]+=s[k]);return a;},{P:0,A:0,Lt:0,HD:0,L:0});
-    pieChart?.destroy(); pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['P','A','Lt','HD','L'],datasets:[{data:Object.values(agg)}]}});
-
-    lastAnalyticsShare=`Analytics (${from} to ${to})\n`+stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
+  analyticsTarget.onchange = () => {
+    analyticsType.disabled = false;
+    hide(analyticsSectionSel, analyticsSearch, instructionsEl, analyticsContainer, graphsEl, analyticsActions);
+    if (analyticsTarget.value === 'section') show(analyticsSectionSel);
+    if (analyticsTarget.value === 'student') show(analyticsSearch);
   };
-  $('shareAnalytics').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,'_blank');
-  $('downloadAnalytics').onclick=()=>{
-    const doc=new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#analyticsTable' });
-    const barImg=barCtx.canvas.toDataURL(), pieImg=pieCtx.canvas.toDataURL();
-    doc.addPage(); doc.setFontSize(20); doc.text('Bar Chart',14,20); doc.addImage(barImg,'PNG',14,28,180,100);
-    doc.addPage(); doc.setFontSize(20); doc.text('Pie Chart',14,20); doc.addImage(pieImg,'PNG',14,28,100,100);
-    const pc=doc.getNumberOfPages(); for(let i=1;i<=pc;i++){ doc.setPage(i); doc.setFontSize(10); doc.text('FAIQTECH SOL',doc.internal.pageSize.getWidth()/2,doc.internal.pageSize.getHeight()-10,{align:'center'}); }
-    const url=doc.output('bloburl'); window.open(url,'_blank'); doc.save('analytics_report.pdf');
+  analyticsType.onchange = () => {
+    hide(analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart, instructionsEl, analyticsContainer, graphsEl, analyticsActions);
+    if (analyticsType.value === 'date') show(analyticsDate);
+    if (analyticsType.value === 'month') show(analyticsMonth);
+    if (analyticsType.value === 'semester') show(semesterStart, semesterEnd);
+    if (analyticsType.value === 'year') show(yearStart);
+    show(resetAnalyticsBtn);
+  };
+  resetAnalyticsBtn.onclick = e => {
+    e.preventDefault();
+    analyticsType.value = '';
+    hide(analyticsDate, analyticsMonth, semesterStart, semesterEnd, yearStart, instructionsEl, analyticsContainer, graphsEl, analyticsActions, resetAnalyticsBtn);
+  };
+  loadAnalyticsBtn.onclick = () => {
+    if (analyticsTarget.value === 'student' && !analyticsSearch.value.trim()) {
+      alert('Enter Adm# or Name');
+      return;
+    }
+    let from, to, typ = analyticsType.value;
+    if (typ === 'date') {
+      from = to = analyticsDate.value;
+    } else if (typ === 'month') {
+      const [y, m] = analyticsMonth.value.split('-').map(Number);
+      from = `${analyticsMonth.value}-01`;
+      to   = `${analyticsMonth.value}-${new Date(y, m, 0).getDate()}`;
+    } else if (typ === 'semester') {
+      const [sy, sm] = semesterStart.value.split('-').map(Number),
+            [ey, em] = semesterEnd.value.split('-').map(Number);
+      from = `${semesterStart.value}-01`;
+      to   = `${semesterEnd.value}-${new Date(ey, em, 0).getDate()}`;
+    } else if (typ === 'year') {
+      from = `${yearStart.value}-01-01`;
+      to   = `${yearStart.value}-12-31`;
+    } else {
+      alert('Select period');
+      return;
+    }
+    const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    let pool = students.filter(s => s.cls === cls && s.sec === sec);
+    if (analyticsTarget.value === 'section') pool = pool.filter(s => s.sec === analyticsSectionSel.value);
+    if (analyticsTarget.value === 'student') {
+      const q = analyticsSearch.value.trim().toLowerCase();
+      pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
+    }
+
+    const stats = pool.map(s => ({ adm: s.adm, name: s.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0, total: 0 }));
+    Object.entries(attendanceData).forEach(([d, recs]) => {
+      if (d < from || d > to) return;
+      stats.forEach(st => {
+        const c = recs[st.adm] || 'A';
+        st[c]++;
+        st.total++;
+      });
+    });
+
+    const head = $('analyticsTable').querySelector('thead tr');
+    head.innerHTML = '<th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th>';
+    const body = $('analyticsBody');
+    body.innerHTML = '';
+    stats.forEach((st, i) => {
+      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td>`;
+      body.appendChild(tr);
+    });
+
+    instructionsEl.textContent = `Period: ${from} to ${to}`;
+    show(instructionsEl, analyticsContainer, graphsEl, analyticsActions);
+
+    barChart?.destroy();
+    barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: stats.map(s => s.name),
+        datasets: [{ label: '% Present', data: stats.map(s => s.total ? s.P / s.total * 100 : 0) }]
+      },
+      options: { scales: { y: { beginAtZero: true, max: 100 } } }
+    });
+
+    const agg = stats.reduce((a, s) => {
+      ['P','A','Lt','HD','L'].forEach(k => a[k] += s[k]);
+      return a;
+    }, { P:0, A:0, Lt:0, HD:0, L:0 });
+
+    pieChart?.destroy();
+    pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: { labels: ['P','A','Lt','HD','L'], datasets: [{ data: Object.values(agg) }] }
+    });
+
+    lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
+      stats.map((st, i) => `${i+1}. ${st.adm} ${st.name}: ${((st.P||0)/(st.total||1)*100).toFixed(1)}%`).join('\n');
+  };
+
+  $('shareAnalytics').onclick = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  };
+  $('downloadAnalytics').onclick = () => {
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY: 32, html: '#analyticsTable' });
+    const barImg = barCtx.canvas.toDataURL(),
+          pieImg = pieCtx.canvas.toDataURL();
+    doc.addPage();
+    doc.setFontSize(20);
+    doc.text('Bar Chart', 14, 20);
+    doc.addImage(barImg, 'PNG', 14, 28, 180, 100);
+    doc.addPage();
+    doc.setFontSize(20);
+    doc.text('Pie Chart', 14, 20);
+    doc.addImage(pieImg, 'PNG', 14, 28, 100, 100);
+    const pc = doc.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text('FAIQTECH SOL', doc.internal.pageSize.getWidth()/2, doc.internal.pageSize.getHeight()-10, { align:'center' });
+    }
+    doc.save('analytics_report.pdf');
   };
 
   // 6. ATTENDANCE REGISTER
-  const loadRegisterBtn=$('loadRegister'),changeRegisterBtn=$('changeRegister'),saveRegisterBtn=$('saveRegister'),
-        downloadRegister=$('downloadRegister'),shareRegister=$('shareRegister'),
-        monthInput=$('registerMonth'),registerHeader=$('registerHeader'),
-        registerBody=$('registerBody'),registerWrapper=$('registerTableWrapper');
-  const regCodes=['A','P','Lt','HD','L'], regColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
-  hide(changeRegisterBtn,saveRegisterBtn,downloadRegister,shareRegister);
+  const loadRegisterBtn = $('loadRegister'),
+        changeRegisterBtn = $('changeRegister'),
+        saveRegisterBtn   = $('saveRegister'),
+        downloadRegister  = $('downloadRegister'),
+        shareRegister     = $('shareRegister'),
+        monthInput        = $('registerMonth'),
+        registerHeader    = $('registerHeader'),
+        registerBody      = $('registerBody'),
+        registerWrapper   = $('registerTableWrapper');
+  const regCodes  = ['A','P','Lt','HD','L'],
+        regColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+  hide(changeRegisterBtn, saveRegisterBtn, downloadRegister, shareRegister);
 
-  loadRegisterBtn.onclick=()=>{
-    const m=monthInput.value; if(!m){alert('Pick month');return;}
-    const[y,mm]=m.split('-').map(Number),days=new Date(y,mm,0).getDate();
-    registerHeader.innerHTML='<th>#</th><th>Adm#</th><th>Name</th>'+Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
-    registerBody.innerHTML=''; const cls=$('teacherClassSelect').value,sec=$('teacherSectionSelect').value;
-    const roster=students.filter(s=>s.cls===cls&&s.sec===sec);
-    roster.forEach((s,i)=>{let row=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;for(let d=1;d<=days;d++){const key=`${m}-${String(d).padStart(2,'0')}`,code=(attendanceData[key]&&attendanceData[key][s.adm])||'A',style=code==='A'?'':` style="background:${regColors[code]};color:#fff"`;row+=`<td class="reg-cell"${style}><span class="status-text">${code}</span></td>`;}const tr=document.createElement('tr');tr.innerHTML=row;registerBody.appendChild(tr);});
-    registerBody.querySelectorAll('.reg-cell').forEach(cell=>{const span=cell.querySelector('.status-text');cell.onclick=()=>{let idx=regCodes.indexOf(span.textContent);idx=(idx+1)%regCodes.length;const code=regCodes[idx];span.textContent=code;if(code==='A'){cell.style.background='';cell.style.color='';}else{cell.style.background=regColors[code];cell.style.color='#fff';}};});
-    show(registerWrapper,saveRegisterBtn);hide(loadRegisterBtn,changeRegisterBtn,downloadRegister,shareRegister);
+  loadRegisterBtn.onclick = () => {
+    const m = monthInput.value;
+    if (!m) { alert('Pick month'); return; }
+    const [y, mm] = m.split('-').map(Number),
+          days    = new Date(y, mm, 0).getDate();
+    registerHeader.innerHTML = '<th>#</th><th>Adm#</th><th>Name</th>' +
+      Array.from({length: days},(_,i) => `<th>${i+1}</th>`).join('');
+    registerBody.innerHTML = '';
+    const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const roster = students.filter(s=>s.cls===cls&&s.sec===sec);
+    roster.forEach((s,i) => {
+      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      for (let d=1; d<=days; d++) {
+        const key  = `${m}-${String(d).padStart(2,'0')}`,
+              code = (attendanceData[key] && attendanceData[key][s.adm]) || 'A',
+              style= code==='A' ? '' : ` style="background:${regColors[code]};color:#fff"`;
+        row += `<td class="reg-cell"${style}><span class="status-text">${code}</span></td>`;
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = row;
+      registerBody.appendChild(tr);
+    });
+
+    registerBody.querySelectorAll('.reg-cell').forEach(cell => {
+      const span = cell.querySelector('.status-text');
+      cell.onclick = () => {
+        let idx = regCodes.indexOf(span.textContent);
+        idx = (idx + 1) % regCodes.length;
+        const code = regCodes[idx];
+        span.textContent = code;
+        if (code === 'A') {
+          cell.style.background = '';
+          cell.style.color = '';
+        } else {
+          cell.style.background = regColors[code];
+          cell.style.color = '#fff';
+        }
+      };
+    });
+
+    show(registerWrapper, saveRegisterBtn);
+    hide(loadRegisterBtn, changeRegisterBtn, downloadRegister, shareRegister);
   };
 
-  saveRegisterBtn.onclick=async()=>{
-    const m=monthInput.value,[y,mm]=m.split('-').map(Number),days=new Date(y,mm,0).getDate();
-    Array.from(registerBody.children).forEach(tr=>{const adm=tr.children[1].textContent;for(let d=0;d<days;d++){const code=tr.children[3+d].querySelector('.status-text').textContent,key=`${m}-${String(d+1).padStart(2,'0')}`;attendanceData[key]=attendanceData[key]||{};attendanceData[key][adm]=code;}});await saveAttendanceData();
-    hide(saveRegisterBtn);show(changeRegisterBtn,downloadRegister,shareRegister);
+  saveRegisterBtn.onclick = async () => {
+    const m = monthInput.value,
+          [y, mm] = m.split('-').map(Number),
+          days = new Date(y, mm, 0).getDate();
+    Array.from(registerBody.children).forEach(tr => {
+      const adm = tr.children[1].textContent;
+      for (let d=0; d<days; d++) {
+        const code = tr.children[3+d].querySelector('.status-text').textContent,
+              key  = `${m}-${String(d+1).padStart(2,'0')}`;
+        attendanceData[key] = attendanceData[key] || {};
+        attendanceData[key][adm] = code;
+      }
+    });
+    await saveAttendanceData();
+    hide(saveRegisterBtn);
+    show(changeRegisterBtn, downloadRegister, shareRegister);
   };
 
-  changeRegisterBtn.onclick=()=>{hide(changeRegisterBtn,downloadRegister,shareRegister);show(saveRegisterBtn);};
-  downloadRegister.onclick=()=>{const doc=new jspdf.jsPDF();doc.setFontSize(18);doc.text('Attendance Report',14,16);doc.setFontSize(12);doc.text($('setupText').textContent,14,24);doc.autoTable({ startY:32, html:'#registerTable' });const url=doc.output('bloburl');window.open(url,'_blank');doc.save('attendance_register.pdf');};
-  shareRegister.onclick=()=>{const hdr=`Attendance Report\n${$('setupText').textContent}`,rows=Array.from(registerBody.querySelectorAll('tr')).map(tr=>Array.from(tr.querySelectorAll('td')).map(td=>td.querySelector('.status-text')?td.querySelector('.status-text').textContent:td.textContent).join(' '));window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+rows.join('\n'))}`,'_blank');};
+  changeRegisterBtn.onclick = () => {
+    hide(changeRegisterBtn, downloadRegister, shareRegister);
+    show(saveRegisterBtn);
+  };
+  downloadRegister.onclick = () => {
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY: 32, html: '#registerTable' });
+    doc.save('attendance_register.pdf');
+  };
+  shareRegister.onclick = () => {
+    const hdr  = `Attendance Report\n${$('setupText').textContent}`,
+          rows = Array.from(registerBody.querySelectorAll('tr')).map(tr =>
+            Array.from(tr.querySelectorAll('td')).map(td =>
+              td.querySelector('.status-text')
+                ? td.querySelector('.status-text').textContent
+                : td.textContent
+            ).join(' ')
+          );
+    window.open(`https://wa.me/?text=${encodeURIComponent(hdr+'\n'+rows.join('\n'))}`, '_blank');
+  };
 
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
 });
