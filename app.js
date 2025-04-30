@@ -39,6 +39,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   console.debug('App: statusNames defined', statusNames);
 
+  // --- 2.6. Admission Number Generator ---
+  async function genAdmNo() {
+    lastAdmNo++;
+    await save('lastAdmissionNo', lastAdmNo);
+    return String(lastAdmNo).padStart(4, '0');
+  }
+
   // --- 3. DOM Helpers ---
   const $    = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
@@ -289,7 +296,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const st= (out>0||pct<eligibilityPct)?'Debarred':'Eligible';
       return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${out}\nStatus: ${st}`;
     }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank');
   };
   $('downloadRegistrationPDF').onclick = ()=>{
     console.debug('Registration: downloadRegistrationPDF clicked');
@@ -441,237 +448,207 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 11. ANALYTICS REPORT GENERATION ---
-let lastAnalyticsResults = [];
-$('loadAnalytics').onclick = () => {
-  console.debug('Analytics: loadAnalytics clicked');
+  let lastAnalyticsResults = [];
+  $('loadAnalytics').onclick = () => {
+    console.debug('Analytics: loadAnalytics clicked');
 
-  // read selections
-  const target = $('analyticsTarget').value;               // 'section' or 'student'
-  const type   = $('analyticsType').value;                 // 'date','month','semester','year'
-  const cls    = $('teacherClassSelect').value;
-  const datesAll = Object.keys(attendanceData);
+    const target = $('analyticsTarget').value;
+    const type   = $('analyticsType').value;
+    const cls    = $('teacherClassSelect').value;
+    const datesAll = Object.keys(attendanceData);
 
-  // build date‐filter
-  let dates = datesAll.filter(d => {
-    const dt = new Date(d);
-    if (type === 'date') {
-      return d === $('analyticsDate').value;
-    }
-    if (type === 'month') {
-      const [y,m] = $('analyticsMonth').value.split('-').map(Number);
-      return dt.getFullYear() === y && dt.getMonth()+1 === m;
-    }
-    if (type === 'semester') {
-      const start = new Date($('semesterStart').value);
-      const end   = new Date($('semesterEnd').value);
-      return dt >= start && dt <= end;
-    }
-    if (type === 'year') {
-      return dt.getFullYear() === Number($('yearStart').value);
-    }
-    return false;
-  }).sort();
+    let dates = datesAll.filter(d => {
+      const dt = new Date(d);
+      if (type==='date') {
+        return d === $('analyticsDate').value;
+      }
+      if (type==='month') {
+        const [y,m] = $('analyticsMonth').value.split('-').map(Number);
+        return dt.getFullYear()===y && dt.getMonth()+1===m;
+      }
+      if (type==='semester') {
+        const start = new Date($('semesterStart').value);
+        const end   = new Date($('semesterEnd').value);
+        return dt>=start && dt<=end;
+      }
+      if (type==='year') {
+        return dt.getFullYear()===Number($('yearStart').value);
+      }
+      return false;
+    }).sort();
 
-  if (dates.length === 0) { alert('No records for selected range'); return; }
+    if (!dates.length) { alert('No records for selected range'); return; }
 
-  // prepare results
-  lastAnalyticsResults = [];
-
-  if (target === 'section') {
-    const sec = $('analyticsSectionSelect').value;
-    const roster = students.filter(s => s.cls === cls && s.sec === sec);
-    roster.forEach(s => {
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      dates.forEach(d => {
-        const code = attendanceData[d]?.[s.adm] || 'A';
+    lastAnalyticsResults = [];
+    if (target==='section') {
+      const sec = $('analyticsSectionSelect').value;
+      const roster = students.filter(s=>s.cls===cls&&s.sec===sec);
+      roster.forEach(s=>{
+        const stats={P:0,A:0,Lt:0,HD:0,L:0};
+        dates.forEach(d=>{
+          const code = attendanceData[d]?.[s.adm]||'A';
+          stats[code]++;
+        });
+        const pct = dates.length ? ((stats.P/dates.length)*100).toFixed(1) : '0.0';
+        lastAnalyticsResults.push({ adm:s.adm, name:s.name, ...stats, pct });
+      });
+    } else {
+      const query = $('analyticsSearch').value.trim().toLowerCase();
+      const student = students.find(s=>s.adm===query||s.name.toLowerCase().includes(query));
+      if (!student) { alert('Student not found'); return; }
+      const stats={P:0,A:0,Lt:0,HD:0,L:0};
+      dates.forEach(d=>{
+        const code = attendanceData[d]?.[student.adm]||'A';
         stats[code]++;
       });
-      const total = dates.length;
-      const pct   = total ? ((stats.P/total)*100).toFixed(1) : '0.0';
-      lastAnalyticsResults.push({
-        adm: s.adm,
-        name: s.name,
-        ...stats,
-        pct
-      });
+      const pct = dates.length ? ((stats.P/dates.length)*100).toFixed(1) : '0.0';
+      lastAnalyticsResults.push({ adm:student.adm, name:student.name, ...stats, pct });
+    }
+
+    const container = $('analyticsContainer');
+    container.innerHTML = '';
+    const tbl = document.createElement('table');
+    tbl.innerHTML = `
+      <tr><th>Adm#</th><th>Name</th><th>Present</th><th>Absent</th><th>Late</th><th>Half-Day</th><th>Leave</th><th>% Present</th></tr>`;
+    lastAnalyticsResults.forEach(r=>{
+      tbl.innerHTML+=`
+        <tr>
+          <td>${r.adm}</td><td>${r.name}</td><td>${r.P}</td><td>${r.A}</td>
+          <td>${r.Lt}</td><td>${r.HD}</td><td>${r.L}</td><td>${r.pct}%</td>
+        </tr>`;
     });
-  } else if (target === 'student') {
-    const query = $('analyticsSearch').value.trim().toLowerCase();
-    const student = students.find(s =>
-      s.adm === query || s.name.toLowerCase().includes(query)
-    );
-    if (!student) { alert('Student not found'); return; }
-    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-    dates.forEach(d => {
-      const code = attendanceData[d]?.[student.adm] || 'A';
-      stats[code]++;
+    container.appendChild(tbl);
+    hide($('instructions'));
+    show($('analyticsContainer'), $('analyticsActions'));
+  };
+
+  $('shareAnalytics').onclick = () => {
+    if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
+    const header = `*Attendance Analytics*\nClass ${$('teacherClassSelect').value}`;
+    const lines = lastAnalyticsResults.map(r=>
+      `Adm#: ${r.adm}\nName: ${r.name}\nPresent: ${r.P}, Absent: ${r.A}, Late: ${r.Lt}, Half-Day: ${r.HD}, Leave: ${r.L}, %: ${r.pct}%`
+    ).join('\n\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank);
+  };
+
+  $('downloadAnalytics').onclick = () => {
+    if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18); doc.text('Attendance Analytics Report',14,16);
+    doc.autoTable({
+      startY:24,
+      head:[['Adm#','Name','Present','Absent','Late','Half-Day','Leave','% Present']],
+      body:lastAnalyticsResults.map(r=>[r.adm,r.name,r.P,r.A,r.Lt,r.HD,r.L,`${r.pct}%`])
     });
-    const total = dates.length;
-    const pct   = total ? ((stats.P/total)*100).toFixed(1) : '0.0';
-    lastAnalyticsResults.push({
-      adm: student.adm,
-      name: student.name,
-      ...stats,
-      pct
-    });
-  }
+    const now = new Date().toISOString().slice(0,10);
+    doc.save(`analytics_${now}.pdf`);
+  };
 
-  // render table
-  const container = $('analyticsContainer');
-  container.innerHTML = '';
-  const tbl = document.createElement('table');
-  tbl.innerHTML = `
-    <tr>
-      <th>Adm#</th><th>Name</th><th>Present</th><th>Absent</th>
-      <th>Late</th><th>Half-Day</th><th>Leave</th><th>% Present</th>
-    </tr>`;
-  lastAnalyticsResults.forEach(r => {
-    tbl.innerHTML += `
-      <tr>
-        <td>${r.adm}</td><td>${r.name}</td>
-        <td>${r.P}</td><td>${r.A}</td>
-        <td>${r.Lt}</td><td>${r.HD}</td>
-        <td>${r.L}</td><td>${r.pct}%</td>
-      </tr>`;
-  });
-  container.appendChild(tbl);
-
-  // show/hide correct panels
-  hide($('instructions'));
-  show($('analyticsContainer'), $('analyticsActions'));
-};
-
-// --- 12. Analytics Share & Download ---
-$('shareAnalytics').onclick = () => {
-  if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
-  const header = `*Attendance Analytics*\nClass ${$('teacherClassSelect').value}`;
-  const lines = lastAnalyticsResults.map(r =>
-    `Adm#: ${r.adm}\nName: ${r.name}\nPresent: ${r.P}, Absent: ${r.A}, Late: ${r.Lt}, Half-Day: ${r.HD}, Leave: ${r.L}, %: ${r.pct}%`
-  ).join('\n\n');
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-};
-
-$('downloadAnalytics').onclick = () => {
-  if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
-  const doc = new jspdf.jsPDF();
-  doc.setFontSize(18);
-  doc.text('Attendance Analytics Report', 14, 16);
-  doc.setFontSize(12);
-  doc.autoTable({
-    startY: 24,
-    head: [[
-      'Adm#','Name','Present','Absent','Late','Half-Day','Leave','% Present'
-    ]],
-    body: lastAnalyticsResults.map(r => [
-      r.adm, r.name, r.P, r.A, r.Lt, r.HD, r.L, r.pct + '%'
-    ])
-  });
-  const now = new Date().toISOString().slice(0,10);
-  doc.save(`analytics_${now}.pdf`);
-};
   // --- 13. ATTENDANCE REGISTER ---
-let lastRegisterDates = [];
-let lastRegisterStudents = [];
+  let lastRegisterDates = [];
+  let lastRegisterStudents = [];
 
-$('loadRegister').onclick = () => {
-  console.debug('Register: loadRegister clicked');
-  const cls   = $('teacherClassSelect').value;
-  const sec   = $('teacherSectionSelect').value;
-  const dates = Object.keys(attendanceData).sort();
-  const roster = students.filter(s => s.cls === cls && s.sec === sec);
-  lastRegisterDates   = dates;
-  lastRegisterStudents = roster;
-
-  const wrapper = $('registerTableWrapper');
-  wrapper.innerHTML = '';
-
-  const tbl = document.createElement('table');
-  tbl.id = 'registerTable';
-  // header row
-  tbl.innerHTML = `
-    <tr>
-      <th>Adm#</th><th>Name</th>
-      ${dates.map(d => `<th>${d}</th>`).join('')}
-    </tr>`;
-  // data rows
-  roster.forEach(s => {
-    let row = `<tr><td>${s.adm}</td><td>${s.name}</td>`;
-    dates.forEach(d => {
-      const code = attendanceData[d]?.[s.adm] || 'A';
-      row += `<td data-date="${d}" data-adm="${s.adm}">${code}</td>`;
+  $('loadRegister').onclick = () => {
+    console.debug('Register: loadRegister clicked');
+    const cls   = $('teacherClassSelect').value;
+    const sec   = $('teacherSectionSelect').value;
+    const monthDate = dateInput.value;
+    if (!monthDate) { alert('Pick a date in the month for register'); return; }
+    const [year, month] = monthDate.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const dates = Array.from({length: daysInMonth}, (_, i) => {
+      const d = i+1;
+      return `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     });
-    row += '</tr>';
-    tbl.innerHTML += row;
-  });
+    const roster = students.filter(s => s.cls===cls && s.sec===sec);
+    lastRegisterDates = dates;
+    lastRegisterStudents = roster;
 
-  wrapper.appendChild(tbl);
-  show(wrapper, $('changeRegister'), $('downloadRegister'), $('shareRegister'));
-  hide($('loadRegister'), $('saveRegister'));
-};
-
-$('changeRegister').onclick = () => {
-  console.debug('Register: changeRegister clicked');
-  document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
-    const code = td.textContent;
-    const select = document.createElement('select');
-    Object.keys(statusNames).forEach(k => {
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = k;
-      if (k === code) opt.selected = true;
-      select.appendChild(opt);
+    const wrapper = $('registerTableWrapper');
+    wrapper.innerHTML = '';
+    const tbl = document.createElement('table');
+    tbl.id = 'registerTable';
+    // header
+    tbl.innerHTML = `<tr><th>Adm#</th><th>Name</th>${dates.map(d=>`<th>${d.slice(8)}</th>`).join('')}</tr>`;
+    // rows
+    roster.forEach(s => {
+      let row = `<tr><td>${s.adm}</td><td>${s.name}</td>`;
+      dates.forEach(d => {
+        const code = attendanceData[d]?.[s.adm] || 'A';
+        row += `<td data-date="${d}" data-adm="${s.adm}">${code}</td>`;
+      });
+      row += `</tr>`;
+      tbl.innerHTML += row;
     });
-    td.innerHTML = '';
-    td.appendChild(select);
-  });
-  show($('saveRegister'));
-  hide($('changeRegister'));
-};
 
-$('saveRegister').onclick = async () => {
-  console.debug('Register: saveRegister clicked');
-  document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
-    const date = td.dataset.date;
-    const adm  = td.dataset.adm;
-    const code = td.querySelector('select').value;
-    attendanceData[date] = attendanceData[date] || {};
-    attendanceData[date][adm] = code;
-    td.textContent = code;
-  });
-  await save('attendanceData', attendanceData);
-  show($('changeRegister'));
-  hide($('saveRegister'));
-};
+    wrapper.appendChild(tbl);
+    show(wrapper, $('changeRegister'), $('downloadRegister'), $('shareRegister'));
+    hide($('loadRegister'), $('saveRegister'));
+  };
 
-$('downloadRegister').onclick = () => {
-  console.debug('Register: downloadRegister clicked');
-  const doc = new jspdf.jsPDF();
-  doc.setFontSize(18);
-  doc.text('Attendance Register', 14, 16);
-  doc.setFontSize(12);
-  doc.text($('setupText').textContent, 14, 24);
-  doc.autoTable({ startY: 32, html: '#registerTable' });
-  const filename = `register_${new Date().toISOString().slice(0,10)}.pdf`;
-  doc.save(filename);
-};
-
-$('shareRegister').onclick = () => {
-  console.debug('Register: shareRegister clicked');
-  if (!lastRegisterStudents.length) { alert('Load register first'); return; }
-  const header = `*Attendance Register*\nClass ${$('teacherClassSelect').value} Section ${$('teacherSectionSelect').value}`;
-  const lines = lastRegisterStudents.map(s => {
-    const entries = lastRegisterDates.map(d => {
-      const code = attendanceData[d]?.[s.adm] || 'A';
-      return `${d}: ${statusNames[code]}`;
+  $('changeRegister').onclick = () => {
+    console.debug('Register: changeRegister clicked');
+    document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
+      const code = td.textContent;
+      const select = document.createElement('select');
+      Object.keys(statusNames).forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = k;
+        if (k === code) opt.selected = true;
+        select.appendChild(opt);
+      });
+      td.innerHTML = '';
+      td.appendChild(select);
     });
-    return `*${s.name}* (Adm#: ${s.adm})\n` + entries.join(', ');
-  }).join('\n\n');
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-};
+    show($('saveRegister'));
+    hide($('changeRegister'));
+  };
+
+  $('saveRegister').onclick = async () => {
+    console.debug('Register: saveRegister clicked');
+    document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
+      const date = td.dataset.date;
+      const adm  = td.dataset.adm;
+      const code = td.querySelector('select').value;
+      attendanceData[date] = attendanceData[date] || {};
+      attendanceData[date][adm] = code;
+      td.textContent = code;
+    });
+    await save('attendanceData', attendanceData);
+    show($('changeRegister'));
+    hide($('saveRegister'));
+  };
+
+  $('downloadRegister').onclick = () => {
+    console.debug('Register: downloadRegister clicked');
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18); doc.text('Attendance Register',14,16);
+    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
+    doc.autoTable({ startY:32, html:'#registerTable' });
+    const filename = `register_${dateInput.value.slice(0,7)}.pdf`;
+    doc.save(filename);
+  };
+
+  $('shareRegister').onclick = () => {
+    console.debug('Register: shareRegister clicked');
+    if (!lastRegisterStudents.length) { alert('Load register first'); return; }
+    const header = `*Attendance Register*\nClass ${$('teacherClassSelect').value} Section ${$('teacherSectionSelect').value}`;
+    const lines = lastRegisterStudents.map(s => {
+      const entries = lastRegisterDates.map(d => {
+        const code = attendanceData[d]?.[s.adm] || 'A';
+        return `${d.slice(8)}: ${statusNames[code]}`;
+      });
+      return `*${s.name}* (Adm#: ${s.adm})\n` + entries.join(', ');
+    }).join('\n\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
+  };
+
   // --- 14. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js')
       .then(() => console.debug('App: service worker registered'))
       .catch(console.error);
   }
+
 }); // end DOMContentLoaded
