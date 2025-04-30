@@ -569,3 +569,109 @@ $('downloadAnalytics').onclick = () => {
   const now = new Date().toISOString().slice(0,10);
   doc.save(`analytics_${now}.pdf`);
 };
+  // --- 13. ATTENDANCE REGISTER ---
+let lastRegisterDates = [];
+let lastRegisterStudents = [];
+
+$('loadRegister').onclick = () => {
+  console.debug('Register: loadRegister clicked');
+  const cls   = $('teacherClassSelect').value;
+  const sec   = $('teacherSectionSelect').value;
+  const dates = Object.keys(attendanceData).sort();
+  const roster = students.filter(s => s.cls === cls && s.sec === sec);
+  lastRegisterDates   = dates;
+  lastRegisterStudents = roster;
+
+  const wrapper = $('registerTableWrapper');
+  wrapper.innerHTML = '';
+
+  const tbl = document.createElement('table');
+  tbl.id = 'registerTable';
+  // header row
+  tbl.innerHTML = `
+    <tr>
+      <th>Adm#</th><th>Name</th>
+      ${dates.map(d => `<th>${d}</th>`).join('')}
+    </tr>`;
+  // data rows
+  roster.forEach(s => {
+    let row = `<tr><td>${s.adm}</td><td>${s.name}</td>`;
+    dates.forEach(d => {
+      const code = attendanceData[d]?.[s.adm] || 'A';
+      row += `<td data-date="${d}" data-adm="${s.adm}">${code}</td>`;
+    });
+    row += '</tr>';
+    tbl.innerHTML += row;
+  });
+
+  wrapper.appendChild(tbl);
+  show(wrapper, $('changeRegister'), $('downloadRegister'), $('shareRegister'));
+  hide($('loadRegister'), $('saveRegister'));
+};
+
+$('changeRegister').onclick = () => {
+  console.debug('Register: changeRegister clicked');
+  document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
+    const code = td.textContent;
+    const select = document.createElement('select');
+    Object.keys(statusNames).forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = k;
+      if (k === code) opt.selected = true;
+      select.appendChild(opt);
+    });
+    td.innerHTML = '';
+    td.appendChild(select);
+  });
+  show($('saveRegister'));
+  hide($('changeRegister'));
+};
+
+$('saveRegister').onclick = async () => {
+  console.debug('Register: saveRegister clicked');
+  document.querySelectorAll('#registerTable td[data-date]').forEach(td => {
+    const date = td.dataset.date;
+    const adm  = td.dataset.adm;
+    const code = td.querySelector('select').value;
+    attendanceData[date] = attendanceData[date] || {};
+    attendanceData[date][adm] = code;
+    td.textContent = code;
+  });
+  await save('attendanceData', attendanceData);
+  show($('changeRegister'));
+  hide($('saveRegister'));
+};
+
+$('downloadRegister').onclick = () => {
+  console.debug('Register: downloadRegister clicked');
+  const doc = new jspdf.jsPDF();
+  doc.setFontSize(18);
+  doc.text('Attendance Register', 14, 16);
+  doc.setFontSize(12);
+  doc.text($('setupText').textContent, 14, 24);
+  doc.autoTable({ startY: 32, html: '#registerTable' });
+  const filename = `register_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+};
+
+$('shareRegister').onclick = () => {
+  console.debug('Register: shareRegister clicked');
+  if (!lastRegisterStudents.length) { alert('Load register first'); return; }
+  const header = `*Attendance Register*\nClass ${$('teacherClassSelect').value} Section ${$('teacherSectionSelect').value}`;
+  const lines = lastRegisterStudents.map(s => {
+    const entries = lastRegisterDates.map(d => {
+      const code = attendanceData[d]?.[s.adm] || 'A';
+      return `${d}: ${statusNames[code]}`;
+    });
+    return `*${s.name}* (Adm#: ${s.adm})\n` + entries.join(', ');
+  }).join('\n\n');
+  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
+};
+  // --- 14. Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.debug('App: service worker registered'))
+      .catch(console.error);
+  }
+}); // end DOMContentLoaded
