@@ -1,22 +1,45 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
+
+  <!-- PWA & Meta -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <meta name="application-name" content="Attendance Mgmt" />
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
-  <style>@media print { .no-print { display: none !important; } }</style>
+
+  <!-- Hide in PDF/print -->
+  <style>
+    @media print { .no-print { display: none !important; } }
+  </style>
 </head>
 <body>
-  <header><h1><i class="fas fa-school"></i> Attendance Management</h1></header>
+  <header>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+  </header>
 
   <!-- 1. SETUP -->
   <section id="teacher-setup">
@@ -35,7 +58,10 @@
       <button id="saveSetup"><i class="fas fa-save"></i> Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
-      <h3><i class="fas fa-school no-print"></i><span id="setupText"></span></h3>
+      <h3>
+        <i class="fas fa-school no-print"></i>
+        <span id="setupText"></span>
+      </h3>
       <button id="editSetup"><i class="fas fa-edit"></i> Edit</button>
     </div>
   </section>
@@ -43,15 +69,11 @@
   <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div class="row-inline">
-      <label>Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (PKR):<input id="fineLate" type="number"/></label>
-    </div>
-    <div class="row-inline">
-      <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
-      <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
-    </div>
-    <div class="row-inline">
+    <div class="row-inline" style="flex-wrap: wrap;">
+      <label style="flex: 1 1 48%;">Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
+      <label style="flex: 1 1 48%;">Fine/Late (PKR):<input id="fineLate" type="number"/></label>
+      <label style="flex: 1 1 48%;">Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
+      <label style="flex: 1 1 48%;">Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
     </div>
@@ -167,6 +189,7 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
+      <button id="generateFineReport"><i class="fas fa-file-pdf"></i> Fine Report</button>
       <button id="shareAnalytics"><i class="fas fa-share-alt"></i> Share</button>
       <button id="downloadAnalytics"><i class="fas fa-download"></i> Download</button>
     </div>
@@ -205,6 +228,7 @@
     </div>
   </div>
 
+  <!-- App JS -->
   <script src="app.js"></script>
 </body>
 </html>
