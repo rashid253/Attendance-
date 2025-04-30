@@ -50,10 +50,18 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursary</option><option>KG</option>
-        <option>Class One</option><option>Class Two</option><option>Class Three</option>
-        <option>Class Four</option><option>Class Five</option><option>Class Six</option>
-        <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
+        <option>Play Group</option>
+        <option>Nursary</option>
+        <option>KG</option>
+        <option>Class One</option>
+        <option>Class Two</option>
+        <option>Class Three</option>
+        <option>Class Four</option>
+        <option>Class Five</option>
+        <option>Class Six</option>
+        <option>Class Seven</option>
+        <option>Class Eight</option>
+        <option>Class Nine</option>
         <option>Class Ten</option>
       </select>
       <select id="teacherSectionSelect">
@@ -86,9 +94,18 @@
 
   <!-- 3. COUNTERS -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
-    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
-    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
   </section>
 
   <!-- 4. STUDENT REGISTRATION -->
@@ -104,12 +121,14 @@
     </div>
     <div class="table-wrapper">
       <table id="studentsTable">
-        <thead><tr>
-          <th><input type="checkbox" id="selectAllStudents"/></th>
-          <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-          <th>Contact</th><th>Occupation</th><th>Address</th>
-          <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
@@ -152,12 +171,15 @@
         <option value="student">Student</option>
       </select>
       <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option>
+        <option disabled selected>-- Section --</option>
+        <option>A</option><option>B</option><option>C</option>
       </select>
       <select id="analyticsType" disabled>
         <option disabled selected>-- Period --</option>
-        <option value="date">Date</option><option value="month">Month</option>
-        <option value="semester">Semester</option><option value="year">Year</option>
+        <option value="date">Date</option>
+        <option value="month">Month</option>
+        <option value="semester">Semester</option>
+        <option value="year">Year</option>
       </select>
       <input type="date" id="analyticsDate" class="hidden"/>
       <input type="month" id="analyticsMonth" class="hidden"/>
