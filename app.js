@@ -48,7 +48,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   formDiv.parentNode.appendChild(settingsCard);
   formDiv.parentNode.appendChild(editBtn);
 
-  // initialize
   $('fineAbsent').value     = fineRates.A;
   $('fineLate').value       = fineRates.Lt;
   $('fineLeave').value      = fineRates.L;
@@ -167,7 +166,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const out       = totalFine - paid;
       const totalDays = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
       const pct       = totalDays?(stats.P/totalDays)*100:0;
-      const status    = (out>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      const status    = (out>0||pct<eligibilityPct)?'Debarred':'Eligible'; 
       const tr=document.createElement('tr'); tr.dataset.index=i;
       tr.innerHTML=`
         <td><input type="checkbox" class="sel"></td>
@@ -420,6 +419,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   const barCtx  = $('barChart').getContext('2d');
   const pieCtx  = $('pieChart').getContext('2d');
   let barChart, pieChart, lastAnalyticsShare = '';
+  let stats = [];
+
+  function getAnalyticsInstructions() {
+    return `
+Codes & Fines:
+- P (Present): no fine  
+- A (Absent): PKR ${fineRates.A}  
+- Lt (Late): PKR ${fineRates.Lt}  
+- HD (Half-Day): PKR ${fineRates.HD}  
+- L (Leave): PKR ${fineRates.L}  
+
+Eligibility: ≥ ${eligibilityPct}% present
+`.trim();
+  }
 
   atg.onchange = () => {
     atype.disabled = false;
@@ -483,7 +496,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
     }
 
-    const stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
     Object.entries(attendanceData).forEach(([d, recs]) => {
       if (d < from || d > to) return;
       stats.forEach(st => {
@@ -549,20 +562,68 @@ window.addEventListener('DOMContentLoaded', async () => {
       data: { labels: ['Outstanding'], datasets: [{ data: [aggFine] }] }
     });
 
-    lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
+    lastAnalyticsShare = `Attendance Analytics Report (${from} to ${to})\n` +
       stats.map((st,i) => `${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`)
            .join('\n');
   };
 
-  $('shareAnalytics').onclick = () =>
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  // Download Fine Report PDF
+  $('generateFineReport').onclick = () => {
+    const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    doc.setFontSize(18);
+    doc.text('Attendance Analytics Report', 40, 40);
+    doc.setFontSize(12);
+    doc.text($('instructions').textContent, 40, 60);
+    doc.setFontSize(10);
+    doc.text(getAnalyticsInstructions(), 40, 80);
+    const fineRows = stats
+      .filter(st => st.outstanding > 0)
+      .map((st,i)=>[i+1, st.adm, st.name, `PKR ${st.outstanding}`, st.status]);
+    doc.autoTable({
+      head: [['#','Adm#','Name','Outstanding','Status']],
+      body: fineRows,
+      startY: 140,
+      styles: { fontSize: 9 }
+    });
+    doc.save(`attendance_analytics_fine_${Date.now()}.pdf`);
+  };
 
+  // Download Debarred Report PDF
+  $('generateDebarredReport').onclick = () => {
+    const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    doc.setFontSize(18);
+    doc.text('Attendance Analytics Report', 40, 40);
+    doc.setFontSize(12);
+    doc.text($('instructions').textContent, 40, 60);
+    doc.setFontSize(10);
+    doc.text(getAnalyticsInstructions(), 40, 80);
+    const debarRows = stats
+      .filter(st => st.status === 'Debarred')
+      .map((st,i)=>[i+1, st.adm, st.name, `${((st.P/st.total)*100).toFixed(1)}%`, `PKR ${st.outstanding}`]);
+    doc.autoTable({
+      head: [['#','Adm#','Name','% Present','Outstanding']],
+      body: debarRows,
+      startY: 140,
+      styles: { fontSize: 9 }
+    });
+    doc.save(`attendance_analytics_debarred_${Date.now()}.pdf`);
+  };
+
+  // Download Full Analytics PDF
   $('downloadAnalytics').onclick = () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Analytics Report',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#analyticsTable' });
-    const url = doc.output('bloburl'); window.open(url,'_blank'); doc.save('analytics_report.pdf');
+    const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+    doc.setFontSize(18);
+    doc.text('Attendance Analytics Report', 40, 40);
+    doc.setFontSize(12);
+    doc.text($('instructions').textContent, 40, 60);
+    doc.setFontSize(10);
+    doc.text(getAnalyticsInstructions(), 40, 80);
+    doc.autoTable({
+      startY: 140,
+      html: '#analyticsTable',
+      styles: { fontSize: 9 }
+    });
+    doc.save(`attendance_analytics_full_${Date.now()}.pdf`);
   };
 
   // --- 11. ATTENDANCE REGISTER ---
@@ -643,25 +704,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   dlReg.onclick = () => {
-    // Landscape & A4
     const doc = new jspdf.jsPDF({
       orientation: 'landscape',
       unit: 'pt',
       format: 'a4'
     });
     doc.setFontSize(18);
-    doc.text('Attendance Register', 14, 16);
+    doc.text('Attendance Register Report', 40, 40);
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
+    doc.text($('setupText').textContent + ' | ' + rm.value, 40, 60);
     doc.autoTable({
-      startY: 32,
+      startY: 80,
       html: '#registerTable',
-      tableWidth: 'auto',
-      styles: { fontSize: 10 }
+      styles: { fontSize: 8 },
+      margin: { left: 40, right: 40 }
     });
-    const url = doc.output('bloburl');
-    window.open(url, '_blank');
-    doc.save('attendance_register.pdf');
+    doc.save(`attendance_register_${rm.value}.pdf`);
   };
 
   shReg.onclick = () => {
