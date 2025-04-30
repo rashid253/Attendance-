@@ -1,7 +1,7 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
-  console.debug('DOMContentLoaded – initializing app');
+  console.debug('App initialized');
 
   // 0. Debug console via Eruda
   const erudaScript = document.createElement('script');
@@ -12,7 +12,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 1. idb-keyval helpers
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
   const { get, set } = window.idbKeyval;
-  const save = (k, v) => set(k, v).then(() => console.debug(`Saved ${k}`, v));
+  const save = (k, v) => set(k, v);
 
   // 2. State & defaults
   let students       = await get('students')        || [];
@@ -21,7 +21,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   let lastAdmNo      = await get('lastAdmissionNo') || 0;
   let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct = await get('eligibilityPct')  || 75;
-  console.debug('Initial state:', { students, fineRates, eligibilityPct });
 
   async function genAdmNo() {
     lastAdmNo++;
@@ -35,39 +34,36 @@ window.addEventListener('DOMContentLoaded', async () => {
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // 4. Financial Settings UI
-  const formDiv        = $('financialForm'),
-        saveSettingsBtn= $('saveSettings');
-  const settingsInputs = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct'].map($);
-  const settingsCard   = document.createElement('div');
-        settingsCard.id = 'settingsCard';
-        settingsCard.className = 'card hidden';
-  const editSettingsBtn = document.createElement('button');
-        editSettingsBtn.id = 'editSettings';
-        editSettingsBtn.className = 'btn no-print hidden';
-        editSettingsBtn.textContent = 'Edit Settings';
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettingsBtn);
+  const formSettings    = $('financialForm'),
+        btnSaveSettings = $('saveSettings'),
+        inputsSettings  = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct'].map($),
+        cardSettings    = document.createElement('div'),
+        btnEditSettings = document.createElement('button');
 
-  $('fineAbsent').value     = fineRates.A;
-  $('fineLate').value       = fineRates.Lt;
-  $('fineLeave').value      = fineRates.L;
-  $('fineHalfDay').value    = fineRates.HD;
-  $('eligibilityPct').value = eligibilityPct;
+  cardSettings.id = 'settingsCard';
+  cardSettings.className = 'card hidden';
+  btnEditSettings.id = 'editSettings';
+  btnEditSettings.className = 'btn no-print hidden';
+  btnEditSettings.textContent = 'Edit Settings';
+  formSettings.parentNode.append(cardSettings, btnEditSettings);
 
-  saveSettingsBtn.onclick = async () => {
-    console.debug('Saving settings');
+  inputsSettings[0].value = fineRates.A;
+  inputsSettings[1].value = fineRates.Lt;
+  inputsSettings[2].value = fineRates.L;
+  inputsSettings[3].value = fineRates.HD;
+  inputsSettings[4].value = eligibilityPct;
+
+  btnSaveSettings.onclick = async () => {
     fineRates = {
-      A : +$('fineAbsent').value     || 0,
-      Lt: +$('fineLate').value       || 0,
-      L : +$('fineLeave').value      || 0,
-      HD: +$('fineHalfDay').value    || 0,
+      A : +inputsSettings[0].value || 0,
+      Lt: +inputsSettings[1].value || 0,
+      L : +inputsSettings[2].value || 0,
+      HD: +inputsSettings[3].value || 0,
     };
-    eligibilityPct = +$('eligibilityPct').value || 0;
-    await Promise.all([
-      save('fineRates', fineRates),
-      save('eligibilityPct', eligibilityPct)
-    ]);
-    settingsCard.innerHTML = `
+    eligibilityPct = +inputsSettings[4].value || 0;
+    await save('fineRates', fineRates);
+    await save('eligibilityPct', eligibilityPct);
+    cardSettings.innerHTML = `
       <div class="card-content">
         <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
         <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
@@ -75,62 +71,58 @@ window.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
         <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
       </div>`;
-    hide(formDiv, ...settingsInputs, saveSettingsBtn);
-    show(settingsCard, editSettingsBtn);
+    hide(formSettings, btnSaveSettings, ...inputsSettings);
+    show(cardSettings, btnEditSettings);
   };
 
-  editSettingsBtn.onclick = () => {
-    console.debug('Editing settings');
-    hide(settingsCard, editSettingsBtn);
-    show(formDiv, ...settingsInputs, saveSettingsBtn);
+  btnEditSettings.onclick = () => {
+    hide(cardSettings, btnEditSettings);
+    show(formSettings, btnSaveSettings, ...inputsSettings);
   };
 
   // 5. Teacher & School Setup
-  const setupForm            = $('setupForm'),
-        setupDisplay         = $('setupDisplay'),
-        schoolNameInput      = $('schoolNameInput'),
-        teacherClassSelect   = $('teacherClassSelect'),
-        teacherSectionSelect = $('teacherSectionSelect'),
-        setupText            = $('setupText');
+  const formSetup     = $('setupForm'),
+        displaySetup  = $('setupDisplay'),
+        inpSchool     = $('schoolNameInput'),
+        selClass      = $('teacherClassSelect'),
+        selSection    = $('teacherSectionSelect'),
+        txtSetup      = $('setupText'),
+        btnSaveSetup  = $('saveSetup'),
+        btnEditSetup  = $('editSetup');
+
+  btnSaveSetup.onclick = async e => {
+    e.preventDefault();
+    if (!inpSchool.value.trim() || !selClass.value || !selSection.value) {
+      return alert('Complete setup');
+    }
+    await save('schoolName', inpSchool.value.trim());
+    await save('teacherClass', selClass.value);
+    await save('teacherSection', selSection.value);
+    loadSetup();
+  };
+
+  btnEditSetup.onclick = e => {
+    e.preventDefault();
+    show(formSetup);
+    hide(displaySetup);
+  };
 
   async function loadSetup() {
-    console.debug('Loading setup');
     const [sc, cl, sec] = await Promise.all([
       get('schoolName'), get('teacherClass'), get('teacherSection')
     ]);
     if (sc && cl && sec) {
-      schoolNameInput.value        = sc;
-      teacherClassSelect.value     = cl;
-      teacherSectionSelect.value   = sec;
-      setupText.textContent        = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide(setupForm);
-      show(setupDisplay);
-      renderStudents(); updateCounters(); resetViews();
+      inpSchool.value   = sc;
+      selClass.value    = cl;
+      selSection.value  = sec;
+      txtSetup.textContent = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
+      hide(formSetup);
+      show(displaySetup);
+      renderStudents();
+      updateCounters();
+      resetViews();
     }
   }
-
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    console.debug('Saving setup');
-    const sc  = schoolNameInput.value.trim(),
-          cl  = teacherClassSelect.value,
-          sec = teacherSectionSelect.value;
-    if (!sc || !cl || !sec) { alert('Complete setup'); return; }
-    await Promise.all([
-      save('schoolName', sc),
-      save('teacherClass', cl),
-      save('teacherSection', sec)
-    ]);
-    await loadSetup();
-  };
-
-  $('editSetup').onclick = e => {
-    e.preventDefault();
-    console.debug('Editing setup');
-    show(setupForm);
-    hide(setupDisplay);
-  };
-
   await loadSetup();
 
   // 6. Counters & View Management
@@ -147,16 +139,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updateCounters() {
-    const cl  = teacherClassSelect.value,
-          sec = teacherSectionSelect.value;
-    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
-    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
+    const cl = selClass.value, sec = selSection.value;
+    $('sectionCount').dataset.target = students.filter(s => s.cls === cl && s.sec === sec).length;
+    $('classCount').dataset.target   = students.filter(s => s.cls === cl).length;
     $('schoolCount').dataset.target  = students.length;
     animateCounters();
   }
 
   function resetViews() {
-    console.debug('Resetting views');
     hide(
       $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
       $('attendanceSummary'), $('downloadAttendancePDF'), $('shareAttendanceSummary'),
@@ -167,162 +157,187 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('loadRegister'));
   }
 
-  teacherClassSelect.onchange = () => { renderStudents(); updateCounters(); resetViews(); };
-  teacherSectionSelect.onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+  selClass.onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+  selSection.onchange = () => { renderStudents(); updateCounters(); resetViews(); };
 
-  // 7. Student Registration & Display
+  // 7. Student Registration & Actions
+  const tbodyStudents    = $('studentsBody'),
+        cbSelectAll      = $('selectAllStudents'),
+        btnEditSelected  = $('editSelected'),
+        btnDeleteSelected= $('deleteSelected');
+
   function renderStudents() {
-    console.debug('Rendering students');
-    const cl   = teacherClassSelect.value,
-          sec  = teacherSectionSelect.value,
-          tbody= $('studentsBody');
-    tbody.innerHTML = '';
+    tbodyStudents.innerHTML = '';
     let idx = 0;
-    students.forEach((s,i) => {
-      if (s.cls!==cl||s.sec!==sec) return;
+    const cl = selClass.value, sec = selSection.value;
+    students.forEach((s, i) => {
+      if (s.cls !== cl || s.sec !== sec) return;
       idx++;
-      const stats = { P:0,A:0,Lt:0,HD:0,L:0 };
-      Object.values(attendanceData).forEach(r=>stats[r[s.adm]||'A']++);
-      const fineTotal   = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paidTotal   = (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
+      // compute fines & status
+      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      Object.values(attendanceData).forEach(r => stats[r[s.adm] || 'A']++);
+      const fineTotal = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paidTotal = (paymentsData[s.adm] || []).reduce((sum,p) => sum + p.amount, 0);
       const outstanding = fineTotal - paidTotal;
-      const totalDays   = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
-      const pct         = totalDays ? (stats.P/totalDays)*100 : 0;
-      const status      = (outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      const totalDays = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+      const pct = totalDays ? (stats.P/totalDays)*100 : 0;
+      const status = (outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
+
       const tr = document.createElement('tr');
       tr.dataset.index = i;
       tr.innerHTML = `
         <td><input type="checkbox" class="sel"></td>
-        <td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>
-        <td>${s.parent}</td><td>${s.contact}</td>
-        <td>${s.occupation}</td><td>${s.address}</td>
-        <td>PKR ${outstanding}</td><td>${status}</td>
-        <td><button class="add-payment-btn btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>`;
-      tbody.appendChild(tr);
+        <td>${idx}</td>
+        <td>${s.name}</td>
+        <td>${s.adm}</td>
+        <td>${s.parent}</td>
+        <td>${s.contact}</td>
+        <td>${s.occupation}</td>
+        <td>${s.address}</td>
+        <td>PKR ${outstanding}</td>
+        <td>${status}</td>`;
+      tbodyStudents.appendChild(tr);
     });
-    $('selectAllStudents').checked = false;
-    toggleButtons();
-    document.querySelectorAll('.add-payment-btn').forEach(b=>b.onclick=()=>openPaymentModal(b.dataset.adm));
+    cbSelectAll.checked = false;
+    btnEditSelected.disabled = true;
+    btnDeleteSelected.disabled = true;
   }
 
-  function toggleButtons() {
-    const any = !!document.querySelector('.sel:checked');
-    $('editSelected').disabled = !any;
-    $('deleteSelected').disabled = !any;
-  }
-
-  $('studentsBody').addEventListener('change', e => {
-    if (e.target.classList.contains('sel')) toggleButtons();
+  tbodyStudents.addEventListener('change', e => {
+    if (e.target.classList.contains('sel')) {
+      const any = !!tbodyStudents.querySelector('.sel:checked');
+      btnEditSelected.disabled   = !any;
+      btnDeleteSelected.disabled = !any;
+    }
   });
 
-  $('selectAllStudents').onclick = () => {
-    document.querySelectorAll('.sel').forEach(cb=>cb.checked=$('selectAllStudents').checked);
-    toggleButtons();
+  cbSelectAll.onclick = () => {
+    tbodyStudents.querySelectorAll('.sel').forEach(cb => cb.checked = cbSelectAll.checked);
+    const any = cbSelectAll.checked;
+    btnEditSelected.disabled   = !any;
+    btnDeleteSelected.disabled = !any;
   };
 
-  $('addStudent').onclick = async e => {
-    e.preventDefault();
-    console.debug('Adding student');
-    const name       = $('studentName').value.trim(),
-          parent     = $('parentName').value.trim(),
-          contact    = $('parentContact').value.trim(),
+  $('addStudent').onclick = async () => {
+    const name = $('studentName').value.trim(),
+          parent = $('parentName').value.trim(),
+          contact = $('parentContact').value.trim(),
           occupation = $('parentOccupation').value.trim(),
-          address    = $('parentAddress').value.trim(),
-          cl         = teacherClassSelect.value,
-          sec        = teacherSectionSelect.value;
-    if (!name||!parent||!contact||!occupation||!address) { alert('All fields required'); return; }
-    if (!/^\d{7,15}$/.test(contact)) { alert('Contact must be 7–15 digits'); return; }
+          address = $('parentAddress').value.trim();
+    if (![name,parent,contact,occupation,address].every(v=>v)) {
+      return alert('All fields required');
+    }
+    if (!/^\d{7,15}$/.test(contact)) {
+      return alert('Contact must be 7–15 digits');
+    }
     const adm = await genAdmNo();
-    students.push({ name,adm,parent,contact,occupation,address,cls:cl,sec });
+    students.push({ name, adm, parent, contact, occupation, address, cls: selClass.value, sec: selSection.value });
     await save('students', students);
     renderStudents(); updateCounters(); resetViews();
-    ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id=>$(id).value='');
+  };
+
+  btnDeleteSelected.onclick = async () => {
+    const toDelete = [...tbodyStudents.querySelectorAll('.sel:checked')]
+      .map(cb => +cb.closest('tr').dataset.index);
+    students = students.filter((_,i) => !toDelete.includes(i));
+    await save('students', students);
+    renderStudents(); updateCounters(); resetViews();
+  };
+
+  btnEditSelected.onclick = () => {
+    alert('Inline edit UI not implemented—click a row and repopulate the form manually.');
   };
 
   // 8. Payment Modal
   function openPaymentModal(adm) {
-    console.debug(`Opening payment modal for ${adm}`);
     $('payAdm').textContent = adm;
     $('paymentAmount').value = '';
     show($('paymentModal'));
   }
-  $('savePayment').onclick = async ()=>{
-    console.debug('Saving payment');
+  $('studentsBody').addEventListener('click', e => {
+    if (e.target.closest('tr') && e.target.matches('.sel') === false) return;
+  });
+  // (Bind your .add-payment-btn logic inside renderStudents if needed)
+
+  $('savePayment').onclick = async () => {
     const adm = $('payAdm').textContent;
-    const amt = +$('paymentAmount').value||0;
-    paymentsData[adm]=(paymentsData[adm]||[]);
-    paymentsData[adm].push({ date:new Date().toISOString().split('T')[0], amount:amt });
+    const amt = +$('paymentAmount').value || 0;
+    paymentsData[adm] = paymentsData[adm] || [];
+    paymentsData[adm].push({ date: new Date().toISOString().split('T')[0], amount: amt });
     await save('paymentsData', paymentsData);
     hide($('paymentModal'));
     renderStudents();
   };
-  $('cancelPayment').onclick = ()=>hide($('paymentModal'));
+  $('cancelPayment').onclick = () => hide($('paymentModal'));
 
   // 9. Mark Attendance
-  console.debug('Initializing attendance');
-  const dateInput         = $('dateInput'),
-        loadAttBtn        = $('loadAttendance'),
-        saveAttBtn        = $('saveAttendance'),
-        resetAttBtn       = $('resetAttendance'),
-        attBody           = $('attendanceBody'),
-        attSummary        = $('attendanceSummary'),
-        downloadAttBtn    = $('downloadAttendancePDF'),
-        shareAttBtn       = $('shareAttendanceSummary');
+  const dateInput       = $('dateInput'),
+        btnLoadAtt      = $('loadAttendance'),
+        btnSaveAtt      = $('saveAttendance'),
+        btnResetAtt     = $('resetAttendance'),
+        attBody         = $('attendanceBody'),
+        attSummary      = $('attendanceSummary'),
+        btnDownloadAtt  = $('downloadAttendancePDF'),
+        btnShareAtt     = $('shareAttendanceSummary');
 
-  loadAttBtn.onclick = ()=>{
+  btnLoadAtt.onclick = () => {
     const date = dateInput.value;
-    if(!date){ alert('Select a date'); return; }
-    console.debug('Loading attendance for', date);
-    attBody.innerHTML='';
-    const table = document.createElement('table'), thead=document.createElement('thead'), tbody=document.createElement('tbody');
+    if (!date) return alert('Select a date');
+    attBody.innerHTML = '';
+    const table = document.createElement('table'),
+          thead = document.createElement('thead'),
+          tbody = document.createElement('tbody');
     thead.innerHTML = '<tr><th>#</th><th>Name</th><th>Adm#</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th></tr>';
-    table.appendChild(thead);
-    const cl=teacherClassSelect.value, sec=teacherSectionSelect.value;
-    let idx=0;
-    students.forEach(s=>{
-      if(s.cls!==cl||s.sec!==sec) return;
-      idx++;
-      const row=document.createElement('tr');
-      row.innerHTML=`
-        <td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>
-        <td><button data-status="P" class="att-btn">P</button></td>
-        <td><button data-status="A" class="att-btn">A</button></td>
-        <td><button data-status="Lt" class="att-btn">Lt</button></td>
-        <td><button data-status="HD" class="att-btn">HD</button></td>
-        <td><button data-status="L" class="att-btn">L</button></td>`;
-      const prev = attendanceData[date]?.[s.adm];
-      if(prev){ row.querySelector(`button[data-status="${prev}"]`)?.classList.add('selected'); }
-      row.querySelectorAll('.att-btn').forEach(btn=>btn.onclick=()=>{
-        row.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('selected'));
-        btn.classList.add('selected');
+    table.append(thead, tbody);
+    let idx = 0;
+    students.filter(s=>s.cls===selClass.value&&s.sec===selSection.value)
+      .forEach(s => {
+        idx++;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${idx}</td>
+          <td>${s.name}</td>
+          <td>${s.adm}</td>
+          <td><button data-status="P" class="att-btn">P</button></td>
+          <td><button data-status="A" class="att-btn">A</button></td>
+          <td><button data-status="Lt" class="att-btn">Lt</button></td>
+          <td><button data-status="HD" class="att-btn">HD</button></td>
+          <td><button data-status="L" class="att-btn">L</button></td>`;
+        const prev = attendanceData[date]?.[s.adm];
+        if (prev) row.querySelector(`.att-btn[data-status="${prev}"]`).classList.add('selected');
+        row.querySelectorAll('.att-btn').forEach(btn => {
+          btn.onclick = () => {
+            row.querySelectorAll('.att-btn').forEach(b=>b.classList.remove('selected'));
+            btn.classList.add('selected');
+          };
+        });
+        tbody.appendChild(row);
       });
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody); attBody.appendChild(table);
-    show(saveAttBtn, resetAttBtn); hide(attSummary, downloadAttBtn, shareAttBtn);
+    attBody.appendChild(table);
+    show(btnSaveAtt, btnResetAtt);
+    hide(attSummary, btnDownloadAtt, btnShareAtt);
   };
 
-  saveAttBtn.onclick=async()=>{
-    const date=dateInput.value;
-    attendanceData[date]={};
-    attBody.querySelectorAll('tbody tr').forEach(row=>{
-      const adm=row.children[2].textContent;
-      const sel=row.querySelector('.att-btn.selected');
-      attendanceData[date][adm]=sel?.dataset.status||'A';
+  btnSaveAtt.onclick = async () => {
+    const date = dateInput.value;
+    attendanceData[date] = {};
+    attBody.querySelectorAll('tbody tr').forEach(row => {
+      const adm = row.children[2].textContent;
+      const sel = row.querySelector('.att-btn.selected');
+      attendanceData[date][adm] = sel?.dataset.status || 'A';
     });
     await save('attendanceData', attendanceData);
-    console.debug('Saved attendance for', date);
     renderAttendanceSummary(date);
-    show(attSummary, downloadAttBtn, shareAttBtn);
+    show(attSummary, btnDownloadAtt, btnShareAtt);
   };
 
-  resetAttBtn.onclick = ()=>loadAttBtn.click();
+  btnResetAtt.onclick = () => btnLoadAtt.click();
 
-  function renderAttendanceSummary(date){
-    const recs=attendanceData[date]||{};
-    const stats={P:0,A:0,Lt:0,HD:0,L:0};
-    Object.values(recs).forEach(s=>stats[s]++);
-    attSummary.innerHTML=`
+  function renderAttendanceSummary(date) {
+    const recs = attendanceData[date] || {};
+    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+    Object.values(recs).forEach(v => stats[v]++);
+    attSummary.innerHTML = `
       <p><strong>Summary for ${date}</strong></p>
       <p>Present: ${stats.P}</p>
       <p>Absent: ${stats.A}</p>
@@ -331,273 +346,281 @@ window.addEventListener('DOMContentLoaded', async () => {
       <p>Leave: ${stats.L}</p>`;
   }
 
-  downloadAttBtn.onclick=()=>{
-    const date=dateInput.value;
-    const doc=new jspdf.jsPDF();
-    doc.text(`Attendance – ${date}`,20,20);
-    const body=Object.entries(attendanceData[date]||{}).map(([adm,st])=>[adm,st]);
-    doc.autoTable({head:[['Adm#','Status']],body});
+  btnDownloadAtt.onclick = () => {
+    const date = dateInput.value;
+    const doc = new jspdf.jsPDF();
+    doc.text(`Attendance – ${date}`, 20, 20);
+    const body = Object.entries(attendanceData[date]||{}).map(([adm,st]) => [adm, st]);
+    doc.autoTable({ head:[['Adm#','Status']], body });
     doc.save(`attendance-${date}.pdf`);
   };
 
-  shareAttBtn.onclick=()=>{
-    const date=dateInput.value; let txt=`Attendance for ${date}\n`;
-    Object.entries(attendanceData[date]||{}).forEach(([adm,st])=>txt+=`${adm}: ${st}\n`);
-    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`);
+  btnShareAtt.onclick = () => {
+    const date = dateInput.value;
+    let txt = `Attendance for ${date}\n`;
+    Object.entries(attendanceData[date]||{}).forEach(([adm,st]) => { txt += `${adm}: ${st}\n`; });
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
   };
 
   // 10. Analytics & PDF Download
-  console.debug('Initializing analytics');
-  const atg              = $('analyticsTarget'),
-        asel             = $('analyticsSectionSelect'),
-        atype            = $('analyticsType'),
-        adate            = $('analyticsDate'),
-        amonth           = $('analyticsMonth'),
-        sems             = $('semesterStart'),
-        seme             = $('semesterEnd'),
-        ayear            = $('yearStart'),
-        asearch          = $('analyticsSearch'),
-        loadA            = $('loadAnalytics'),
-        resetA           = $('resetAnalytics'),
-        instr            = $('instructions'),
-        acont            = $('analyticsContainer'),
-        aTableHeadRow    = $('analyticsTable').querySelector('thead tr'),
-        aTableBody       = $('analyticsBody'),
-        graphs           = $('graphs'),
-        barCtx           = $('barChart').getContext('2d'),
-        pieCtx           = $('pieChart').getContext('2d'),
-        shareAnalyticsBtn= $('shareAnalytics'),
-        downloadAnalyticsBtn=$('downloadAnalytics');
-  let stats=[], analyticsFrom='', analyticsTo='', barChart, pieChart;
+  const atg             = $('analyticsTarget'),
+        asel            = $('analyticsSectionSelect'),
+        atype           = $('analyticsType'),
+        adate           = $('analyticsDate'),
+        amonth          = $('analyticsMonth'),
+        sems            = $('semesterStart'),
+        seme            = $('semesterEnd'),
+        ayear           = $('yearStart'),
+        asearch         = $('analyticsSearch'),
+        btnLoadA        = $('loadAnalytics'),
+        btnResetA       = $('resetAnalytics'),
+        instr           = $('instructions'),
+        contAnalytics   = $('analyticsContainer'),
+        tblHeadRow      = $('analyticsTable').querySelector('thead tr'),
+        tblBody         = $('analyticsBody'),
+        graphs          = $('graphs'),
+        barCtx          = $('barChart').getContext('2d'),
+        pieCtx          = $('pieChart').getContext('2d'),
+        btnShareA       = $('shareAnalytics'),
+        btnDownloadA    = $('downloadAnalytics');
 
-  atg.onchange = ()=>{
-    atype.disabled=false;
-    [asel,asearch].forEach(el=>el.classList.add('hidden'));
-    [instr,acont,graphs,shareAnalyticsBtn,downloadAnalyticsBtn,resetA].forEach(el=>el.classList.add('hidden'));
-    if(atg.value==='section') show(asel);
-    if(atg.value==='student') show(asearch);
+  let stats = [], analyticsFrom = '', analyticsTo = '', barChart, pieChart;
+
+  atg.onchange = () => {
+    atype.disabled = false;
+    [asel, asearch].forEach(el => el.classList.add('hidden'));
+    [instr, contAnalytics, graphs, btnShareA, btnDownloadA, btnResetA].forEach(el => el.classList.add('hidden'));
+    if (atg.value === 'section') show(asel);
+    if (atg.value === 'student') show(asearch);
   };
 
-  atype.onchange = ()=>{
-    [adate,amonth,sems,seme,ayear].forEach(el=>el.classList.add('hidden'));
-    [instr,acont,graphs,shareAnalyticsBtn,downloadAnalyticsBtn,resetA].forEach(el=>el.classList.add('hidden'));
-    resetA.classList.remove('hidden');
-    if(atype.value==='date') show(adate);
-    if(atype.value==='month') show(amonth);
-    if(atype.value==='semester') show(sems,seme);
-    if(atype.value==='year') show(ayear);
+  atype.onchange = () => {
+    [adate, amonth, sems, seme, ayear].forEach(el => el.classList.add('hidden'));
+    [instr, contAnalytics, graphs, btnShareA, btnDownloadA, btnResetA].forEach(el => el.classList.add('hidden'));
+    btnResetA.classList.remove('hidden');
+    if (atype.value === 'date') show(adate);
+    if (atype.value === 'month') show(amonth);
+    if (atype.value === 'semester') show(sems, seme);
+    if (atype.value === 'year') show(ayear);
   };
 
-  resetA.onclick=e=>{
+  btnResetA.onclick = e => {
     e.preventDefault();
-    atype.value='';
-    [adate,amonth,sems,seme,ayear,instr,acont,graphs,shareAnalyticsBtn,downloadAnalyticsBtn,resetA]
-      .forEach(el=>el.classList.add('hidden'));
+    atype.value = '';
+    [adate, amonth, sems, seme, ayear, instr, contAnalytics, graphs, btnShareA, btnDownloadA, btnResetA]
+      .forEach(el => el.classList.add('hidden'));
   };
 
-  loadA.onclick = ()=>{
-    if(!atype.value){ alert('Select a period'); return; }
-    if(atg.value==='section'&&!asel.value){ alert('Select a section'); return; }
-    if(atg.value==='student'&&!asearch.value.trim()){ alert('Enter Adm# or Name'); return; }
-    // date range
-    let from, to;
-    if(atype.value==='date'){ from=to=adate.value; }
-    else if(atype.value==='month'){
-      const [y,m]=amonth.value.split('-').map(Number);
-      from=`${amonth.value}-01`; to=`${amonth.value}-${new Date(y,m,0).getDate()}`;
-    } else if(atype.value==='semester'){
-      const [sy,sm]=sems.value.split('-').map(Number);
-      const [ey,em]=seme.value.split('-').map(Number);
-      from=`${sems.value}-01`; to=`${seme.value}-${new Date(ey,em,0).getDate()}`;
+  btnLoadA.onclick = () => {
+    if (!atype.value)      return alert('Select a period');
+    if (atg.value==='section' && !asel.value) return alert('Select a section');
+    if (atg.value==='student' && !asearch.value.trim()) return alert('Enter Adm# or Name');
+
+    // determine date range
+    if (atype.value === 'date') {
+      analyticsFrom = analyticsTo = adate.value;
+    } else if (atype.value === 'month') {
+      const [y,m] = amonth.value.split('-').map(Number);
+      analyticsFrom = `${amonth.value}-01`;
+      analyticsTo   = `${amonth.value}-${new Date(y,m,0).getDate()}`;
+    } else if (atype.value === 'semester') {
+      const [sy,sm] = sems.value.split('-').map(Number);
+      const [ey,em] = seme.value.split('-').map(Number);
+      analyticsFrom = `${sems.value}-01`;
+      analyticsTo   = `${seme.value}-${new Date(ey,em,0).getDate()}`;
     } else {
-      from=`${ayear.value}-01-01`; to=`${ayear.value}-12-31`;
+      analyticsFrom = `${ayear.value}-01-01`;
+      analyticsTo   = `${ayear.value}-12-31`;
     }
-    analyticsFrom=from; analyticsTo=to;
+
     // filter pool
-    let pool = students.filter(s=>s.cls===teacherClassSelect.value&&s.sec===teacherSectionSelect.value);
-    if(atg.value==='section') pool=pool.filter(s=>s.sec===asel.value);
-    if(atg.value==='student'){
-      const q=asearch.value.trim().toLowerCase();
-      pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));
+    let pool = students.filter(s=>s.cls===selClass.value && s.sec===selSection.value);
+    if (atg.value==='section') pool = pool.filter(s=>s.sec===asel.value);
+    if (atg.value==='student') {
+      const q = asearch.value.trim().toLowerCase();
+      pool = pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));
     }
+
+    // build stats
     stats = pool.map(s=>({ adm:s.adm, name:s.name, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
-    for(const [d,recs] of Object.entries(attendanceData)){
-      if(d<from||d>to) continue;
-      stats.forEach(st=>{
-        const code=recs[st.adm]||'A';
+    for (const [d,recs] of Object.entries(attendanceData)) {
+      if (d < analyticsFrom || d > analyticsTo) continue;
+      stats.forEach(st => {
+        const code = recs[st.adm] || 'A';
         st[code]++; st.total++;
       });
     }
-    stats.forEach(st=>{
-      const fineTotal=st.A*fineRates.A+st.Lt*fineRates.Lt+st.L*fineRates.L+st.HD*fineRates.HD;
-      const paidTotal=(paymentsData[st.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
-      st.outstanding=fineTotal-paidTotal;
-      const pct=st.total?(st.P/st.total)*100:0;
-      st.status=(st.outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
+    stats.forEach(st => {
+      const ft = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
+      const pt = (paymentsData[st.adm] || []).reduce((a,p)=>a+p.amount,0);
+      st.outstanding = ft - pt;
+      const pct = st.total ? (st.P/st.total)*100 : 0;
+      st.status = (st.outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
     });
+
     // render table
-    aTableHeadRow.innerHTML=`
-      <th>#</th><th>Adm#</th><th>Name</th>
-      <th>% Present</th><th>Outstanding</th><th>Status</th>
-    `;
-    aTableBody.innerHTML='';
-    stats.forEach((st,i)=>{
-      const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';
-      const tr=document.createElement('tr');
-      tr.innerHTML=`
+    tblHeadRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>
+                            <th>% Present</th><th>Outstanding</th><th>Status</th>`;
+    tblBody.innerHTML = '';
+    stats.forEach((st,i) => {
+      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
         <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td>
-        <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>
-      `;
-      aTableBody.appendChild(tr);
+        <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>`;
+      tblBody.appendChild(tr);
     });
-    show(instr,acont,graphs,shareAnalyticsBtn,downloadAnalyticsBtn);
-    if(barChart) barChart.destroy();
-    if(pieChart) pieChart.destroy();
-    barChart=new Chart(barCtx,{
+
+    show(instr, contAnalytics, graphs, btnShareA, btnDownloadA);
+    if (window.barChart) window.barChart.destroy();
+    if (window.pieChart) window.pieChart.destroy();
+
+    // bar chart
+    window.barChart = new Chart(barCtx, {
       type:'bar',
-      data:{ labels:stats.map(s=>s.adm), datasets:[{ label:'% Present', data:stats.map(s=>(s.total?(s.P/s.total)*100:0)) }] },
+      data:{ labels: stats.map(s=>s.adm),
+             datasets:[{ label:'% Present', data: stats.map(s=>s.total?(s.P/s.total)*100:0) }] },
       options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
     });
-    const first=stats[0]||{P:0,A:0,Lt:0,HD:0,L:0};
-    pieChart=new Chart(pieCtx,{
+    // pie chart for first record
+    const first = stats[0] || { P:0,A:0,Lt:0,HD:0,L:0 };
+    window.pieChart = new Chart(pieCtx, {
       type:'pie',
-      data:{ labels:['Present','Absent','Late','Half-day','Leave'], datasets:[{ data:[first.P,first.A,first.Lt,first.HD,first.L] }] },
+      data:{ labels:['P','A','Lt','HD','L'], datasets:[{ data:[first.P,first.A,first.Lt,first.HD,first.L] }] },
       options:{ responsive:true }
     });
   };
 
-  shareAnalyticsBtn.onclick=()=>{
-    let txt=`Analytics (${analyticsFrom} to ${analyticsTo})\n`;
-    stats.forEach((st,i)=>{
-      const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';
-      txt+=`${i+1}. ${st.adm} ${st.name}: ${pct}% / PKR ${st.outstanding}\n`;
+  btnShareA.onclick = () => {
+    let txt = `Analytics (${analyticsFrom} to ${analyticsTo})\n`;
+    stats.forEach((st,i) => {
+      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
+      txt += `${i+1}. ${st.adm} ${st.name}: ${pct}% / PKR ${st.outstanding}\n`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
   };
 
-  downloadAnalyticsBtn.onclick=()=>{
-    const doc=new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-    const margin=40, rowH=20;
-    let y=margin;
-    doc.setFontSize(16);
-    doc.text(`${setupText.textContent} – Analytics Report`, margin, y); y+=rowH;
-    doc.setFontSize(12);
-    doc.text(`Period: ${analyticsFrom} – ${analyticsTo}`, margin, y); y+=rowH;
+  btnDownloadA.onclick = () => {
+    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+    doc.text(`${txtSetup.textContent} – Analytics`, 40, 30);
+    doc.text(`Period: ${analyticsFrom} – ${analyticsTo}`, 40, 50);
     doc.autoTable({
-      startY:y,
+      startY: 70,
       head:[['Adm#','Name','% Present','Outstanding','Status']],
-      body:stats.map(st=>[
-        st.adm,
-        st.name,
+      body: stats.map(st => [
+        st.adm, st.name,
         st.total?((st.P/st.total)*100).toFixed(1)+'%':'0.0%',
-        'PKR '+st.outstanding,
-        st.status
+        'PKR '+st.outstanding, st.status
       ]),
-      styles:{ fontSize:10 },
-      margin:{ left:margin, right:margin }
+      styles:{ fontSize:10 }, margin:{ left:40, right:40 }
     });
     doc.save(`analytics_${analyticsFrom}_to_${analyticsTo}.pdf`);
   };
 
   // 11. Attendance Register
-  console.debug('Initializing attendance register');
-  const registerMonth       = $('registerMonth'),
-        loadRegisterBtn     = $('loadRegister'),
-        changeRegisterBtn   = $('changeRegister'),
-        saveRegisterBtn     = $('saveRegister'),
-        downloadRegisterBtn = $('downloadRegister'),
-        shareRegisterBtn    = $('shareRegister'),
-        registerHeader      = $('registerHeader'),
-        registerBody        = $('registerBody');
+  const inpRegisterMonth  = $('registerMonth'),
+        btnLoadRegister   = $('loadRegister'),
+        btnChangeRegister = $('changeRegister'),
+        btnSaveRegister   = $('saveRegister'),
+        btnDownloadRegister = $('downloadRegister'),
+        btnShareRegister  = $('shareRegister'),
+        hdrRegister       = $('registerHeader'),
+        bodyRegister      = $('registerBody');
 
-  loadRegisterBtn.onclick = ()=>{
-    const ym = registerMonth.value;
-    if(!ym){ alert('Select month'); return; }
-    console.debug('Loading register for', ym);
-    registerHeader.innerHTML='<th>#</th><th>Name</th><th>Adm#</th>';
-    registerBody.innerHTML='';
-    const [y,m]=ym.split('-').map(Number);
-    const days=new Date(y,m,0).getDate();
-    for(let d=1;d<=days;d++){
-      const th=document.createElement('th'); th.textContent=d; registerHeader.appendChild(th);
+  btnLoadRegister.onclick = () => {
+    const ym = inpRegisterMonth.value;
+    if (!ym) return alert('Select month');
+    hdrRegister.innerHTML = '<th>#</th><th>Name</th><th>Adm#</th>';
+    bodyRegister.innerHTML = '';
+    const [y,m] = ym.split('-').map(Number);
+    const days = new Date(y,m,0).getDate();
+    for (let d=1; d<=days; d++) {
+      const th = document.createElement('th');
+      th.textContent = d;
+      hdrRegister.appendChild(th);
     }
     let idx=0;
-    students.forEach(s=>{
-      if(s.cls!==teacherClassSelect.value||s.sec!==teacherSectionSelect.value) return;
-      idx++;
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>`;
-      for(let d=1;d<=days;d++){
-        const dateKey=`${ym}-${String(d).padStart(2,'0')}`;
-        const cell=document.createElement('td');
-        const btn=document.createElement('button'); btn.className='att-btn';
-        const prev=attendanceData[dateKey]?.[s.adm];
-        btn.textContent=prev||'A'; if(prev) btn.classList.add('selected');
-        btn.onclick=()=>{
-          const cycle=['P','A','Lt','HD','L'];
-          const cur=btn.textContent;
-          const nxt=cycle[(cycle.indexOf(cur)+1)%cycle.length];
-          btn.textContent=nxt; btn.classList.toggle('selected',nxt!=='A');
-        };
-        cell.appendChild(btn); tr.appendChild(cell);
-      }
-      registerBody.appendChild(tr);
-    });
-    show(changeRegisterBtn, saveRegisterBtn);
-    hide(loadRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
+    students.filter(s=>s.cls===selClass.value&&s.sec===selSection.value)
+      .forEach(s=>{
+        idx++;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>`;
+        for (let d=1; d<=days; d++){
+          const dateKey = `${ym}-${String(d).padStart(2,'0')}`;
+          const btn = document.createElement('button');
+          btn.className = 'att-btn';
+          const prev = attendanceData[dateKey]?.[s.adm];
+          btn.textContent = prev || 'A';
+          if (prev && prev!=='A') btn.classList.add('selected');
+          btn.onclick = () => {
+            const cycle = ['P','A','Lt','HD','L'];
+            const cur = btn.textContent;
+            const nxt = cycle[(cycle.indexOf(cur)+1)%cycle.length];
+            btn.textContent = nxt;
+            btn.classList.toggle('selected', nxt!=='A');
+          };
+          const td = document.createElement('td');
+          td.appendChild(btn);
+          tr.appendChild(td);
+        }
+        bodyRegister.appendChild(tr);
+      });
+    show(btnChangeRegister, btnSaveRegister);
+    hide(btnLoadRegister, btnDownloadRegister, btnShareRegister);
   };
 
-  changeRegisterBtn.onclick=()=>{
-    registerHeader.innerHTML=''; registerBody.innerHTML='';
-    hide(changeRegisterBtn, saveRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
-    show(loadRegisterBtn);
+  btnChangeRegister.onclick = () => {
+    hdrRegister.innerHTML = '';
+    bodyRegister.innerHTML = '';
+    hide(btnChangeRegister, btnSaveRegister, btnDownloadRegister, btnShareRegister);
+    show(btnLoadRegister);
   };
 
-  saveRegisterBtn.onclick=async()=>{
-    const ym=registerMonth.value;
-    const [y,m]=ym.split('-').map(Number);
-    const days=new Date(y,m,0).getDate();
-    registerBody.querySelectorAll('tr').forEach(tr=>{
-      const adm=tr.children[2].textContent;
-      for(let i=0;i<days;i++){
-        const btn=tr.children[3+i].firstChild;
-        const status=btn.textContent;
-        const dateKey=`${ym}-${String(i+1).padStart(2,'0')}`;
-        attendanceData[dateKey]=attendanceData[dateKey]||{};
-        attendanceData[dateKey][adm]=status;
+  btnSaveRegister.onclick = async () => {
+    const ym = inpRegisterMonth.value;
+    const [y,m] = ym.split('-').map(Number);
+    const days = new Date(y,m,0).getDate();
+    bodyRegister.querySelectorAll('tr').forEach(tr => {
+      const adm = tr.children[2].textContent;
+      for (let i=0; i<days; i++){
+        const btn = tr.children[3+i].firstChild;
+        const status = btn.textContent;
+        const dateKey = `${ym}-${String(i+1).padStart(2,'0')}`;
+        attendanceData[dateKey] = attendanceData[dateKey] || {};
+        attendanceData[dateKey][adm] = status;
       }
     });
     await save('attendanceData', attendanceData);
-    console.debug('Saved register for', ym);
-    show(downloadRegisterBtn, shareRegisterBtn);
-    hide(saveRegisterBtn, changeRegisterBtn);
+    show(btnDownloadRegister, btnShareRegister);
+    hide(btnChangeRegister, btnSaveRegister);
   };
 
-  downloadRegisterBtn.onclick=()=>{
-    const ym=registerMonth.value;
-    const doc=new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-    doc.text(`Attendance Register – ${ym}`,30,20);
-    const header=Array.from(registerHeader.children).map(th=>th.textContent);
-    const body=Array.from(registerBody.children).map(tr=>Array.from(tr.children).map(td=>td.textContent));
+  btnDownloadRegister.onclick = () => {
+    const ym = inpRegisterMonth.value;
+    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+    doc.text(`Attendance Register – ${ym}`, 30, 20);
+    const header = Array.from(hdrRegister.children).map(th=>th.textContent);
+    const body   = Array.from(bodyRegister.children).map(tr => Array.from(tr.children).map(td=>td.textContent));
     doc.autoTable({ head:[header], body, margin:{ left:30, right:30 }, styles:{ fontSize:8 } });
     doc.save(`register-${ym}.pdf`);
   };
 
-  shareRegisterBtn.onclick=()=>{
-    const ym=registerMonth.value; let txt=`Register for ${ym}\n`;
-    registerBody.querySelectorAll('tr').forEach(tr=>{
-      const adm=tr.children[2].textContent;
-      const statuses=Array.from(tr.children).slice(3).map(td=>td.textContent).join('');
-      txt+=`${adm}: ${statuses}\n`;
+  btnShareRegister.onclick = () => {
+    const ym = inpRegisterMonth.value;
+    let txt = `Register for ${ym}\n`;
+    bodyRegister.querySelectorAll('tr').forEach(tr => {
+      const adm = tr.children[2].textContent;
+      const statuses = Array.from(tr.children).slice(3).map(td=>td.textContent).join('');
+      txt += `${adm}: ${statuses}\n`;
     });
-    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`,'_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
   };
 
-  // 12. Service Worker registration
-  if('serviceWorker'in navigator) {
+  // 12. Service Worker
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js')
-      .then(reg=>console.debug('SW registered',reg))
-      .catch(err=>console.error('SW registration failed',err));
+      .then(reg => console.debug('SW registered', reg))
+      .catch(err => console.error('SW failed', err));
   }
 
 }); // end DOMContentLoaded
