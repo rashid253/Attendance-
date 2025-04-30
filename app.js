@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   
-  const { get, set } = window.idb-keyval;
+  const { get, set } = window.idbKeyval;
   const save = (key, val) => set(key, val);
   
   // --- 2. State & Defaults ---
@@ -178,9 +178,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const pctPresent = totalDays ? (stats.P / totalDays) * 100 : 0;
 
       // determine status
-      const status = (outstanding > 0 || pctPresent < eligibilityPct)
-        ? 'Debarred'
-        : 'Eligible';
+      const status = (outstanding > 0 || pctPresent < eligibilityPct) ? 'Debarred' : 'Eligible';
 
       const tr = document.createElement('tr');
       tr.dataset.index = i;
@@ -338,7 +336,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('downloadRegistrationPDF').onclick = () => {
-    const doc = new jspdf.jsPDF();
+    const doc = new jspdf.jsPDF('landscape');
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
     doc.setFontSize(12);
@@ -384,7 +382,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl = $('teacherClassSelect').value;
     const sec = $('teacherSectionSelect').value;
     const roster = students.filter(s => s.cls === cl && s.sec === sec);
-    roster.forEach((stu, i) => {
+    roster.forEach((stu) => {
       const row = document.createElement('div');
       row.className = 'attendance-row';
       const nameDiv = document.createElement('div');
@@ -458,15 +456,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
   };
 
+  // Download attendance in landscape format
   downloadAttendanceBtn.onclick = () => {
-    const doc = new jspdf.jsPDF('landscape'); // Change to landscape
+    const doc = new jspdf.jsPDF('landscape');
     doc.setFontSize(18);
     doc.text(`Attendance Report`, 14, 16);
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
+    doc.text(/* Include additional report header details */, 14, 24);
     doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
-    const url = doc.output('bloburl');
-    window.open(url, '_blank');
     doc.save(`attendance_${dateInput.value}.pdf`);
   };
 
@@ -481,7 +478,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
   };
 
-  // --- 10. ANALYTICS ---
+  // --- 10. ANALYTICS Implementation ---
   const atg = $('analyticsTarget');
   const asel = $('analyticsSectionSelect');
   const atype = $('analyticsType');
@@ -552,7 +549,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       to = `${ayear.value}-12-31`;
     }
 
-    // Here you can add additional logic for loading and displaying analytics data.
+    // Here the logic for fetching and displaying analytics based on from-to dates will go.
     alert(`Analytics from ${from} to ${to} for ${atg.value}`);
   };
 });
