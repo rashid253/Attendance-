@@ -21,7 +21,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   let finesData       = await get('finesData')       || {};
   let paymentsData    = await get('paymentsData')    || {};
   let lastAdmNo       = await get('lastAdmissionNo') || 0;
-  let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:0 };
+  let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct  = await get('eligibilityPct')  || 75;
 
   async function genAdmNo() {
