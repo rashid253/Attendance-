@@ -1,5 +1,4 @@
 // app.js
-
 window.addEventListener('DOMContentLoaded', async () => {
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
@@ -78,7 +77,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
       </div>
     `;
-
     hide(formDiv, ...inputs, saveBtn);
     show(settingsCard, editBtn);
   };
@@ -242,7 +240,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     await save('students',students);
     renderStudents();updateCounters();resetViews();
   };
-
   $('saveRegistration').onclick=async()=>{
     if(!$('doneEditing').classList.contains('hidden')){alert('Finish editing');return;}
     await save('students',students);
@@ -569,25 +566,27 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 11. ATTENDANCE REGISTER ---
-  const loadReg = $('loadRegister');
-  const changeReg = $('changeRegister');
-  const saveReg = $('saveRegister');
-  const dlReg = $('downloadRegister');
-  const shReg = $('shareRegister');
-  const rm = $('registerMonth');
-  const rh = $('registerHeader');
-  const rb = $('registerBody');
-  const rw = $('registerTableWrapper');
-  const regCodes = ['A','P','Lt','HD','L'];
-  const regColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+  const loadReg     = $('loadRegister');
+  const changeReg   = $('changeRegister');
+  const saveReg     = $('saveRegister');
+  const dlReg       = $('downloadRegister');
+  const shReg       = $('shareRegister');
+  const rm          = $('registerMonth');
+  const rh          = $('registerHeader');
+  const rb          = $('registerBody');
+  const rw          = $('registerTableWrapper');
+  const regCodes    = ['A','P','Lt','HD','L'];
+  const regColors   = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
 
   loadReg.onclick = () => {
     const m = rm.value;
     if (!m) { alert('Pick month'); return; }
-    const [y,mm] = m.split('-').map(Number);
-    const days = new Date(y,mm,0).getDate();
+    const [y, mm] = m.split('-').map(Number);
+    const days = new Date(y, mm, 0).getDate();
+
     rh.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
       [...Array(days)].map((_,i)=>`<th>${i+1}</th>`).join('');
+
     rb.innerHTML = '';
     const cl = $('teacherClassSelect').value;
     const sec= $('teacherSectionSelect').value;
@@ -604,6 +603,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       tr.innerHTML = row;
       rb.appendChild(tr);
     });
+
     rb.querySelectorAll('.reg-cell').forEach(cell => {
       cell.onclick = () => {
         const span = cell.querySelector('.status-text');
@@ -615,17 +615,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         else        { cell.style.background=regColors[c]; cell.style.color='#fff'; }
       };
     });
+
     show(rw, saveReg);
     hide(loadReg, changeReg, dlReg, shReg);
   };
 
   saveReg.onclick = async () => {
-    const m = rm.value, [y,mm] = m.split('-').map(Number);
-    const days = new Date(y,mm,0).getDate();
+    const m = rm.value, [y, mm] = m.split('-').map(Number);
+    const days = new Date(y, mm, 0).getDate();
     Array.from(rb.children).forEach(tr => {
       const adm = tr.children[1].textContent;
       for (let d=1; d<=days; d++) {
-        const code = tr.children[3+d-1].querySelector('.status-text').textContent;
+        const code = tr.children[3 + d - 1].querySelector('.status-text').textContent;
         const key = `${m}-${String(d).padStart(2,'0')}`;
         attendanceData[key] = attendanceData[key] || {};
         attendanceData[key][adm] = code;
@@ -642,11 +643,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   dlReg.onclick = () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Register',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#registerTable' });
-    const url = doc.output('bloburl'); window.open(url,'_blank'); doc.save('attendance_register.pdf');
+    // Landscape & A4
+    const doc = new jspdf.jsPDF({
+      orientation: 'landscape',
+      unit: 'pt',
+      format: 'a4'
+    });
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({
+      startY: 32,
+      html: '#registerTable',
+      tableWidth: 'auto',
+      styles: { fontSize: 10 }
+    });
+    const url = doc.output('bloburl');
+    window.open(url, '_blank');
+    doc.save('attendance_register.pdf');
   };
 
   shReg.onclick = () => {
