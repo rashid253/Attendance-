@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,15 +69,15 @@
   <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div class="row-inline small-fines">
+    <div class="row-inline fines-row">
       <label>Fine/Absent (₨):<input id="fineAbsent" type="number"/></label>
       <label>Fine/Late (₨):<input id="fineLate" type="number"/></label>
     </div>
-    <div class="row-inline small-fines">
+    <div class="row-inline fines-row">
       <label>Fine/Leave (₨):<input id="fineLeave" type="number"/></label>
       <label>Fine/Half-Day (₨):<input id="fineHalfDay" type="number"/></label>
     </div>
-    <div class="row-inline small-fines">
+    <div class="row-inline eligibility-row">
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
     </div>
@@ -180,13 +181,14 @@
       <button id="loadAnalytics"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden"><i class="fas fa-undo"></i> Change</button>
     </div>
+    <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
       <table id="analyticsTable">
         <thead><tr></tr></thead>
         <tbody id="analyticsBody"></tbody>
       </table>
     </div>
-    <div id="graphs" class="hidden" style="height:300px;">
+    <div id="graphs" class="hidden">
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
