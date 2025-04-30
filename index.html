@@ -12,10 +12,7 @@
   <meta name="application-name" content="Attendance Mgmt" />
 
   <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
@@ -27,15 +24,13 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
-
   <style>
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    .card { border:1px solid #ccc; padding:1em; margin-top:1em; border-radius:4px; }
+    .btn { margin-top:.5em; }
+    .row-inline > * { margin-right:.5em; margin-bottom:.5em; }
   </style>
 </head>
 <body>
@@ -103,10 +98,8 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine</th><th>Status</th><th>Actions</th>
+            <th><input type="checkbox" id="selectAllStudents"/></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th><th>Fine</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
@@ -144,12 +137,7 @@
   <section id="analytics-section">
     <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
     <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>-- Report For --</option>
-        <option value="class">Class</option>
-        <option value="section">Section</option>
-        <option value="student">Student</option>
-      </select>
+      <select id="analyticsTarget"><option disabled selected>-- Report For --</option><option value="class">Class</option><option value="section">Section</option><option value="student">Student</option></select>
       <select id="analyticsSectionSelect" class="hidden"><option disabled selected>-- Section --</option><option>A</option><option>B</option><option>C</option></select>
       <select id="analyticsType" disabled><option disabled selected>-- Period --</option><option value="date">Date</option><option value="month">Month</option><option value="semester">Semester</option><option value="year">Year</option></select>
       <input type="date" id="analyticsDate" class="hidden"/>
@@ -163,9 +151,7 @@
     </div>
     <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable">
-        <thead><tr></tr></thead><tbody id="analyticsBody"></tbody>
-      </table>
+      <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
     </div>
     <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
     <div class="table-actions hidden" id="analyticsActions">
