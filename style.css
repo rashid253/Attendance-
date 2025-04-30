@@ -183,6 +183,7 @@ td {
   display: inline-block;
 }
 
+/* Responsive adjustments */
 @media (max-width: 600px) {
   .row-inline input,
   .row-inline select {
