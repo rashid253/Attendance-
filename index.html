@@ -1,247 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Attendance Management</title>
-
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
-
-  <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
-
-  <!-- idb-keyval -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-
-  <!-- jsPDF + AutoTable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- Hide in PDF/print -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Attendance App</title>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
   <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    /* Reset & base */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; line-height: 1.4; padding: 1rem; background: #f5f5f5; }
+    h1, h2, h3 { margin-bottom: .5rem; }
+    section { background: #fff; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .hidden { display: none !important; }
+
+    /* Forms & controls */
+    input, select, button { font-size: .9rem; }
+    input, select { padding: .4rem; margin-right: .5rem; border: 1px solid #ccc; border-radius: 2px; }
+    button.btn { 
+      display: inline-block; 
+      padding: .4rem .8rem; 
+      margin: .2rem .2rem .2rem 0; 
+      border: none; 
+      border-radius: 2px; 
+      background: #007bff; 
+      color: #fff; 
+      cursor: pointer;
+    }
+    button.btn:hover { background: #0056b3; }
+
+    /* Counters */
+    #counters div { margin-bottom: .5rem; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem; text-align: center; }
+    th { background: #f0f0f0; }
+
+    /* Attendance rows */
+    .attendance-row { display: flex; align-items: center; margin-bottom: .4rem; }
+    .attendance-name { width: 150px; flex-shrink: 0; }
+    .attendance-buttons button { margin-right: .3rem; border: 1px solid #ccc; border-radius: 2px; background: #e9e9e9; }
+    .attendance-buttons button.selected { background: #007bff; color: #fff; border-color: #0056b3; }
+
+    /* Card & modal */
+    .card { background: #fff; border: 1px solid #ddd; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    #paymentModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; z-index: 10; }
+
+    /* Print */
+    @media print {
+      button, input, select { display: none; }
+      section, table { box-shadow: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1><i class="fas fa-school"></i> Attendance Management</h1>
-  </header>
+  <h1>Attendance Management</h1>
 
-  <!-- 1. SETUP -->
-  <section id="teacher-setup">
-    <h2><i class="fas fa-cog"></i> Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
+  <!-- 5. SETUP -->
+  <section id="setupSection">
+    <h2>Setup</h2>
+    <div id="setupForm">
+      <input type="text" id="schoolNameInput" placeholder="School Name"/>
       <select id="teacherClassSelect">
-        <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option>
-        <option>Nursary</option>
-        <option>KG</option>
-        <option>Class One</option>
-        <option>Class Two</option>
-        <option>Class Three</option>
-        <option>Class Four</option>
-        <option>Class Five</option>
-        <option>Class Six</option>
-        <option>Class Seven</option>
-        <option>Class Eight</option>
-        <option>Class Nine</option>
-        <option>Class Ten</option>
+        <option value="">Select Class</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
       </select>
       <select id="teacherSectionSelect">
-        <option disabled selected>-- Select Section --</option>
-        <option>A</option><option>B</option><option>C</option>
+        <option value="">Select Section</option>
+        <option>A</option><option>B</option><option>C</option><option>D</option>
       </select>
-      <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="saveSetup" class="btn">Save Setup</button>
     </div>
     <div id="setupDisplay" class="hidden">
-      <h3>
-        <i class="fas fa-school no-print"></i>
-        <span id="setupText"></span>
-      </h3>
-      <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
+      <span id="setupText"></span>
+      <button id="editSetup" class="btn">Edit Setup</button>
     </div>
   </section>
 
-  <!-- 2. FINANCIAL SETTINGS -->
-  <section id="financial-settings">
-    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div id="financialForm" class="row-inline">
-      <label>Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (PKR):  <input id="fineLate"   type="number"/></label>
-      <label>Fine/Leave (PKR): <input id="fineLeave"  type="number"/></label>
-      <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. % (≥):   <input id="eligibilityPct" type="number" min="0" max="100"/></label>
-      <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
+  <!-- 6. COUNTERS -->
+  <section id="counters">
+    <div>Section Count: <span id="sectionCount" class="number" data-target="0">0</span></div>
+    <div>Class Count: <span id="classCount" class="number" data-target="0">0</span></div>
+    <div>School Count: <span id="schoolCount" class="number" data-target="0">0</span></div>
+  </section>
+
+  <!-- 4. SETTINGS -->
+  <section id="settingsSection">
+    <h2>Settings: Fines & Eligibility</h2>
+    <div id="financialForm">
+      <input type="number" id="fineAbsent" placeholder="Fine Absent"/>
+      <input type="number" id="fineLate" placeholder="Fine Late"/>
+      <input type="number" id="fineLeave" placeholder="Fine Leave"/>
+      <input type="number" id="fineHalfDay" placeholder="Fine Half-Day"/>
+      <input type="number" id="eligibilityPct" placeholder="Eligibility %"/>
+      <button id="saveSettings" class="btn">Save Settings</button>
     </div>
   </section>
 
-  <!-- 3. COUNTERS -->
-  <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
-  </section>
-
-  <!-- 4. STUDENT REGISTRATION -->
+  <!-- 7. STUDENT REGISTRATION -->
   <section id="student-registration">
-    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
-    <div class="row-inline">
-      <input id="studentName" placeholder="Name" />
-      <input id="parentName" placeholder="Parent Name" />
-      <input id="parentContact" placeholder="Contact" />
-      <input id="parentOccupation" placeholder="Occupation" />
-      <input id="parentAddress" placeholder="Address" />
-      <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
+    <h2>Student Registration</h2>
+    <div>
+      <input type="text" id="studentName" placeholder="Student Name"/>
+      <input type="text" id="parentName" placeholder="Parent Name"/>
+      <input type="text" id="parentContact" placeholder="Parent Contact"/>
+      <input type="text" id="parentOccupation" placeholder="Parent Occupation"/>
+      <input type="text" id="parentAddress" placeholder="Parent Address"/>
+      <button id="addStudent" class="btn">Add Student</button>
     </div>
-    <div class="table-wrapper">
-      <table id="studentsTable">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="studentsBody"></tbody>
-      </table>
+    <div>
+      <label><input type="checkbox" id="selectAllStudents"/> Select All</label>
+      <button id="editSelected" class="btn" disabled>Edit Selected</button>
+      <button id="deleteSelected" class="btn" disabled>Delete Selected</button>
+      <button id="saveRegistration" class="btn">Save Registration</button>
+      <button id="editRegistration" class="btn hidden">Edit Registration</button>
+      <button id="shareRegistration" class="btn hidden">Share Registration</button>
+      <button id="downloadRegistrationPDF" class="btn hidden">Download PDF</button>
     </div>
-    <div class="table-actions">
-      <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="hidden no-print"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
-      <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
-    </div>
+    <table id="studentsTable">
+      <thead>
+        <tr>
+          <th></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th>
+          <th>Occupation</th><th>Address</th><th>Outstanding</th><th>Status</th><th>Payment</th>
+        </tr>
+      </thead>
+      <tbody id="studentsBody"></tbody>
+    </table>
   </section>
 
-  <!-- 5. MARK ATTENDANCE -->
-  <section id="attendance-section">
-    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
-    <div class="row-inline">
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
-    </div>
-    <div id="attendanceBody"></div>
-    <div id="attendanceSummary" class="hidden summary-box"></div>
-    <div class="table-actions">
-      <button id="saveAttendance" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="resetAttendance" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="downloadAttendancePDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAttendanceSummary" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
-
-  <!-- 6. ANALYTICS -->
-  <section id="analytics-section">
-    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
-    <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>-- Report For --</option>
-        <option value="class">Class</option>
-        <option value="section">Section</option>
-        <option value="student">Student</option>
-      </select>
-      <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <select id="analyticsType" disabled>
-        <option disabled selected>-- Period --</option>
-        <option value="date">Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
-      </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
-      <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
-      <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
-    </div>
-    <div id="instructions" class="hidden"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable">
-        <thead><tr></tr></thead>
-        <tbody id="analyticsBody"></tbody>
-      </table>
-    </div>
-    <div id="graphs" class="hidden">
-      <canvas id="barChart"></canvas>
-      <canvas id="pieChart"></canvas>
-    </div>
-    <div class="table-actions hidden" id="analyticsActions">
-      <button id="generateFineReport" class="no-print"><i class="fas fa-file-pdf"></i> Fine Report</button>
-      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
-    </div>
-  </section>
-
-  <!-- 7. ATTENDANCE REGISTER -->
-  <section id="register-section">
-    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
-    <div class="row-inline">
-      <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
-    </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper">
-      <table id="registerTable">
-        <thead><tr id="registerHeader"></tr></thead>
-        <tbody id="registerBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="saveRegister" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareRegister" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
-
-  <!-- PAYMENT MODAL -->
-  <div id="paymentModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Payment for Adm# <span id="payAdm"></span></h3>
-      <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
-      <div class="modal-actions">
-        <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
-      </div>
-    </div>
+  <!-- 8. PAYMENT MODAL -->
+  <div id="paymentModal" class="card hidden">
+    <h3>Record Payment</h3>
+    <p>Adm#: <span id="payAdm"></span></p>
+    <input type="number" id="paymentAmount" placeholder="Amount"/>
+    <button id="savePayment" class="btn">Save Payment</button>
+    <button id="cancelPayment" class="btn">Cancel</button>
   </div>
 
+  <!-- 9. MARK ATTENDANCE -->
+  <section id="attendanceSection">
+    <h2>Mark Attendance</h2>
+    <input type="date" id="dateInput"/>
+    <button id="loadAttendance" class="btn">Load</button>
+    <div id="attendanceBody" class="hidden"></div>
+    <button id="saveAttendance" class="btn hidden">Save</button>
+    <button id="resetAttendance" class="btn hidden">Reset</button>
+    <button id="downloadAttendancePDF" class="btn hidden">Download PDF</button>
+    <button id="shareAttendanceSummary" class="btn hidden">Share</button>
+    <div id="attendanceSummary" class="hidden"></div>
+  </section>
+
+  <!-- 10–12. ATTENDANCE ANALYTICS -->
+  <section id="analyticsSection">
+    <h2>Attendance Analytics</h2>
+    <select id="analyticsTarget" class="btn">
+      <option value="">Target</option>
+      <option value="section">Section</option>
+      <option value="student">Student</option>
+    </select>
+    <select id="analyticsSectionSelect" class="hidden btn">
+      <option value="">Section</option><option>A</option><option>B</option><option>C</option><option>D</option>
+    </select>
+    <input type="text" id="analyticsSearch" class="hidden" placeholder="Search Student"/>
+    <select id="analyticsType" disabled class="btn">
+      <option value="">Type</option><option value="date">Date</option><option value="month">Month</option>
+      <option value="semester">Semester</option><option value="year">Year</option>
+    </select>
+    <input type="date" id="analyticsDate" class="hidden"/>
+    <input type="month" id="analyticsMonth" class="hidden"/>
+    <input type="date" id="semesterStart" class="hidden"/>
+    <input type="date" id="semesterEnd" class="hidden"/>
+    <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
+    <button id="loadAnalytics" class="btn">Load Analytics</button>
+    <div id="instructions">Choose options above and click "Load Analytics"</div>
+    <div id="analyticsContainer" class="hidden"></div>
+    <div id="analyticsActions" class="hidden">
+      <button id="shareAnalytics" class="btn">Share</button>
+      <button id="downloadAnalytics" class="btn">Download</button>
+    </div>
+  </section>
+
+  <!-- 13. ATTENDANCE REGISTER -->
+  <section id="registerSection">
+    <h2>Attendance Register</h2>
+    <!-- Use the same dateInput for month (YYYY-MM) or add a separate <input type="month" id="registerMonth"> -->
+    <button id="loadRegister" class="btn">Load Register</button>
+    <div id="registerTableWrapper" class="hidden"></div>
+    <button id="changeRegister" class="btn hidden">Edit</button>
+    <button id="saveRegister" class="btn hidden">Save</button>
+    <button id="downloadRegister" class="btn hidden">Download</button>
+    <button id="shareRegister" class="btn hidden">Share</button>
+  </section>
+
+  <!-- Dependencies -->
+  <script src="https://unpkg.com/idb-keyval@6/dist/idb-keyval-iife.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <!-- Main JS -->
   <script src="app.js"></script>
 </body>
 </html>
