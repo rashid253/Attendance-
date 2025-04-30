@@ -1,215 +1,43 @@
-/* style (F).css */
-
-/* 0. CSS Variables & Reset */
 :root {
-  --primary:   #2196F3;
-  --success:   #4caf50;
-  --danger:    #f44336;
-  --warning:   #ffeb3b;
-  --info:      #03a9f4;
-  --light:     #f2f2f2;
-  --dark:      #333;
+  --primary: #2196F3; --success: #4caf50; --danger: #f44336;
+  --warning: #ffeb3b; --info: #03a9f4; --light: #f2f2f2; --dark: #333;
 }
-* {
-  box-sizing: border-box;
-  outline:    none;
-  margin:     0;
-  padding:    0;
-}
-body {
-  background: var(--light);
-  color:      var(--dark);
-  font-family: Arial, sans-serif;
-  padding:    10px;
-}
+* { box-sizing:border-box; outline:none; }
+body { margin:0; padding:10px; font-family:Arial,sans-serif; background:var(--light); color:var(--dark); }
+header h1 { background:var(--primary); color:#fff; text-align:center; padding:10px; margin:0 0 20px; }
+section { background:#fff; padding:15px; margin-bottom:20px; border:1px solid #ccc; border-radius:6px; }
+.row-inline { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+input,select,button,label { padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.9rem; }
+label { display:flex; align-items:center; gap:5px; }
+button { background:var(--primary); color:#fff; cursor:pointer; display:flex; align-items:center; gap:5px; }
+.hidden { display:none !important; }
 
-/* 1. Header */
-header h1 {
-  background:    var(--primary);
-  color:         #fff;
-  padding:       10px;
-  text-align:    center;
-  margin-bottom: 20px;
-}
+/* Fines Section */
+#financial-settings .row-inline { gap:8px; }
+#financial-settings label { flex:1 1 45%; min-width:160px; margin-bottom:5px; }
+#financial-settings input { width:100%; padding:6px; font-size:0.85rem; }
 
-/* 2. Sections */
-section {
-  background:       #fff;
-  border:           1px solid #ccc;
-  border-radius:    6px;
-  margin-bottom:    20px;
-  padding:          15px;
-}
+/* Counters */
+.counter-grid { display:flex; justify-content:space-between; gap:10px; }
+.counter-card { flex:1; background:#fff; padding:1rem; text-align:center; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+.number { font-size:2rem; font-weight:bold; }
 
-/* 3. Flex rows */
-.row-inline {
-  display:    flex;
-  flex-wrap:  wrap;
-  gap:        10px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-@media (max-width: 600px) {
-  .row-inline input,
-  .row-inline select {
-    flex: 1 1 100%;
-  }
-}
+/* Tables */
+.table-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px; }
+table { width:100%; border-collapse:collapse; }
+th,td { border:1px solid #ccc; padding:8px; text-align:left; white-space:nowrap; }
 
-/* 4. Form controls */
-input,
-select,
-button,
-label {
-  border:        1px solid #ccc;
-  border-radius: 4px;
-  font-size:     0.9rem;
-  padding:       8px;
-}
-label {
-  display:      flex;
-  align-items:  center;
-  gap:          5px;
-}
+/* Modals */
+.modal { position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; }
+.modal-content { background:#fff; padding:20px; border-radius:8px; width:300px; }
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
 
-/* 5. Buttons */
-button {
-  background:       var(--primary);
-  color:            #fff;
-  cursor:           pointer;
-  display:          flex;
-  align-items:      center;
-  gap:              5px;
-  border:           none;
-  border-radius:    4px;
-}
-button:disabled {
-  opacity: 0.5;
-  cursor:  not-allowed;
-}
+/* Attendance Buttons */
+.attendance-buttons { display:flex; gap:0.5rem; }
+.att-btn { padding:0.5rem 1rem; border:1px solid var(--primary); border-radius:4px; background:rgba(33,150,243,0.1); color:var(--dark); cursor:pointer; }
+.att-btn.selected { background:var(--primary); color:#fff; }
 
-/* 6. Utility */
-.hidden {
-  display: none !important;
-}
-.no-print {
-  display: inline-block;
-}
-
-/* 7. Counters */
-.counter-grid {
-  display:       flex;
-  justify-content: space-between;
-  gap:           10px;
-}
-.counter-card {
-  flex:        1;
-  background:  #fff;
-  padding:     1rem;
-  text-align:  center;
-  border-radius: 8px;
-  box-shadow:  0 2px 6px rgba(0,0,0,0.1);
-}
-
-/* 8. Tables */
-.table-wrapper {
-  margin-top:           10px;
-  overflow-x:           auto;
-  -webkit-overflow-scrolling: touch;
-}
-table {
-  width:            100%;
-  border-collapse:  collapse;
-}
-th, td {
-  border:      1px solid #ccc;
-  padding:     8px;
-  text-align:  left;
-  white-space: nowrap;
-}
-.table-actions {
-  display:       flex;
-  gap:           10px;
-  margin-top:    10px;
-  overflow-x:    auto;
-}
-
-/* 9. Modal */
-.modal {
-  position:         fixed;
-  top: left: right: bottom: 0;
-  background:       rgba(0,0,0,0.5);
-  display:          flex;
-  align-items:      center;
-  justify-content:  center;
-}
-.modal-content {
-  background:     #fff;
-  border-radius:  8px;
-  padding:        20px;
-  width:          300px;
-}
-.modal-actions {
-  display:        flex;
-  justify-content: flex-end;
-  gap:            10px;
-  margin-top:     10px;
-}
-
-/* 10. Attendance buttons */
-.attendance-buttons {
-  display: flex;
-  gap:     0.5rem;
-}
-.att-btn {
-  padding:          0.5rem 1rem;
-  border:           1px solid var(--primary);
-  border-radius:    4px;
-  background:       rgba(33,150,243,0.1);
-  color:            var(--dark);
-  cursor:           pointer;
-}
-.att-btn.selected {
-  background: var(--primary);
-  color:      #fff;
-}
-
-/* 11. Summary box */
-.summary-box {
-  background:    #fafafa;
-  border:        1px solid #ddd;
-  border-radius: 4px;
-  margin-top:    1rem;
-  padding:       1rem;
-}
-
-/* 12. Attendance rows (dynamic) */
-.attendance-row {
-  display:       flex;
-  align-items:   center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.attendance-name {
-  flex: 1;
-}
-
-/* 13. Register cells */
-.reg-cell {
-  cursor:    pointer;
-  text-align: center;
-}
-.status-text {
-  display: inline-block;
-  width:   100%;
-  text-align: center;
-}
-
-/* 14. Fines & Eligibility: two fields per row */
-#financial-settings .row-inline {
-  flex-wrap: wrap;
-}
-#financial-settings .row-inline label {
-  flex:      1 1 calc(50% - 10px);
-  min-width: 120px;
+@media(max-width:600px){
+  .row-inline input, .row-inline select { flex:1 1 100%; }
+  .counter-grid { flex-direction:column; }
 }
