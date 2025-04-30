@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   
-  const { get, set } = window.idbKeyval;
+  const { get, set } = window.idb-keyval;
   const save = (key, val) => set(key, val);
   
   // --- 2. State & Defaults ---
@@ -458,7 +458,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
   };
 
-  // Adjusted for landscape mode
   downloadAttendanceBtn.onclick = () => {
     const doc = new jspdf.jsPDF('landscape'); // Change to landscape
     doc.setFontSize(18);
@@ -543,7 +542,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else if (atype.value === 'month') {
       const [year, month] = amonth.value.split('-');
       from = to = `${year}-${month}-01`;
+    } else if (atype.value === 'semester') {
+      const [startYear, startMonth] = sems.value.split('-');
+      const [endYear, endMonth] = seme.value.split('-');
+      from = `${startYear}-${startMonth}-01`;
+      to = `${endYear}-${endMonth}-31`;
+    } else if (atype.value === 'year') {
+      from = `${ayear.value}-01-01`;
+      to = `${ayear.value}-12-31`;
     }
-    // Additional data loading logic would be here
+
+    // Here you can add additional logic for loading and displaying analytics data.
+    alert(`Analytics from ${from} to ${to} for ${atg.value}`);
   };
 });
