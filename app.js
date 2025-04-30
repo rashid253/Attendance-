@@ -1,13 +1,21 @@
 // app.js
 window.addEventListener('DOMContentLoaded', async () => {
-  // --- 0. Debug console (optional) ---
+  console.debug('App: DOMContentLoaded');
+
+  // --- 0. Debug console (eruda) ---
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
+  erudaScript.onload = () => {
+    eruda.init();
+    console.debug('App: eruda initialized');
+  };
   document.body.appendChild(erudaScript);
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+  if (!window.idbKeyval) {
+    console.error('App: idb-keyval not found');
+    return;
+  }
   const { get, set } = window.idbKeyval;
   const save = (k, v) => set(k, v);
 
@@ -19,12 +27,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   let lastAdmNo       = await get('lastAdmissionNo') || 0;
   let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct  = await get('eligibilityPct')  || 75;
+  console.debug('App: State & Defaults loaded', { students, attendanceData, finesData, paymentsData, lastAdmNo, fineRates, eligibilityPct });
 
-  async function genAdmNo() {
-    lastAdmNo++;
-    await save('lastAdmissionNo', lastAdmNo);
-    return String(lastAdmNo).padStart(4, '0');
-  }
+  // --- 2.5. STATUS CODES & LABELS ---
+  const statusNames = {
+    P : 'Present',
+    A : 'Absent',
+    Lt: 'Late',
+    HD: 'Half Day',
+    L : 'Leave'
+  };
+  console.debug('App: statusNames defined', statusNames);
 
   // --- 3. DOM Helpers ---
   const $    = id => document.getElementById(id);
@@ -32,6 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // --- 4. SETTINGS: Fines & Eligibility ---
+  console.debug('App: initSettingsSection');
   (function initSettingsSection() {
     const formDiv = $('financialForm');
     const saveBtn = $('saveSettings');
@@ -52,6 +66,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('eligibilityPct').value = eligibilityPct;
 
     saveBtn.onclick = async () => {
+      console.debug('Settings: saveSettings clicked');
       fineRates = {
         A : Number($('fineAbsent').value)   || 0,
         Lt: Number($('fineLate').value)     || 0,
@@ -72,12 +87,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       show(settingsCard, editBtn);
     };
     editBtn.onclick = () => {
+      console.debug('Settings: editSettings clicked');
       hide(settingsCard, editBtn);
       show(formDiv, ...inputs, saveBtn);
     };
   })();
 
   // --- 5. SETUP: School, Class & Section ---
+  console.debug('App: initSetup');
   (async function initSetup() {
     async function loadSetup() {
       const [sc, cl, sec] = await Promise.all([
@@ -87,13 +104,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         $('schoolNameInput').value      = sc;
         $('teacherClassSelect').value   = cl;
         $('teacherSectionSelect').value = sec;
-        $('setupText').textContent = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
+        $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
         hide($('setupForm')); show($('setupDisplay'));
         renderStudents(); updateCounters(); resetViews();
+        console.debug('Setup loaded', { school: sc, class: cl, section: sec });
       }
     }
     $('saveSetup').onclick = async e => {
       e.preventDefault();
+      console.debug('Setup: saveSetup clicked');
       const sc = $('schoolNameInput').value.trim(),
             cl = $('teacherClassSelect').value,
             sec= $('teacherSectionSelect').value;
@@ -181,6 +200,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('addStudent').onclick = async e => {
     e.preventDefault();
+    console.debug('Registration: addStudent clicked');
     const n = $('studentName').value.trim(),
           p = $('parentName').value.trim(),
           c = $('parentContact').value.trim(),
@@ -198,6 +218,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('editSelected').onclick = () => {
+    console.debug('Registration: editSelected clicked');
     document.querySelectorAll('.sel:checked').forEach(cb=>{
       const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
       tr.innerHTML = `
@@ -214,6 +235,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('editSelected')); show($('doneEditing'));
   };
   $('doneEditing').onclick = async () => {
+    console.debug('Registration: doneEditing clicked');
     document.querySelectorAll('#studentsBody tr').forEach(tr=>{
       const inputs = [...tr.querySelectorAll('input:not(.sel)')];
       if (inputs.length===5) {
@@ -228,6 +250,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters();
   };
   $('deleteSelected').onclick = async () => {
+    console.debug('Registration: deleteSelected clicked');
     if(!confirm('Delete?')) return;
     const toDel = [...document.querySelectorAll('.sel:checked')].map(cb=>+cb.closest('tr').dataset.index);
     students = students.filter((_,i)=>!toDel.includes(i));
@@ -235,6 +258,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters(); resetViews();
   };
   $('saveRegistration').onclick = async () => {
+    console.debug('Registration: saveRegistration clicked');
     if(!$('doneEditing').classList.contains('hidden')) { alert('Finish editing'); return; }
     await save('students', students);
     hide(
@@ -244,6 +268,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters();
   };
   $('editRegistration').onclick = ()=> {
+    console.debug('Registration: editRegistration clicked');
     show(
       document.querySelector('#student-registration .row-inline'),
       $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration'));
@@ -251,6 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters();
   };
   $('shareRegistration').onclick = ()=> {
+    console.debug('Registration: shareRegistration clicked');
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
     const header = `*Students List*\nClass ${cl} Section ${sec}`;
     const lines = students.filter(s=>s.cls===cl&&s.sec===sec).map(s=>{
@@ -266,6 +292,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
   };
   $('downloadRegistrationPDF').onclick = ()=>{
+    console.debug('Registration: downloadRegistrationPDF clicked');
     const doc=new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Student List',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
@@ -274,137 +301,271 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 8. PAYMENT MODAL ---
-  function openPaymentModal(adm){ $('payAdm').textContent=adm; $('paymentAmount').value=''; show($('paymentModal')); }
+  function openPaymentModal(adm){ 
+    console.debug('Payment: openPaymentModal for', adm);
+    $('payAdm').textContent = adm;
+    $('paymentAmount').value = '';
+    show($('paymentModal'));
+  }
   $('savePayment').onclick = async ()=> {
+    console.debug('Payment: savePayment clicked for', $('payAdm').textContent);
     const adm = $('payAdm').textContent, amt = Number($('paymentAmount').value)||0;
     paymentsData[adm] = paymentsData[adm]||[];
     paymentsData[adm].push({ date: new Date().toISOString().split('T')[0], amount: amt });
     await save('paymentsData', paymentsData);
     hide($('paymentModal')); renderStudents();
   };
-  $('cancelPayment').onclick = () => hide($('paymentModal'));
+  $('cancelPayment').onclick = () => {
+    console.debug('Payment: cancelPayment clicked');
+    hide($('paymentModal'));
+  };
 
   // --- 9. MARK ATTENDANCE ---
-  const dateInput      = $('dateInput'),
-        loadAttendance = $('loadAttendance'),
-        saveAttendance = $('saveAttendance'),
-        resetAttendance= $('resetAttendance'),
-        downloadAttendancePDF = $('downloadAttendancePDF'),
-        shareAttendanceSummary= $('shareAttendanceSummary'),
-        attendanceBody = $('attendanceBody'),
-        attendanceSummary = $('attendanceSummary');
+  console.debug('App: setting up attendance handlers');
+  const dateInput              = $('dateInput'),
+        loadAttendance         = $('loadAttendance'),
+        saveAttendance         = $('saveAttendance'),
+        resetAttendance        = $('resetAttendance'),
+        downloadAttendancePDF  = $('downloadAttendancePDF'),
+        shareAttendanceSummary = $('shareAttendanceSummary'),
+        attendanceBody         = $('attendanceBody'),
+        attendanceSummary      = $('attendanceSummary');
+
   loadAttendance.onclick = () => {
-    attendanceBody.innerHTML=''; attendanceSummary.innerHTML='';
+    console.debug('Attendance: loadAttendance clicked for date', dateInput.value);
+    attendanceBody.innerHTML = '';
+    attendanceSummary.innerHTML = '';
     const roster = students.filter(s=>s.cls===$('teacherClassSelect').value && s.sec===$('teacherSectionSelect').value);
     roster.forEach((s,i)=>{
-      const row=document.createElement('div'); row.className='attendance-row';
-      const nm=document.createElement('div'); nm.className='attendance-name'; nm.textContent=s.name;
-      const btns=document.createElement('div'); btns.className='attendance-buttons';
+      const row = document.createElement('div');
+      row.className = 'attendance-row';
+      const nm  = document.createElement('div');
+      nm.className = 'attendance-name';
+      nm.textContent = s.name;
+      const btns = document.createElement('div');
+      btns.className = 'attendance-buttons';
       Object.keys(statusNames).forEach(code=>{
-        const b=document.createElement('button'); b.className='att-btn'; b.textContent=code;
-        b.onclick=()=>{ btns.querySelectorAll('.att-btn').forEach(x=>{x.classList.remove('selected');x.style='';}); b.classList.add('selected'); b.style.background='#2196F3'; b.style.color='#fff'; };
+        const b = document.createElement('button');
+        b.className = 'att-btn';
+        b.textContent = code;
+        b.onclick = () => {
+          btns.querySelectorAll('.att-btn').forEach(x=>{ x.classList.remove('selected'); x.style=''; });
+          b.classList.add('selected');
+          b.style.background = '#2196F3';
+          b.style.color = '#fff';
+        };
         btns.appendChild(b);
       });
-      row.append(nm,btns); attendanceBody.appendChild(row);
+      row.append(nm, btns);
+      attendanceBody.appendChild(row);
     });
-    show(attendanceBody, saveAttendance); hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
+    show(attendanceBody, saveAttendance);
+    hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
   };
-  saveAttendance.onclick = async ()=>{
-    const date = dateInput.value; if(!date){ alert('Pick date'); return; }
-    attendanceData[date]={};
+
+  saveAttendance.onclick = async () => {
+    const date = dateInput.value;
+    if (!date) { alert('Pick date'); return; }
+    console.debug('Attendance: saveAttendance clicked, saving for', date);
+    attendanceData[date] = {};
     const roster = students.filter(s=>s.cls===$('teacherClassSelect').value && s.sec===$('teacherSectionSelect').value);
     roster.forEach((s,i)=>{
       const sel = attendanceBody.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = sel?sel.textContent:'A';
+      attendanceData[date][s.adm] = sel ? sel.textContent : 'A';
     });
     await save('attendanceData', attendanceData);
     attendanceSummary.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
-    const tbl=document.createElement('table');
-    tbl.innerHTML='<tr><th>Adm#</th><th>Name</th><th>Status</th></tr>';
-    roster.forEach(s=>{
-      const st=attendanceData[date][s.adm];
-      tbl.innerHTML+=`<tr><td>${s.adm}</td><td>${s.name}</td><td>${statusNames[st]}</td></tr>`;
+    const tbl = document.createElement('table');
+    tbl.innerHTML = '<tr><th>Adm#</th><th>Name</th><th>Status</th></tr>';
+    roster.forEach(s => {
+      const st = attendanceData[date][s.adm];
+      tbl.innerHTML += `<tr><td>${s.adm}</td><td>${s.name}</td><td>${statusNames[st]}</td></tr>`;
     });
     attendanceSummary.appendChild(tbl);
     hide(attendanceBody, saveAttendance);
     show(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
   };
-  resetAttendance.onclick=()=>{ show(attendanceBody, saveAttendance); hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary); };
-  downloadAttendancePDF.onclick = ()=>{
-    const doc=new jspdf.jsPDF();
+
+  resetAttendance.onclick = () => {
+    console.debug('Attendance: resetAttendance clicked');
+    show(attendanceBody, saveAttendance);
+    hide(resetAttendance, downloadAttendancePDF, shareAttendanceSummary, attendanceSummary);
+  };
+
+  downloadAttendancePDF.onclick = () => {
+    console.debug('Attendance: downloadAttendancePDF clicked for', dateInput.value);
+    const doc = new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Attendance Report',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html:'#attendanceSummary table' });
     doc.save(`attendance_${dateInput.value}.pdf`);
   };
-  shareAttendanceSummary.onclick=()=>{
-    const date=dateInput.value;
-    const roster=students.filter(s=>s.cls===$('teacherClassSelect').value && s.sec===$('teacherSectionSelect').value);
-    const lines=roster.map(s=>
+
+  shareAttendanceSummary.onclick = () => {
+    console.debug('Attendance: shareAttendanceSummary clicked for', dateInput.value);
+    const date = dateInput.value;
+    const roster = students.filter(s=>s.cls===$('teacherClassSelect').value && s.sec===$('teacherSectionSelect').value);
+    const lines = roster.map(s =>
       `Reg#: *${s.adm}*\nName: *${s.name}*\nMonthly Attendance: Present ${Object.values(attendanceData).filter(r=>r[s.adm]==='P').length} days, Absent ${Object.values(attendanceData).filter(r=>r[s.adm]==='A').length} days`
     ).join('\n\n');
-    const header=`*Attendance Analytics Report*\nReport Date: ${date}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
+    const header = `*Attendance Analytics Report*\nReport Date: ${date}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank');
   };
 
   // --- 10. ANALYTICS UI CONTROL (target/type toggles) ---
+  console.debug('App: analytics UI control setup');
   $('analyticsTarget').onchange = () => {
     const t = $('analyticsTarget').value;
     $('analyticsType').disabled = false;
     ['analyticsSectionSelect','analyticsSearch'].forEach(id=>$(id).classList.add('hidden'));
-    if(t==='section') $('analyticsSectionSelect').classList.remove('hidden');
-    if(t==='student') $('analyticsSearch').classList.remove('hidden');
+    if (t === 'section') $('analyticsSectionSelect').classList.remove('hidden');
+    if (t === 'student') $('analyticsSearch').classList.remove('hidden');
   };
   $('analyticsType').onchange = () => {
     ['analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart'].forEach(id=>$(id).classList.add('hidden'));
     const v = $('analyticsType').value;
-    if(v==='date') $('analyticsDate').classList.remove('hidden');
-    if(v==='month') $('analyticsMonth').classList.remove('hidden');
-    if(v==='semester') ['semesterStart','semesterEnd'].forEach(id=>$(id).classList.remove('hidden'));
-    if(v==='year') $('yearStart').classList.remove('hidden');
+    if (v==='date') $('analyticsDate').classList.remove('hidden');
+    if (v==='month') $('analyticsMonth').classList.remove('hidden');
+    if (v==='semester') ['semesterStart','semesterEnd'].forEach(id=>$(id).classList.remove('hidden'));
+    if (v==='year') $('yearStart').classList.remove('hidden');
     hide($('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'));
     show($('resetAnalytics'));
   };
   $('resetAnalytics').onclick = e => {
     e.preventDefault();
-    $('analyticsType').value='';
+    console.debug('Analytics: resetAnalytics clicked');
+    $('analyticsType').value = '';
     ['analyticsDate','analyticsMonth','semesterStart','semesterEnd','yearStart','instructions','analyticsContainer','graphs','analyticsActions']
       .forEach(id=>$(id).classList.add('hidden'));
     hide($('resetAnalytics'));
   };
 
   // --- 11. ANALYTICS REPORT GENERATION ---
-  $('loadAnalytics').onclick = () => {
-    // (Implementation as above in previous message)
-  };
+let lastAnalyticsResults = [];
+$('loadAnalytics').onclick = () => {
+  console.debug('Analytics: loadAnalytics clicked');
 
-  // --- 12. Analytics Share & Download ---
-  $('shareAnalytics').onclick = () => {
-    // (Implementation as above)
-  };
-  $('downloadAnalytics').onclick = () => {
-    // (Implementation as above)
-  };
+  // read selections
+  const target = $('analyticsTarget').value;               // 'section' or 'student'
+  const type   = $('analyticsType').value;                 // 'date','month','semester','year'
+  const cls    = $('teacherClassSelect').value;
+  const datesAll = Object.keys(attendanceData);
 
-  // --- 13. ATTENDANCE REGISTER ---
-  $('loadRegister').onclick = () => {
-    // (Implementation as above)
-  };
-  $('saveRegister').onclick = async () => {
-    // (Implementation as above)
-  };
-  $('changeRegister').onclick = () => {
-    // (Implementation as above)
-  };
-  $('downloadRegister').onclick = () => {
-    // (Implementation as above)
-  };
-  $('shareRegister').onclick = () => {
-    // (Implementation as above)
-  };
+  // build date‐filter
+  let dates = datesAll.filter(d => {
+    const dt = new Date(d);
+    if (type === 'date') {
+      return d === $('analyticsDate').value;
+    }
+    if (type === 'month') {
+      const [y,m] = $('analyticsMonth').value.split('-').map(Number);
+      return dt.getFullYear() === y && dt.getMonth()+1 === m;
+    }
+    if (type === 'semester') {
+      const start = new Date($('semesterStart').value);
+      const end   = new Date($('semesterEnd').value);
+      return dt >= start && dt <= end;
+    }
+    if (type === 'year') {
+      return dt.getFullYear() === Number($('yearStart').value);
+    }
+    return false;
+  }).sort();
 
-  // --- 14. Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  if (dates.length === 0) { alert('No records for selected range'); return; }
+
+  // prepare results
+  lastAnalyticsResults = [];
+
+  if (target === 'section') {
+    const sec = $('analyticsSectionSelect').value;
+    const roster = students.filter(s => s.cls === cls && s.sec === sec);
+    roster.forEach(s => {
+      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      dates.forEach(d => {
+        const code = attendanceData[d]?.[s.adm] || 'A';
+        stats[code]++;
+      });
+      const total = dates.length;
+      const pct   = total ? ((stats.P/total)*100).toFixed(1) : '0.0';
+      lastAnalyticsResults.push({
+        adm: s.adm,
+        name: s.name,
+        ...stats,
+        pct
+      });
+    });
+  } else if (target === 'student') {
+    const query = $('analyticsSearch').value.trim().toLowerCase();
+    const student = students.find(s =>
+      s.adm === query || s.name.toLowerCase().includes(query)
+    );
+    if (!student) { alert('Student not found'); return; }
+    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+    dates.forEach(d => {
+      const code = attendanceData[d]?.[student.adm] || 'A';
+      stats[code]++;
+    });
+    const total = dates.length;
+    const pct   = total ? ((stats.P/total)*100).toFixed(1) : '0.0';
+    lastAnalyticsResults.push({
+      adm: student.adm,
+      name: student.name,
+      ...stats,
+      pct
+    });
   }
-});
+
+  // render table
+  const container = $('analyticsContainer');
+  container.innerHTML = '';
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `
+    <tr>
+      <th>Adm#</th><th>Name</th><th>Present</th><th>Absent</th>
+      <th>Late</th><th>Half-Day</th><th>Leave</th><th>% Present</th>
+    </tr>`;
+  lastAnalyticsResults.forEach(r => {
+    tbl.innerHTML += `
+      <tr>
+        <td>${r.adm}</td><td>${r.name}</td>
+        <td>${r.P}</td><td>${r.A}</td>
+        <td>${r.Lt}</td><td>${r.HD}</td>
+        <td>${r.L}</td><td>${r.pct}%</td>
+      </tr>`;
+  });
+  container.appendChild(tbl);
+
+  // show/hide correct panels
+  hide($('instructions'));
+  show($('analyticsContainer'), $('analyticsActions'));
+};
+
+// --- 12. Analytics Share & Download ---
+$('shareAnalytics').onclick = () => {
+  if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
+  const header = `*Attendance Analytics*\nClass ${$('teacherClassSelect').value}`;
+  const lines = lastAnalyticsResults.map(r =>
+    `Adm#: ${r.adm}\nName: ${r.name}\nPresent: ${r.P}, Absent: ${r.A}, Late: ${r.Lt}, Half-Day: ${r.HD}, Leave: ${r.L}, %: ${r.pct}%`
+  ).join('\n\n');
+  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
+};
+
+$('downloadAnalytics').onclick = () => {
+  if (!lastAnalyticsResults.length) { alert('Generate analytics first'); return; }
+  const doc = new jspdf.jsPDF();
+  doc.setFontSize(18);
+  doc.text('Attendance Analytics Report', 14, 16);
+  doc.setFontSize(12);
+  doc.autoTable({
+    startY: 24,
+    head: [[
+      'Adm#','Name','Present','Absent','Late','Half-Day','Leave','% Present'
+    ]],
+    body: lastAnalyticsResults.map(r => [
+      r.adm, r.name, r.P, r.A, r.Lt, r.HD, r.L, r.pct + '%'
+    ])
+  });
+  const now = new Date().toISOString().slice(0,10);
+  doc.save(`analytics_${now}.pdf`);
+};
