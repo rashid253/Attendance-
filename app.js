@@ -479,7 +479,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     );
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
   };
-
+  
+function resetViews() {
+-    hide(
++    hide(
+       $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
+       $('attendanceSummary'), $('downloadAttendancePDF'), $('shareAttendanceSummary'),
+       $('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'),
+       $('registerTableWrapper'), $('changeRegister'), $('saveRegister'),
+       $('downloadRegister'), $('shareRegister')
+     );
+-    show($('loadRegister'));
++    // always show both the attendance and register loaders
++    show($('loadRegister'), $('loadAttendance'));
+   }
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
