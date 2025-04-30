@@ -39,11 +39,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   const regForm = document.querySelector('#student-registration .row-inline');
 
   // --- 4. SETTINGS: Fines & Eligibility ---
+  // Prepare inputs and container
+  const settingsInputs = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct']
+    .map(id => $(id));
+  const settingsSection = document.querySelector('#settings-section');
+
+  // Create display card and edit button
+  const settingsCard = document.createElement('div');
+  settingsCard.id = 'settingsCard';
+  settingsCard.className = 'card hidden';
+  const editSettingsBtn = document.createElement('button');
+  editSettingsBtn.id = 'editSettings';
+  editSettingsBtn.textContent = 'Edit Settings';
+  editSettingsBtn.className = 'btn hidden';
+
+  // Initialize input values
   $('fineAbsent').value      = fineRates.A;
   $('fineLate').value        = fineRates.Lt;
   $('fineLeave').value       = fineRates.L;
   $('fineHalfDay').value     = fineRates.HD;
   $('eligibilityPct').value  = eligibilityPct;
+
+  // Save settings handler
   $('saveSettings').onclick  = async () => {
     fineRates = {
       A : Number($('fineAbsent').value)   || 0,
@@ -56,8 +73,32 @@ window.addEventListener('DOMContentLoaded', async () => {
       save('fineRates', fineRates),
       save('eligibilityPct', eligibilityPct)
     ]);
-    alert('Fines & eligibility settings saved');
+
+    // Populate card
+    settingsCard.innerHTML = `
+      <div class="card-content">
+        <p><strong>Fine - Absent:</strong> ₹${fineRates.A}</p>
+        <p><strong>Fine - Late:</strong> ₹${fineRates.Lt}</p>
+        <p><strong>Fine - Leave:</strong> ₹${fineRates.L}</p>
+        <p><strong>Fine - Half Day:</strong> ₹${fineRates.HD}</p>
+        <p><strong>Eligibility %:</strong> ${eligibilityPct}%</p>
+      </div>
+    `;
+
+    // Toggle views
+    hide(...settingsInputs, $('saveSettings'));
+    show(settingsCard, editSettingsBtn);
   };
+
+  // Edit settings handler
+  editSettingsBtn.onclick = () => {
+    hide(settingsCard, editSettingsBtn);
+    show(...settingsInputs, $('saveSettings'));
+  };
+
+  // Append to settings section
+  settingsSection.appendChild(settingsCard);
+  settingsSection.appendChild(editSettingsBtn);
 
   // --- 5. SETUP: School, Class & Section ---
   async function loadSetup() {
@@ -193,7 +234,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       tbody.appendChild(tr);
     });
 
-    // reset select-all and buttons
     $('selectAllStudents').checked = false;
     toggleButtons();
     document.querySelectorAll('.add-payment-btn')
@@ -643,7 +683,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('downloadAnalytics').onclick = () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Analytics Report', 14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
+    doc.setFontSize(12); doc.text('' + $('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html: '#analyticsTable' });
     const url = doc.output('bloburl');
     window.open(url,'_blank');
