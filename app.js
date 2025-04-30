@@ -199,6 +199,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.add-payment-btn')
       .forEach(btn => btn.onclick = () => openPaymentModal(btn.dataset.adm));
   }
+  
   function toggleButtons() {
     const any = !!document.querySelector('.sel:checked');
     $('editSelected').disabled = !any;
@@ -529,5 +530,37 @@ window.addEventListener('DOMContentLoaded', async () => {
     let from, to;
     if (atype.value === 'date') {
       from = to = adate.value;
-    } else // ...
+    } else if (atype.value === 'month') {
+      from = `${amonth.value}-01`;
+      to = new Date(new Date(from).getFullYear(), (+amonth.value), 0).toISOString().split('T')[0];
+    } else if (atype.value === 'semester') {
+      from = sems.value;
+      to = seme.value;
+    } else if (atype.value === 'year') {
+      from = `${ayear.value}-01-01`;
+      to = `${ayear.value}-12-31`;
+    }
 
+    const filteredStudents = students.filter(s => {
+      const attendanceRecords = Object.keys(attendanceData).filter(date => {
+        const rec = attendanceData[date][s.adm];
+        return rec && date >= from && date <= to;
+      }).length;
+      return attendanceRecords > 0;
+    });
+
+    // Process the filtered students to render graphs or analytics
+    renderAnalytics(filteredStudents);
+  };
+
+  function renderAnalytics(students) {
+    // Example: A chart can be created here based on attendance data
+    // You can fill this function with specific analytics logic
+    console.log('Analytics for students:', students);
+    // Reset the UI or display charts
+    graphs.classList.remove('hidden');
+  }
+
+  // Other event listeners and logic related to analytics...
+
+});
