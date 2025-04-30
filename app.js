@@ -193,7 +193,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${s.address}</td>
         <td>PKR ${outstanding}</td>
         <td>${status}</td>
-        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+        <td>
+          <button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button>
+          <button class="edit-btn" data-index="${i}"><i class="fas fa-edit"></i></button>
+          <button class="delete-btn" data-index="${i}"><i class="fas fa-trash"></i></button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -249,101 +253,49 @@ window.addEventListener('DOMContentLoaded', async () => {
       .forEach(id => $(id).value = '');
   };
 
-  $('editSelected').onclick = () => {
-    document.querySelectorAll('.sel:checked').forEach(cb => {
-      const tr = cb.closest('tr');
-      const i = +tr.dataset.index;
-      const s = students[i];
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel" checked></td>
-        <td>${tr.children[1].textContent}</td>
-        <td><input value="${s.name}"></td>
-        <td>${s.adm}</td>
-        <td><input value="${s.parent}"></td>
-        <td><input value="${s.contact}"></td>
-        <td><input value="${s.occupation}"></td>
-        <td><input value="${s.address}"></td>
-        <td colspan="3"></td>
-      `;
-    });
-    hide($('editSelected'));
-    show($('doneEditing'));
-  };
+  // Edit functionality for students
+  $('studentsBody').addEventListener('click', e => {
+    if (e.target.classList.contains('edit-btn')) {
+      const index = e.target.dataset.index;
+      const s = students[index];
 
-  $('doneEditing').onclick = async () => {
-    document.querySelectorAll('#studentsBody tr').forEach(tr => {
-      const inputs = [...tr.querySelectorAll('input:not(.sel)')];
-      if (inputs.length === 5) {
-        const [n, p, c, o, a] = inputs.map(i => i.value.trim());
-        const adm = tr.children[3].textContent;
-        const idx = students.findIndex(s => s.adm === adm);
-        if (idx > -1) {
-          students[idx] = { ...students[idx], name: n, parent: p, contact: c, occupation: o, address: a };
-        }
-      }
-    });
-    await save('students', students);
-    hide($('doneEditing'));
-    show($('editSelected'), $('deleteSelected'), $('saveRegistration'));
-    renderStudents();
-    updateCounters();
-  };
+      // Fill the edit form with student data
+      $('studentName').value = s.name;
+      $('parentName').value = s.parent;
+      $('parentContact').value = s.contact;
+      $('parentOccupation').value = s.occupation;
+      $('parentAddress').value = s.address;
 
-  $('deleteSelected').onclick = async () => {
-    if (!confirm('Delete selected students?')) return;
-    const toDel = [...document.querySelectorAll('.sel:checked')].map(cb => +cb.closest('tr').dataset.index);
-    students = students.filter((_, i) => !toDel.includes(i));
-    await save('students', students);
-    renderStudents();
-    updateCounters();
-    resetViews();
-  };
+      // Change the button to "Add" to save the changes
+      $('addStudent').textContent = 'Update Student';
+      $('addStudent').onclick = async function () {
+        // Update student details
+        if (!s) return;
+        
+        s.name = $('studentName').value;
+        s.parent = $('parentName').value;
+        s.contact = $('parentContact').value;
+        s.occupation = $('parentOccupation').value;
+        s.address = $('parentAddress').value;
 
-  $('saveRegistration').onclick = async () => {
-    if (!$('doneEditing').classList.contains('hidden')) {
-      alert('Finish editing first');
-      return;
+        await save('students', students);
+        renderStudents();
+        updateCounters();
+        resetViews();
+        $('addStudent').textContent = 'Add Student'; // Reset button text
+      };
     }
-    await save('students', students);
-    hide(regForm, $('editSelected'), $('deleteSelected'), $('selectAllStudents'), $('saveRegistration'));
-    show($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
-    renderStudents();
-    updateCounters();
-  };
 
-  $('editRegistration').onclick = () => {
-    show(regForm, $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration'));
-    hide($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
-    renderStudents();
-    updateCounters();
-  };
-
-  $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value;
-    const sec = $('teacherSectionSelect').value;
-    const header = `*Students List*\nClass ${cl} Section ${sec}`;
-    const lines = students.filter(s => s.cls === cl && s.sec === sec).map(s => {
-      const tf = (finesData[s.adm] || []).reduce((sum, f) => sum + f.amount, 0);
-      const tp = (paymentsData[s.adm] || []).reduce((sum, p) => sum + p.amount, 0);
-      const out = tf - tp;
-      const days = Object.keys(attendanceData).length;
-      const pres = Object.values(attendanceData).filter(r => r[s.adm] === 'P').length;
-      const pct = days ? (pres / days) * 100 : 0;
-      const st = (out > 0 || pct < eligibilityPct) ? 'Debarred' : 'Eligible';
-      return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${out}\nStatus: ${st}`;
-    }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-  };
-
-  $('downloadRegistrationPDF').onclick = () => {
-    const doc = new jspdf.jsPDF('landscape');
-    doc.setFontSize(18);
-    doc.text('Student List', 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable' });
-    doc.save('registration.pdf');
-  };
+    // Delete functionality for students
+    if (e.target.classList.contains('delete-btn')) {
+      const index = e.target.dataset.index;
+      students.splice(index, 1); // Remove the student
+      await save('students', students);
+      renderStudents();
+      updateCounters();
+      resetViews();
+    }
+  });
 
   // --- 8. PAYMENT MODAL ---
   function openPaymentModal(adm) {
@@ -462,7 +414,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.setFontSize(18);
     doc.text(`Attendance Report`, 14, 16);
     doc.setFontSize(12);
-    doc.text(/* Include additional report header details */, 14, 24);
+    doc.text($('setupText').textContent, 14, 24);
     doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
     doc.save(`attendance_${dateInput.value}.pdf`);
   };
@@ -549,7 +501,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       to = `${ayear.value}-12-31`;
     }
 
-    // Here the logic for fetching and displaying analytics based on from-to dates will go.
+    // Here add your logic for fetching and displaying the analytics data based on the date range.
     alert(`Analytics from ${from} to ${to} for ${atg.value}`);
   };
 });
