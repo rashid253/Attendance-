@@ -21,9 +21,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -61,11 +58,11 @@
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div class="row-inline" style="flex-wrap: wrap;">
-      <label style="flex:1 1 45%;">Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label style="flex:1 1 45%;">Fine/Late (PKR):<input id="fineLate" type="number"/></label>
-      <label style="flex:1 1 45%;">Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
-      <label style="flex:1 1 45%;">Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
+      <label style="flex: 1 1 45%;">Fine/Absent (PKR):<input id="fineAbsent" type="number" /></label>
+      <label style="flex: 1 1 45%;">Fine/Late (PKR):<input id="fineLate" type="number" /></label>
+      <label style="flex: 1 1 45%;">Fine/Leave (PKR):<input id="fineLeave" type="number" /></label>
+      <label style="flex: 1 1 45%;">Fine/Half-Day (PKR):<input id="fineHalfDay" type="number" /></label>
+      <label>Eligible % (≥):<input id="eligibilityPct" type="number" min="0" max="100" /></label>
       <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
     </div>
   </section>
