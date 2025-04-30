@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
-  <!-- PWA & Meta -->
+  <!-- PWA & Meta for Firefox integration later -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -16,7 +16,6 @@
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    integrity="sha512-p1Cm...=="
     crossorigin="anonymous"
     referrerpolicy="no-referrer"
   />
@@ -50,19 +49,24 @@
     </div>
   </section>
 
-  <!-- 2. Counters -->
-  <section id="counters" class="counter-grid">
-    <div class="counter-card"><h3>Section</h3><span id="sectionCount" class="number" data-target="0">0</span></div>
-    <div class="counter-card"><h3>Class</h3><span id="classCount" class="number" data-target="0">0</span></div>
-    <div class="counter-card"><h3>School</h3><span id="schoolCount" class="number" data-target="0">0</span></div>
+  <!-- 2. Fines & Eligibility -->
+  <section id="financial-settings">
+    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
+    <div class="row-inline">
+      <label>Fine/Absent (₨):<input id="fineAbsent" type="number" /></label>
+      <label>Fine/Late (₨):<input id="fineLate" type="number" /></label>
+      <label>Fine/Leave (₨):<input id="fineLeave" type="number" /></label>
+      <label>Fine/Half-Day (₨):<input id="fineHalfDay" type="number" /></label>
+      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100" /></label>
+      <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
+    </div>
   </section>
 
   <!-- 3. Student Registration -->
   <section id="student-registration">
-    <h2><i class="fas fa-user-graduate"></i> Add Student</h2>
+    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
       <input id="studentName" placeholder="Name" />
-      <input id="studentAdm" placeholder="Admission #" disabled />
       <input id="parentName" placeholder="Parent Name" />
       <input id="parentContact" placeholder="Contact" />
       <input id="parentOccupation" placeholder="Occupation" />
@@ -73,40 +77,15 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (₨)</th><th>Status</th><th>Actions</th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Fine (₨)</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
-    <div class="table-actions">
-      <button id="editSelected" disabled><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="hidden"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden"><i class="fas fa-edit"></i> Edit Reg</button>
-      <button id="shareRegistration" class="hidden"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden"><i class="fas fa-download"></i> Download PDF</button>
-    </div>
   </section>
 
-  <!-- 4. Fines & Eligibility -->
-  <section id="financial-settings">
-    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div class="row-inline">
-      <label>Fine/Absent (₨):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (₨):<input id="fineLate"   type="number"/></label>
-      <label>Fine/Leave (₨):<input id="fineLeave"  type="number"/></label>
-      <label>Fine/Half-Day (₨):<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
-      <button id="saveSettings"><i class="fas fa-save"></i> Save</button>
-    </div>
-  </section>
-
-  <!-- 5. Attendance Entry -->
+  <!-- 4. Attendance -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
@@ -123,7 +102,7 @@
     </div>
   </section>
 
-  <!-- 6. Analytics -->
+  <!-- 5. Analytics -->
   <section id="analytics">
     <h2><i class="fas fa-chart-line"></i> Analytics</h2>
     <div class="row-inline">
@@ -169,7 +148,7 @@
     </div>
   </section>
 
-  <!-- 7. Attendance Register -->
+  <!-- 6. Attendance Register -->
   <section id="attendance-register">
     <h2><i class="fas fa-clipboard-list"></i> Attendance Register</h2>
     <div class="row-inline">
@@ -190,11 +169,11 @@
     </div>
   </section>
 
-  <!-- 8. Payment Modal -->
+  <!-- Payment Modal -->
   <div id="paymentModal" class="modal hidden">
     <div class="modal-content">
       <h3>Payment for Adm# <span id="payAdm"></span></h3>
-      <label>Amount (₨): <input id="paymentAmount" type="number"/></label>
+      <label>Amount (₨): <input id="paymentAmount" type="number" /></label>
       <div class="modal-actions">
         <button id="savePayment"><i class="fas fa-check"></i> Save</button>
         <button id="cancelPayment"><i class="fas fa-times"></i> Cancel</button>
@@ -207,7 +186,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  
   <!-- App JS -->
   <script src="app.js"></script>
 </body>
