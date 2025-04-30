@@ -32,7 +32,4 @@ th, td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: no
 .att-btn { padding: 0.5rem 1rem; border: 1px solid var(--primary); border-radius: 4px; background: rgba(33, 150, 243, 0.1); color: var(--dark); cursor: pointer; }
 .att-btn.selected { background: var(--primary); color: #fff; }
 .summary-box { margin-top: 1rem; padding: 1rem; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; }
-.no-print { display: inline-block; }
-@media(max-width: 600px) {
-  .row-inline input, .row-inline select { flex: 1 1 100%; }
-}
+.no-print { display:
