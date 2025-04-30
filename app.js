@@ -173,7 +173,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     students.forEach((s, i) => {
       if (s.cls !== cl || s.sec !== sec) return;
       idx++;
-      // compute fines & status
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
       Object.values(attendanceData).forEach(r => stats[r[s.adm] || 'A']++);
       const fineTotal = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
@@ -255,9 +254,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('paymentModal'));
   }
   $('studentsBody').addEventListener('click', e => {
-    if (e.target.closest('tr') && e.target.matches('.sel') === false) return;
+    if (e.target.matches('.add-payment-btn')) openPaymentModal(e.target.dataset.adm);
   });
-  // (Bind your .add-payment-btn logic inside renderStudents if needed)
 
   $('savePayment').onclick = async () => {
     const adm = $('payAdm').textContent;
@@ -458,7 +456,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       st.status = (st.outstanding>0 || pct<eligibilityPct) ? 'Debarred' : 'Eligible';
     });
 
-    // render table
+    // render table view & charts
     tblHeadRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>
                             <th>% Present</th><th>Outstanding</th><th>Status</th>`;
     tblBody.innerHTML = '';
@@ -472,17 +470,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     show(instr, contAnalytics, graphs, btnShareA, btnDownloadA);
+
     if (window.barChart) window.barChart.destroy();
     if (window.pieChart) window.pieChart.destroy();
 
-    // bar chart
     window.barChart = new Chart(barCtx, {
       type:'bar',
       data:{ labels: stats.map(s=>s.adm),
              datasets:[{ label:'% Present', data: stats.map(s=>s.total?(s.P/s.total)*100:0) }] },
       options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
     });
-    // pie chart for first record
+
     const first = stats[0] || { P:0,A:0,Lt:0,HD:0,L:0 };
     window.pieChart = new Chart(pieCtx, {
       type:'pie',
@@ -500,20 +498,46 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
   };
 
+  // 10b. Download Analytics PDF with Summary Page + Detailed Page
   btnDownloadA.onclick = () => {
-    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-    doc.text(`${txtSetup.textContent} – Analytics`, 40, 30);
-    doc.text(`Period: ${analyticsFrom} – ${analyticsTo}`, 40, 50);
+    // Summary page in portrait
+    let doc = new jspdf.jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    doc.setFontSize(16);
+    doc.text('Analytics Summary', 40, 40);
+    doc.setFontSize(12);
+    doc.text(`School & Class : ${txtSetup.textContent}`, 40, 70);
+    doc.text(`Time Period    : ${analyticsFrom} – ${analyticsTo}`, 40, 90);
+    doc.text(`Target         : ${atg.value.toUpperCase()}`, 40, 110);
+    if (atg.value === 'section')  doc.text(`Section        : ${asel.value}`, 40, 130);
+    if (atg.value === 'student')  doc.text(`Student Query  : ${asearch.value}`, 40, 130);
+    doc.text(`Eligibility ≥   : ${eligibilityPct}%`, 40, 150);
+    doc.text(
+      `Fine Rates     : Absent PKR ${fineRates.A}, Late PKR ${fineRates.Lt}, ` +
+      `Leave PKR ${fineRates.L}, Half-Day PKR ${fineRates.HD}`,
+      40, 170
+    );
+
+    // Detailed page in landscape
+    doc.addPage('a4', 'landscape');
+    doc.setFontSize(14);
+    doc.text('Detailed Analytics', 40, 40);
+    doc.setFontSize(10);
+    doc.text(`Period: ${analyticsFrom} – ${analyticsTo}`, 40, 60);
     doc.autoTable({
-      startY: 70,
-      head:[['Adm#','Name','% Present','Outstanding','Status']],
-      body: stats.map(st => [
-        st.adm, st.name,
-        st.total?((st.P/st.total)*100).toFixed(1)+'%':'0.0%',
-        'PKR '+st.outstanding, st.status
+      startY: 80,
+      head: [['#','Adm#','Name','% Present','Outstanding','Status']],
+      body: stats.map((st,i) => [
+        i+1,
+        st.adm,
+        st.name,
+        st.total ? ((st.P/st.total)*100).toFixed(1) + '%' : '0.0%',
+        'PKR ' + st.outstanding,
+        st.status
       ]),
-      styles:{ fontSize:10 }, margin:{ left:40, right:40 }
+      styles: { fontSize: 9 },
+      margin: { left: 40, right: 40 }
     });
+
     doc.save(`analytics_${analyticsFrom}_to_${analyticsTo}.pdf`);
   };
 
