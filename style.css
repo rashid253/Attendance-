@@ -14,9 +14,6 @@ button { background:var(--primary); color:#fff; cursor:pointer; display:flex; al
 .hidden { display:none !important; }
 .counter-grid { display:flex; justify-content:space-between; }
 .counter-card { flex:1; background:#fff; padding:1rem; text-align:center; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-right:1rem; }
-.counter-card:last-child { margin-right:0; }
-.number { font-size:2rem; font-weight:bold; }
-.table-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px; }
 table { width:100%; border-collapse:collapse; }
 th,td { border:1px solid #ccc; padding:8px; text-align:left; white-space:nowrap; }
 .table-actions { display:flex; gap:10px; flex-wrap:nowrap; margin-top:10px; overflow-x:auto; }
