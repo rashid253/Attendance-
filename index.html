@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,29 +16,32 @@
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-…"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
   />
 
-  <!-- idb-keyval -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-
-  <!-- jsPDF + AutoTable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Main CSS -->
+  <!-- Your CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Hide in PDF/print -->
+  <!-- Hide in PDF/print & basic card/button styles -->
   <style>
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
     .btn { margin-top: 0.5em; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    @media (max-width: 600px) {
+      .table-actions button { display: block; width: 100%; margin-bottom: .5em; }
+      #analyticsTable { font-size: .9em; }
+    }
   </style>
+
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -51,23 +55,9 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option>
-        <option>Nursary</option>
-        <option>KG</option>
-        <option>Class One</option>
-        <option>Class Two</option>
-        <option>Class Three</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option>
-        <option>Class Five</option>
-        <option>Class Six</option>
-        <option>Class Seven</option>
-        <option>Class Eight</option>
-        <option>Class Nine</option>
-        <option>Class Ten</option>
-      </select>
-      <select id="teacherSectionSelect">
-        <option disabled selected>-- Select Section --</option>
-        <option>A</option><option>B</option><option>C</option>
       </select>
       <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
@@ -85,28 +75,19 @@
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
       <label>Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (PKR):  <input id="fineLate"   type="number"/></label>
-      <label>Fine/Leave (PKR): <input id="fineLeave"  type="number"/></label>
+      <label>Fine/Late (PKR):<input id="fineLate" type="number"/></label>
+      <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
       <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. % (≥):   <input id="eligibilityPct" type="number" min="0" max="100"/></label>
+      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
   </section>
 
   <!-- 3. COUNTERS -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
+    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
+    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
+    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
   </section>
 
   <!-- 4. STUDENT REGISTRATION -->
@@ -123,12 +104,7 @@
     <div class="table-wrapper">
       <table id="studentsTable">
         <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
-          </tr>
+          <tr><th><input type="checkbox" id="selectAllStudents"/></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th><th>Fine (PKR)</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
@@ -162,50 +138,57 @@
   </section>
 
   <!-- 6. ANALYTICS -->
-  <section id="analytics-section">
-    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
-    <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>-- Report For --</option>
-        <option value="class">Class</option>
-        <option value="section">Section</option>
-        <option value="student">Student</option>
-      </select>
-      <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <select id="analyticsType" disabled>
-        <option disabled selected>-- Period --</option>
-        <option value="date">Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
-      </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
-      <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
-      <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
+  <section id="analytics" class="container my-5">
+    <h2 class="mb-4"><i class="fas fa-chart-bar"></i> Analytics</h2>
+
+    <!-- Dashboard Summary Cards -->
+    <div class="row mb-4 text-center">
+      <div class="col-md-3 mb-2">
+        <div class="card shadow-sm p-3"><h5>Total Students</h5><p id="kpiTotal" class="display-6">0</p></div>
+      </div>
+      <div class="col-md-3 mb-2">
+        <div class="card shadow-sm p-3"><h5>Debarred</h5><p id="kpiDebarred" class="display-6 text-danger">0</p></div>
+      </div>
+      <div class="col-md-3 mb-2">
+        <div class="card shadow-sm p-3"><h5>Total Outstanding</h5><p id="kpiOutstanding" class="display-6">PKR 0</p></div>
+      </div>
+      <div class="col-md-3 mb-2">
+        <div class="card shadow-sm p-3"><h5>Avg Attendance</h5><p id="kpiAvgPct" class="display-6">0%</p></div>
+      </div>
     </div>
-    <div id="instructions" class="hidden"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable">
-        <thead><tr></tr></thead>
-        <tbody id="analyticsBody"></tbody>
+
+    <!-- Charge & Eligibility Criteria -->
+    <div id="criteriaInfo" class="card mb-4 p-3">
+      <h4>Charge & Eligibility Criteria</h4>
+      <ul id="criteriaList" class="mb-0 ps-3"></ul>
+    </div>
+
+    <!-- Filter & Export Buttons -->
+    <div class="d-flex flex-wrap align-items-center mb-3">
+      <label for="statusFilter" class="me-2">Show:</label>
+      <select id="statusFilter" class="form-select w-auto me-3">
+        <option value="all">All Students</option>
+        <option value="eligible">Eligible</option>
+        <option value="debarred">Debarred</option>
+      </select>
+      <button id="generateFineReport" class="btn btn-danger me-2"><i class="fas fa-file-pdf"></i> Fine Report</button>
+      <button id="downloadAnalytics" class="btn btn-primary me-2"><i class="fas fa-file-pdf"></i> Analytics PDF</button>
+      <button id="downloadCSV" class="btn btn-secondary"><i class="fas fa-file-csv"></i> CSV</button>
+    </div>
+
+    <!-- Chart -->
+    <div class="card mb-4 p-3">
+      <canvas id="analyticsChart" height="80"></canvas>
+    </div>
+
+    <!-- Analytics Table -->
+    <div class="table-responsive">
+      <table id="analyticsTable" class="table table-striped">
+        <thead class="table-dark">
+          <tr><th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th><th>Outstanding</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
       </table>
-    </div>
-    <div id="graphs" class="hidden">
-      <canvas id="barChart"></canvas>
-      <canvas id="pieChart"></canvas>
-    </div>
-    <div class="table-actions hidden" id="analyticsActions">
-      <button id="generateFineReport" class="no-print"><i class="fas fa-file-pdf"></i> Fine Report</button>
-      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
