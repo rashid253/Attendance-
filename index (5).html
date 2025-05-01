@@ -91,6 +91,8 @@
       <label>Eligib. % (≥):   <input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
+    <div id="settingsCard" class="card hidden"></div>
+    <button id="editSettings" class="btn no-print hidden">Edit Settings</button>
   </section>
 
   <!-- 3. COUNTERS -->
@@ -125,9 +127,16 @@
         <thead>
           <tr>
             <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
+            <th>#</th>
+            <th>Name</th>
+            <th>Adm#</th>
+            <th class="hidden-info">Contact</th>
+            <th class="hidden-info">Occupation</th>
+            <th class="hidden-info">Address</th>
+            <th>Fine (PKR)</th>
+            <th>Status</th>
+            <th>Toggle</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
