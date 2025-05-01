@@ -679,62 +679,67 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
-// app.js
+// --- Analytics Fine Report PDF Block Start ---
 
-// (yahan wahi mojooda tamam functions & event handlers hain jo aap ne pehle likhe thay)
-// --- ⬇ yahan naya hissa shamil karein ⬇ ---
 document.addEventListener('DOMContentLoaded', () => {
-  const fineReportBtn = document.getElementById('downloadFineReport');
-  fineReportBtn.addEventListener('click', generateFineReportPDF);
-
-  // jab user 'Date Range' select kare to fromDate/toDate dikhayen/chhupayen
-  const analyticsType = document.getElementById('analyticsType');
-  analyticsType.addEventListener('change', () => {
-    const from = document.getElementById('fromDate');
-    const to = document.getElementById('toDate');
-    if (analyticsType.value === 'range') {
-      from.classList.remove('hidden');
-      to.classList.remove('hidden');
-    } else {
-      from.classList.add('hidden');
-      to.classList.add('hidden');
-    }
-  });
+  const fineBtn = document.getElementById('generateFineReport');
+  fineBtn.addEventListener('click', generateFineReportPDF);
 });
 
 async function generateFineReportPDF() {
-  const { fineRates, eligibilityCriteria } = await idbKeyval.get('settings');
-  const fromDate = document.getElementById('fromDate').value;
-  const toDate   = document.getElementById('toDate').value;
-  const selectedClass = document.getElementById('analyticsTarget').value === 'class'
-    ? document.getElementById('analyticsSearch').value : '';
-  const selectedSection = document.getElementById('analyticsSectionSelect').value;
+  // 1. Load settings & data
+  const settings   = await idbKeyval.get('settings')         || {};
+  const fines      = await idbKeyval.get('finesData')        || [];
+  const attendance = await idbKeyval.get('attendanceData')   || [];
+  const students   = await idbKeyval.get('students')         || [];
 
-  const attendance = await idbKeyval.get('attendanceData') || [];
-  const fines      = await idbKeyval.get('finesData')       || [];
-  const students   = await idbKeyval.get('students')        || [];
+  // 2. Determine period (date/month/semester/year)
+  const type = document.getElementById('analyticsType').value;
+  let fromDate, toDate;
 
-  const filtered = fines.filter(f => {
-    const date = new Date(f.date);
-    return date >= new Date(fromDate) && date <= new Date(toDate)
-      && (!selectedClass || f.class === selectedClass)
-      && (!selectedSection || f.section === selectedSection);
-  });
+  if (type === 'date') {
+    fromDate = toDate = document.getElementById('analyticsDate').value;
+  } else if (type === 'month') {
+    const m = document.getElementById('analyticsMonth').value; // YYYY-MM
+    fromDate = `${m}-01`;
+    const [y, mon] = m.split('-').map(Number);
+    const last = new Date(y, mon, 0).getDate();
+    toDate = `${m}-${last.toString().padStart(2,'0')}`;
+  } else if (type === 'semester') {
+    const s1 = document.getElementById('semesterStart').value; // YYYY-MM
+    const s2 = document.getElementById('semesterEnd').value;
+    fromDate = `${s1}-01`;
+    const [y2, mon2] = s2.split('-').map(Number);
+    const last2 = new Date(y2, mon2, 0).getDate();
+    toDate = `${s2}-${last2.toString().padStart(2,'0')}`;
+  } else if (type === 'year') {
+    const y = document.getElementById('yearStart').value; // YYYY
+    fromDate = `${y}-01-01`;
+    toDate   = `${y}-12-31`;
+  } else {
+    alert('Please select a valid period.');
+    return;
+  }
 
+  // 3. Filter fines within that period
+  const filtered = fines.filter(f => f.date >= fromDate && f.date <= toDate);
+
+  // 4. Generate PDF
   const doc = new jspdf.jsPDF();
   let y = 10;
 
-  // Fine & Eligibility Criteria
-  doc.setFontSize(14).text('Fine & Eligibility Criteria', 10, y);
-  y += 8;
+  // --- Fine & Eligibility Criteria ---
+  doc.setFontSize(14).text('Fine & Eligibility Criteria', 10, y); y += 8;
   doc.setFontSize(12);
-  doc.text(`Absent Fine: ${fineRates.absent}`, 10, y); y += 6;
-  doc.text(`Late Fine: ${fineRates.late}`,   10, y); y += 6;
-  doc.text(`Passing %: ${eligibilityCriteria.passingPercent}`, 10, y); y += 10;
+  doc.text(`Absent Fine: ${settings.fineAbsent   || 0}`, 10, y); y += 6;
+  doc.text(`Late Fine:   ${settings.fineLate     || 0}`, 10, y); y += 6;
+  doc.text(`Leave Fine:  ${settings.fineLeave    || 0}`, 10, y); y += 6;
+  doc.text(`Half-Day Fine: ${settings.fineHalfDay|| 0}`, 10, y); y += 6;
+  doc.text(`Passing %:   ${settings.eligibilityPct|| 0}`, 10, y); y += 10;
 
-  // Detailed Fines Table
+  // --- Detailed Fine Table ---
   doc.setFontSize(14).text('Fine Details', 10, y); y += 6;
-  const tableData = filtered.map(f => [
+  const fineTable = filtered.map(f => [
     f.studentId,
     (students.find(s => s.admNo === f.studentId) || {}).name || '',
     f.class, f.section, f.date, f.type, f.amount
@@ -742,35 +747,31 @@ async function generateFineReportPDF() {
   doc.autoTable({
     startY: y,
     head: [['Adm#','Name','Class','Section','Date','Type','Amount']],
-    body: tableData
+    body: fineTable
   });
   y = doc.lastAutoTable.finalY + 10;
 
-  // Exam Eligibility Status
+  // --- Exam Eligibility Status ---
   doc.setFontSize(14).text('Exam Eligibility', 10, y); y += 8;
-  const statusData = students
-    .filter(s =>
-      (!selectedClass || s.class === selectedClass)
-      && (!selectedSection || s.section === selectedSection)
-    )
-    .map(s => {
-      const recs = attendance.filter(a =>
-        a.admNo === s.admNo
-        && new Date(a.date) >= new Date(fromDate)
-        && new Date(a.date) <= new Date(toDate)
-      );
-      const presentCount = recs.filter(a => a.status === 'present').length;
-      const percent = recs.length ? (presentCount / recs.length) * 100 : 0;
-      const eligible = percent >= eligibilityCriteria.passingPercent;
-      return [s.admNo, s.name, `${percent.toFixed(1)}%`, eligible ? 'Eligible' : 'Debarred'];
-    });
+  const statusTable = students.map(s => {
+    const recs = attendance.filter(a =>
+      a.admNo === s.admNo && a.date >= fromDate && a.date <= toDate
+    );
+    const presentCount = recs.filter(a => a.status === 'present').length;
+    const pct = recs.length ? (presentCount / recs.length) * 100 : 0;
+    const status = pct >= (settings.eligibilityPct || 0) ? 'Eligible' : 'Debarred';
+    return [s.admNo, s.name, `${pct.toFixed(1)}%`, status];
+  });
   doc.autoTable({
     startY: y,
     head: [['Adm#','Name','Attendance %','Status']],
-    body: statusData
+    body: statusTable
   });
 
-  // Save PDF
+  // 5. Save PDF
   doc.save(`Fine_Report_${fromDate}_to_${toDate}.pdf`);
 }
-// --- ⬆ naya hissa ikhtetam pazir ⬆ ---
+
+// --- Analytics Fine Report PDF Block End ---
+
+
