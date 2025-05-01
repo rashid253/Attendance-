@@ -679,3 +679,98 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
+// app.js
+
+// (yahan wahi mojooda tamam functions & event handlers hain jo aap ne pehle likhe thay)
+// --- ⬇ yahan naya hissa shamil karein ⬇ ---
+document.addEventListener('DOMContentLoaded', () => {
+  const fineReportBtn = document.getElementById('downloadFineReport');
+  fineReportBtn.addEventListener('click', generateFineReportPDF);
+
+  // jab user 'Date Range' select kare to fromDate/toDate dikhayen/chhupayen
+  const analyticsType = document.getElementById('analyticsType');
+  analyticsType.addEventListener('change', () => {
+    const from = document.getElementById('fromDate');
+    const to = document.getElementById('toDate');
+    if (analyticsType.value === 'range') {
+      from.classList.remove('hidden');
+      to.classList.remove('hidden');
+    } else {
+      from.classList.add('hidden');
+      to.classList.add('hidden');
+    }
+  });
+});
+
+async function generateFineReportPDF() {
+  const { fineRates, eligibilityCriteria } = await idbKeyval.get('settings');
+  const fromDate = document.getElementById('fromDate').value;
+  const toDate   = document.getElementById('toDate').value;
+  const selectedClass = document.getElementById('analyticsTarget').value === 'class'
+    ? document.getElementById('analyticsSearch').value : '';
+  const selectedSection = document.getElementById('analyticsSectionSelect').value;
+
+  const attendance = await idbKeyval.get('attendanceData') || [];
+  const fines      = await idbKeyval.get('finesData')       || [];
+  const students   = await idbKeyval.get('students')        || [];
+
+  const filtered = fines.filter(f => {
+    const date = new Date(f.date);
+    return date >= new Date(fromDate) && date <= new Date(toDate)
+      && (!selectedClass || f.class === selectedClass)
+      && (!selectedSection || f.section === selectedSection);
+  });
+
+  const doc = new jspdf.jsPDF();
+  let y = 10;
+
+  // Fine & Eligibility Criteria
+  doc.setFontSize(14).text('Fine & Eligibility Criteria', 10, y);
+  y += 8;
+  doc.setFontSize(12);
+  doc.text(`Absent Fine: ${fineRates.absent}`, 10, y); y += 6;
+  doc.text(`Late Fine: ${fineRates.late}`,   10, y); y += 6;
+  doc.text(`Passing %: ${eligibilityCriteria.passingPercent}`, 10, y); y += 10;
+
+  // Detailed Fines Table
+  doc.setFontSize(14).text('Fine Details', 10, y); y += 6;
+  const tableData = filtered.map(f => [
+    f.studentId,
+    (students.find(s => s.admNo === f.studentId) || {}).name || '',
+    f.class, f.section, f.date, f.type, f.amount
+  ]);
+  doc.autoTable({
+    startY: y,
+    head: [['Adm#','Name','Class','Section','Date','Type','Amount']],
+    body: tableData
+  });
+  y = doc.lastAutoTable.finalY + 10;
+
+  // Exam Eligibility Status
+  doc.setFontSize(14).text('Exam Eligibility', 10, y); y += 8;
+  const statusData = students
+    .filter(s =>
+      (!selectedClass || s.class === selectedClass)
+      && (!selectedSection || s.section === selectedSection)
+    )
+    .map(s => {
+      const recs = attendance.filter(a =>
+        a.admNo === s.admNo
+        && new Date(a.date) >= new Date(fromDate)
+        && new Date(a.date) <= new Date(toDate)
+      );
+      const presentCount = recs.filter(a => a.status === 'present').length;
+      const percent = recs.length ? (presentCount / recs.length) * 100 : 0;
+      const eligible = percent >= eligibilityCriteria.passingPercent;
+      return [s.admNo, s.name, `${percent.toFixed(1)}%`, eligible ? 'Eligible' : 'Debarred'];
+    });
+  doc.autoTable({
+    startY: y,
+    head: [['Adm#','Name','Attendance %','Status']],
+    body: statusData
+  });
+
+  // Save PDF
+  doc.save(`Fine_Report_${fromDate}_to_${toDate}.pdf`);
+}
+// --- ⬆ naya hissa ikhtetam pazir ⬆ ---
