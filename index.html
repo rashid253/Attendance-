@@ -40,37 +40,6 @@
   </style>
 </head>
 <body>
-  <!-- ====== 1. FILTER & SEARCH UI ====== -->
-<div id="studentFilter" class="filter-panel">
-  <input type="text" id="filterStudent" placeholder="Enter name or Adm#" />
-
-  <select id="filterPeriodType">
-    <option value="">Time Period</option>
-    <option value="date">Date</option>
-    <option value="month">Month</option>
-    <option value="semester">Semester</option>
-    <option value="year">Year</option>
-  </select>
-
-  <input type="date"    id="filterDate"    class="period-input hidden" />
-  <input type="month"   id="filterMonth"   class="period-input hidden" />
-  <div id="filterSemester" class="period-input hidden">
-    <input type="month" id="filterSemStart" /> to
-    <input type="month" id="filterSemEnd" />
-  </div>
-  <input type="number"  id="filterYear"    class="period-input hidden" min="2000" max="2100" />
-
-  <select id="filterStatus">
-    <option value="all">All Students</option>
-    <option value="eligible">Eligible</option>
-    <option value="debarred">Debarred</option>
-    <option value="outstanding">Outstanding</option>
-    <option value="avg">Avg Attendance &gt;= %</option>
-  </select>
-
-  <button id="applyFilter" class="btn">Apply</button>
-  <button id="generateBooklet" class="btn">Generate PDF Booklet</button>
-</div>
   <header>
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
@@ -110,7 +79,38 @@
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
   </section>
+  
+<!-- ====== 1. FILTER & SEARCH UI ====== -->
+<div id="studentFilter" class="filter-panel">
+  <input type="text" id="filterStudent" placeholder="Enter name or Adm#" />
 
+  <select id="filterPeriodType">
+    <option value="">Time Period</option>
+    <option value="date">Date</option>
+    <option value="month">Month</option>
+    <option value="semester">Semester</option>
+    <option value="year">Year</option>
+  </select>
+
+  <input type="date"    id="filterDate"    class="period-input hidden" />
+  <input type="month"   id="filterMonth"   class="period-input hidden" />
+  <div id="filterSemester" class="period-input hidden">
+    <input type="month" id="filterSemStart" /> to
+    <input type="month" id="filterSemEnd" />
+  </div>
+  <input type="number"  id="filterYear"    class="period-input hidden" min="2000" max="2100" />
+
+  <select id="filterStatus">
+    <option value="all">All Students</option>
+    <option value="eligible">Eligible</option>
+    <option value="debarred">Debarred</option>
+    <option value="outstanding">Outstanding</option>
+    <option value="avg">Avg Attendance &gt;= %</option>
+  </select>
+
+  <button id="applyFilter" class="btn">Apply</button>
+  <button id="generateBooklet" class="btn">Generate PDF Booklet</button>
+</div>
   <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
