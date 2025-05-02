@@ -78,6 +78,36 @@
       </h3>
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
+    <!-- Full-width Search + Filter -->
+    <div class="search-container">
+      <input type="text" id="globalSearch" class="search-bar" placeholder="Search by Adm# or Name" />
+      <button id="filterBtn" class="filter-icon no-print"><i class="fas fa-filter"></i></button>
+    </div>
+    <div id="filterDialog" class="filter-dialog hidden">
+      <div class="filter-content">
+        <h3>Filter Options</h3>
+        <fieldset>
+          <legend>Time Period</legend>
+          <label><input type="checkbox" name="timeFilter" value="date-day" /> Date/Day</label>
+          <label><input type="checkbox" name="timeFilter" value="month" /> Month</label>
+          <label><input type="checkbox" name="timeFilter" value="semester" /> Semester</label>
+          <label><input type="checkbox" name="timeFilter" value="year" /> Year</label>
+        </fieldset>
+        <fieldset>
+          <legend>Information</legend>
+          <label><input type="checkbox" name="infoFilter" value="registration" /> Student Registration</label>
+          <label><input type="checkbox" name="infoFilter" value="fines" /> Fines & Eligibility</label>
+          <label><input type="checkbox" name="infoFilter" value="attendance" /> Attendance Info</label>
+          <label><input type="checkbox" name="infoFilter" value="status" /> Eligible / Debarred</label>
+          <label><input type="checkbox" name="infoFilter" value="outstanding" /> Outstanding / Clear Fines</label>
+          <label><input type="checkbox" name="infoFilter" value="all" /> All</label>
+        </fieldset>
+        <div class="dialog-actions">
+          <button id="applyFilter" class="no-print"><i class="fas fa-check"></i> Apply</button>
+          <button id="closeFilter" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- 2. FINANCIAL SETTINGS -->
@@ -91,6 +121,8 @@
       <label>Eligib. % (≥):   <input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
+    <div id="settingsCard" class="card hidden"></div>
+    <button id="editSettings" class="btn no-print hidden">Edit Settings</button>
   </section>
 
   <!-- 3. COUNTERS -->
