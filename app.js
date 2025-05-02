@@ -1,5 +1,9 @@
 // app.js — Part 1 of 2
 window.addEventListener('DOMContentLoaded', async () => {
+  window.addEventListener('DOMContentLoaded', async () => {
+  console.log('✅ app.js loaded and DOM ready');
+  // … rest of your code …
+});
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
