@@ -1,4 +1,4 @@
-// app.js (part 1/3)
+p// app.js (part 1/3)
 window.addEventListener('DOMContentLoaded', async () => {
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
@@ -680,6 +680,9 @@ shReg.onclick = () => {
 };
 
 // --- 13. SERVICE WORKER ---
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js').catch(console.error);
-}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
+
+}); // ← close async callback
+); // ← close addEventListener
