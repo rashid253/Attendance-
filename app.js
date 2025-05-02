@@ -772,3 +772,118 @@ async function generateFineReportPDF() {
   window.open(blobUrl);
   doc.save('fine_report.pdf');
 }
+// ====== 3. JAVASCRIPT: FILTER + PDF BOOKLET ======
+document.addEventListener('DOMContentLoaded', () => {
+  // references
+  const students        = await idbKeyval.get('students')       || [];
+  const attendanceData  = await idbKeyval.get('attendanceData') || {};
+  const fineRates       = await idbKeyval.get('fineRates')      || { A:0,Lt:0,L:0,HD:0 };
+  const eligibilityPct  = await idbKeyval.get('eligibilityPct') || 0;
+
+  const el = id => document.getElementById(id);
+  const pcs = {
+    filterStudent:    el('filterStudent'),
+    filterPeriodType: el('filterPeriodType'),
+    filterDate:       el('filterDate'),
+    filterMonth:      el('filterMonth'),
+    filterSemester:   el('filterSemester'),
+    filterSemStart:   el('filterSemStart'),
+    filterSemEnd:     el('filterSemEnd'),
+    filterYear:       el('filterYear'),
+    filterStatus:     el('filterStatus'),
+    applyFilter:      el('applyFilter'),
+    generateBooklet:  el('generateBooklet')
+  };
+
+  // show/hide period inputs
+  pcs.filterPeriodType.addEventListener('change', () => {
+    document.querySelectorAll('.period-input').forEach(i=>i.classList.add('hidden'));
+    switch(pcs.filterPeriodType.value) {
+      case 'date':     pcs.filterDate.classList.remove('hidden'); break;
+      case 'month':    pcs.filterMonth.classList.remove('hidden'); break;
+      case 'semester': pcs.filterSemester.classList.remove('hidden'); break;
+      case 'year':     pcs.filterYear.classList.remove('hidden'); break;
+    }
+  });
+
+  // applyFilter builds list of student IDs matching criteria
+  pcs.applyFilter.addEventListener('click', () => {
+    const nameQ = pcs.filterStudent.value.trim().toLowerCase();
+    let filtered = students.filter(s =>
+      !nameQ || s.adm.includes(nameQ) || s.name.toLowerCase().includes(nameQ)
+    );
+    // time window
+    let from, to;
+    switch(pcs.filterPeriodType.value) {
+      case 'date':
+        from = to = pcs.filterDate.value; break;
+      case 'month':
+        from = `${pcs.filterMonth.value}-01`;
+        to   = `${pcs.filterMonth.value}-${new Date(...pcs.filterMonth.value.split('-').map(Number),0).getDate()}`;
+        break;
+      case 'semester':
+        let [sy,sm]=pcs.filterSemStart.value.split('-');
+        let [ey,em]=pcs.filterSemEnd.value.split('-');
+        from = `${pcs.filterSemStart.value}-01`;
+        to   = `${pcs.filterSemEnd.value}-${new Date(+ey,+em,0).getDate()}`;
+        break;
+      case 'year':
+        from = `${pcs.filterYear.value}-01-01`;
+        to   = `${pcs.filterYear.value}-12-31`;
+        break;
+    }
+    if(from && to) {
+      filtered = filtered.filter(s => {
+        const recs = Object.entries(attendanceData)
+          .filter(([d])=>d>=from&&d<=to)
+          .map(([,r])=>r[s.adm]||'A');
+        const total = recs.length;
+        const pres  = recs.filter(c=>'P'===c).length;
+        const out   = recs.reduce((sum,c)=>sum + (fineRates[c]||0),0)
+                  - ( (await idbKeyval.get('paymentsData'))[s.adm]||[] )
+                    .reduce((a,p)=>a+p.amount,0);
+        // status filter
+        switch(pcs.filterStatus.value) {
+          case 'eligible':   return out<=0 && (total?pres/total*100:0)>=eligibilityPct;
+          case 'debarred':   return out>0 || (total?pres/total*100:0)<eligibilityPct;
+          case 'outstanding':return out>0;
+          case 'avg':        return total?pres/total*100>=eligibilityPct:false;
+        }
+        return true;
+      });
+    }
+    pcs.generateBooklet.filtered = filtered;
+    alert(`${filtered.length} students matched`);
+  });
+
+  // generate PDF booklet
+  pcs.generateBooklet.addEventListener('click', () => {
+    const list = pcs.generateBooklet.filtered || students;
+    const doc = new jspdf.jsPDF();
+    list.forEach((s,i) => {
+      if(i>0) doc.addPage();
+      // header
+      doc.setFontSize(16).text(`${s.name} (Adm# ${s.adm})`,10,20);
+      // table of attendance & fines summary
+      const rows = [];
+      for(const [date,recs] of Object.entries(attendanceData)) {
+        // filter by from/to if set...
+        rows.push([
+          date,
+          recs[s.adm]||'A',
+          fineRates[recs[s.adm]||'A']||0
+        ]);
+      }
+      doc.autoTable({
+        startY:30,
+        head:[['Date','Status','Fine']],
+        body:rows
+      });
+      // eligibility line
+      doc.text(`Eligibility Threshold: ${eligibilityPct}%`,10, doc.lastAutoTable.finalY+10);
+    });
+    // open & save
+    window.open(doc.output('bloburl'));
+    doc.save('student_booklet.pdf');
+  });
+});
