@@ -43,6 +43,49 @@
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
 
+  <!-- SEARCH & FILTER at top -->
+  <div class="search-container row-inline" style="padding: 10px; background: #f9f9f9; border-bottom: 1px solid #ddd;">
+    <input type="text" id="globalSearch" class="search-bar" placeholder="Search by Adm# or Name" style="flex:1; padding:8px;" />
+    <button id="filterBtn" class="filter-icon no-print" style="padding:8px; margin-left:5px;"><i class="fas fa-filter"></i></button>
+  </div>
+  <div id="filterDialog" class="filter-dialog hidden">
+    <div class="filter-content">
+      <h3>Filter Options</h3>
+      <fieldset>
+        <legend>Time Period</legend>
+        <label><input name="timeFilter" value="date-day" type="checkbox" /> Date/Day</label>
+        <label><input name="timeFilter" value="month" type="checkbox" /> Month</label>
+        <label><input name="timeFilter" value="semester" type="checkbox" /> Semester</label>
+        <label><input name="timeFilter" value="year" type="checkbox" /> Year</label>
+      </fieldset>
+      <fieldset id="timePickers" class="hidden">
+        <legend>Choose Range</legend>
+        <div id="picker-date" class="hidden"><label>On Date: <input type="date" id="filterDate"/></label></div>
+        <div id="picker-month" class="hidden"><label>In Month: <input type="month" id="filterMonth"/></label></div>
+        <div id="picker-semester" class="hidden">
+          <label>Semester Start: <input type="month" id="filterSemStart"/></label>
+          <label>Semester End:   <input type="month" id="filterSemEnd"/></label>
+        </div>
+        <div id="picker-year" class="hidden"><label>In Year: <input type="number" id="filterYear" min="2000" max="2100"/></label></div>
+      </fieldset>
+      <fieldset>
+        <legend>Information</legend>
+        <label><input name="infoFilter" value="registration" type="checkbox" /> Student Profile</label>
+        <label><input name="infoFilter" value="attendance" type="checkbox" /> Attendance Records</label>
+        <label><input name="infoFilter" value="fines" type="checkbox" /> Financial Status</label>
+        <label><input name="infoFilter" value="eligible" type="checkbox" /> Eligible</label>
+        <label><input name="infoFilter" value="debarred" type="checkbox" /> Debarred</label>
+        <label><input name="infoFilter" value="outstanding" type="checkbox" /> Outstanding Fines</label>
+        <label><input name="infoFilter" value="clear" type="checkbox" /> Clear Fines</label>
+        <label><input name="infoFilter" value="all" type="checkbox" /> All</label>
+      </fieldset>
+      <div class="dialog-actions row-inline">
+        <button id="applyFilter" class="no-print"><i class="fas fa-check"></i> Apply</button>
+        <button id="closeFilter" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. SETUP -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
@@ -74,50 +117,9 @@
       <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
-
-    <!-- 2. SEARCH & FILTER -->
-    <div class="search-container row-inline">
-      <input type="text" id="globalSearch" class="search-bar" placeholder="Search by Adm# or Name" />
-      <button id="filterBtn" class="filter-icon no-print"><i class="fas fa-filter"></i></button>
-    </div>
-    <div id="filterDialog" class="filter-dialog hidden">
-      <div class="filter-content">
-        <h3>Filter Options</h3>
-        <fieldset>
-          <legend>Time Period</legend>
-          <label><input name="timeFilter" value="date-day" type="checkbox" /> Date/Day</label>
-          <label><input name="timeFilter" value="month" type="checkbox" /> Month</label>
-          <label><input name="timeFilter" value="semester" type="checkbox" /> Semester</label>
-          <label><input name="timeFilter" value="year" type="checkbox" /> Year</label>
-        </fieldset>
-        <fieldset id="timePickers" class="hidden">
-          <legend>Choose Range</legend>
-          <div id="picker-date" class="hidden"><label>On Date: <input type="date" id="filterDate"/></label></div>
-          <div id="picker-month" class="hidden"><label>In Month: <input type="month" id="filterMonth"/></label></div>
-          <div id="picker-semester" class="hidden">
-            <label>Semester Start: <input type="month" id="filterSemStart"/></label>
-            <label>Semester End:   <input type="month" id="filterSemEnd"/></label>
-          </div>
-          <div id="picker-year" class="hidden"><label>In Year: <input type="number" id="filterYear" min="2000" max="2100"/></label></div>
-        </fieldset>
-        <fieldset>
-          <legend>Information</legend>
-          <label><input name="infoFilter" value="registration" type="checkbox" /> Student Registration</label>
-          <label><input name="infoFilter" value="fines" type="checkbox" /> Fines & Eligibility</label>
-          <label><input name="infoFilter" value="attendance" type="checkbox" /> Attendance Info</label>
-          <label><input name="infoFilter" value="status" type="checkbox" /> Eligible / Debarred</label>
-          <label><input name="infoFilter" value="outstanding" type="checkbox" /> Outstanding / Clear Fines</label>
-          <label><input name="infoFilter" value="all" type="checkbox" /> All</label>
-        </fieldset>
-        <div class="dialog-actions row-inline">
-          <button id="applyFilter" class="no-print"><i class="fas fa-check"></i> Apply</button>
-          <button id="closeFilter" class="no-print"><i class="fas fa-times"></i> Cancel</button>
-        </div>
-      </div>
-    </div>
   </section>
 
-  <!-- 3. FINANCIAL SETTINGS -->
+  <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
@@ -132,23 +134,14 @@
     <button id="editSettings" class="btn no-print hidden"><i class="fas fa-edit"></i> Edit Settings</button>
   </section>
 
-  <!-- 4. COUNTERS -->
+  <!-- 3. COUNTERS -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
+    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
+    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
+    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
   </section>
 
-  <!-- 5. STUDENT REGISTRATION -->
+  <!-- 4. STUDENT REGISTRATION -->
   <section id="student-registration">
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
@@ -183,7 +176,7 @@
     </div>
   </section>
 
-  <!-- 6. MARK ATTENDANCE -->
+  <!-- 5. MARK ATTENDANCE -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
@@ -200,8 +193,8 @@
     </div>
   </section>
 
-  <!-- 7. ANALYTICS -->
-  <section id="analytics-section">
+  <!-- 6. ANALYTICS -->
+  <section id="analytics-section" class="hidden">
     <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
     <div class="row-inline">
       <select id="analyticsTarget">
@@ -248,8 +241,8 @@
     </div>
   </section>
 
-  <!-- 8. ATTENDANCE REGISTER -->
-  <section id="register-section">
+  <!-- 7. ATTENDANCE REGISTER -->
+  <section id="register-section" class="hidden">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
       <input type="month" id="registerMonth" />
