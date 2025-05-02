@@ -679,7 +679,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
-// --- Analytics Fine Report PDF Block Updated ---
+// --- Analytics Fine Report PDF Block ---
 
 document.addEventListener('DOMContentLoaded', () => {
   const fineReportBtn = document.getElementById('generateFineReport');
@@ -688,10 +688,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function generateFineReportPDF() {
   // 1. Load settings & all data
-  const settings   = await idbKeyval.get('settings')       || {};
-  const fines      = await idbKeyval.get('finesData')      || [];
-  const attendance = await idbKeyval.get('attendanceData') || [];
-  const students   = await idbKeyval.get('students')       || [];
+  const fineRates      = await idbKeyval.get('fineRates')      || { A:0, Lt:0, L:0, HD:0 };
+  const eligibilityPct = await idbKeyval.get('eligibilityPct') || 0;
+  const attendanceData = await idbKeyval.get('attendanceData') || {};
+  const students       = await idbKeyval.get('students')       || [];
 
   // 2. Determine period based on selection
   const type = document.getElementById('analyticsType').value;
@@ -700,17 +700,18 @@ async function generateFineReportPDF() {
     fromDate = toDate = document.getElementById('analyticsDate').value;
   } else if (type === 'month') {
     const m = document.getElementById('analyticsMonth').value;
-    fromDate = `${m}-01`;
     const [y, mon] = m.split('-').map(Number);
+    fromDate = `${m}-01`;
     const last = new Date(y, mon, 0).getDate();
-    toDate = `${m}-${String(last).padStart(2, '0')}`;
+    toDate   = `${m}-${String(last).padStart(2,'0')}`;
   } else if (type === 'semester') {
     const s1 = document.getElementById('semesterStart').value;
     const s2 = document.getElementById('semesterEnd').value;
+    const [sy, sm] = s1.split('-').map(Number);
+    const [ey, em] = s2.split('-').map(Number);
     fromDate = `${s1}-01`;
-    const [y2, mon2] = s2.split('-').map(Number);
-    const last2 = new Date(y2, mon2, 0).getDate();
-    toDate = `${s2}-${String(last2).padStart(2, '0')}`;
+    const last2 = new Date(ey, em, 0).getDate();
+    toDate   = `${s2}-${String(last2).padStart(2,'0')}`;
   } else if (type === 'year') {
     const y = document.getElementById('yearStart').value;
     fromDate = `${y}-01-01`;
@@ -720,62 +721,54 @@ async function generateFineReportPDF() {
     return;
   }
 
-  // 3. Filter fines within date range
-  const filteredFines = fines.filter(f => f.date >= fromDate && f.date <= toDate);
+  // 3. Compute fines entries dynamically
+  const finesEntries = [];
+  for (const [date, recs] of Object.entries(attendanceData)) {
+    if (date < fromDate || date > toDate) continue;
+    students.forEach(s => {
+      const status = recs[s.adm] || 'A';
+      const amount = fineRates[status] || 0;
+      if (amount > 0) {
+        finesEntries.push({
+          studentId: s.adm,
+          name:      s.name,
+          class:     s.cls,
+          section:   s.sec,
+          date,
+          type:      status,
+          amount
+        });
+      }
+    });
+  }
 
   // 4. Prepare PDF document
   const doc = new jspdf.jsPDF();
   let y = 10;
 
   // Fine & Eligibility Criteria Section
-  doc.setFontSize(14).text('Fine & Eligibility Criteria', 10, y);
-  y += 8;
+  doc.setFontSize(14).text('Fine & Eligibility Criteria', 10, y); y += 8;
   doc.setFontSize(12);
-  doc.text(`Absent Fine: ${settings.fineAbsent   || 0}`, 10, y); y += 6;
-  doc.text(`Late Fine:   ${settings.fineLate     || 0}`, 10, y); y += 6;
-  doc.text(`Leave Fine:  ${settings.fineLeave    || 0}`, 10, y); y += 6;
-  doc.text(`Half-Day Fine: ${settings.fineHalfDay|| 0}`, 10, y); y += 6;
-  doc.text(`Passing %:   ${settings.eligibilityPct|| 0}`, 10, y); y += 10;
+  doc.text(`Absent Fine: PKR ${fineRates.A}`,    10, y); y += 6;
+  doc.text(`Late Fine: PKR ${fineRates.Lt}`,     10, y); y += 6;
+  doc.text(`Leave Fine: PKR ${fineRates.L}`,     10, y); y += 6;
+  doc.text(`Half-Day Fine: PKR ${fineRates.HD}`, 10, y); y += 6;
+  doc.text(`Passing % Threshold: ${eligibilityPct}%`, 10, y); y += 10;
 
   // Detailed Fine Table
-  doc.setFontSize(14).text('Fine Details', 10, y); y += 6;
-  const fineTable = filteredFines.map(f => [
-    f.studentId,
-    (students.find(s => s.admNo === f.studentId) || {}).name || '',
-    f.class, f.section, f.date, f.type, f.amount
+  doc.setFontSize(14).text('Detailed Fine Report', 10, y); y += 6;
+  const fineTable = finesEntries.map(f => [
+    f.studentId, f.name, f.class, f.section, f.date, f.type, f.amount
   ]);
-  doc.autoTable({ startY: y,
-    head: [['Adm#','Name','Class','Section','Date','Type','Amount']],
-    body: fineTable
-  });
-  y = doc.lastAutoTable.finalY + 10;
-
-  // Exam Eligibility & Action Status
-  doc.setFontSize(14).text('Exam Eligibility', 10, y); y += 8;
-  const statusTable = students.map(s => {
-    const recs = attendance.filter(a =>
-      a.admNo === s.admNo && a.date >= fromDate && a.date <= toDate
-    );
-    const presentCount = recs.filter(a => a.status === 'present').length;
-    const pct = recs.length ? (presentCount / recs.length) * 100 : 0;
-    const eligibility = pct >= (settings.eligibilityPct || 0) ? 'Eligible' : 'Debarred';
-    const actionStatus = s.status || '';
-    return [s.admNo, s.name, `${pct.toFixed(1)}%`, eligibility, actionStatus];
-  });
-  doc.autoTable({ startY: y,
-    head: [['Adm#','Name','Attendance %','Status','Action']],
-    body: statusTable
+  doc.autoTable({
+    startY: y,
+    head: [['Adm#','Name','Class','Section','Date','Type','Amount (PKR)']],
+    body: fineTable,
+    styles: { fontSize: 10 }
   });
 
-  // HOD Signature at bottom-right
-  const pageH = doc.internal.pageSize.height;
-  const pageW = doc.internal.pageSize.width;
-  doc.setFontSize(12);
-  doc.text('HOD Signature:', pageW - 60, pageH - 20);
-
-  // Open PDF in new window
+  // 5. Open & save PDF
   const blobUrl = doc.output('bloburl');
   window.open(blobUrl);
+  doc.save('fine_report.pdf');
 }
-
-// --- End of Analytics Fine Report PDF Block ---
