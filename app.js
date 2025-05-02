@@ -1,4 +1,5 @@
 // app.js — Part 1/3
+console.log('app.js loaded');
 window.addEventListener('DOMContentLoaded', async () => {
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
