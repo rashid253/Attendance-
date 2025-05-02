@@ -78,11 +78,14 @@
       </h3>
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
+
     <!-- Full-width Search + Filter -->
     <div class="search-container">
       <input type="text" id="globalSearch" class="search-bar" placeholder="Search by Adm# or Name" />
       <button id="filterBtn" class="filter-icon no-print"><i class="fas fa-filter"></i></button>
     </div>
+
+    <!-- Filter Dialog -->
     <div id="filterDialog" class="filter-dialog hidden">
       <div class="filter-content">
         <h3>Filter Options</h3>
@@ -92,6 +95,22 @@
           <label><input type="checkbox" name="timeFilter" value="month" /> Month</label>
           <label><input type="checkbox" name="timeFilter" value="semester" /> Semester</label>
           <label><input type="checkbox" name="timeFilter" value="year" /> Year</label>
+        </fieldset>
+        <fieldset id="timePickers" class="hidden">
+          <legend>Choose Range</legend>
+          <div id="picker-date" class="hidden">
+            <label>On Date: <input type="date" id="filterDate"/></label>
+          </div>
+          <div id="picker-month" class="hidden">
+            <label>In Month: <input type="month" id="filterMonth"/></label>
+          </div>
+          <div id="picker-semester" class="hidden">
+            <label>Semester Start: <input type="month" id="filterSemStart"/></label>
+            <label>Semester End:   <input type="month" id="filterSemEnd"/></label>
+          </div>
+          <div id="picker-year" class="hidden">
+            <label>In Year: <input type="number" id="filterYear" min="2000" max="2100"/></label>
+          </div>
         </fieldset>
         <fieldset>
           <legend>Information</legend>
