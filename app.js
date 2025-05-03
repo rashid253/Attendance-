@@ -35,54 +35,67 @@ window.addEventListener('DOMContentLoaded', async () => {
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // --- 4. SETTINGS: Fines & Eligibility ---
-  const formDiv      = $('financialForm');
-  const saveSettings = $('saveSettings');
-  const settingsCard = document.createElement('div');
-  settingsCard.id    = 'settingsCard';
-  settingsCard.className = 'card hidden';
-  const editSettings = document.createElement('button');
-  editSettings.id    = 'editSettings';
-  editSettings.className = 'btn no-print hidden';
-  editSettings.textContent = 'Edit Settings';
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
+const formDiv      = $('financialForm');
+const saveSettings = $('saveSettings');
+// Correctly map the five input elements
+const inputs       = ['fineAbsent', 'fineLate', 'fineLeave', 'fineHalfDay', 'eligibilityPct']
+  .map(id => document.getElementById(id));
 
-  $('fineAbsent').value     = fineRates.A;
-  $('fineLate').value       = fineRates.Lt;
-  $('fineLeave').value      = fineRates.L;
-  $('fineHalfDay').value    = fineRates.HD;
-  $('eligibilityPct').value = eligibilityPct;
+// Create the read‑only card and edit button
+const settingsCard = document.createElement('div');
+settingsCard.id    = 'settingsCard';
+settingsCard.className = 'card hidden';
 
-  saveSettings.onclick = async () => {
-    fineRates = {
-      A : Number($('fineAbsent').value)   || 0,
-      Lt: Number($('fineLate').value)     || 0,
-      L : Number($('fineLeave').value)    || 0,
-      HD: Number($('fineHalfDay').value)  || 30,
-    };
-    eligibilityPct = Number($('eligibilityPct').value) || 0;
-    await Promise.all([
-      save('fineRates', fineRates),
-      save('eligibilityPct', eligibilityPct)
-    ]);
-    settingsCard.innerHTML = `
-      <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
-      </div>
-    `;
-    hide(formDiv, saveSettings);
-    show(settingsCard, editSettings);
+const editSettings = document.createElement('button');
+editSettings.id    = 'editSettings';
+editSettings.className = 'btn no-print hidden';
+editSettings.textContent = 'Edit Settings';
+
+// Insert them into the DOM
+formDiv.parentNode.appendChild(settingsCard);
+formDiv.parentNode.appendChild(editSettings);
+
+// Initialize form fields with saved values
+$('fineAbsent').value     = fineRates.A;
+$('fineLate').value       = fineRates.Lt;
+$('fineLeave').value      = fineRates.L;
+$('fineHalfDay').value    = fineRates.HD;
+$('eligibilityPct').value = eligibilityPct;
+
+// Save button handler
+saveSettings.onclick = async () => {
+  fineRates = {
+    A : Number($('fineAbsent').value)   || 0,
+    Lt: Number($('fineLate').value)     || 0,
+    L : Number($('fineLeave').value)    || 0,
+    HD: Number($('fineHalfDay').value)  || 30,
   };
+  eligibilityPct = Number($('eligibilityPct').value) || 0;
+  await Promise.all([
+    save('fineRates', fineRates),
+    save('eligibilityPct', eligibilityPct)
+  ]);
 
-  editSettings.onclick = () => {
-    hide(settingsCard, editSettings);
-    show(formDiv, saveSettings);
-  };
+  settingsCard.innerHTML = `
+    <div class="card-content">
+      <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
+      <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
+      <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
+      <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
+      <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+    </div>
+  `;
 
+  // Hide the form inputs and save button, show the read‑only card and edit button
+  hide(formDiv, saveSettings, ...inputs);
+  show(settingsCard, editSettings);
+};
+
+// Edit button handler
+editSettings.onclick = () => {
+  hide(settingsCard, editSettings);
+  show(formDiv, saveSettings, ...inputs);
+};
   // --- 5. SETUP: School, Class & Section ---
   async function loadSetup() {
     const [sc, cl, sec] = await Promise.all([
