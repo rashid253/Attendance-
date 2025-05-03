@@ -148,27 +148,29 @@
     <h2 style="display:flex;justify-content:space-between;align-items:center;">
       <span><i class="fas fa-chart-bar"></i> Analytics Dashboard</span>
       <button id="analyticsFilterBtn" class="no-print" style="background:none;border:none;cursor:pointer;font-size:1.2em;">
-        <i class="fas fa-filter" title="Show Filters"></i>
+        <i class="fas fa-filter" title="Filters"></i>
       </button>
     </h2>
-    <div id="analyticsFilterPanel" class="card hidden" style="position:absolute;top:2.5em;right:1em;width:240px;z-index:10;">
-      <h4 style="margin-top:0;">🔍 Filter & Export</h4>
-      <div style="margin-bottom:0.5em;">
-        <label><input type="checkbox" class="analytics-filter" value="eligible" /> Eligible Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="debarred" /> Debarred Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="outstanding" /> With Outstanding Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="clears" /> Cleared All Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="registration" /> Show Registration Section</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="attendanceReport" /> Show Attendance Section</label>
+    <dialog id="analyticsFilterDialog" style="padding:1em;border-radius:6px;border:1px solid #ccc;width:260px;">
+      <h3 style="margin-top:0;">🔍 Filters & Export</h3>
+      <div style="margin-bottom:1em;">
+        <label><input type="checkbox" class="analytics-filter" value="eligible"> Eligible Students</label><br>
+        <label><input type="checkbox" class="analytics-filter" value="debarred"> Debarred Students</label><br>
+        <label><input type="checkbox" class="analytics-filter" value="outstanding"> With Outstanding Fines</label><br>
+        <label><input type="checkbox" class="analytics-filter" value="clears"> Cleared All Fines</label><br>
+        <label><input type="checkbox" class="analytics-filter" value="registration"> Show Registration Section</label><br>
+        <label><input type="checkbox" class="analytics-filter" value="attendanceReport"> Show Attendance Section</label>
       </div>
       <hr>
-      <div>
-        <label><input type="radio" name="downloadMode" value="filtered" checked /> Download Filtered PDF</label><br>
-        <label><input type="radio" name="downloadMode" value="all" /> Download All Reports</label><br>
-        <button id="downloadReports" class="btn no-print" style="width:100%;">Download</button>
-        <button id="clearFilters" class="btn no-print" style="width:100%;margin-top:0.5em;background:#eee;color:#333;">Clear</button>
+      <div style="margin:0.5em 0;">
+        <label><input type="radio" name="downloadMode" value="filtered" checked> Download Filtered PDF</label><br>
+        <label><input type="radio" name="downloadMode" value="all"> Download All Reports</label>
       </div>
-    </div>
+      <div style="display:flex;gap:0.5em;margin-top:1em;">
+        <button id="downloadReports" class="btn no-print" style="flex:1;">Download</button>
+        <button id="closeFilterDialog" class="btn no-print" style="flex:1;background:#eee;color:#333;">Close</button>
+      </div>
+    </dialog>
     <div class="row-inline" style="margin-bottom:0.5em;">
       <select id="analyticsTarget">
         <option disabled selected>— Report For —</option>
