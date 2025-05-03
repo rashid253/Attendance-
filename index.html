@@ -36,6 +36,16 @@
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
     .btn { margin-top: 0.5em; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    .counter-grid { display: flex; gap: 1em; margin: 1em 0; }
+    .counter-card { flex: 1; text-align: center; padding: 1em; background: #f3f3f3; border-radius: 8px; }
+    .table-wrapper { overflow-x: auto; margin-top: 1em; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; }
+    .summary-box { padding: 1em; background: #fafafa; border: 1px solid #eee; margin-top: 1em; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+             display: flex; align-items: center; justify-content: center;
+             background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; padding: 1.5em; border-radius: 8px; width: 90%; max-width: 400px; }
   </style>
 </head>
 <body>
@@ -43,7 +53,7 @@
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
 
-  <!-- SEARCH & FILTER at top -->
+  <!-- SEARCH & FILTER -->
   <div class="search-container row-inline" style="padding: 10px; background: #f9f9f9; border-bottom: 1px solid #ddd;">
     <input type="text" id="globalSearch" class="search-bar" placeholder="Search by Adm# or Name" style="flex:1; padding:8px;" />
     <button id="filterBtn" class="filter-icon no-print" style="padding:8px; margin-left:5px;"><i class="fas fa-filter"></i></button>
@@ -136,9 +146,18 @@
 
   <!-- 3. COUNTERS -->
   <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span><div>Section Students</div></div>
-    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span><div>Class Students</div></div>
-    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span><div>School Students</div></div>
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
   </section>
 
   <!-- 4. STUDENT REGISTRATION -->
