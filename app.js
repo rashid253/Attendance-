@@ -199,7 +199,7 @@
     resetViews();
 
     // app.js (Part 2/2)
-(() => {
+
   // Assumes Part 1 has run and defined $, show, hide, students, attendanceData, etc.
 
   // 7. Counters & View Utilities
@@ -412,10 +412,9 @@
     $('payAdm').textContent = adm;
     $('paymentAmount').value = '';
     show($('paymentModal'));
-  }
-
+  
   // app.js (Part 3/3)
-(() => {
+
   // Assumes Parts 1 & 2 have run and defined $, show, hide, students, attendanceData, etc.
 
   // --- 11. PAYMENT MODAL HANDLERS ---
