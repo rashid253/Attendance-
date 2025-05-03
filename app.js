@@ -290,99 +290,171 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+lines.join('\n'))}`,'_blank');
   };
 
-  // ANALYTICS & FILTERS
-  const atg=$('analyticsTarget'), asel=$('analyticsSectionSelect'), atype=$('analyticsType'),
-        adate=$('analyticsDate'), amonth=$('analyticsMonth'),
-        sems=$('semesterStart'), seme=$('semesterEnd'), ayear=$('yearStart'),
-        asearch=$('analyticsSearch'), loadA=$('loadAnalytics'), resetA=$('resetAnalytics'),
-        instr=$('instructions'), acont=$('analyticsContainer'), graphs=$('graphs'),
-        filterBtn=$('analyticsFilterBtn'), filterDialog=$('analyticsFilterDialog'),
-        filterChecks=document.querySelectorAll('.analytics-filter'),
-        closeDlg=$('closeFilterDialog'), downloadBtn=$('downloadReports'),
-        barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
-  let barChart, pieChart, lastShare='';
+  
+// In app.js, add or replace the following Analytics & Filters code
 
-  filterBtn.addEventListener('click',()=>filterDialog.showModal());
-  closeDlg.addEventListener('click',()=>filterDialog.close());
-  filterChecks.forEach(cb=>cb.addEventListener('change',applyAnalyticsFilters));
+// 1. Grab all controls
+const atg          = document.getElementById('analyticsTarget'),
+      asel         = document.getElementById('analyticsSectionSelect'),
+      atype        = document.getElementById('analyticsType'),
+      adate        = document.getElementById('analyticsDate'),
+      amonth       = document.getElementById('analyticsMonth'),
+      sems         = document.getElementById('semesterStart'),
+      seme         = document.getElementById('semesterEnd'),
+      ayear        = document.getElementById('yearStart'),
+      asearch      = document.getElementById('analyticsSearch'),
+      loadA        = document.getElementById('loadAnalytics'),
+      resetA       = document.getElementById('resetAnalytics'),
+      instr        = document.getElementById('instructions'),
+      acont        = document.getElementById('analyticsContainer'),
+      graphs       = document.getElementById('graphs'),
+      filterBtn    = document.getElementById('analyticsFilterBtn'),
+      filterPanel  = document.getElementById('analyticsFilterPanel'),
+      filterChecks = document.querySelectorAll('.analytics-filter'),
+      clearFilters = document.getElementById('clearFilters'),
+      downloadBtn  = document.getElementById('downloadReports'),
+      barCtx       = document.getElementById('barChart').getContext('2d'),
+      pieCtx       = document.getElementById('pieChart').getContext('2d');
 
-  function applyAnalyticsFilters(){
-    const active=Array.from(filterChecks).filter(cb=>cb.checked).map(cb=>cb.value);
-    document.querySelectorAll('#analyticsBody tr').forEach(row=>{
-      const status=row.cells[11].textContent.toLowerCase(), out=+row.cells[10].textContent.replace(/[^0-9]/g,'');
-      let show=!active.length;
-      if(active.includes('eligible')&&status==='eligible') show=true;
-      if(active.includes('debarred')&&status==='debarred') show=true;
-      if(active.includes('outstanding')&&out>0) show=true;
-      if(active.includes('clears')&&out<=0) show=true;
-      row.style.display=show?'':'none';
+let barChart, pieChart, lastAnalyticsShare = '';
+
+// 2. Open/close filter panel
+filterBtn.addEventListener('click', () => filterPanel.classList.toggle('hidden'));
+clearFilters.addEventListener('click', () => {
+  filterChecks.forEach(cb => cb.checked = false);
+  applyAnalyticsFilters();
+});
+
+// 3. Apply filters on change
+filterChecks.forEach(cb => cb.addEventListener('change', applyAnalyticsFilters));
+
+function applyAnalyticsFilters() {
+  const active = Array.from(filterChecks).filter(cb => cb.checked).map(cb => cb.value);
+  document.querySelectorAll('#analyticsBody tr').forEach(row => {
+    const status      = row.cells[11].textContent.trim().toLowerCase();
+    const outstanding = parseFloat(row.cells[10].textContent.replace(/[^0-9.]/g, '')) || 0;
+    let show = active.length === 0;
+    if (active.includes('eligible')    && status === 'eligible')    show = true;
+    if (active.includes('debarred')    && status === 'debarred')    show = true;
+    if (active.includes('outstanding') && outstanding > 0)          show = true;
+    if (active.includes('clears')      && outstanding <= 0)         show = true;
+    row.style.display = show ? '' : 'none';
+  });
+  document.getElementById('student-registration').style.display = active.includes('registration') ? '' : 'none';
+  document.getElementById('attendance-section').style.display   = active.includes('attendanceReport') ? '' : 'none';
+}
+
+// 4. Unified Download button
+downloadBtn.addEventListener('click', () => {
+  const mode = document.querySelector('input[name="downloadMode"]:checked').value;
+  if (mode === 'filtered') {
+    const doc = new jspdf.jsPDF();
+    doc.text('Filtered Analytics Report', 10, 10);
+    doc.autoTable({ startY: 20, html: '#analyticsTable', includeHiddenRows: false });
+    doc.save('analytics_filtered.pdf');
+  } else {
+    const rows = Array.from(document.querySelectorAll('#analyticsBody tr'))
+                      .filter(r => r.style.display !== 'none');
+    if (!rows.length) { alert('No records to download'); return; }
+    const doc = new jspdf.jsPDF();
+    rows.forEach((row, i) => {
+      const cells = Array.from(row.children).map(td => td.textContent.trim());
+      doc.text(`Report for ${cells[2]} (Adm#: ${cells[1]})`, 10, 20);
+      doc.autoTable({
+        startY: 30,
+        head: [['P','A','Lt','HD','L','Total','%','Outstanding','Status']],
+        body: [[cells[3],cells[4],cells[5],cells[6],cells[7],cells[8],cells[9],cells[10],cells[11]]]
+      });
+      if (i < rows.length - 1) doc.addPage();
     });
-    $('student-registration').style.display=active.includes('registration')?'':'none';
-    $('attendance-section').style.display=active.includes('attendanceReport')?'':'none';
+    doc.save('analytics_all_reports.pdf');
+  }
+  filterPanel.classList.add('hidden');
+});
+
+// 5. Generate Analytics Report
+loadA.addEventListener('click', () => {
+  if (atg.value === 'student' && !asearch.value.trim()) {
+    alert('Please enter an admission number or name');
+    return;
+  }
+  let from, to;
+  if (atype.value === 'date') {
+    from = to = adate.value;
+  } else if (atype.value === 'month') {
+    const [y,m] = amonth.value.split('-').map(Number);
+    from = `${amonth.value}-01`;
+    to   = `${amonth.value}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
+  } else if (atype.value === 'semester') {
+    const [sy,sm] = sems.value.split('-').map(Number);
+    const [ey,em] = seme.value.split('-').map(Number);
+    from = `${sems.value}-01`;
+    to   = `${seme.value}-${String(new Date(ey,em,0).getDate()).padStart(2,'0')}`;
+  } else if (atype.value === 'year') {
+    from = `${ayear.value}-01-01`;
+    to   = `${ayear.value}-12-31`;
+  } else {
+    alert('Select a period');
+    return;
   }
 
-  downloadBtn.addEventListener('click',()=>{
-    const mode=document.querySelector('input[name="downloadMode"]:checked').value;
-    if(mode==='filtered'){
-      const doc=new jspdf.jsPDF(); doc.text('Filtered Analytics',10,10);
-      doc.autoTable({startY:20,html:'#analyticsTable',includeHiddenRows:false}); doc.save('filtered.pdf');
-    } else {
-      const rows=Array.from(document.querySelectorAll('#analyticsBody tr')).filter(r=>r.style.display!=='none');
-      if(!rows.length){alert('No data');return;}
-      const doc=new jspdf.jsPDF();
-      rows.forEach((r,i)=>{
-        const c=Array.from(r.children).map(td=>td.textContent.trim());
-        doc.text(`Report ${c[2]}`,10,20);
-        doc.autoTable({startY:30,head:[['P','A','Lt','HD','L','Total','%','Outstanding','Status']],body:[[c[3],c[4],c[5],c[6],c[7],c[8],c[9],c[10],c[11]]]});
-        if(i<rows.length-1)doc.addPage();
-      });
-      doc.save('all_reports.pdf');
-    }
-    filterDialog.close();
+  // build pool
+  let pool = students.filter(s => s.cls === $('teacherClassSelect').value && s.sec === $('teacherSectionSelect').value);
+  if (atg.value === 'section') pool = pool.filter(s => s.sec === asel.value);
+  if (atg.value === 'student') {
+    const q = asearch.value.trim().toLowerCase();
+    pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
+  }
+
+  // compute stats
+  const stats = pool.map(s => ({ adm:s.adm, name:s.name, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
+  Object.entries(attendanceData).forEach(([d, recs]) => {
+    if (d < from || d > to) return;
+    stats.forEach(st => {
+      const c = recs[st.adm]||'A'; st[c]++; st.total++;
+    });
+  });
+  stats.forEach(st => {
+    const tf = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
+    const tp = (paymentsData[st.adm]||[]).reduce((a,p)=>a+p.amount,0);
+    st.outstanding = tf - tp;
   });
 
-  atg.onchange=()=>{
-    atype.disabled=false; [asel,asearch].forEach(x=>x.classList.add('hidden'));
-    [instr,acont,graphs].forEach(x=>x.classList.add('hidden')); resetA.classList.add('hidden');
-    if(atg.value==='section') asel.classList.remove('hidden');
-    if(atg.value==='student') asearch.classList.remove('hidden');
-  };
-  atype.onchange=()=>{
-    [adate,amonth,sems,seme,ayear].forEach(x=>x.classList.add('hidden'));
-    [instr,acont,graphs].forEach(x=>x.classList.add('hidden')); resetA.classList.remove('hidden');
-    if(atype.value==='date') adate.classList.remove('hidden');
-    if(atype.value==='month') amonth.classList.remove('hidden');
-    if(atype.value==='semester'){sems.classList.remove('hidden');seme.classList.remove('hidden');}
-    if(atype.value==='year') ayear.classList.remove('hidden');
-  };
-  resetA.onclick=e=>{e.preventDefault();atype.value='';[adate,amonth,sems,seme,ayear,instr,acont,graphs].forEach(x=>x.classList.add('hidden'));resetA.classList.add('hidden');};
+  // render table
+  const thead = $('analyticsTable').querySelector('thead tr');
+  thead.innerHTML = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']
+    .map(h=>`<th>${h}</th>`).join('');
+  const tbody = $('analyticsBody'); tbody.innerHTML = '';
+  stats.forEach((st,i) => {
+    const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td>
+      <td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td>
+      <td>${st.total}</td><td>${pct}%</td><td>PKR ${st.outstanding}</td>
+      <td>${(st.outstanding>0)?'Debarred':'Eligible'}</td>`;
+    tbody.appendChild(tr);
+  });
 
-  loadA.onclick=()=>{
-    if(atg.value==='student'&&!asearch.value.trim()){alert('Enter Adm#');return;}
-    let from,to;
-    if(atype.value==='date'){from=to=adate.value;}
-    else if(atype.value==='month'){const [y,m]=amonth.value.split('-').map(Number);from=`${amonth.value}-01`;to=`${amonth.value}-${new Date(y,m,0).getDate()}`;}
-    else if(atype.value==='semester'){const [sy,sm]=sems.value.split('-').map(Number),[ey,em]=seme.value.split('-').map(Number);from=`${sems.value}-01`;to=`${seme.value}-${new Date(ey,em,0).getDate()}`;}
-    else if(atype.value==='year'){from=`${ayear.value}-01-01`;to=`${ayear.value}-12-31`;}
-    else{alert('Select period');return;}
-    let pool=students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value);
-    if(atg.value==='section') pool=pool.filter(s=>s.sec===asel.value);
-    if(atg.value==='student'){const q=asearch.value.trim().toLowerCase();pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));}
-    const stats=pool.map(s=>({adm:s.adm,name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
-    Object.entries(attendanceData).forEach(([d,r])=>{
-      if(d<from||d>to) return; stats.forEach(st=>{const c=r[st.adm]||'A';st[c]++;st.total++;});
-    });
-    stats.forEach(st=>{const tf=st.A*fineRates.A+st.Lt*fineRates.Lt+st.L*fineRates.L+st.HD*fineRates.HD;const tp=(paymentsData[st.adm]||[]).reduce((s,p)=>s+p.amount,0);st.outstanding=tf-tp;});
-    const thead=$('analyticsTable').querySelector('thead tr');thead.innerHTML=['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status'].map(h=>`<th>${h}</th>`).join('');
-    const tbody=$('analyticsBody');tbody.innerHTML='';
-    stats.forEach((st,i)=>{const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${(st.outstanding>0)?'Debarred':'Eligible'}</td>`;tbody.appendChild(tr);});
-    instr.textContent=`Period: ${from} to ${to}`;show(instr,acont,graphs,downloadBtn);
-    barChart?.destroy();barChart=new Chart(barCtx,{type:'bar',data:{labels:stats.map(s=>s.name),datasets:[{label:'% Present',data:stats.map(s=>s.total?s.P/s.total*100:0)}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
-    pieChart?.destroy();pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['Outstanding'],datasets:[{data:[stats.reduce((s,st)=>s+st.outstanding,0)]}]}});
+  instr.textContent = `Period: ${from} to ${to}`;
+  show(instr, acont, graphs, downloadBtn);
 
-    lastShare=`Analytics (${from} to ${to})\n`+stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
-  };
-  $('shareAnalytics').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent(lastShare)}`,'_blank');
+  // charts
+  barChart?.destroy();
+  barChart = new Chart(barCtx, {
+    type: 'bar',
+    data: { labels: stats.map(s=>s.name), datasets:[{ label:'% Present', data: stats.map(s=>s.total?s.P/s.total*100:0) }] },
+    options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
+  pieChart?.destroy();
+  pieChart = new Chart(pieCtx, {
+    type: 'pie',
+    data: { labels:['Outstanding'], datasets:[{ data:[ stats.reduce((sum,s)=>sum+s.outstanding,0) ] }] }
+  );
+
+  lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
+    stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
+});
 
   // ATTENDANCE REGISTER
   $('loadRegister').onclick=()=>{
