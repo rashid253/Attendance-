@@ -37,6 +37,8 @@
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
     .btn { margin-top: 0.5em; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    .table-wrapper { overflow-x:auto; }
+    .table-actions { margin-top: 0.5em; }
   </style>
 </head>
 <body>
@@ -91,6 +93,8 @@
       <label>Eligib. % (≥):   <input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
+    <div id="settingsCard" class="card hidden"></div>
+    <button id="editSettings" class="btn no-print hidden">Edit Settings</button>
   </section>
 
   <!-- 3. COUNTERS -->
@@ -162,8 +166,25 @@
   </section>
 
   <!-- 6. ANALYTICS -->
-  <section id="analytics-section">
-    <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
+  <section id="analytics-section" style="position:relative;">
+    <h2>
+      <i class="fas fa-chart-bar"></i> Analytics
+      <button id="analyticsFilterBtn" class="no-print" style="float:right; border:none; background:none; cursor:pointer;">
+        <i class="fas fa-filter"></i>
+      </button>
+    </h2>
+
+    <div id="analyticsFilterPanel" class="card hidden" style="position:absolute; top:2.5em; right:1em; z-index:10; width:220px;">
+      <h4 style="margin-bottom:0.5em;">🔍 Filters</h4>
+      <label><input type="checkbox" class="analytics-filter" value="eligible" /> Eligible Students</label><br />
+      <label><input type="checkbox" class="analytics-filter" value="debarred" /> Debarred Students</label><br />
+      <label><input type="checkbox" class="analytics-filter" value="outstanding" /> Has Outstanding Fines</label><br />
+      <label><input type="checkbox" class="analytics-filter" value="clears" /> Cleared All Fines</label><br />
+      <label><input type="checkbox" class="analytics-filter" value="registration" /> Show Registration Info</label><br />
+      <label><input type="checkbox" class="analytics-filter" value="attendanceReport" /> Show Attendance Report</label><br />
+      <button id="clearFilters" class="btn no-print" style="margin-top:0.5em;">Clear All</button>
+    </div>
+
     <div class="row-inline">
       <select id="analyticsTarget">
         <option disabled selected>-- Report For --</option>
@@ -191,6 +212,7 @@
       <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
     </div>
+
     <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
       <table id="analyticsTable">
@@ -202,10 +224,12 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
+
     <div class="table-actions hidden" id="analyticsActions">
+      <button id="downloadFilteredPDF" class="no-print"><i class="fas fa-download"></i> Download Filtered PDF</button>
+      <button id="downloadAllReports" class="no-print"><i class="fas fa-file-alt"></i> Download All Reports</button>
       <button id="generateFineReport" class="no-print"><i class="fas fa-file-pdf"></i> Fine Report</button>
       <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
