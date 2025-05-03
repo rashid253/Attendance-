@@ -141,61 +141,75 @@
   </section>
 
   <!-- 6. ANALYTICS -->
-  <section id="analytics-section" style="position:relative;">
-    <h2 style="display:flex; justify-content:space-between; align-items:center;">
-      <span><i class="fas fa-chart-bar"></i> Analytics Dashboard</span>
-      <button id="analyticsFilterBtn" class="no-print" style="background:none; border:none; cursor:pointer;">
-        <i class="fas fa-filter" title="Filters"></i>
-      </button>
-    </h2>
+  
+<!-- ANALYTICS & FILTERS SECTION (place this above your Attendance Register) -->
+<section id="analytics-section" style="position:relative; padding:1em; background:#fff; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:2em;">
+  <h2 style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5em;">
+    <span><i class="fas fa-chart-bar"></i> Analytics Dashboard</span>
+    <button id="analyticsFilterBtn" class="no-print" style="background:none; border:none; font-size:1.2em; cursor:pointer;">
+      <i class="fas fa-filter" title="Show Filters"></i>
+    </button>
+  </h2>
 
-    <dialog id="analyticsFilterDialog" class="card hidden">
-      <h3>🔍 Filters & Export</h3>
-      <div>
-        <label><input type="checkbox" class="analytics-filter" value="eligible"> Eligible Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="debarred"> Debarred Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="outstanding"> With Outstanding Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="clears"> Cleared All Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="registration"> Show Registration Section</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="attendanceReport"> Show Attendance Section</label>
-      </div>
-      <hr>
-      <div>
-        <label><input type="radio" name="downloadMode" value="filtered" checked> Download Filtered PDF</label><br>
-        <label><input type="radio" name="downloadMode" value="all"> Download All Reports</label>
-      </div>
-      <div style="margin-top:1em; display:flex; gap:0.5em;">
-        <button id="downloadReports" class="btn no-print" style="flex:1;">Download</button>
-        <button id="closeFilterDialog" class="btn no-print" style="flex:1; background:#eee; color:#333;">Close</button>
-      </div>
-    </dialog>
-
-    <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>— Report For —</option>
-        <option value="class">Entire Class</option>
-        <option value="section">Specific Section</option>
-        <option value="student">Individual Student</option>
-      </select>
-      <select id="analyticsSectionSelect" class="hidden"><option disabled selected>— Section —</option><option>A</option><option>B</option><option>C</option></select>
-      <select id="analyticsType" disabled><option disabled selected>— Time Period —</option><option value="date">Single Date</option><option value="month">Monthly</option><option value="semester">Semester</option><option value="year">Full Year</option></select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
-      <button id="loadAnalytics" class="btn no-print">Generate Report</button>
-      <button id="resetAnalytics" class="btn hidden no-print">Change</button>
+  <!-- Filter panel -->
+  <div id="analyticsFilterPanel" class="card hidden" style="position:absolute; top:2.5em; right:1em; width:260px; z-index:10;">
+    <h4 style="margin-top:0; margin-bottom:0.5em;">🔍 Filters & Export</h4>
+    <div style="margin-bottom:0.75em;">
+      <label><input type="checkbox" class="analytics-filter" value="eligible"> Eligible Students</label><br>
+      <label><input type="checkbox" class="analytics-filter" value="debarred"> Debarred Students</label><br>
+      <label><input type="checkbox" class="analytics-filter" value="outstanding"> With Outstanding Fines</label><br>
+      <label><input type="checkbox" class="analytics-filter" value="clears"> Cleared All Fines</label><br>
+      <label><input type="checkbox" class="analytics-filter" value="registration"> Show Registration Section</label><br>
+      <label><input type="checkbox" class="analytics-filter" value="attendanceReport"> Show Attendance Section</label>
     </div>
-
-    <div id="instructions" class="hidden" style="font-style:italic; margin-top:0.5em;"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
+    <hr>
+    <div style="margin:0.5em 0;">
+      <label><input type="radio" name="downloadMode" value="filtered" checked> Download Filtered PDF</label><br>
+      <label><input type="radio" name="downloadMode" value="all"> Download All Reports</label>
     </div>
-    <div id="graphs" class="hidden" style="display:flex; gap:1em; margin-top:1em;"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
-  </section>
+    <div style="display:flex; gap:0.5em; margin-top:1em;">
+      <button id="downloadReports" class="btn no-print" style="flex:1;">Download</button>
+      <button id="clearFilters" class="btn no-print" style="flex:1; background:#eee; color:#333;">Clear</button>
+    </div>
+  </div>
 
+  <!-- Controls -->
+  <div class="row-inline" style="margin-bottom:0.5em;">
+    <select id="analyticsTarget">
+      <option disabled selected>— Report For —</option>
+      <option value="class">Entire Class</option>
+      <option value="section">Specific Section</option>
+      <option value="student">Individual Student</option>
+    </select>
+    <select id="analyticsSectionSelect" class="hidden">
+      <option disabled selected>— Section —</option><option>A</option><option>B</option><option>C</option>
+    </select>
+    <select id="analyticsType" disabled>
+      <option disabled selected>— Time Period —</option>
+      <option value="date">Single Date</option>
+      <option value="month">Monthly</option>
+      <option value="semester">Semester</option>
+      <option value="year">Full Year</option>
+    </select>
+    <input type="date" id="analyticsDate" class="hidden" />
+    <input type="month" id="analyticsMonth" class="hidden" />
+    <input type="month" id="semesterStart" class="hidden" />
+    <input type="month" id="semesterEnd" class="hidden" />
+    <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+    <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
+    <button id="loadAnalytics" class="btn no-print">Generate Report</button>
+    <button id="resetAnalytics" class="btn hidden no-print">Change</button>
+  </div>
+
+  <div id="instructions" class="hidden" style="font-style:italic; margin-bottom:0.5em;"></div>
+  <div id="analyticsContainer" class="table-wrapper hidden">
+    <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
+  </div>
+  <div id="graphs" class="hidden" style="display:flex; gap:1em; margin-top:1em;">
+    <canvas id="barChart" style="flex:1; height:200px;"></canvas>
+    <canvas id="pieChart" style="flex:1; height:200px;"></canvas>
+  </div>
+</section>
   <!-- 7. ATTENDANCE REGISTER -->
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
