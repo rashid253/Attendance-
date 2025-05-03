@@ -1,231 +1,423 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Attendance Management</title>
+// app.js
+window.addEventListener('DOMContentLoaded', async () => {
+  // Debug console (eruda)
+  const erudaScript = document.createElement('script');
+  erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
+  erudaScript.onload = () => eruda.init();
+  document.body.appendChild(erudaScript);
 
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
+  // IndexedDB helpers (idb-keyval)
+  const { get, set } = window.idbKeyval;
+  const save = (k, v) => set(k, v);
 
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  // State & Defaults
+  let students        = await get('students')        || [];
+  let attendanceData  = await get('attendanceData')  || {};
+  let paymentsData    = await get('paymentsData')    || {};
+  let lastAdmNo       = await get('lastAdmissionNo') || 0;
+  let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
+  let eligibilityPct  = await get('eligibilityPct')  || 75;
+  async function genAdmNo() {
+    lastAdmNo++;
+    await save('lastAdmissionNo', lastAdmNo);
+    return String(lastAdmNo).padStart(4, '0');
+  }
 
-  <!-- idb-keyval -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+  // DOM helpers
+  const $ = id => document.getElementById(id);
+  const show = (...els) => els.forEach(e=>e&&e.classList.remove('hidden'));
+  const hide = (...els) => els.forEach(e=>e&&e.classList.add('hidden'));
 
-  <!-- jsPDF + AutoTable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  // SETTINGS: fines & eligibility
+  $('fineAbsent').value     = fineRates.A;
+  $('fineLate').value       = fineRates.Lt;
+  $('fineLeave').value      = fineRates.L;
+  $('fineHalfDay').value    = fineRates.HD;
+  $('eligibilityPct').value = eligibilityPct;
+  $('saveSettings').onclick = async () => {
+    fineRates = {
+      A : +$('fineAbsent').value   || 0,
+      Lt: +$('fineLate').value     || 0,
+      L : +$('fineLeave').value    || 0,
+      HD: +$('fineHalfDay').value  || 0,
+    };
+    eligibilityPct = +$('eligibilityPct').value || 0;
+    await save('fineRates', fineRates);
+    await save('eligibilityPct', eligibilityPct);
+    $('settingsCard').innerHTML = `
+      <p>Fine – Absent: PKR ${fineRates.A}</p>
+      <p>Fine – Late: PKR ${fineRates.Lt}</p>
+      <p>Fine – Leave: PKR ${fineRates.L}</p>
+      <p>Fine – Half-Day: PKR ${fineRates.HD}</p>
+      <p>Eligibility %: ${eligibilityPct}%</p>`;
+    hide($('financialForm'));
+    show($('settingsCard'), $('editSettings'));
+  };
+  $('editSettings').onclick = () => {
+    show($('financialForm'));
+    hide($('settingsCard'), $('editSettings'));
+  };
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  // SETUP: school/class/section
+  async function loadSetup() {
+    const [sc, cl, sec] = await Promise.all([
+      get('schoolName'),
+      get('teacherClass'),
+      get('teacherSection')
+    ]);
+    if (sc && cl && sec) {
+      $('schoolNameInput').value = sc;
+      $('teacherClassSelect').value = cl;
+      $('teacherSectionSelect').value = sec;
+      $('setupText').textContent = `${sc} | Class: ${cl} | Section: ${sec}`;
+      hide($('setupForm'));
+      show($('setupDisplay'));
+      renderStudents();
+      updateCounters();
+      resetViews();
+    }
+  }
+  $('saveSetup').onclick = async e => {
+    e.preventDefault();
+    const sc = $('schoolNameInput').value.trim(),
+          cl = $('teacherClassSelect').value,
+          sec= $('teacherSectionSelect').value;
+    if (!sc || !cl || !sec) { alert('Complete setup'); return; }
+    await save('schoolName', sc);
+    await save('teacherClass', cl);
+    await save('teacherSection', sec);
+    loadSetup();
+  };
+  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
+  await loadSetup();
 
-  <style>
-    @media print { .no-print { display: none !important; } }
-    body { font-family: Arial, sans-serif; margin:0; padding:0; }
-    header { background:#2196F3; color:#fff; padding:1em; }
-    section { margin:1em; }
-    .row-inline > * { margin-right:0.5em; margin-bottom:0.5em; }
-    .btn { padding:0.4em 0.8em; background:#2196F3; color:#fff; border:none; border-radius:4px; cursor:pointer; }
-    .btn:hover { background:#1976D2; }
-    .hidden { display:none; }
-    .card { background:#fff; border:1px solid #ccc; border-radius:4px; padding:1em; margin-top:1em; }
-    .table-wrapper { overflow-x:auto; margin-top:0.5em; }
-    .table-actions { margin-top:0.5em; }
-    .counter-grid { display:flex; gap:1em; margin:1em 0; }
-    .counter-card { flex:1; background:#e3f2fd; padding:1em; border-radius:6px; text-align:center; }
-    .number { font-size:2em; font-weight:bold; display:block; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { border:1px solid #ddd; padding:0.5em; text-align:left; }
-    th { background:#f5f5f5; }
-  </style>
-</head>
-<body>
-  <header><h1><i class="fas fa-school"></i> Attendance Management</h1></header>
+  // COUNTERS & UTILS
+  function animateCounters() {
+    document.querySelectorAll('.number').forEach(span => {
+      const target = +span.dataset.target; let count = 0;
+      const step = Math.max(1, target/100);
+      (function upd(){
+        count += step;
+        span.textContent = count < target ? Math.ceil(count) : target;
+        if (count < target) requestAnimationFrame(upd);
+      })();
+    });
+  }
+  function updateCounters() {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
+    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
+    $('schoolCount').dataset.target  = students.length;
+    animateCounters();
+  }
+  function resetViews() {
+    hide(
+      $('attendanceBody'), $('saveAttendance'), $('resetAttendance'), $('attendanceSummary'),
+      $('downloadAttendancePDF'), $('shareAttendanceSummary'),
+      $('analyticsContainer'), $('graphs'),
+      $('downloadReports'), $('closeFilterDialog'),
+      $('registerTableWrapper'), $('changeRegister'), $('saveRegister'),
+      $('downloadRegister'), $('shareRegister')
+    );
+    show($('loadRegister'));
+  }
+  $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+  $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
 
-  <!-- 1. SETUP -->
-  <section id="teacher-setup">
-    <h2><i class="fas fa-cog"></i> Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
-      <select id="teacherClassSelect">
-        <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursary</option><option>KG</option>
-        <option>Class One</option><option>Class Two</option><option>Class Three</option>
-        <option>Class Four</option><option>Class Five</option><option>Class Six</option>
-        <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option><option>Class Ten</option>
-      </select>
-      <select id="teacherSectionSelect">
-        <option disabled selected>-- Select Section --</option><option>A</option><option>B</option><option>C</option>
-      </select>
-      <button id="saveSetup" class="btn no-print"><i class="fas fa-save"></i> Save</button>
-    </div>
-    <div id="setupDisplay" class="hidden">
-      <h3><i class="fas fa-school"></i> <span id="setupText"></span></h3>
-      <button id="editSetup" class="btn no-print"><i class="fas fa-edit"></i> Edit</button>
-    </div>
-  </section>
+  // STUDENT REGISTRATION
+  function renderStudents() {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const tbody = $('studentsBody'); tbody.innerHTML = ''; let idx=0;
+    students.forEach((s,i)=>{
+      if (s.cls!==cl||s.sec!==sec) return; idx++;
+      const stats={P:0,A:0,Lt:0,HD:0,L:0};
+      Object.values(attendanceData).forEach(r=>stats[r[s.adm]||'A']++);
+      const fine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+      const out = fine-paid;
+      const totalDays = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+      const pct = totalDays?stats.P/totalDays*100:0;
+      const status = (out>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      const tr=document.createElement('tr'); tr.dataset.index=i;
+      tr.innerHTML=`
+        <td><input type="checkbox" class="sel"></td>
+        <td>${idx}</td><td>${s.name}</td><td>${s.adm}</td><td>${s.parent}</td>
+        <td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>
+        <td>PKR ${out}</td><td>${status}</td>
+        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>`;
+      tbody.appendChild(tr);
+    });
+    $('selectAllStudents').checked=false; toggleButtons();
+    document.querySelectorAll('.add-payment-btn').forEach(b=>b.onclick=()=>openPaymentModal(b.dataset.adm));
+  }
+  function toggleButtons() {
+    const any = !!document.querySelector('.sel:checked');
+    $('editSelected').disabled = !any;
+    $('deleteSelected').disabled = !any;
+  }
+  $('studentsBody').addEventListener('change', e=>{ if(e.target.classList.contains('sel')) toggleButtons(); });
+  $('selectAllStudents').onclick = () => {
+    document.querySelectorAll('.sel').forEach(c=>c.checked=$('selectAllStudents').checked);
+    toggleButtons();
+  };
+  $('addStudent').onclick = async e => {
+    e.preventDefault();
+    const n=$('studentName').value.trim(), p=$('parentName').value.trim(),
+          c=$('parentContact').value.trim(), o=$('parentOccupation').value.trim(),
+          a=$('parentAddress').value.trim(), cl=$('teacherClassSelect').value,
+          sec=$('teacherSectionSelect').value;
+    if(!n||!p||!c||!o||!a){alert('All fields required');return;}
+    if(!/^\d{7,15}$/.test(c)){alert('Contact 7–15 digits');return;}
+    const adm=await genAdmNo();
+    students.push({name:n,adm,parent:p,contact:c,occupation:o,address:a,cls:cl,sec});
+    await save('students',students);
+    renderStudents(); updateCounters(); resetViews();
+    ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id=>$(id).value='');
+  };
+  $('editSelected').onclick = () => {
+    document.querySelectorAll('.sel:checked').forEach(cb=>{
+      const tr=cb.closest('tr'), i=+tr.dataset.index, s=students[i];
+      tr.innerHTML=`
+        <td><input type="checkbox" class="sel" checked></td>
+        <td>${tr.children[1].textContent}</td>
+        <td><input value="${s.name}"></td>
+        <td>${s.adm}</td>
+        <td><input value="${s.parent}"></td>
+        <td><input value="${s.contact}"></td>
+        <td><input value="${s.occupation}"></td>
+        <td><input value="${s.address}"></td>
+        <td colspan="3"></td>`;
+    });
+    hide($('editSelected')); show($('doneEditing'));
+  };
+  $('doneEditing').onclick = async () => {
+    document.querySelectorAll('#studentsBody tr').forEach(tr=>{
+      const inputs=[...tr.querySelectorAll('input:not(.sel)')];
+      if(inputs.length===5){
+        const [n,p,c,o,a]=inputs.map(i=>i.value.trim());
+        const adm=tr.children[3].textContent, idx=students.findIndex(s=>s.adm===adm);
+        if(idx>-1) students[idx]={...students[idx],name:n,parent:p,contact:c,occupation:o,address:a};
+      }
+    });
+    await save('students',students);
+    hide($('doneEditing')); show($('editSelected'),$('deleteSelected'),$('saveRegistration'));
+    renderStudents(); updateCounters();
+  };
+  $('deleteSelected').onclick = async () => {
+    if(!confirm('Delete selected?')) return;
+    const toDel=[...document.querySelectorAll('.sel:checked')].map(cb=>+cb.closest('tr').dataset.index);
+    students=students.filter((_,i)=>!toDel.includes(i));
+    await save('students',students);
+    renderStudents(); updateCounters(); resetViews();
+  };
+  $('saveRegistration').onclick = async () => {
+    if(!$('doneEditing').classList.contains('hidden')){alert('Finish editing');return;}
+    await save('students',students);
+    hide(document.querySelector('#student-registration .row-inline'),$('editSelected'),$('deleteSelected'),$('selectAllStudents'),$('saveRegistration'));
+    show($('editRegistration'),$('shareRegistration'),$('downloadRegistrationPDF'));
+    renderStudents(); updateCounters();
+  };
+  $('editRegistration').onclick = () => {
+    show(document.querySelector('#student-registration .row-inline'),$('selectAllStudents'),$('editSelected'),$('deleteSelected'),$('saveRegistration'));
+    hide($('editRegistration'),$('shareRegistration'),$('downloadRegistrationPDF'));
+    renderStudents(); updateCounters();
+  };
+  $('shareRegistration').onclick = () => {
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    const header=`Students List\nClass ${cl} Section ${sec}`;
+    const lines=students.filter(s=>s.cls===cl&&s.sec===sec).map(s=>{
+      const out=(stats=>stats.A*fineRates.A+stats.Lt*fineRates.Lt+stats.L* fineRates.L+stats.HD*fineRates.HD - (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0))
+        (Object.values(attendanceData).reduce((acc,r)=>{acc[r[s.adm]||'A']++;return acc;},{P:0,A:0,Lt:0,HD:0,L:0}));
+      const status=(out>0)?'Debarred':'Eligible';
+      return `${s.name} (Adm#${s.adm}): Outstanding PKR ${out}, ${status}`;
+    }).join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+lines)}`,'_blank');
+  };
+  $('downloadRegistrationPDF').onclick = () => {
+    const doc=new jspdf.jsPDF();
+    doc.text('Student List',14,16);
+    doc.autoTable({startY:24,html:'#studentsTable'});
+    doc.save('registration.pdf');
+  };
 
-  <!-- 2. FINANCIAL SETTINGS -->
-  <section id="financial-settings">
-    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div id="financialForm" class="row-inline">
-      <label>Fine/Absent:<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late:<input id="fineLate" type="number"/></label>
-      <label>Fine/Leave:<input id="fineLeave" type="number"/></label>
-      <label>Fine/Half-Day:<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. %:<input id="eligibilityPct" type="number" min="0" max="100"/></label>
-      <button id="saveSettings" class="btn no-print"><i class="fas fa-save"></i> Save</button>
-    </div>
-    <div id="settingsCard" class="card hidden"></div>
-    <button id="editSettings" class="btn no-print hidden">Edit Settings</button>
-  </section>
+  // PAYMENT modal
+  function openPaymentModal(adm){ $('payAdm').textContent=adm; $('paymentAmount').value=''; show($('paymentModal')); }
+  $('savePayment').onclick = async () => {
+    const adm=$('payAdm').textContent, amt=+$('paymentAmount').value||0;
+    paymentsData[adm]=paymentsData[adm]||[]; paymentsData[adm].push({date:new Date().toISOString().split('T')[0],amount:amt});
+    await save('paymentsData',paymentsData); hide($('paymentModal')); renderStudents();
+  };
+  $('cancelPayment').onclick = () => hide($('paymentModal'));
 
-  <!-- 3. COUNTERS -->
-  <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card"><span id="sectionCount" class="number" data-target="0">0</span>Section Students</div>
-    <div class="counter-card"><span id="classCount" class="number" data-target="0">0</span>Class Students</div>
-    <div class="counter-card"><span id="schoolCount" class="number" data-target="0">0</span>School Students</div>
-  </section>
+  // MARK ATTENDANCE
+  $('loadAttendance').onclick = () => {
+    const date=$('dateInput').value; if(!date){alert('Pick date');return;}
+    $('attendanceBody').innerHTML=''; $('attendanceSummary').innerHTML='';
+    const roster=students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value);
+    roster.forEach((stu,i)=>{
+      const row=document.createElement('div'), nameDiv=document.createElement('div'), btnsDiv=document.createElement('div');
+      row.className='attendance-row'; nameDiv.className='attendance-name'; btnsDiv.className='attendance-buttons';
+      nameDiv.textContent=stu.name;
+      ['P','A','Lt','HD','L'].forEach(code=>{
+        const btn=document.createElement('button'); btn.className='att-btn'; btn.textContent=code;
+        btn.onclick=()=>{
+          btnsDiv.querySelectorAll('.att-btn').forEach(b=>{b.classList.remove('selected');b.style='';});
+          btn.classList.add('selected'); btn.style.background={'P':'#4caf50','A':'#f44336','Lt':'#ffeb3b','HD':'#ff9800','L':'#2196f3'}[code]; btn.style.color='#fff';
+        };
+        btnsDiv.appendChild(btn);
+      });
+      row.append(nameDiv,btnsDiv); $('attendanceBody').appendChild(row);
+    });
+    show($('attendanceBody'),$('saveAttendance')); hide($('resetAttendance'),$('downloadAttendancePDF'),$('shareAttendanceSummary'),$('attendanceSummary'));
+  };
+  $('saveAttendance').onclick = async () => {
+    const date=$('dateInput').value; attendanceData[date]={};
+    const roster=students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value);
+    roster.forEach((s,i)=>{ const btn=$('attendanceBody').children[i].querySelector('.att-btn.selected'); attendanceData[date][s.adm]=btn?btn.textContent:'A'; });
+    await save('attendanceData',attendanceData);
+    const sum=$('attendanceSummary'); sum.innerHTML=`<h3>Attendance ${date}</h3><table><tr><th>Name</th><th>Status</th></tr>`+
+      roster.map(s=>`<tr><td>${s.name}</td><td>${{'P':'Present','A':'Absent','Lt':'Late','HD':'Half-Day','L':'Leave'}[attendanceData[date][s.adm]]}</td></tr>`).join('')+'</table>';
+    hide($('attendanceBody'),$('saveAttendance')); show($('resetAttendance'),$('downloadAttendancePDF'),$('shareAttendanceSummary'),sum);
+  };
+  $('resetAttendance').onclick = () => { show($('attendanceBody'),$('saveAttendance')); hide($('resetAttendance'),$('downloadAttendancePDF'),$('shareAttendanceSummary'),$('attendanceSummary')); };
+  $('downloadAttendancePDF').onclick = () => {
+    const doc=new jspdf.jsPDF(); doc.text('Attendance Report',14,16); doc.autoTable({startY:24,html:'#attendanceSummary table'}); doc.save(`attendance_${$('dateInput').value}.pdf`);
+  };
+  $('shareAttendanceSummary').onclick = () => {
+    const date=$('dateInput').value; const header=`Attendance ${date}`;
+    const lines=students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value)
+      .map(s=>`${s.name}: ${attendanceData[date][s.adm]}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+lines.join('\n'))}`,'_blank');
+  };
 
-  <!-- 4. STUDENT REGISTRATION -->
-  <section id="student-registration">
-    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
-    <div class="row-inline">
-      <input id="studentName" placeholder="Name" />
-      <input id="parentName" placeholder="Parent Name" />
-      <input id="parentContact" placeholder="Contact" />
-      <input id="parentOccupation" placeholder="Occupation" />
-      <input id="parentAddress" placeholder="Address" />
-      <button id="addStudent" class="btn no-print"><i class="fas fa-plus-circle"></i> Add</button>
-    </div>
-    <div class="table-wrapper">
-      <table id="studentsTable">
-        <thead><tr>
-          <th><input type="checkbox" id="selectAllStudents"/></th><th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-          <th>Contact</th><th>Occupation</th><th>Address</th><th>Fine</th><th>Status</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="studentsBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="editSelected" disabled class="btn no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="btn hidden no-print"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled class="btn no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="btn no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="btn hidden no-print"><i class="fas fa-undo"></i> Restore</button>
-      <button id="shareRegistration" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="btn hidden no-print"><i class="fas fa-download"></i> Download</button>
-    </div>
-  </section>
+  // ANALYTICS & FILTERS
+  const atg=$('analyticsTarget'), asel=$('analyticsSectionSelect'), atype=$('analyticsType'),
+        adate=$('analyticsDate'), amonth=$('analyticsMonth'),
+        sems=$('semesterStart'), seme=$('semesterEnd'), ayear=$('yearStart'),
+        asearch=$('analyticsSearch'), loadA=$('loadAnalytics'), resetA=$('resetAnalytics'),
+        instr=$('instructions'), acont=$('analyticsContainer'), graphs=$('graphs'),
+        filterBtn=$('analyticsFilterBtn'), filterDialog=$('analyticsFilterDialog'),
+        filterChecks=document.querySelectorAll('.analytics-filter'),
+        closeDlg=$('closeFilterDialog'), downloadBtn=$('downloadReports'),
+        barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
+  let barChart, pieChart, lastShare='';
 
-  <!-- 5. MARK ATTENDANCE -->
-  <section id="attendance-section">
-    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
-    <div class="row-inline">
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance" class="btn no-print"><i class="fas fa-calendar-check"></i> Load</button>
-    </div>
-    <div id="attendanceBody"></div>
-    <div id="attendanceSummary" class="hidden"></div>
-    <div class="table-actions">
-      <button id="saveAttendance" class="btn hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="resetAttendance" class="btn hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="downloadAttendancePDF" class="btn hidden no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAttendanceSummary" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
+  filterBtn.addEventListener('click',()=>filterDialog.showModal());
+  closeDlg.addEventListener('click',()=>filterDialog.close());
+  filterChecks.forEach(cb=>cb.addEventListener('change',applyAnalyticsFilters));
 
-  <!-- 6. ANALYTICS -->
-  <section id="analytics-section" style="position:relative;">
-    <h2 style="display:flex; justify-content:space-between; align-items:center;">
-      <span><i class="fas fa-chart-bar"></i> Analytics Dashboard</span>
-      <button id="analyticsFilterBtn" class="no-print" style="background:none; border:none; cursor:pointer;">
-        <i class="fas fa-filter" title="Filters"></i>
-      </button>
-    </h2>
+  function applyAnalyticsFilters(){
+    const active=Array.from(filterChecks).filter(cb=>cb.checked).map(cb=>cb.value);
+    document.querySelectorAll('#analyticsBody tr').forEach(row=>{
+      const status=row.cells[11].textContent.toLowerCase(), out=+row.cells[10].textContent.replace(/[^0-9]/g,'');
+      let show=!active.length;
+      if(active.includes('eligible')&&status==='eligible') show=true;
+      if(active.includes('debarred')&&status==='debarred') show=true;
+      if(active.includes('outstanding')&&out>0) show=true;
+      if(active.includes('clears')&&out<=0) show=true;
+      row.style.display=show?'':'none';
+    });
+    $('student-registration').style.display=active.includes('registration')?'':'none';
+    $('attendance-section').style.display=active.includes('attendanceReport')?'':'none';
+  }
 
-    <dialog id="analyticsFilterDialog" class="card hidden">
-      <h3>🔍 Filters & Export</h3>
-      <div>
-        <label><input type="checkbox" class="analytics-filter" value="eligible"> Eligible Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="debarred"> Debarred Students</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="outstanding"> With Outstanding Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="clears"> Cleared All Fines</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="registration"> Show Registration Section</label><br>
-        <label><input type="checkbox" class="analytics-filter" value="attendanceReport"> Show Attendance Section</label>
-      </div>
-      <hr>
-      <div>
-        <label><input type="radio" name="downloadMode" value="filtered" checked> Download Filtered PDF</label><br>
-        <label><input type="radio" name="downloadMode" value="all"> Download All Reports</label>
-      </div>
-      <div style="margin-top:1em; display:flex; gap:0.5em;">
-        <button id="downloadReports" class="btn no-print" style="flex:1;">Download</button>
-        <button id="closeFilterDialog" class="btn no-print" style="flex:1; background:#eee; color:#333;">Close</button>
-      </div>
-    </dialog>
+  downloadBtn.addEventListener('click',()=>{
+    const mode=document.querySelector('input[name="downloadMode"]:checked').value;
+    if(mode==='filtered'){
+      const doc=new jspdf.jsPDF(); doc.text('Filtered Analytics',10,10);
+      doc.autoTable({startY:20,html:'#analyticsTable',includeHiddenRows:false}); doc.save('filtered.pdf');
+    } else {
+      const rows=Array.from(document.querySelectorAll('#analyticsBody tr')).filter(r=>r.style.display!=='none');
+      if(!rows.length){alert('No data');return;}
+      const doc=new jspdf.jsPDF();
+      rows.forEach((r,i)=>{
+        const c=Array.from(r.children).map(td=>td.textContent.trim());
+        doc.text(`Report ${c[2]}`,10,20);
+        doc.autoTable({startY:30,head:[['P','A','Lt','HD','L','Total','%','Outstanding','Status']],body:[[c[3],c[4],c[5],c[6],c[7],c[8],c[9],c[10],c[11]]]});
+        if(i<rows.length-1)doc.addPage();
+      });
+      doc.save('all_reports.pdf');
+    }
+    filterDialog.close();
+  });
 
-    <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>— Report For —</option>
-        <option value="class">Entire Class</option>
-        <option value="section">Specific Section</option>
-        <option value="student">Individual Student</option>
-      </select>
-      <select id="analyticsSectionSelect" class="hidden"><option disabled selected>— Section —</option><option>A</option><option>B</option><option>C</option></select>
-      <select id="analyticsType" disabled><option disabled selected>— Time Period —</option><option value="date">Single Date</option><option value="month">Monthly</option><option value="semester">Semester</option><option value="year">Full Year</option></select>
-      <input type="date" id="analyticsDate" class="hidden" />
-      <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" />
-      <input type="month" id="semesterEnd" class="hidden" />
-      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
-      <button id="loadAnalytics" class="btn no-print">Generate Report</button>
-      <button id="resetAnalytics" class="btn hidden no-print">Change</button>
-    </div>
+  atg.onchange=()=>{
+    atype.disabled=false; [asel,asearch].forEach(x=>x.classList.add('hidden'));
+    [instr,acont,graphs].forEach(x=>x.classList.add('hidden')); resetA.classList.add('hidden');
+    if(atg.value==='section') asel.classList.remove('hidden');
+    if(atg.value==='student') asearch.classList.remove('hidden');
+  };
+  atype.onchange=()=>{
+    [adate,amonth,sems,seme,ayear].forEach(x=>x.classList.add('hidden'));
+    [instr,acont,graphs].forEach(x=>x.classList.add('hidden')); resetA.classList.remove('hidden');
+    if(atype.value==='date') adate.classList.remove('hidden');
+    if(atype.value==='month') amonth.classList.remove('hidden');
+    if(atype.value==='semester'){sems.classList.remove('hidden');seme.classList.remove('hidden');}
+    if(atype.value==='year') ayear.classList.remove('hidden');
+  };
+  resetA.onclick=e=>{e.preventDefault();atype.value='';[adate,amonth,sems,seme,ayear,instr,acont,graphs].forEach(x=>x.classList.add('hidden'));resetA.classList.add('hidden');};
 
-    <div id="instructions" class="hidden" style="font-style:italic; margin-top:0.5em;"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden">
-      <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
-    </div>
-    <div id="graphs" class="hidden" style="display:flex; gap:1em; margin-top:1em;"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
-  </section>
+  loadA.onclick=()=>{
+    if(atg.value==='student'&&!asearch.value.trim()){alert('Enter Adm#');return;}
+    let from,to;
+    if(atype.value==='date'){from=to=adate.value;}
+    else if(atype.value==='month'){const [y,m]=amonth.value.split('-').map(Number);from=`${amonth.value}-01`;to=`${amonth.value}-${new Date(y,m,0).getDate()}`;}
+    else if(atype.value==='semester'){const [sy,sm]=sems.value.split('-').map(Number),[ey,em]=seme.value.split('-').map(Number);from=`${sems.value}-01`;to=`${seme.value}-${new Date(ey,em,0).getDate()}`;}
+    else if(atype.value==='year'){from=`${ayear.value}-01-01`;to=`${ayear.value}-12-31`;}
+    else{alert('Select period');return;}
+    let pool=students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value);
+    if(atg.value==='section') pool=pool.filter(s=>s.sec===asel.value);
+    if(atg.value==='student'){const q=asearch.value.trim().toLowerCase();pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));}
+    const stats=pool.map(s=>({adm:s.adm,name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0}));
+    Object.entries(attendanceData).forEach(([d,r])=>{
+      if(d<from||d>to) return; stats.forEach(st=>{const c=r[st.adm]||'A';st[c]++;st.total++;});
+    });
+    stats.forEach(st=>{const tf=st.A*fineRates.A+st.Lt*fineRates.Lt+st.L*fineRates.L+st.HD*fineRates.HD;const tp=(paymentsData[st.adm]||[]).reduce((s,p)=>s+p.amount,0);st.outstanding=tf-tp;});
+    const thead=$('analyticsTable').querySelector('thead tr');thead.innerHTML=['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status'].map(h=>`<th>${h}</th>`).join('');
+    const tbody=$('analyticsBody');tbody.innerHTML='';
+    stats.forEach((st,i)=>{const pct=st.total?((st.P/st.total)*100).toFixed(1):'0.0';const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${(st.outstanding>0)?'Debarred':'Eligible'}</td>`;tbody.appendChild(tr);});
+    instr.textContent=`Period: ${from} to ${to}`;show(instr,acont,graphs,downloadBtn);
+    barChart?.destroy();barChart=new Chart(barCtx,{type:'bar',data:{labels:stats.map(s=>s.name),datasets:[{label:'% Present',data:stats.map(s=>s.total?s.P/s.total*100:0)}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
+    pieChart?.destroy();pieChart=new Chart(pieCtx,{type:'pie',data:{labels:['Outstanding'],datasets:[{data:[stats.reduce((s,st)=>s+st.outstanding,0)]}]}});
 
-  <!-- 7. ATTENDANCE REGISTER -->
-  <section id="register-section">
-    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
-    <div class="row-inline">
-      <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="btn no-print"><i class="fas fa-calendar-alt"></i> Load</button>
-    </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper">
-      <table id="registerTable"><thead><tr id="registerHeader"></tr></thead><tbody id="registerBody"></tbody></table>
-    </div>
-    <div class="table-actions">
-      <button id="changeRegister" class="btn hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="saveRegister" class="btn hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegister" class="btn no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareRegister" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
+    lastShare=`Analytics (${from} to ${to})\n`+stats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
+  };
+  $('shareAnalytics').onclick=()=>window.open(`https://wa.me/?text=${encodeURIComponent(lastShare)}`,'_blank');
 
-  <!-- PAYMENT MODAL -->
-  <div id="paymentModal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
-    <div class="card" style="width:300px;">
-      <h3>Payment for Adm# <span id="payAdm"></span></h3>
-      <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
-      <div class="table-actions" style="text-align:right; margin-top:0.5em;">
-        <button id="savePayment" class="btn no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="btn no-print" style="background:#f44336;">Cancel</button>
-      </div>
-    </div>
-  </div>
+  // ATTENDANCE REGISTER
+  $('loadRegister').onclick=()=>{
+    const m=$('registerMonth').value; if(!m){alert('Pick month');return;}
+    const [y,mm]=m.split('-').map(Number),days=new Date(y,mm,0).getDate();
+    $('registerHeader').innerHTML='<th>#</th><th>Adm#</th><th>Name</th>'+[...Array(days)].map((_,i)=>`<th>${i+1}</th>`).join('');
+    $('registerBody').innerHTML='';
+    students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value).forEach((s,i)=>{
+      let row=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      for(let d=1;d<=days;d++){const key=`${m}-${String(d).padStart(2,'0')}`,c=(attendanceData[key]||{})[s.adm]||'A';const style=c==='A'?'':`style="background:${{'P':'#4caf50','A':'#f44336','Lt':'#ffeb3b','HD':'#ff9800','L':'#2196f3'}[c]};color:#fff"`;row+=`<td class="reg-cell"${style}><span class="status-text">${c}</span></td>`;}
+      const tr=document.createElement('tr');tr.innerHTML=row;$('registerBody').appendChild(tr);
+    });
+    document.querySelectorAll('.reg-cell').forEach(cell=>cell.onclick=()=>{
+      const span=cell.querySelector('.status-text'),codes=['A','P','Lt','HD','L'];let idx=codes.indexOf(span.textContent),next=codes[(idx+1)%codes.length];span.textContent=next;
+      cell.style.background=next==='A'?'':{'P':'#4caf50','A':'#f44336','Lt':'#ffeb3b','HD':'#ff9800','L':'#2196f3'}[next];
+      cell.style.color=next==='A'?'':'#fff';
+    });
+    show($('registerTableWrapper'),$('saveRegister'));hide($('loadRegister'),$('changeRegister'),$('downloadRegister'),$('shareRegister'));
+  };
+  $('saveRegister').onclick=async()=>{
+    const m=$('registerMonth').value,[y,mm]=m.split('-').map(Number),days=new Date(y,mm,0).getDate();
+    Array.from($('registerBody').children).forEach(tr=>{
+      const adm=tr.children[1].textContent;
+      for(let d=1;d<=days;d++){const code=tr.children[3+d-1].querySelector('.status-text').textContent;const key=`${m}-${String(d).padStart(2,'0')}`;attendanceData[key]=attendanceData[key]||{};attendanceData[key][adm]=code;}
+    });
+    await save('attendanceData',attendanceData);hide($('saveRegister'));show($('changeRegister'),$('downloadRegister'),$('shareRegister'));
+  };
+  $('changeRegister').onclick=()=>{hide($('changeRegister'),$('downloadRegister'),$('shareRegister'));show($('saveRegister'));};
+  $('downloadRegister').onclick=()=>{
+    const doc=new jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});doc.text('Attendance Register',14,16);doc.autoTable({startY:24,html:'#registerTable',styles:{fontSize:10}});doc.save('register.pdf');
+  };
+  $('shareRegister').onclick=()=>{
+    const header=`Register\n${$('setupText').textContent}`,rows=Array.from($('registerBody').children).map(tr=>Array.from(tr.children).map(td=>td.querySelector('.status-text')?td.querySelector('.status-text').textContent:td.textContent).join(' '));window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows.join('\n'))}`,'_blank');
+  };
 
-  <script src="app.js"></script>
-</body>
-</html>
+  // Service worker
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
+});
