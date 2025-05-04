@@ -1,52 +1,58 @@
 // app.js
 window.addEventListener('DOMContentLoaded', async () => {
-  // --- 0. Debug console (optional) ---
-  const erudaScript = document.createElement('script');
-  erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
+  // 0. Eruda debug
+  const eruda = document.createElement('script');
+  eruda.src = 'https://cdn.jsdelivr.net/npm/eruda';
+  eruda.onload = () => eruda.init();
+  document.body.appendChild(eruda);
 
-  // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) {
-    console.error('idb-keyval not found');
-    return;
-  }
+  // 1. IndexedDB via idb-keyval
+  if (!window.idbKeyval) return console.error('idb-keyval not found');
   const { get, set } = window.idbKeyval;
-  const save = (key, val) => set(key, val);
+  const save = (k, v) => set(k, v);
 
-  // --- 2. State & Defaults ---
-  let students        = await get('students')        || [];
-  let attendanceData  = await get('attendanceData')  || {};
-  let paymentsData    = await get('paymentsData')    || {};
-  let lastAdmNo       = await get('lastAdmissionNo') || 0;
-  let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct  = await get('eligibilityPct')  || 75;
+  // 2. State
+  let students       = await get('students')       || [];
+  let attendanceData = await get('attendanceData') || {};
+  let paymentsData   = await get('paymentsData')   || {};
+  let lastAdmNo      = await get('lastAdmissionNo')|| 0;
+  let fineRates      = await get('fineRates')      || { A:50, Lt:20, L:10, HD:30 };
+  let eligibilityPct = await get('eligibilityPct') || 75;
 
-  let analyticsStats     = [];
-  let analyticsRange     = { from: null, to: null };
-  let analyticsFilter    = ['all'];
-  let analyticsDownload  = 'combined';
-
-  // --- 3. Helpers ---
   async function genAdmNo() {
     lastAdmNo++;
     await save('lastAdmissionNo', lastAdmNo);
     return String(lastAdmNo).padStart(4, '0');
   }
-  const $    = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
-  function getFineMode() {
-    return document.querySelector('input[name="fineMode"]:checked')?.value || 'advance';
-  }
 
-  // --- 4. SETTINGS: Fines & Eligibility ---
+  // 3. DOM helpers
+  const $ = id => document.getElementById(id);
+  const show = (...els) => els.forEach(e=>e&&e.classList.remove('hidden'));
+  const hide = (...els) => els.forEach(e=>e&&e.classList.add('hidden'));
+
+  //
+  // 4. Fines & Eligibility → form → static card → edit
+  //
+  const formDiv     = $('financialForm');
+  const saveBtn     = $('saveSettings');
+  const inputs      = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct'].map($);
+  const settingsCard= document.createElement('div');
+        settingsCard.id   = 'settingsCard';
+        settingsCard.className = 'card hidden';
+  const editBtn     = document.createElement('button');
+        editBtn.id      = 'editSettings';
+        editBtn.className = 'btn no-print hidden';
+        editBtn.textContent = 'Edit Settings';
+  formDiv.parentNode.append(settingsCard, editBtn);
+
+  // initialize form values
   $('fineAbsent').value     = fineRates.A;
   $('fineLate').value       = fineRates.Lt;
   $('fineLeave').value      = fineRates.L;
   $('fineHalfDay').value    = fineRates.HD;
   $('eligibilityPct').value = eligibilityPct;
-  $('saveSettings').onclick = async () => {
+
+  saveBtn.onclick = async () => {
     fineRates = {
       A : +$('fineAbsent').value   || 0,
       Lt: +$('fineLate').value     || 0,
@@ -54,62 +60,63 @@ window.addEventListener('DOMContentLoaded', async () => {
       HD: +$('fineHalfDay').value  || 0,
     };
     eligibilityPct = +$('eligibilityPct').value || 0;
-    await Promise.all([
-      save('fineRates', fineRates),
-      save('eligibilityPct', eligibilityPct)
-    ]);
-    renderAll();
+    await Promise.all([save('fineRates', fineRates), save('eligibilityPct', eligibilityPct)]);
+    settingsCard.innerHTML = `
+      <div class="card-content">
+        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
+        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
+        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
+        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
+        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+      </div>`;
+    hide(formDiv, ...inputs, saveBtn);
+    show(settingsCard, editBtn);
   };
 
-  // --- 5. SETUP: School, Class & Section ---
+  editBtn.onclick = () => {
+    hide(settingsCard, editBtn);
+    show(formDiv, ...inputs, saveBtn);
+  };
+
+  //
+  // 5. SETUP (unchanged)
+  //
   async function loadSetup() {
-    const [sc, cl, sec] = await Promise.all([
-      get('schoolName'),
-      get('teacherClass'),
-      get('teacherSection')
-    ]);
+    const [sc, cl, sec] = await Promise.all([get('schoolName'),get('teacherClass'),get('teacherSection')]);
     if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
+      $('schoolNameInput').value = sc;
+      $('teacherClassSelect').value = cl;
       $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
+      $('setupText').textContent = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
       hide($('setupForm'));
       show($('setupDisplay'));
-      renderAll();
+      renderStudents(); updateCounters(); resetViews();
     }
   }
   $('saveSetup').onclick = async e => {
     e.preventDefault();
-    const sc  = $('schoolNameInput').value.trim();
-    const cl  = $('teacherClassSelect').value;
-    const sec = $('teacherSectionSelect').value;
-    if (!sc || !cl || !sec) { alert('Complete setup'); return; }
-    await Promise.all([
-      save('schoolName', sc),
-      save('teacherClass', cl),
-      save('teacherSection', sec)
-    ]);
+    const sc = $('schoolNameInput').value.trim(),
+          cl = $('teacherClassSelect').value,
+          sec= $('teacherSectionSelect').value;
+    if (!sc||!cl||!sec) return alert('Complete setup');
+    await Promise.all([save('schoolName',sc), save('teacherClass',cl), save('teacherSection',sec)]);
     await loadSetup();
   };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
+  $('editSetup').onclick = e=>{e.preventDefault();show($('setupForm'));hide($('setupDisplay'));};
   await loadSetup();
 
-  // --- 6. COUNTERS & UTILS ---
+  //
+  // 6. Counters & view reset (unchanged)
+  //
   function animateCounters() {
-    document.querySelectorAll('.number').forEach(span => {
+    document.querySelectorAll('.number').forEach(span=>{
       const target = +span.dataset.target;
-      let count = 0;
-      const step = Math.max(1, target / 100);
-      (function update() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(update);
-      })();
+      let count=0, step=Math.max(1,target/100);
+      (function upd(){ count+=step; span.textContent = count<target?Math.ceil(count):target; if(count<target)requestAnimationFrame(upd); })();
     });
   }
   function updateCounters() {
-    const cl  = $('teacherClassSelect').value;
-    const sec = $('teacherSectionSelect').value;
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
     $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
     $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
     $('schoolCount').dataset.target  = students.length;
@@ -125,70 +132,191 @@ window.addEventListener('DOMContentLoaded', async () => {
     );
     show($('loadRegister'));
   }
-  $('teacherClassSelect').onchange   = renderAll;
-  $('teacherSectionSelect').onchange = renderAll;
+  $('teacherClassSelect').onchange   =()=>{renderStudents();updateCounters();resetViews();};
+  $('teacherSectionSelect').onchange =()=>{renderStudents();updateCounters();resetViews();};
 
-  // --- 7. STUDENT REGISTRATION ---
-  $('addStudent').onclick = async e => {
-    e.preventDefault();
-    const n       = $('studentName').value.trim();
-    const p       = $('parentName').value.trim();
-    const c       = $('parentContact').value.trim();
-    const o       = $('parentOccupation').value.trim();
-    const a       = $('parentAddress').value.trim();
-    const cl      = $('teacherClassSelect').value;
-    const sec     = $('teacherSectionSelect').value;
-    const admDate = $('admissionDate').value || null;
-    if (!n||!p||!c||!o||!a){ alert('All fields required'); return; }
-    const adm = await genAdmNo();
-    students.push({
-      name: n, adm,
-      parent: p, contact: c,
-      occupation: o, address: a,
-      cls: cl, sec,
-      admissionDate: admDate
+  //
+  // 7. STUDENT REGISTRATION & FINE/STATUS
+  //
+  function renderStudents() {
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    const tbody = $('studentsBody');
+    tbody.innerHTML=''; let idx=0;
+    students.forEach((s,i)=>{
+      if(s.cls!==cl||s.sec!==sec) return;
+      idx++;
+      // compute stats
+      const stats={P:0,A:0,Lt:0,HD:0,L:0};
+      Object.values(attendanceData).forEach(r=>stats[r[s.adm]||'A']++);
+      const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paid      = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+      const outstanding = totalFine - paid;
+      const totalDays = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+      const pct       = totalDays?((stats.P/totalDays)*100):0;
+      const status    = (outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
+
+      const tr = document.createElement('tr');
+      tr.dataset.index = i;
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sel"></td>
+        <td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>
+        <td>${s.parent}</td><td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>
+        <td>PKR ${outstanding}</td><td>${status}</td>
+        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+      `;
+      tbody.appendChild(tr);
     });
-    await save('students', students);
-    renderAll();
-  };
-
-  // Restore registration buttons functionality
-  document.getElementById('selectAllStudents').onclick = () => {
-    const checked = document.getElementById('selectAllStudents').checked;
-    document.querySelectorAll('#studentsBody .sel').forEach(c => c.checked = checked);
-    toggleRegButtons();
-  };
-  function toggleRegButtons() {
-    const any = !!document.querySelector('#studentsBody .sel:checked');
-    $('editSelected').disabled = !any;
+    $('selectAllStudents').checked = false;
+    toggleButtons();
+    document.querySelectorAll('.add-payment-btn').forEach(b=>b.onclick=()=>openPaymentModal(b.dataset.adm));
+  }
+  function toggleButtons() {
+    const any = !!document.querySelector('.sel:checked');
+    $('editSelected').disabled   = !any;
     $('deleteSelected').disabled = !any;
-    $('saveRegistration').disabled = !any;
   }
   $('studentsBody').addEventListener('change', e => {
-    if (e.target.classList.contains('sel')) toggleRegButtons();
+    if (e.target.classList.contains('sel')) toggleButtons();
   });
-  $('editSelected').onclick = () => { /* implement edit selected rows */ };
-  $('deleteSelected').onclick = async () => { /* implement delete selected */ };
-  $('saveRegistration').onclick = async () => { /* implement save edited */ };
+  $('selectAllStudents').onclick = () => {
+    document.querySelectorAll('.sel').forEach(c=>c.checked=$('selectAllStudents').checked);
+    toggleButtons();
+  };
 
-  // --- 8. PAYMENT MODAL ---
+  // Add new student → clear form
+  $('addStudent').onclick = async e => {
+    e.preventDefault();
+    const n = $('studentName').value.trim(),
+          p = $('parentName').value.trim(),
+          c = $('parentContact').value.trim(),
+          o = $('parentOccupation').value.trim(),
+          a = $('parentAddress').value.trim(),
+          cl= $('teacherClassSelect').value,
+          sec=$('teacherSectionSelect').value;
+    if (!n||!p||!c||!o||!a) return alert('All fields required');
+    if (!/^\d{7,15}$/.test(c)) return alert('Contact 7–15 digits');
+    const adm = await genAdmNo();
+    students.push({name:n,adm,parent:p,contact:c,occupation:o,address:a,cls:cl,sec});
+    await save('students', students);
+    renderStudents(); updateCounters(); resetViews();
+    // clear inputs
+    ['studentName','parentName','parentContact','parentOccupation','parentAddress']
+      .forEach(id=>$(id).value='');
+  };
+
+  // Edit selected
+  $('editSelected').onclick = () => {
+    document.querySelectorAll('.sel:checked').forEach(cb => {
+      const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sel" checked></td>
+        <td>${tr.children[1].textContent}</td>
+        <td><input value="${s.name}"></td>
+        <td>${s.adm}</td>
+        <td><input value="${s.parent}"></td>
+        <td><input value="${s.contact}"></td>
+        <td><input value="${s.occupation}"></td>
+        <td><input value="${s.address}"></td>
+        <td colspan="3"></td>
+      `;
+    });
+    hide($('editSelected')); show($('doneEditing'));
+  };
+
+  // Done editing
+  $('doneEditing').onclick = async () => {
+    document.querySelectorAll('#studentsBody tr').forEach(tr => {
+      const inputs = [...tr.querySelectorAll('input:not(.sel)')];
+      if (inputs.length === 5) {
+        const [n,p,c,o,a] = inputs.map(i=>i.value.trim());
+        const adm = tr.children[3].textContent;
+        const idx = students.findIndex(s=>s.adm===adm);
+        if (idx > -1) students[idx] = {...students[idx], name:n, parent:p, contact:c, occupation:o, address:a};
+      }
+    });
+    await save('students', students);
+    hide($('doneEditing'));
+    show($('editSelected'), $('deleteSelected'), $('saveRegistration'));
+    renderStudents(); updateCounters();
+  };
+
+  // Delete selected
+  $('deleteSelected').onclick = async () => {
+    if (!confirm('Delete?')) return;
+    const toDel = [...document.querySelectorAll('.sel:checked')].map(cb=>+cb.closest('tr').dataset.index);
+    students = students.filter((_,i) => !toDel.includes(i));
+    await save('students', students);
+    renderStudents(); updateCounters(); resetViews();
+  };
+
+  // Save registration (lock editing)
+  $('saveRegistration').onclick = async () => {
+    if (!$('doneEditing').classList.contains('hidden')) return alert('Finish editing first');
+    await save('students', students);
+    hide(
+      document.querySelector('#student-registration .row-inline'),
+      $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration')
+    );
+    show($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+    renderStudents(); updateCounters();
+  };
+
+  // Re-open registration edit mode
+  $('editRegistration').onclick = () => {
+    show(
+      document.querySelector('#student-registration .row-inline'),
+      $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration')
+    );
+    hide($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+    renderStudents(); updateCounters();
+  };
+
+  // Share registration
+  $('shareRegistration').onclick = () => {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const header = `*Students List*\nClass ${cl} Section ${sec}`;
+    const lines = students
+      .filter(s=>s.cls===cl&&s.sec===sec)
+      .map(s=>{
+        const tf = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+        const stats = Object.values(attendanceData).filter(r=>r[s.adm]==='A').length;
+        const pct = Object.values(attendanceData).length
+                    ? (Object.values(attendanceData).filter(r=>r[s.adm]==='P').length/
+                       Object.values(attendanceData).length)*100
+                    : 0;
+        const status = (tf>0||pct<eligibilityPct)?'Debarred':'Eligible';
+        return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${tf}\nStatus: ${status}`;
+      }).join('\n\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
+  };
+
+  // Download registration PDF
+  $('downloadRegistrationPDF').onclick = () => {
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18); doc.text('Student List',14,16);
+    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
+    doc.autoTable({ startY:32, html:'#studentsTable' });
+    doc.save('registration.pdf');
+  };
+
+  //
+  // 8. PAYMENT MODAL
+  //
   function openPaymentModal(adm) {
     $('payAdm').textContent = adm;
     $('paymentAmount').value = '';
     show($('paymentModal'));
   }
   $('savePayment').onclick = async () => {
-    const adm = $('payAdm').textContent;
-    const amt = +$('paymentAmount').value || 0;
+    const adm = $('payAdm').textContent, amt = +$('paymentAmount').value||0;
     paymentsData[adm] = paymentsData[adm]||[];
     paymentsData[adm].push({ date: new Date().toISOString().split('T')[0], amount: amt });
     await save('paymentsData', paymentsData);
     hide($('paymentModal'));
-    renderAll();
+    renderStudents();
   };
-  $('cancelPayment').onclick     = () => hide($('paymentModal'));
-  $('paymentModalClose').onclick = () => hide($('paymentModal'));
-
+  $('cancelPayment, #paymentModalClose'.split(',')).forEach(id=>$(id.trim()).onclick = ()=>hide($('paymentModal')));
+  
   // --- 9. MARK ATTENDANCE ---
   $('loadAttendance').onclick = () => {
     const attendanceBody = $('attendanceBody');
