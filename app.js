@@ -22,20 +22,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct  = await get('eligibilityPct')  || 75;
 
-  let analyticsStats     = [];
-  let analyticsRange     = { from: null, to: null };
-  let analyticsFilter    = ['all'];
-  let analyticsDownload  = 'combined';
+  let financialDisplay = null;
+
+  let analyticsStats    = [];
+  let analyticsRange    = { from: null, to: null };
+  let analyticsFilter   = ['all'];
+  let analyticsDownload = 'combined';
 
   // --- 3. Helpers ---
+  const $    = id => document.getElementById(id);
+  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
+  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+
   async function genAdmNo() {
     lastAdmNo++;
     await save('lastAdmissionNo', lastAdmNo);
     return String(lastAdmNo).padStart(4, '0');
   }
-  const $    = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+
   function getFineMode() {
     return document.querySelector('input[name="fineMode"]:checked')?.value || 'advance';
   }
@@ -46,6 +50,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('fineLeave').value      = fineRates.L;
   $('fineHalfDay').value    = fineRates.HD;
   $('eligibilityPct').value = eligibilityPct;
+
   $('saveSettings').onclick = async () => {
     fineRates = {
       A : +$('fineAbsent').value   || 0,
@@ -58,7 +63,33 @@ window.addEventListener('DOMContentLoaded', async () => {
       save('fineRates', fineRates),
       save('eligibilityPct', eligibilityPct)
     ]);
-    renderAll();
+
+    // Hide form & radios
+    hide($('financialForm'), $('fineModeFieldset'), $('saveSettings'));
+
+    // Insert static summary
+    if (financialDisplay) financialDisplay.remove();
+    financialDisplay = document.createElement('div');
+    financialDisplay.id = 'financialDisplay';
+    financialDisplay.className = 'summary-box';
+    financialDisplay.innerHTML = `
+      <h3><i class="fas fa-wallet"></i> Fines & Eligibility</h3>
+      <p>Absent Fine: PKR ${fineRates.A}</p>
+      <p>Late Fine: PKR ${fineRates.Lt}</p>
+      <p>Leave Fine: PKR ${fineRates.L}</p>
+      <p>Half‑Day Fine: PKR ${fineRates.HD}</p>
+      <p>Eligibility Threshold: ${eligibilityPct}%</p>
+      <button id="editSettings" class="no-print"><i class="fas fa-edit"></i> Edit</button>
+    `;
+    document.getElementById('financial-settings').appendChild(financialDisplay);
+    show(financialDisplay);
+
+    // Edit restores form
+    $('editSettings').onclick = () => {
+      financialDisplay.remove();
+      financialDisplay = null;
+      show($('financialForm'), $('fineModeFieldset'), $('saveSettings'));
+    };
   };
 
   // --- 5. SETUP: School, Class & Section ---
@@ -91,7 +122,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     ]);
     await loadSetup();
   };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
+  $('editSetup').onclick = e => {
+    e.preventDefault();
+    show($('setupForm'));
+    hide($('setupDisplay'));
+  };
   await loadSetup();
 
   // --- 6. COUNTERS & UTILS ---
@@ -110,11 +145,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   function updateCounters() {
     const cl  = $('teacherClassSelect').value;
     const sec = $('teacherSectionSelect').value;
-    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
-    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
+    $('sectionCount').dataset.target = students.filter(s => s.cls===cl && s.sec===sec).length;
+    $('classCount').dataset.target   = students.filter(s => s.cls===cl).length;
     $('schoolCount').dataset.target  = students.length;
     animateCounters();
   }
+
   function resetViews() {
     hide(
       $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
@@ -125,18 +161,174 @@ window.addEventListener('DOMContentLoaded', async () => {
     );
     show($('loadRegister'));
   }
+
   $('teacherClassSelect').onchange   = renderAll;
   $('teacherSectionSelect').onchange = renderAll;
 
   // --- 7. STUDENT REGISTRATION ---
+  function clearForm() {
+    ['studentName','parentName','parentContact','parentOccupation','parentAddress','admissionDate']
+      .forEach(id => $(id).value = '');
+  }
   $('addStudent').onclick = async e => {
     e.preventDefault();
-    const n       = $('studentName').value.trim();
-    const p       = $('parentName').value.trim();
-    const c       = $('parentContact').value.trim();
-    const o       = $('parentOccupation').value.trim();
-    const a       = $('parentAddress').value.trim();
-    const cl      = $('teacherClassSelect').value;
+    const n = $('studentName').value.trim(),
+          p = $('parentName').value.trim(),
+          c = $('parentContact').value.trim(),
+          o = $('parentOccupation').value.trim(),
+          a = $('parentAddress').value.trim(),
+          cl= $('teacherClassSelect').value,
+          sec=$('teacherSectionSelect').value,
+          admDate=$('admissionDate').value||null;
+    if (!n||!p||!c||!o||!a) { alert('All fields required'); return; }
+    const adm = await genAdmNo();
+    students.push({ name:n, adm, parent:p, contact:c, occupation:o, address:a, cls:cl, sec, admissionDate:admDate });
+    await save('students', students);
+    clearForm();
+    renderStudents();
+    updateCounters();
+    resetViews();
+  };
+
+  $('selectAllStudents').onclick = () => {
+    const c = $('selectAllStudents').checked;
+    document.querySelectorAll('#studentsBody .sel').forEach(cb => cb.checked = c);
+    toggleButtons();
+  };
+
+  function toggleButtons() {
+    const any = !!document.querySelector('#studentsBody .sel:checked');
+    $('editSelected').disabled = !any;
+    $('deleteSelected').disabled = !any;
+    $('saveRegistration').disabled = !any;
+  }
+
+  $('studentsBody').addEventListener('change', e => {
+    if (e.target.classList.contains('sel')) toggleButtons();
+  });
+
+  $('editSelected').onclick = () => {
+    document.querySelectorAll('.sel:checked').forEach(cb => {
+      const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sel" checked></td>
+        <td>${tr.children[1].textContent}</td>
+        <td><input value="${s.name}"></td>
+        <td>${s.adm}</td>
+        <td><input value="${s.parent}"></td>
+        <td><input value="${s.contact}"></td>
+        <td><input value="${s.occupation}"></td>
+        <td><input value="${s.address}"></td>
+        <td colspan="2"></td>
+      `;
+    });
+    hide($('editSelected'), $('deleteSelected'), $('selectAllStudents'));
+    show($('saveRegistration'));
+  };
+
+  $('deleteSelected').onclick = async () => {
+    if (!confirm('Delete selected?')) return;
+    const toDel = [...document.querySelectorAll('.sel:checked')].map(cb => +cb.closest('tr').dataset.index);
+    students = students.filter((_,i) => !toDel.includes(i));
+    await save('students', students);
+    renderStudents();
+  };
+
+  $('saveRegistration').onclick = async () => {
+    document.querySelectorAll('#studentsBody tr').forEach(tr => {
+      const inputs = [...tr.querySelectorAll('input')].filter(i => !i.classList.contains('sel'));
+      if (inputs.length === 5) {
+        const [n,p,c,o,a] = inputs.map(i => i.value.trim());
+        const adm = tr.children[3].textContent;
+        const idx = students.findIndex(s => s.adm === adm);
+        students[idx] = { ...students[idx], name:n, parent:p, contact:c, occupation:o, address:a };
+      }
+    });
+    await save('students', students);
+    hide($('editSelected'), $('deleteSelected'), $('saveRegistration'));
+    show($('downloadRegistrationPDF'), $('shareRegistration'), $('editRegistration'));
+    renderStudents();
+  };
+
+  // assume downloadRegistrationPDF, shareRegistration, editRegistration exist
+
+  function renderStudents() {
+    const tbody = $('studentsBody');
+    tbody.innerHTML = '';
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    students.filter(s => s.cls===cl && s.sec===sec).forEach((s,i) => {
+      const st = calcStats(s);
+      const tr = document.createElement('tr');
+      tr.dataset.index = i;
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sel"></td>
+        <td>${i+1}</td>
+        <td>${s.name}</td><td>${s.adm}</td><td>${s.parent}</td>
+        <td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>
+        <td>PKR ${st.outstanding.toFixed(0)}</td><td>${st.status}</td>
+        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.querySelectorAll('.add-payment-btn').forEach(b => b.onclick = () => openPaymentModal(b.dataset.adm));
+  }
+
+  function calcStats(s) {
+    const dates = Object.keys(attendanceData).filter(d => !s.admissionDate || d >= s.admissionDate);
+    const stats = { P:0,A:0,Lt:0,HD:0,L:0,total:0 };
+    dates.forEach(d => {
+      const code = (attendanceData[d]||{})[s.adm] || 'A';
+      stats[code]++; stats.total++;
+    });
+    const auto = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+    const fine = getFineMode()==='advance'
+      ? (dates.length*fineRates.A - auto) : auto;
+    const paid = (paymentsData[s.adm]||[]).reduce((sum,p)=>sum+p.amount,0);
+    const outstanding = fine - paid;
+    const pct = stats.total ? (stats.P/stats.total*100) : 0;
+    const status = (outstanding>0||pct<eligibilityPct) ? 'Debarred' : 'Eligible';
+    return { ...stats, outstanding, pct, status };
+  }
+
+  // --- 8. PAYMENT MODAL ---
+  function openPaymentModal(adm) {
+    $('payAdm').textContent = adm; $('paymentAmount').value = '';
+    show($('paymentModal'));
+  }
+  $('savePayment').onclick = async () => {
+    const adm = $('payAdm').textContent, amt = +$('paymentAmount').value||0;
+    paymentsData[adm] = paymentsData[adm]||[];
+    paymentsData[adm].push({ date:new Date().toISOString().split('T')[0], amount:amt });
+    await save('paymentsData', paymentsData);
+    hide($('paymentModal'));
+    renderAll();
+  };
+  $('cancelPayment').onclick     = () => hide($('paymentModal'));
+  $('paymentModalClose').onclick = () => hide($('paymentModal'));
+  
+  // --- 9. MARK ATTENDANCE ---
+  $('loadAttendance').onclick = () => {
+    const attendanceBody = $('attendanceBody');
+    attendanceBody.innerHTML = '';
+    const cl  = $('teacherClassSelect').value;
+    const sec = $('teacherSectionSelect').value;
+    const roster = students.filter(s=>s.cls===cl&&s.sec===sec);
+    roster.forEach((stu,i) => {
+      const row = document.createElement('div');
+      row.className = 'attendance-row';
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'attendance-name';
+      nameDiv.textContent = stu.name;
+      const btnsDiv = document.createElement('div');
+      btnsDiv.className = 'attendance-buttons';
+      const codes = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+      ['P','A','Lt','HD','L'].forEach(code => {
+        const btn = document.createElement('button');
+        btn.className = 'att-btn';
+        btn.textContent = code;
+        btn.onclick = () => {
+          btnsDiv.querySelectorAll('.att-btn').forEach(b=>{
+            b.classLconst cl      = $('teacherClassSelect').value;
     const sec     = $('teacherSectionSelect').value;
     const admDate = $('admissionDate').value || null;
     if (!n||!p||!c||!o||!a){ alert('All fields required'); return; }
@@ -212,6 +404,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         btn.onclick = () => {
           btnsDiv.querySelectorAll('.att-btn').forEach(b=>{
             b.classList.remove('selected');
+            b.style.background = '';
+            b.style.color = 'ist.remove('selected');
             b.style.background = '';
             b.style.color = '';
           });
