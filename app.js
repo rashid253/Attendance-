@@ -729,8 +729,21 @@ saveReg.onclick = async () => {
 };
 
 changeReg.onclick = () => {
-  hide(changeReg, dlReg, shReg);
-  show(saveReg);
+  // Hide the register table and all buttons
+  hide(
+    $('registerTableWrapper'),
+    changeReg,
+    dlReg,
+    shReg,
+    saveReg
+  );
+
+  // Clear old table content
+  $('registerHeader').innerHTML = '';
+  $('registerBody').innerHTML   = '';
+
+  // Show the Load button again
+  show($('loadRegister'));
 };
 
 dlReg.onclick = () => {
