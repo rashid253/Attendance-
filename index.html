@@ -30,6 +30,18 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
+  <!-- Hide in PDF/print -->
+  <style>
+    @media print { .no-print { display: none !important; } }
+    .hidden { display: none; }
+    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
+    .btn { margin-top: 0.5em; }
+    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
+    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
+  </style>
 </head>
 <body>
   <header>
@@ -43,7 +55,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursery</option><option>KG</option>
+        <option>Play Group</option><option>Nursary</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
         <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
@@ -56,7 +68,7 @@
       <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
-      <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
+      <h3><i class="fas fa-school"></i> <span id="setupText"></span></h3>
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
   </section>
@@ -70,21 +82,18 @@
       <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
       <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
+
+      <!-- Advance vs Pro-Rata Mode -->
+      <label><input type="radio" name="fineMode" value="advance"> Advance Fine Mode</label>
+      <label><input type="radio" name="fineMode" value="prorata"> Pro-Rata Fine Mode</label>
+
+      <!-- Gazetted Holidays -->
+      <label>Gazetted Holidays (YYYY-MM-DD, comma-sep):<input id="holidayDatesInput" type="text" placeholder="2025-05-01,2025-05-23"/></label>
+
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
-    <fieldset id="fineModeFieldset" class="no-print">
-      <legend>Fine Calculation Mode</legend>
-      <label>
-        <input type="radio" name="fineMode" value="advance" checked>
-        Advance Fine Mode<br>
-        <small>(Full‑Month Advance & Pro‑Rata from Admission Date)</small>
-      </label><br>
-      <label>
-        <input type="radio" name="fineMode" value="prorata">
-        Pro‑Rata Fine Mode<br>
-        <small>(Admission‑Date Accrual Only on Attendance Days)</small>
-      </label>
-    </fieldset>
+    <div id="settingsCard" class="card hidden"></div>
+    <button id="editSettings" class="btn no-print hidden">Edit Settings</button>
   </section>
 
   <!-- 3. COUNTERS -->
@@ -112,8 +121,7 @@
       <input id="parentContact" placeholder="Contact" />
       <input id="parentOccupation" placeholder="Occupation" />
       <input id="parentAddress" placeholder="Address" />
-      <label>Admission Date:<input type="date" id="admissionDate"/></label>
-      <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
+      <button id="addRegistration" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
     <div class="table-wrapper">
       <table id="studentsTable">
@@ -122,7 +130,8 @@
             <th><input type="checkbox" id="selectAllStudents"/></th>
             <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
             <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
+            <th>P</th><th>Lt</th><th>L</th><th>HD</th><th>A</th>
+            <th>Total</th><th>%</th><th>Outstanding</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
@@ -130,9 +139,12 @@
     </div>
     <div class="table-actions">
       <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="hidden no-print"><i class="fas fa-check"></i> Done</button>
       <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" disabled class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegistrationPDF" class="no-print hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
+      <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
@@ -140,10 +152,10 @@
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
-      <input type="date" id="dateInput" />
+      <input type="date" id="attendanceDate" />
       <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
-    <div id="attendanceBody"></div>
+    <div id="attendanceBody" class="row-inline"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
       <button id="saveAttendance" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
@@ -228,11 +240,12 @@
   <div id="paymentModal" class="modal hidden">
     <div class="modal-content">
       <span id="paymentModalClose" class="modal-close">&times;</span>
-      <h3>Payment for Adm# <span id="payAdm"></span></h3>
+      <h3>Payment for Adm# <span id="paymentAdm"></span></h3>
       <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
+      <label>Date: <input id="paymentDate" type="date"/></label>
       <div class="modal-actions">
         <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+        <button id="closePayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
       </div>
     </div>
   </div>
@@ -243,13 +256,13 @@
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
       <h3>Filter Reports</h3>
       <form id="analyticsFilterForm">
-        <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
-        <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
+        <label><input type="checkbox" value="registered" checked> Registered</label><br>
+        <label><input type="checkbox" value="attendance"> Attendance</label><br>
         <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
-        <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
+        <label><input type="checkbox" value="cleared"> Cleared</label><br>
         <label><input type="checkbox" value="debarred"> Debarred</label><br>
         <label><input type="checkbox" value="eligible"> Eligible</label><br>
-        <label><input type="checkbox" value="all"> All Students</label><br>
+        <label><input type="checkbox" value="all"> All Students</label>
         <fieldset>
           <legend>Download Mode</legend>
           <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
