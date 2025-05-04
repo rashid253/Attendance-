@@ -30,19 +30,6 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Hide in PDF/print -->
-  <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    /* Filter button positioning */
-    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
-    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-  </style>
 </head>
 <body>
   <header>
@@ -56,7 +43,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursary</option><option>KG</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
         <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
@@ -85,6 +72,19 @@
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
+    <fieldset id="fineModeFieldset" class="no-print">
+      <legend>Fine Calculation Mode</legend>
+      <label>
+        <input type="radio" name="fineMode" value="advance" checked>
+        Advance Fine Mode<br>
+        <small>(Full‑Month Advance & Pro‑Rata from Admission Date)</small>
+      </label><br>
+      <label>
+        <input type="radio" name="fineMode" value="prorata">
+        Pro‑Rata Fine Mode<br>
+        <small>(Admission‑Date Accrual Only on Attendance Days)</small>
+      </label>
+    </fieldset>
   </section>
 
   <!-- 3. COUNTERS -->
@@ -112,6 +112,7 @@
       <input id="parentContact" placeholder="Contact" />
       <input id="parentOccupation" placeholder="Occupation" />
       <input id="parentAddress" placeholder="Address" />
+      <label>Admission Date:<input type="date" id="admissionDate"/></label>
       <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
     <div class="table-wrapper">
@@ -129,12 +130,9 @@
     </div>
     <div class="table-actions">
       <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="hidden no-print"><i class="fas fa-check"></i> Done</button>
       <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
-      <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="saveRegistration" disabled class="no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegistrationPDF" class="no-print hidden"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
@@ -251,7 +249,7 @@
         <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
         <label><input type="checkbox" value="debarred"> Debarred</label><br>
         <label><input type="checkbox" value="eligible"> Eligible</label><br>
-        <label><input type="checkbox" value="all"> All Students</label>
+        <label><input type="checkbox" value="all"> All Students</label><br>
         <fieldset>
           <legend>Download Mode</legend>
           <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
