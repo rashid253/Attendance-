@@ -29,7 +29,6 @@
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
-
 </head>
 <body>
   <header>
@@ -66,8 +65,8 @@
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
       <label>Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (PKR):<input id="fineLate" type="number"/></label>
-      <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
+      <label>Fine/Late (PKR):<input id="fineLate"   type="number"/></label>
+      <label>Fine/Leave (PKR):<input id="fineLeave"  type="number"/></label>
       <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
@@ -75,14 +74,12 @@
     <fieldset id="fineModeFieldset" class="no-print">
       <legend>Fine Calculation Mode</legend>
       <label>
-        <input type="radio" name="fineMode" value="advance" checked>
-        Advance Fine Mode<br>
-        <small>(Full‑Month Advance & Pro‑Rata from Admission Date)</small>
-      </label><br>
+        <input type="radio" name="fineMode" value="advance" checked />
+        Advance Mode (Full‑Month + Pro‑Rata)
+      </label><br/>
       <label>
-        <input type="radio" name="fineMode" value="prorata">
-        Pro‑Rata Fine Mode<br>
-        <small>(Admission‑Date Accrual Only on Attendance Days)</small>
+        <input type="radio" name="fineMode" value="prorata" />
+        Pro‑Rata Mode (From Admission Date)
       </label>
     </fieldset>
   </section>
@@ -133,6 +130,8 @@
       <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
       <button id="saveRegistration" disabled class="no-print"><i class="fas fa-save"></i> Save</button>
       <button id="downloadRegistrationPDF" class="no-print hidden"><i class="fas fa-download"></i> Download</button>
+      <button id="shareRegistration" class="no-print hidden"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="editRegistration" class="no-print hidden"><i class="fas fa-undo"></i> Restore</button>
     </div>
   </section>
 
@@ -177,12 +176,12 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
       <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
     </div>
@@ -243,17 +242,17 @@
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
       <h3>Filter Reports</h3>
       <form id="analyticsFilterForm">
-        <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
-        <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
-        <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
-        <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
-        <label><input type="checkbox" value="debarred"> Debarred</label><br>
-        <label><input type="checkbox" value="eligible"> Eligible</label><br>
-        <label><input type="checkbox" value="all"> All Students</label><br>
+        <label><input type="checkbox" value="registered" checked /> Registered Students</label><br />
+        <label><input type="checkbox" value="attendance" /> Attendance Records</label><br />
+        <label><input type="checkbox" value="fine" /> Fine Incurred</label><br />
+        <label><input type="checkbox" value="cleared" /> Cleared (No Dues)</label><br />
+        <label><input type="checkbox" value="debarred" /> Debarred</label><br />
+        <label><input type="checkbox" value="eligible" /> Eligible</label><br />
+        <label><input type="checkbox" value="all" /> All Students</label><br />
         <fieldset>
           <legend>Download Mode</legend>
-          <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
-          <label><input type="radio" name="downloadMode" value="individual"> Individual PDFs</label>
+          <label><input type="radio" name="downloadMode" value="combined" checked /> Combined PDF</label><br />
+          <label><input type="radio" name="downloadMode" value="individual" /> Individual PDFs</label>
         </fieldset>
         <button type="button" id="applyAnalyticsFilter" class="btn no-print">Apply Filter</button>
       </form>
