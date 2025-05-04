@@ -30,16 +30,6 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    #fineModeFieldset { margin-top: 1em; border: 1px solid #ccc; padding: 0.5em; border-radius: 4px; }
-    #fineModeFieldset legend { font-weight: bold; }
-    .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; }
-    .modal-content { background: #fff; padding:1.5em; border-radius:6px; width:90%; max-width:400px; position:relative; }
-    .modal-close { position:absolute; top:8px; right:12px; cursor:pointer; font-size:1.2em; }
-  </style>
 </head>
 <body>
   <header>
@@ -84,8 +74,16 @@
     </div>
     <fieldset id="fineModeFieldset" class="no-print">
       <legend>Fine Calculation Mode</legend>
-      <label><input type="radio" name="fineMode" value="manual" checked> Manual Fine</label><br>
-      <label><input type="radio" name="fineMode" value="smart"> Attendance-Based Fine</label>
+      <label>
+        <input type="radio" name="fineMode" value="advance" checked>
+        Advance Fine Mode<br>
+        <small>(Full‑Month Advance & Pro‑Rata from Admission Date)</small>
+      </label><br>
+      <label>
+        <input type="radio" name="fineMode" value="prorata">
+        Pro‑Rata Fine Mode<br>
+        <small>(Admission‑Date Accrual Only on Attendance Days)</small>
+      </label>
     </fieldset>
   </section>
 
@@ -121,13 +119,19 @@
       <table id="studentsTable">
         <thead>
           <tr>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Fine (PKR)</th><th>Status</th>
+            <th><input type="checkbox" id="selectAllStudents"/></th>
+            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+            <th>Contact</th><th>Occupation</th><th>Address</th>
+            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
+      <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
+      <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration" disabled class="no-print"><i class="fas fa-save"></i> Save</button>
       <button id="downloadRegistrationPDF" class="no-print hidden"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
