@@ -604,4 +604,4 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderRegistrationTable();
   renderSettingsCard();
   renderAll();
-  
+});
