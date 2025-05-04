@@ -41,7 +41,7 @@
     .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
     .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5em; }
     th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; }
     .attendance-row { display: flex; align-items: center; margin-bottom: 0.5em; }
     .attendance-name { width: 150px; }
@@ -54,7 +54,7 @@
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
 
-  <!-- SETUP -->
+  <!-- 1. SETUP -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
     <div id="setupForm" class="row-inline">
@@ -79,7 +79,7 @@
     </div>
   </section>
 
-  <!-- FINANCIAL SETTINGS -->
+  <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
@@ -90,10 +90,13 @@
       <label>Eligibility %: <input id="eligibilityPct" type="number" min="0" max="100" /></label>
       <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
-    <!-- settingsCard & editSettings injected here -->
+    <div class="row-inline">
+      <label><input type="radio" name="fineMode" id="modeManual" value="manual" /> Manual Fine</label>
+      <label><input type="radio" name="fineMode" id="modeSmart" value="smart" /> Smart (Attendance‑Based)</label>
+    </div>
   </section>
 
-  <!-- COUNTERS -->
+  <!-- 3. COUNTERS -->
   <section id="animatedCounters" class="counter-grid">
     <div class="counter-card">
       <span id="sectionCount" class="number" data-target="0">0</span>
@@ -109,14 +112,11 @@
     </div>
   </section>
 
-  <!-- STUDENT REGISTRATION -->
+  <!-- 4. STUDENT REGISTRATION -->
   <section id="student-registration">
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
-      <label><input type="radio" name="fineMode" id="modeManual" value="manual" checked /> Manual Fine</label>
-      <label><input type="radio" name="fineMode" id="modeSmart" value="smart" /> Smart Fine</label>
-      <label title="Fine & attendance considered from this date only">
-        Admission Date:
+      <label title="Fine & attendance counted from this date"><strong>Admission Date:</strong>
         <input type="date" id="admissionDate" required />
       </label>
     </div>
@@ -128,7 +128,7 @@
       <input id="parentAddress" placeholder="Address" />
       <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
-    <div class="table-wrapper">
+    <div class="table-wrapper card">
       <table id="studentsTable">
         <thead>
           <tr>
@@ -153,7 +153,7 @@
     </div>
   </section>
 
-  <!-- ATTENDANCE MARKING -->
+  <!-- 5. MARK ATTENDANCE -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
@@ -170,7 +170,7 @@
     </div>
   </section>
 
-  <!-- ANALYTICS -->
+  <!-- 6. ANALYTICS -->
   <section id="analytics-section">
     <h2>
       <i class="fas fa-chart-bar"></i> Analytics
@@ -179,11 +179,6 @@
     <div class="row-inline">
       <select id="analyticsTarget">
         <option disabled selected>-- Report For --</option>
-        <option value="registered">Registered</option>
-        <option value="attendance">Attendance</option>
-        <option value="fine">Fine</option>
-        <option value="eligible">Eligible</option>
-        <option value="debarred">Debarred</option>
       </select>
       <select id="analyticsSectionSelect" class="hidden">
         <option disabled selected>-- Section --</option>
@@ -198,8 +193,8 @@
       </select>
       <input type="date" id="analyticsDate" class="hidden" />
       <input type="month" id="analyticsMonth" class="hidden" />
-      <input type="month" id="semesterStart" class="hidden" placeholder="Start" />
-      <input type="month" id="semesterEnd" class="hidden" placeholder="End" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
       <input type="number" id="yearStart" class="hidden" placeholder="Year" />
       <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
       <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-line"></i> Load</button>
@@ -222,7 +217,7 @@
     </div>
   </section>
 
-  <!-- ATTENDANCE REGISTER -->
+  <!-- 7. ATTENDANCE REGISTER -->
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
