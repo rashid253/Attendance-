@@ -316,7 +316,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents();
   };
   $('cancelPayment, #paymentModalClose'.split(',')).forEach(id=>$(id.trim()).onclick = ()=>hide($('paymentModal')));
-  
+
+  //
+  // 9–12. Attendance, Analytics, Register & Service Worker
+  // (unchanged from uploaded version)
+  //
+  // … include all your existing loadAttendance, saveAttendance,
+  // analytics handlers, register handlers, and SW registration here …
+
+  // Finally, initial render:
+  renderStudents();
+  updateCounters();
+  resetViews();
+});
+
   // --- 9. MARK ATTENDANCE ---
   $('loadAttendance').onclick = () => {
     const attendanceBody = $('attendanceBody');
@@ -713,4 +726,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Initial render
   renderAll();
+});
+
+renderStudents();
+updateCounters();
+resetViews();
 });
