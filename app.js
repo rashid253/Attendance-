@@ -528,19 +528,29 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   function renderAnalytics(stats, from, to) {
     let filtered = stats;
-    if (!analyticsFilterOptions.includes('all')) {
-      filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
-        switch (opt) {
-          case 'registered': return true;
-          case 'attendance':  return st.total > 0;
-          case 'fine':        return st.outstanding > 0;
-          case 'cleared':     return st.outstanding <= 0;
-          case 'debarred':    return st.status === 'Debarred';
-          case 'eligible':    return st.status === 'Eligible';
-          default:            return false;
-        }
-      }));
+    
+    // new filter logic
+if (!analyticsFilterOptions.includes('all')) {
+  filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
+    switch (opt) {
+      case 'registered':
+        return true;
+      case 'attendance':
+        return st.total > 0;
+      case 'fine':
+        // anyone who incurred a fine, even if later paid
+        return (st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0);
+      case 'cleared':
+        return st.outstanding === 0;
+      case 'debarred':
+        return st.status === 'Debarred';
+      case 'eligible':
+        return st.status === 'Eligible';
+      default:
+        return false;
     }
+  }));
+}
 
     const thead = $('analyticsTable').querySelector('thead tr');
     thead.innerHTML = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']
@@ -609,35 +619,87 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       });
     });
-    if (analyticsDownloadMode === 'combined') {
+    $('downloadAnalytics').onclick = () => {
+  // Apply exactly the same filters as in renderAnalytics
+  const filtered = lastAnalyticsStats.filter(st => {
+    if (analyticsFilterOptions.includes('all')) return true;
+    return analyticsFilterOptions.some(opt => {
+      switch (opt) {
+        case 'registered':
+          return true;
+        case 'attendance':
+          return st.total > 0;
+        case 'fine':
+          // anyone who incurred any fine
+          return (st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0);
+        case 'cleared':
+          return st.outstanding === 0;
+        case 'debarred':
+          return st.status === 'Debarred';
+        case 'eligible':
+          return st.status === 'Eligible';
+        default:
+          return false;
+      }
+    });
+  });
+
+  if (analyticsDownloadMode === 'combined') {
+    // Combined PDF
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18);
+    doc.text('Analytics Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
+    const body = filtered.map((st, i) => [
+      i + 1,
+      st.adm,
+      st.name,
+      st.P,
+      st.A,
+      st.Lt,
+      st.HD,
+      st.L,
+      st.total,
+      `${((st.P / st.total) * 100).toFixed(1)}%`,
+      `PKR ${st.outstanding}`,
+      st.status
+    ]);
+    doc.autoTable({
+      startY: 32,
+      head: [['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']],
+      body,
+      styles: { fontSize: 10 }
+    });
+    doc.save('analytics_report.pdf');
+  } else {
+    // Individual PDFs
+    filtered.forEach(st => {
       const doc = new jspdf.jsPDF();
-      doc.setFontSize(18); doc.text('Analytics Report', 14, 16);
+      doc.setFontSize(16);
+      doc.text(`Report for ${st.name} (${st.adm})`, 14, 16);
       doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      const body = filtered.map((st, i) => [
-        i+1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L,
-        st.total, `${((st.P/st.total)*100).toFixed(1)}%`,
-        `PKR ${st.outstanding}`, st.status
-      ]);
-      doc.autoTable({ startY: 32, head: [['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']], body, styles: { fontSize: 10 } });
-      doc.save('analytics_report.pdf');
-    } else {
-      filtered.forEach(st => {
-        const doc = new jspdf.jsPDF();
-        doc.setFontSize(16); doc.text(`Report for ${st.name} (${st.adm})`, 14, 16);
-        doc.setFontSize(12);
-        const rows = [
-          ['Present', st.P], ['Absent', st.A], ['Late', st.Lt],
-          ['Half-Day', st.HD], ['Leave', st.L], ['Total', st.total],
-          ['% Present', `${((st.P/st.total)*100).toFixed(1)}%`],
-          ['Outstanding', `PKR ${st.outstanding}`],
-          ['Status', st.status]
-        ];
-        doc.autoTable({ startY: 24, head: [['Metric','Value']], body: rows, styles: { fontSize: 10 } });
-        doc.save(`report_${st.adm}.pdf`);
+      const rows = [
+        ['Present', st.P],
+        ['Absent', st.A],
+        ['Late', st.Lt],
+        ['Half-Day', st.HD],
+        ['Leave', st.L],
+        ['Total', st.total],
+        ['% Present', `${((st.P / st.total) * 100).toFixed(1)}%`],
+        ['Outstanding', `PKR ${st.outstanding}`],
+        ['Status', st.status]
+      ];
+      doc.autoTable({
+        startY: 24,
+        head: [['Metric','Value']],
+        body: rows,
+        styles: { fontSize: 10 }
       });
-    }
-  };
+      doc.save(`report_${st.adm}.pdf`);
+    });
+  }
+};
 
   $('shareAnalytics').onclick = () =>
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
