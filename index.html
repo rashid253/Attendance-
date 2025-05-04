@@ -29,7 +29,6 @@
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
-
 </head>
 <body>
   <header>
@@ -85,6 +84,7 @@
         <small>(Admission‑Date Accrual Only on Attendance Days)</small>
       </label>
     </fieldset>
+    <!-- financialDisplay will be injected here by app.js -->
   </section>
 
   <!-- 3. COUNTERS -->
@@ -133,6 +133,7 @@
       <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
       <button id="saveRegistration" disabled class="no-print"><i class="fas fa-save"></i> Save</button>
       <button id="downloadRegistrationPDF" class="no-print hidden"><i class="fas fa-download"></i> Download</button>
+      <!-- shareStudents and editRegistration will be injected here by app.js -->
     </div>
   </section>
 
@@ -177,12 +178,12 @@
         <option value="semester">Semester</option>
         <option value="year">Year</option>
       </select>
-      <input type="date" id="analyticsDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+      <input type="date" id="analyticsDate" class="hidden" />
+      <input type="month" id="analyticsMonth" class="hidden" />
+      <input type="month" id="semesterStart" class="hidden" />
+      <input type="month" id="semesterEnd" class="hidden" />
+      <input type="number" id="yearStart" class="hidden" placeholder="Year" />
+      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name" />
       <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
     </div>
