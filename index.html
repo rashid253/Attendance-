@@ -39,6 +39,9 @@
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
     /* Filter button positioning */
     #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
+    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
   </style>
 </head>
 <body>
@@ -66,10 +69,7 @@
       <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
     </div>
     <div id="setupDisplay" class="hidden">
-      <h3>
-        <i class="fas fa-school no-print"></i>
-        <span id="setupText"></span>
-      </h3>
+      <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
       <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
     </div>
   </section>
@@ -229,7 +229,7 @@
   <!-- PAYMENT MODAL -->
   <div id="paymentModal" class="modal hidden">
     <div class="modal-content">
-      <span class="modal-close" id="paymentModalClose">&times;</span>
+      <span id="paymentModalClose" class="modal-close">&times;</span>
       <h3>Payment for Adm# <span id="payAdm"></span></h3>
       <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
       <div class="modal-actions">
@@ -245,17 +245,17 @@
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
       <h3>Filter Reports</h3>
       <form id="analyticsFilterForm">
-        <label><input type="checkbox" value="registered" checked> All Registered Students</label>
-        <label><input type="checkbox" value="attendance"> Attendance Records</label>
-        <label><input type="checkbox" value="fine"> Fine Details</label>
-        <label><input type="checkbox" value="cleared"> Students with No Dues</label>
-        <label><input type="checkbox" value="debarred"> Debarred Students</label>
-        <label><input type="checkbox" value="eligible"> Eligible Students</label>
-        <label><input type="checkbox" value="all"> Every Student</label>
+        <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
+        <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
+        <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
+        <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
+        <label><input type="checkbox" value="debarred"> Debarred</label><br>
+        <label><input type="checkbox" value="eligible"> Eligible</label><br>
+        <label><input type="checkbox" value="all"> All Students</label>
         <fieldset>
           <legend>Download Mode</legend>
-          <label><input type="radio" name="downloadMode" value="combined" checked> Combined Report</label>
-          <label><input type="radio" name="downloadMode" value="individual"> Individual PDF Reports</label>
+          <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
+          <label><input type="radio" name="downloadMode" value="individual"> Individual PDFs</label>
         </fieldset>
         <button type="button" id="applyAnalyticsFilter" class="btn no-print">Apply Filter</button>
       </form>
