@@ -642,101 +642,116 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('shareAnalytics').onclick = () =>
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 
+  
   // --- 11. ATTENDANCE REGISTER ---
-  const loadReg   = $('loadRegister');
-  const changeReg = $('changeRegister');
-  const saveReg   = $('saveRegister');
-  const dlReg     = $('downloadRegister');
-  const shReg     = $('shareRegister');
-  const rm        = $('registerMonth');
-  const rh        = $('registerHeader');
-  const rb        = $('registerBody');
-  const regCodes  = ['A','P','Lt','HD','L'];
-  const regColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+const loadReg   = $('loadRegister');
+const changeReg = $('changeRegister');
+const saveReg   = $('saveRegister');
+const dlReg     = $('downloadRegister');
+const shReg     = $('shareRegister');
+const rm        = $('registerMonth');
+const rh        = $('registerHeader');
+const rb        = $('registerBody');
+const regCodes  = ['A','P','Lt','HD','L'];
+const regColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
 
-  loadReg.onclick = () => {
-    const m = rm.value;
-    if (!m) { alert('Pick month'); return; }
-    const [y, mm] = m.split('-').map(Number);
-    const days = new Date(y, mm, 0).getDate();
+loadReg.onclick = () => {
+  const m = rm.value;
+  if (!m) { alert('Pick month'); return; }
+  const [y, mm] = m.split('-').map(Number);
+  const days = new Date(y, mm, 0).getDate();
 
-    rh.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
-      [...Array(days)].map((_,i) => `<th>${i+1}</th>`).join('');
+  // Build header
+  rh.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+    [...Array(days)].map((_, i) => `<th>${i+1}</th>`).join('');
 
-    rb.innerHTML = '';
-    const cl  = $('teacherClassSelect').value;
-    const sec = $('teacherSectionSelect').value;
-    const roster = students.filter(s => s.cls === cl && s.sec === sec);
+  // Populate rows
+  rb.innerHTML = '';
+  const cl = $('teacherClassSelect').value;
+  const sec = $('teacherSectionSelect').value;
+  const roster = students.filter(s => s.cls === cl && s.sec === sec);
 
-    roster.forEach((s, i) => {
-      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d=1; d<=days; d++) {
-        const key = `${m}-${String(d).padStart(2,'0')}`;
-        const c   = (attendanceData[key]||{})[s.adm] || 'A';
-        const style = c==='A' ? '' : `style="background:${regColors[c]};color:#fff"`;
-        row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+  roster.forEach((s, i) => {
+    let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+    for (let d = 1; d <= days; d++) {
+      const key = `${m}-${String(d).padStart(2,'0')}`;
+      const c = (attendanceData[key]||{})[s.adm] || 'A';
+      const style = c === 'A' ? '' : `style="background:${regColors[c]};color:#fff"`;
+      row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = row;
+    rb.appendChild(tr);
+  });
+
+  // Cell‑click toggles status
+  rb.querySelectorAll('.reg-cell').forEach(cell => {
+    cell.onclick = () => {
+      const span = cell.querySelector('.status-text');
+      let idx = regCodes.indexOf(span.textContent);
+      idx = (idx + 1) % regCodes.length;
+      const c = regCodes[idx];
+      span.textContent = c;
+      if (c === 'A') {
+        cell.style.background = '';
+        cell.style.color = '';
+      } else {
+        cell.style.background = regColors[c];
+        cell.style.color = '#fff';
       }
-      const tr = document.createElement('tr');
-      tr.innerHTML = row;
-      rb.appendChild(tr);
-    });
+    };
+  });
 
-    rb.querySelectorAll('.reg-cell').forEach(cell => {
-      cell.onclick = () => {
-        const span = cell.querySelector('.status-text');
-        let idx = regCodes.indexOf(span.textContent);
-        idx = (idx+1) % regCodes.length;
-        const c = regCodes[idx];
-        span.textContent = c;
-        if (c==='A') { cell.style.background=''; cell.style.color=''; }
-        else        { cell.style.background=regColors[c]; cell.style.color='#fff'; }
-      };
-    });
+  // Show the full table wrapper and Save button
+  show($('registerTableWrapper'), saveReg);
+  // Hide Load, Reset, Download, Share until after save
+  hide(loadReg, changeReg, dlReg, shReg);
+};
 
-    show(rb.parentNode, saveReg);
-    hide(loadReg, changeReg, dlReg, shReg);
-  };
+saveReg.onclick = async () => {
+  const m = rm.value;
+  const [y, mm] = m.split('-').map(Number);
+  const days = new Date(y, mm, 0).getDate();
 
-  saveReg.onclick = async () => {
-    const m = rm.value, [y, mm] = m.split('-').map(Number);
-    const days = new Date(y, mm, 0).getDate();
-    Array.from(rb.children).forEach(tr => {
-      const adm = tr.children[1].textContent;
-      for (let d=1; d<=days; d++) {
-        const code = tr.children[3 + d - 1].querySelector('.status-text').textContent;
-        const key = `${m}-${String(d).padStart(2,'0')}`;
-        attendanceData[key] = attendanceData[key] || {};
-        attendanceData[key][adm] = code;
-      }
-    });
-    await save('attendanceData', attendanceData);
-    hide(saveReg);
-    show(changeReg, dlReg, shReg);
-  };
+  Array.from(rb.children).forEach(tr => {
+    const adm = tr.children[1].textContent;
+    for (let d = 1; d <= days; d++) {
+      const code = tr.children[3 + d - 1].querySelector('.status-text').textContent;
+      const key = `${m}-${String(d).padStart(2,'0')}`;
+      attendanceData[key] = attendanceData[key] || {};
+      attendanceData[key][adm] = code;
+    }
+  });
 
-  changeReg.onclick = () => {
-    hide(changeReg, dlReg, shReg);
-    show(saveReg);
-  };
+  await save('attendanceData', attendanceData);
+  hide(saveReg);
+  show(changeReg, dlReg, shReg);
+};
 
-  dlReg.onclick = () => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(18); doc.text('Attendance Register', 14, 16);
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-    const url = doc.output('bloburl'); window.open(url,'_blank');
-    doc.save('attendance_register.pdf');
-  };
+changeReg.onclick = () => {
+  hide(changeReg, dlReg, shReg);
+  show(saveReg);
+};
 
-  shReg.onclick = () => {
-    const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from(rb.children).map(tr =>
-      Array.from(tr.children).map(td =>
-        td.querySelector('.status-text') ? td.querySelector('.status-text').textContent : td.textContent
-      ).join(' ')
-    );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
-  };
+dlReg.onclick = () => {
+  const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  doc.setFontSize(18); doc.text('Attendance Register', 14, 16);
+  doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
+  doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
+  const url = doc.output('bloburl'); window.open(url,'_blank');
+  doc.save('attendance_register.pdf');
+};
+
+shReg.onclick = () => {
+  const header = `Attendance Register\n${$('setupText').textContent}`;
+  const rows = Array.from(rb.children).map(tr =>
+    Array.from(tr.children).map(td =>
+      td.querySelector('.status-text') ? td.querySelector('.status-text').textContent : td.textContent
+    ).join(' ')
+  );
+  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+};
+    
 
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
