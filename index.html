@@ -9,13 +9,14 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
   <style>
-    /* Utility Styles */
+    /* Utility */
     .hidden { display: none; }
-    .btn { margin: 4px; padding: 6px 12px; cursor: pointer; border: 1px solid #444; background: #f0f0f0; }
+    .btn { margin: 4px; padding: 6px 12px; cursor: pointer; }
     .number { font-weight: bold; }
+    /* Modal */
     .modal {
       position: fixed; top:0; left:0; right:0; bottom:0;
-      background: rgba(0,0,0,.5);
+      background: rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center;
     }
     .modal-content {
@@ -37,33 +38,22 @@
 <body>
   <h1>Attendance Management</h1>
 
-  <!-- Setup -->
-  <section id="setupSection">
+  <!-- SETUP -->
+  <section>
     <h2>Setup</h2>
     <form id="setupForm">
       <label>Class:
         <select id="teacherClassSelect">
           <option value="">–</option>
-          <optgroup label="Play Group">
-            <option>Nursery</option><option>KG</option>
-          </optgroup>
-          <optgroup label="Primary">
-            <option>Class One</option><option>Class Two</option><option>Class Three</option>
-          </optgroup>
-          <optgroup label="Middle">
-            <option>Class Four</option><option>Class Five</option><option>Class Six</option>
-          </optgroup>
-          <optgroup label="High">
-            <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
-          </optgroup>
+          <optgroup label="Play Group"><option>Nursery</option><option>KG</option></optgroup>
+          <optgroup label="Primary"><option>Class One</option><option>Class Two</option><option>Class Three</option></optgroup>
+          <optgroup label="Middle"><option>Class Four</option><option>Class Five</option><option>Class Six</option></optgroup>
+          <optgroup label="High"><option>Class Seven</option><option>Class Eight</option><option>Class Nine</option></optgroup>
           <option>Class Ten</option>
         </select>
       </label>
       <label>Section:
-        <select id="teacherSectionSelect">
-          <option value="">–</option>
-          <option>ABC</option>
-        </select>
+        <select id="teacherSectionSelect"><option value="">–</option><option>ABC</option></select>
       </label>
       <button id="saveSetup" class="btn">Save</button>
     </form>
@@ -73,15 +63,15 @@
     </div>
   </section>
 
-  <!-- Fines & Eligibility -->
-  <section id="settingsSection">
+  <!-- FINES & ELIGIBILITY -->
+  <section>
     <h2>Fines & Eligibility</h2>
     <div id="financialForm">
-      <label>Fine/Absent (PKR): <input id="fineAbsent" type="number"></label>
-      <label>Fine/Late   (PKR): <input id="fineLate"   type="number"></label>
-      <label>Fine/Leave  (PKR): <input id="fineLeave"  type="number"></label>
-      <label>Fine/Half-Day (PKR): <input id="fineHalfDay" type="number"></label>
-      <label>Eligib. % (≥):      <input id="eligibilityPct" type="number"></label>
+      <label>Fine/Absent: <input id="fineAbsent" type="number"></label>
+      <label>Fine/Late:   <input id="fineLate"   type="number"></label>
+      <label>Fine/Leave:  <input id="fineLeave"  type="number"></label>
+      <label>Fine/Half-Day:<input id="fineHalfDay" type="number"></label>
+      <label>Eligib. % ≥: <input id="eligibilityPct" type="number"></label>
       <button id="saveSettings" class="btn">Save</button>
     </div>
     <div id="settingsCard" class="hidden"></div>
@@ -93,8 +83,8 @@
     </div>
   </section>
 
-  <!-- Student Registration -->
-  <section id="registrationSection">
+  <!-- STUDENT REGISTRATION -->
+  <section>
     <h2>Student Registration</h2>
     <form id="registrationForm">
       <input id="studentName" placeholder="Name">
@@ -108,19 +98,17 @@
     <button id="deleteSelected" class="btn" disabled>Delete</button>
     <button id="doneEditing" class="btn hidden">Save</button>
     <table>
-      <thead>
-        <tr>
-          <th><input id="selectAllStudents" type="checkbox"></th>
-          <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th>
-          <th>Occupation</th><th>Address</th><th>Fine (PKR)</th><th>Status</th><th>Actions</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th><input id="selectAllStudents" type="checkbox"></th>
+        <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th><th>Contact</th>
+        <th>Occupation</th><th>Address</th><th>Fine</th><th>Status</th><th>Actions</th>
+      </tr></thead>
       <tbody id="studentsBody"></tbody>
     </table>
   </section>
 
-  <!-- Mark Attendance -->
-  <section id="attendanceSection">
+  <!-- MARK ATTENDANCE -->
+  <section>
     <h2>Mark Attendance</h2>
     <label>Date: <input id="dateInput" type="date"></label>
     <button id="loadAttendance" class="btn">Load</button>
@@ -131,22 +119,20 @@
     <button id="shareAttendanceSummary" class="btn hidden">Share</button>
   </section>
 
-  <!-- Analytics -->
-  <section id="analyticsSection">
+  <!-- ANALYTICS -->
+  <section>
     <h2>Analytics</h2>
     <button id="downloadAnalytics" class="btn">Download Report</button>
     <table id="analyticsTable"></table>
   </section>
 
-  <!-- Attendance Register -->
-  <section id="registerSection">
+  <!-- ATTENDANCE REGISTER -->
+  <section>
     <h2>Attendance Register</h2>
     <label>Month: <input id="registerMonth" type="month"></label>
     <button id="loadRegister" class="btn">Load</button>
-    <button id="saveRegister"   class="btn hidden">Save</button>
-    <button id="changeRegister" class="btn hidden">Change</button>
     <button id="downloadRegister" class="btn hidden">Download</button>
-    <button id="shareRegister"    class="btn hidden">Share</button>
+    <button id="shareRegister" class="btn hidden">Share</button>
     <div id="registerTableWrapper">
       <table id="registerTable">
         <thead><tr id="registerHeader"></tr></thead>
@@ -155,14 +141,17 @@
     </div>
   </section>
 
-  <!-- PDF Preview Modal -->
+  <!-- PDF PREVIEW & SHARE MODAL -->
   <div id="pdfPreviewModal" class="modal hidden">
     <div class="modal-content">
       <span id="closePreview" class="modal-close">&times;</span>
       <iframe id="pdfPreviewFrame" style="width:100%; height:80vh; border:none;"></iframe>
       <div class="modal-actions">
         <button id="downloadFromPreview" class="btn">Download</button>
-        <button id="shareFromPreview"    class="btn">Share</button>
+        <button id="nativeShare" class="btn">Native Share</button>
+        <button id="shareWhatsapp" class="btn">WhatsApp</button>
+        <button id="shareFacebook" class="btn">Facebook</button>
+        <button id="shareEmail" class="btn">Email</button>
       </div>
     </div>
   </div>
