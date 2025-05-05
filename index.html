@@ -45,17 +45,6 @@
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
     .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .counter-grid { display: flex; gap: 1em; margin: 1em 0; }
-    .counter-card { background: #f5f5f5; padding: 1em; border-radius: 4px; text-align: center; flex: 1; }
-    .number { font-size: 2em; font-weight: bold; }
-    .table-wrapper { overflow-x: auto; margin-top: 1em; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; }
-    .table-actions { margin-top: 0.5em; }
-    .attendance-row { display: flex; align-items: center; margin: 0.5em 0; }
-    .attendance-name { flex: 1; }
-    .attendance-buttons button { margin-right: 0.3em; }
-    .summary-box { margin-top: 1em; }
   </style>
 </head>
 <body>
@@ -70,7 +59,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursery</option><option>KG</option>
+        <option>Play Group</option><option>Nursary</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
         <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
@@ -214,29 +203,4 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
-
-  <!-- Payment Modal -->
-  <div id="paymentModal" class="modal hidden">
-    <div class="modal-content">
-      <span id="paymentModalClose" class="modal-close"><i class="fas fa-times"></i></span>
-      <h3>Record Payment</h3>
-      <p>Adm#: <span id="payAdm"></span></p>
-      <input id="paymentAmount" type="number" placeholder="Amount (PKR)" />
-      <div class="table-actions">
-        <button id="savePayment" class="no-print"><i class="fas fa-save"></i> Save</button>
-        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Service Worker registration fallback -->
-  <noscript>You need JavaScript to run this app.</noscript>
-
-  <!-- App Script -->
-  <script src="app.js"></script>
-</body>
-</html>
+      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></Discussion truncated due to length...
