@@ -431,3 +431,4 @@ $('shareRegister').onclick = async () => {
     await navigator.share({ files: [new File([blob], 'MonthlyRegister.pdf', { type: 'application/pdf' })], title: 'Monthly Register' });
   }
 };
+  });
