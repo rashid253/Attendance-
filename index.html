@@ -40,11 +40,21 @@
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
     .btn { margin-top: 0.5em; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    /* Filter button positioning */
     #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
     .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
+    .counter-grid { display: flex; gap: 1em; margin: 1em 0; }
+    .counter-card { background: #f5f5f5; padding: 1em; border-radius: 4px; text-align: center; flex: 1; }
+    .number { font-size: 2em; font-weight: bold; }
+    .table-wrapper { overflow-x: auto; margin-top: 1em; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 0.5em; text-align: left; }
+    .table-actions { margin-top: 0.5em; }
+    .attendance-row { display: flex; align-items: center; margin: 0.5em 0; }
+    .attendance-name { flex: 1; }
+    .attendance-buttons button { margin-right: 0.3em; }
+    .summary-box { margin-top: 1em; }
   </style>
 </head>
 <body>
@@ -59,7 +69,7 @@
       <input id="schoolNameInput" placeholder="School Name" />
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursary</option><option>KG</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
         <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
@@ -117,27 +127,17 @@
       <input id="parentAddress" placeholder="Address" />
       <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
-    <div class="table-wrapper">
-      <table id="studentsTable">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
-            <th>Contact</th><th>Occupation</th><th>Address</th>
-            <th>Fine (PKR)</th><th>Status</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="studentsBody"></tbody>
+    <div id="registerTableWrapper" class="hidden table-wrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="hidden no-print"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
+      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
+      <button id="saveRegistration" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
       <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
@@ -203,4 +203,49 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></Discussion truncated due to length...
+      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
+
+  <!-- Analytics Filter Modal -->
+  <div id="analyticsFilterModal" class="modal hidden">
+    <div class="modal-content">
+      <span id="analyticsFilterClose" class="modal-close">&times;</span>
+      <h3>Filter Reports</h3>
+      <form id="analyticsFilterForm">
+        <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
+        <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
+        <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
+        <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
+        <label><input type="checkbox" value="debarred"> Debarred</label><br>
+        <label><input type="checkbox" value="eligible"> Eligible</label><br>
+        <label><input type="checkbox" value="all"> All Students</label><br>
+        <fieldset>
+          <legend>Download Mode</legend>
+          <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
+          <label><input type="radio" name="downloadMode" value="individual"> Individual PDFs</label>
+        </fieldset>
+        <button type="button" id="applyAnalyticsFilter" class="btn no-print">Apply Filter</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Payment Modal -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <span id="paymentModalClose" class="modal-close"><i class="fas fa-times"></i></span>
+      <h3>Record Payment</h3>
+      <p>Adm#: <span id="payAdm"></span></p>
+      <input id="paymentAmount" type="number" placeholder="Amount (PKR)" />
+      <div class="table-actions">
+        <button id="savePayment" class="no-print"><i class="fas fa-save"></i> Save</button>
+        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>You need JavaScript to run this app.</noscript>
+  <script src="app.js"></script>
+</body>
+</html>
