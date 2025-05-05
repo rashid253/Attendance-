@@ -1,14 +1,16 @@
-window.addEventListener('DOMContentLoaded', async () => {
+
+    window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
       try {
         await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
       } catch (err) {
-        console.error('Share failed', err);
+        // Ignore user-cancelled share (AbortError)
+        if (err.name !== 'AbortError') {
+          console.error('Share failed', err);
+        }
       }
-    } else {
-      console.warn('Web Share API not supported or cannot share files.');
     }
   }
 
@@ -24,17 +26,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const save = (k, v) => set(k, v);
 
   // --- 2. State & Defaults ---
-  let students       = await get('students')       || [];
-  let attendanceData = await get('attendanceData') || {};
-  let paymentsData   = await get('paymentsData')   || {};
-  let lastAdmNo      = await get('lastAdmissionNo')|| 0;
-  let fineRates      = await get('fineRates')      || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct = await get('eligibilityPct') || 75;
-  let analyticsFilterOptions = ['all'];
-  let analyticsDownloadMode  = 'combined';
-  let lastAnalyticsStats     = [];
-  let lastAnalyticsRange     = { from:null, to:null };
-  let lastAnalyticsShare     = '';
+  let students       = await get('students')        || [];
+  let attendanceData = await get('attendanceData')  || {};
+  let paymentsData   = await get('paymentsData')    || {};
+  let lastAdmNo      = await get('lastAdmissionNo') || 0;
+  let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
+  let eligibilityPct = await get('eligibilityPct')  || 75;
+  let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
+  let lastAnalyticsStats = [], lastAnalyticsRange = { from: null, to: null }, lastAnalyticsShare = '';
 
   async function genAdmNo() {
     lastAdmNo++;
@@ -44,8 +43,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 3. DOM Helpers ---
   const $ = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e=>e&&e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e=>e&&e.classList.add('hidden'));
+  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
+  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -109,7 +108,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('saveSetup').onclick = async e => {
     e.preventDefault();
     const sc=$('schoolNameInput').value.trim(), cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    if(!sc||!cl||!sec){ alert('Complete setup'); return; }
+    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
     await Promise.all([ save('schoolName',sc), save('teacherClass',cl), save('teacherSection',sec) ]);
     await loadSetup();
   };
@@ -120,7 +119,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span=>{
       const target=+span.dataset.target; let count=0; const step=Math.max(1,target/100);
-      (function upd(){ count+=step; span.textContent = count<target?Math.ceil(count):target; if(count<target) requestAnimationFrame(upd); })();
+      (function upd(){ count+=step; span.textContent = count<target?Math.ceil(count):target; if (count<target) requestAnimationFrame(upd); })();
     });
   }
   function updateCounters() {
@@ -131,11 +130,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     animateCounters();
   }
   function resetViews() {
-    hide($('attendanceBody'),$('saveAttendance'),$('resetAttendance'),
-         $('attendanceSummary'),$('downloadAttendancePDF'),$('shareAttendanceSummary'),
-         $('instructions'),$('analyticsContainer'),$('graphs'),$('analyticsActions'),
-         $('registerTableWrapper'),$('changeRegister'),$('saveRegister'),
-         $('downloadRegister'),$('shareRegister'));
+    hide(
+      $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
+      $('attendanceSummary'), $('downloadAttendancePDF'), $('shareAttendanceSummary'),
+      $('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'),
+      $('registerTableWrapper'), $('changeRegister'), $('saveRegister'),
+      $('downloadRegister'), $('shareRegister')
+    );
     show($('loadRegister'));
   }
   $('teacherClassSelect').onchange   = () => { renderStudents(); updateCounters(); resetViews(); };
@@ -146,16 +147,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value, tbody=$('studentsBody');
     tbody.innerHTML=''; let idx=0;
     students.forEach((s,i)=>{
-      if(s.cls!==cl||s.sec!==sec) return;
+      if (s.cls!==cl||s.sec!==sec) return;
       idx++;
       const stats={P:0,A:0,Lt:0,HD:0,L:0};
-      Object.entries(attendanceData).forEach(([d,recs])=>stats[(recs[s.adm]||'A')]++);
+      Object.entries(attendanceData).forEach(([d,r])=>stats[(r[s.adm]||'A')]++);
       const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
       const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
       const outstanding = totalFine - paid;
       const totalDays = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
       const pct = totalDays ? (stats.P/totalDays)*100 : 0;
-      const status = (outstanding>0||pct<eligibilityPct) ? 'Debarred' : 'Eligible';
+      const status = (outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
       const tr = document.createElement('tr'); tr.dataset.index=i;
       tr.innerHTML=`
         <td><input type="checkbox" class="sel"></td>
@@ -178,12 +179,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.sel').forEach(c=>c.checked=$('selectAllStudents').checked);
     toggleButtons();
   };
-  $('addStudent').onclick = async e=>{
+  $('addStudent').onclick=async e=>{
     e.preventDefault();
     const n=$('studentName').value.trim(), p=$('parentName').value.trim(),
           c=$('parentContact').value.trim(), o=$('parentOccupation').value.trim(),
-          a=$('parentAddress').value.trim(), cl=$('teacherClassSelect').value,
-          sec=$('teacherSectionSelect').value;
+          a=$('parentAddress').value.trim(), cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
     if(!n||!p||!c||!o||!a){alert('All fields required');return;}
     if(!/^\d{7,15}$/.test(c)){alert('Contact 7–15 digits');return;}
     const adm=await genAdmNo();
@@ -251,7 +251,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
   };
 
-  // --- 8. PAYMENT MODAL ---
+      // --- 8. PAYMENT MODAL ---
   function openPaymentModal(adm){ $('payAdm').textContent=adm; $('paymentAmount').value=''; show($('paymentModal')); }
   $('paymentModalClose').onclick=()=>hide($('paymentModal'));
   $('savePayment').onclick=async()=>{
