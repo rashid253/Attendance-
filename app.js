@@ -1,3 +1,4 @@
+<script>
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
@@ -74,7 +75,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Analytics Share (FIX #1)
   const shareAnalyticsBtn = $('shareAnalytics');
   shareAnalyticsBtn.onclick = async () => {
-    // share as text if Web Share text-only, else fallback to PDF
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Analytics Report', text: lastAnalyticsShare });
@@ -94,7 +94,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
   };
 
-  // Attendance Register download/share
+  // Attendance Register
   const downloadRegisterBtn = $('downloadRegister');
   downloadRegisterBtn.onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -441,17 +441,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
-  $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
-  $('applyAnalyticsFilter').onclick = () => {
-    // FIX #2: correctly default to ['all'] when nothing checked
-    const selected = Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')).map(cb=>cb.value);
-    analyticsFilterOptions = selected.length > 0 ? selected : ['all'];
-    analyticsDownloadMode = document.querySelector('#analyticsFilterForm input[name="downloadMode"]:checked').value;
-    hide($('analyticsFilterModal'));
-    if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
-  };
-
   atg.onchange = () => {
     atype.disabled = false;
     [asel,asearch].forEach(x=>x.classList.add('hidden'));
@@ -567,7 +556,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     pieChart?.destroy();
     pieChart = new Chart(pieCtx,{ type:'pie', data:{ labels:['Outstanding'], datasets:[{ data:[filtered.reduce((a,st)=>a+st.outstanding,0)] }] } });
-    lastAnalyticsShare = `Analytics (${from} to ${to})\n` + filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
+    lastAnalyticsShare = `Analytics (${from} to ${to})\n` + filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(2)}% / PKR ${st.outstanding}`).join('\n');
   }
 
   // --- 11. ATTENDANCE REGISTER ---
