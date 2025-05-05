@@ -289,14 +289,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     }).join('\n\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
   };
-  $('downloadRegistrationPDF').onclick = () => {
+  
+ $('downloadRegistrationPDF').onclick = () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Student List',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html:'#studentsTable' });
     doc.save('registration.pdf');
+    $('shareRegistration').onclick(); // Added share trigger
   };
-
   // --- 8. PAYMENT MODAL ---
   function openPaymentModal(adm) {
     $('payAdm').textContent = adm;
