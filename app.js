@@ -1,4 +1,3 @@
-// app.js
 window.addEventListener('DOMContentLoaded', async () => {
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
@@ -275,10 +274,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
     const header = `*Students List*\nClass ${cl} Section ${sec}`;
     const lines = students.filter(s=>s.cls===cl&&s.sec===sec).map(s=>{
-      const tf = (Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='A'?fineRates.A:0),0) + 
+      const tf = (Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='A'?fineRates.A:0),0) +
                   Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='Lt'?fineRates.Lt:0),0) +
                   Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='L'?fineRates.L:0),0) +
-                  Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='HD'?fineRates.HD:0),0);
+                  Object.entries(attendanceData).reduce((a,[d,recs])=>a+(recs[s.adm]==='HD'?fineRates.HD:0),0));
       const tp = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
       const out = tf - tp;
       const totalDays = Object.keys(attendanceData).length;
@@ -288,32 +287,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${out}\nStatus: ${st}`;
     }).join('\n\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`,'_blank');
-  };
-  $('downloadRegistrationPDF').onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Student List',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#studentsTable' });
-    
-    // PDF sharing logic
-    const pdfData = doc.output('arraybuffer');
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    const file = new File([blob], 'students.pdf', { type: 'application/pdf' });
-    
-    if(navigator.share) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Student List',
-          text: 'Student Registration Data'
-        });
-      } catch(e) { 
-        doc.save('registration.pdf'); // Fallback
-      }
-    } else {
-      doc.save('registration.pdf');
-      alert('Download complete. Share manually via WhatsApp');
-    }
   };
 
   // --- 8. PAYMENT MODAL ---
@@ -366,7 +339,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         btn.textContent = code;
         btn.onclick = ()=>{
           btnsDiv.querySelectorAll('.att-btn').forEach(b=>{
-            b.classList.remove('selected'); b.style.background=''; b.style.color='';
+            b.classList.remove('selected');
+            b.style.background='';
+            b.style.color='';
           });
           btn.classList.add('selected');
           btn.style.background = statusColors[code];
@@ -428,33 +403,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.setFontSize(18); doc.text('Attendance Report',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
     doc.autoTable({ startY:32, html:'#attendanceSummary table' });
-    
-    // PDF sharing logic
-    const pdfData = doc.output('arraybuffer');
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    const file = new File([blob], `attendance_${dateInput.value}.pdf`);
-    
-    if(navigator.share) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Attendance Report',
-          text: `Attendance data for ${dateInput.value}`
-        });
-      } catch(e) {
-        doc.save(`attendance_${dateInput.value}.pdf`);
-      }
-    } else {
-      doc.save(`attendance_${dateInput.value}.pdf`);
-      alert('Download complete. Share via WhatsApp manually');
-    }
+    const fileName = `attendance_${dateInput.value}.pdf`;
+    const blob = doc.output('blob');
+    doc.save(fileName);
+    await sharePdf(blob, fileName, 'Attendance Report');
   };
 
   shareAttendanceBtn.onclick = () => {
     const cl = $('teacherClassSelect').value;
     const sec = $('teacherSectionSelect').value;
     const date = dateInput.value;
-    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
+    const header = `*Attendance Report*
+Class ${cl} Section ${sec} - ${date}`;
     const lines = students.filter(s=>s.cls===cl&&s.sec===sec)
       .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
     window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines.join('\n'))}`,'_blank');
@@ -608,91 +568,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     lastAnalyticsShare = `Analytics (${from} to ${to})\n` + filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
   }
 
-  $('downloadAnalytics').onclick = async () => {
-    const filtered = lastAnalyticsStats.filter(st=>{
-      if(analyticsFilterOptions.includes('all')) return true;
-      return analyticsFilterOptions.some(opt=>{
-        switch(opt){
-          case 'registered': return true;
-          case 'attendance':  return st.total>0;
-          case 'fine':        return (st.A>0||st.Lt>0||st.L>0||st.HD>0);
-          case 'cleared':     return st.outstanding===0;
-          case 'debarred':    return st.status==='Debarred';
-          case 'eligible':    return st.status==='Eligible';
-          default:            return false;
-        }
-      });
-    });
-    
-    if(analyticsDownloadMode==='combined'){
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18); doc.text('Analytics Report',14,16);
-      doc.setFontSize(12); doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`,14,24);
-      const body = filtered.map((st,i)=>[
-        i+1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L,
-        st.total, `${((st.P/st.total)*100).toFixed(1)}%`,
-        `PKR ${st.outstanding}`, st.status
-      ]);
-      doc.autoTable({ startY:32, head:[['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']], body, styles:{fontSize:10} });
-      
-      // PDF sharing logic
-      const pdfData = doc.output('arraybuffer');
-      const blob = new Blob([pdfData], { type: 'application/pdf' });
-      const file = new File([blob], 'analytics_report.pdf');
-      
-      if(navigator.share) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'Analytics Report',
-            text: 'Attendance Analytics Data'
-          });
-        } catch(e) {
-          doc.save('analytics_report.pdf');
-        }
-      } else {
-        doc.save('analytics_report.pdf');
-        alert('Download complete. Share manually via WhatsApp');
-      }
-    } else {
-      filtered.forEach(async st=>{
-        const doc = new jspdf.jsPDF();
-        doc.setFontSize(16); doc.text(`Report for ${st.name} (${st.adm})`,14,16);
-        doc.setFontSize(12);
-        const rows = [
-          ['Present',st.P],['Absent',st.A],['Late',st.Lt],
-          ['Half-Day',st.HD],['Leave',st.L],['Total',st.total],
-          ['% Present',`${((st.P/st.total)*100).toFixed(1)}%`],
-          ['Outstanding',`PKR ${st.outstanding}`],['Status',st.status]
-        ];
-        doc.autoTable({ startY:24, head:[['Metric','Value']], body:rows, styles:{fontSize:10} });
-        
-        // Individual PDF sharing
-        const pdfData = doc.output('arraybuffer');
-        const blob = new Blob([pdfData], { type: 'application/pdf' });
-        const fileName = `report_${st.adm}.pdf`;
-        
-        if(navigator.share) {
-          try {
-            await navigator.share({
-              files: [new File([blob], fileName)],
-              title: 'Student Report',
-              text: `Report for ${st.name}`
-            });
-          } catch(e) {
-            doc.save(fileName);
-          }
-        } else {
-          doc.save(fileName);
-          alert('Download complete. Share manually');
-        }
-      });
-    }
-  };
-
-  $('shareAnalytics').onclick = () =>
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,'_blank');
-
   // --- 11. ATTENDANCE REGISTER ---
   const loadReg   = $('loadRegister');
   const changeReg = $('changeRegister');
@@ -761,32 +636,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('loadRegister'));
   };
 
-  dlReg.onclick = async ()=>{
+  dlReg.onclick = async () => {
     const doc=new jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
     doc.setFontSize(18);doc.text('Attendance Register',14,16);
     doc.setFontSize(12);doc.text($('setupText').textContent,14,24);
     doc.autoTable({startY:32,html:'#registerTable',tableWidth:'auto',styles:{fontSize:10}});
-    
-    // PDF sharing logic
-    const pdfData = doc.output('arraybuffer');
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    
-    if(navigator.share) {
-      try {
-        await navigator.share({
-          files: [new File([blob], 'attendance_register.pdf')],
-          title: 'Attendance Register',
-          text: 'Monthly Attendance Register Data'
-        });
-      } catch(e) {
-        doc.save('attendance_register.pdf');
-      }
-    } else {
-      doc.save('attendance_register.pdf');
-      alert('File saved. Share manually via WhatsApp');
-    }
+    const blob = doc.output('blob');
+    doc.save('attendance_register.pdf');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
-  shReg.onclick = ()=>{
+
+  shReg.onclick = () => {
     const header=`Attendance Register\n${$('setupText').textContent}`;
     const rows=Array.from(rb.children).map(tr=>
       Array.from(tr.children).map(td=>
