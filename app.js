@@ -1,3 +1,4 @@
+<script>
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
@@ -57,7 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'registration.pdf', 'Student List');
   };
 
-  // Analytics
+  // Analytics Download
   const downloadAnalyticsBtn = $('downloadAnalytics');
   downloadAnalyticsBtn.onclick = async () => {
     const doc = new jspdf.jsPDF();
@@ -71,7 +72,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
   };
 
-  // Attendance Register
+  // Analytics Share (FIX #1)
+  const shareAnalyticsBtn = $('shareAnalytics');
+  shareAnalyticsBtn.onclick = async () => {
+    // share as text if Web Share text-only, else fallback to PDF
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Analytics Report', text: lastAnalyticsShare });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Text share failed', err);
+      }
+    }
+    // fallback: share PDF
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18);
+    doc.text('Analytics Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
+    doc.autoTable({ startY: 32, html: '#analyticsTable' });
+    const blob = doc.output('blob');
+    await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
+  };
+
+  // Attendance Register download/share
   const downloadRegisterBtn = $('downloadRegister');
   downloadRegisterBtn.onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -84,7 +108,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
-  // --- END DOWNLOAD HANDLERS ---
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -422,7 +445,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
   $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
   $('applyAnalyticsFilter').onclick = () => {
-    analyticsFilterOptions = Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')).map(cb=>cb.value)||['all'];
+    // FIX #2: correctly default to ['all'] when nothing checked
+    const selected = Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')).map(cb=>cb.value);
+    analyticsFilterOptions = selected.length > 0 ? selected : ['all'];
     analyticsDownloadMode = document.querySelector('#analyticsFilterForm input[name="downloadMode"]:checked').value;
     hide($('analyticsFilterModal'));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
@@ -622,3 +647,4 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
+</script>
