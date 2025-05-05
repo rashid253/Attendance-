@@ -1,249 +1,382 @@
-window.addEventListener('DOMContentLoaded', async () => {
-  // --- 0. Debug console (optional) ---
-  const erudaScript = document.createElement('script');
-  erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
+// app.js
 
-  // --- 1. IndexedDB helpers (idb-keyval) ---
+window.addEventListener('DOMContentLoaded', async () => {
+  // —— 0. libraries & storage helpers ——  
   if (!window.idbKeyval) {
-    console.error('idb-keyval not found');
+    console.error('idb-keyval missing');
     return;
   }
   const { get, set } = window.idbKeyval;
-  const save = (key, val) => set(key, val);
+  const save = (k, v) => set(k, v);
 
-  // --- 2. State & Defaults ---
+  // —— 1. state & defaults ——  
   let students        = await get('students')        || [];
   let attendanceData  = await get('attendanceData')  || {};
   let paymentsData    = await get('paymentsData')    || {};
   let lastAdmNo       = await get('lastAdmissionNo') || 0;
   let fineRates       = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct  = await get('eligibilityPct')  || 75;
+  let analyticsFilter = await get('analyticsFilter') || { options:['all'], mode:'combined' };
 
-  let analyticsFilterOptions = ['all'];
-  let analyticsDownloadMode  = 'combined';
-  let lastAnalyticsStats     = [];
-  let lastAnalyticsRange     = { from: null, to: null };
-  let lastAnalyticsShare     = '';
+  // —— 2. DOM helpers ——  
+  const $ = id => document.getElementById(id);
+  function bind(id, event, fn) {
+    const el = $(id);
+    if (el) el[event] = fn;
+  }
+  function show(id) { const e = $(id); if (e) e.classList.remove('hidden'); }
+  function hide(id) { const e = $(id); if (e) e.classList.add('hidden'); }
 
+  // —— 3. Utility ——  
   async function genAdmNo() {
     lastAdmNo++;
     await save('lastAdmissionNo', lastAdmNo);
-    return String(lastAdmNo).padStart(4, '0');
+    return String(lastAdmNo).padStart(4,'0');
   }
-
-  // --- 3. DOM Helpers ---
-  const $ = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
-
-  // --- Share utility: download + share PDF ---
-  async function downloadAndSharePDF(doc, filename, shareTitle) {
-    try {
-      // Generate blob from jsPDF
-      const blob = doc.output('blob');
-      // Trigger download
-      doc.save(filename);
-      // If Web Share API available, share the file
-      if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
-        await navigator.share({ files: [new File([blob], filename, { type: 'application/pdf' })], title: shareTitle });
-      }
-    } catch (err) {
-      console.error('Share failed:', err);
+  function downloadAndShare(doc, filename, title) {
+    const blob = doc.output('blob');
+    doc.save(filename);
+    if (navigator.canShare && navigator.canShare({ files:[new File([blob],filename,{type:'application/pdf'})] })) {
+      navigator.share({ files:[new File([blob],filename,{type:'application/pdf'})], title });
     }
   }
 
-  // --- Student Registration Section ---
-  $('registerForm').onsubmit = async e => {
-    e.preventDefault();
-    const name = $('stuName').value.trim();
-    const adm  = await genAdmNo();
-    students.push({ adm, name });
-    await save('students', students);
-    renderStudentsTable();
-    $('stuName').value = '';
-  };
+  // —— 4. SETUP section ——  
+  bind('saveSetup','onclick',async () => {
+    const school = $('schoolNameInput')?.value;
+    const cls    = $('teacherClassSelect')?.value;
+    const sec    = $('teacherSectionSelect')?.value;
+    if (!school || !cls || !sec) return alert('Enter all setup fields');
+    const text = `${school} — ${cls} [Section ${sec}]`;
+    $('setupText').textContent = text;
+    show('setupDisplay'); hide('setupForm');
+    await save('setup', { school, cls, sec });
+  });
+  bind('editSetup','onclick', () => {
+    show('setupForm'); hide('setupDisplay');
+  });
+  // load saved setup
+  const savedSetup = await get('setup');
+  if (savedSetup) {
+    $('setupText').textContent = `${savedSetup.school} — ${savedSetup.cls} [Section ${savedSetup.sec}]`;
+    show('setupDisplay'); hide('setupForm');
+  }
 
-  function renderStudentsTable() {
-    const tbody = $('studentsTable').querySelector('tbody');
-    tbody.innerHTML = '';
-    for (const { adm, name } of students) {
+  // —— 5. FINANCIAL settings ——  
+  bind('financialForm','onsubmit', async e => {
+    e.preventDefault();
+    fineRates = {
+      A : parseFloat($('fineAbsent').value)||0,
+      Lt: parseFloat($('fineLate').value)||0,
+      L : parseFloat($('fineLeave').value)||0,
+      HD: parseFloat($('fineHalfDay').value)||0
+    };
+    eligibilityPct = parseFloat($('eligibilityPct').value)||0;
+    await save('fineRates', fineRates);
+    await save('eligibilityPct', eligibilityPct);
+    alert('Settings saved');
+  });
+
+  // —— 6. COUNTERS animation ——  
+  function animateCounter(id, target) {
+    const el = $(id);
+    if (!el) return;
+    let count = 0;
+    const step = Math.ceil(target/50);
+    const iv = setInterval(() => {
+      count += step;
+      if (count >= target) {
+        el.textContent = target;
+        clearInterval(iv);
+      } else el.textContent = count;
+    }, 10);
+  }
+  function updateCounters() {
+    animateCounter('sectionCount', students.length);
+    animateCounter('classCount',   students.length);
+    animateCounter('schoolCount',  students.length);
+  }
+
+  // —— 7. STUDENT REGISTRATION ——  
+  function renderStudents() {
+    const body = $('studentsBody');
+    if (!body) return;
+    body.innerHTML = '';
+    for (let s of students) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${adm}</td><td>${name}</td>`;
-      tbody.appendChild(tr);
+      tr.innerHTML = `
+        <td><input type="checkbox" data-adm="${s.adm}"></td>
+        <td>${s.name}</td>
+        <td>${s.adm}</td>
+        <td>${s.parent||''}</td>
+        <td>${s.contact||''}</td>
+        <td>${s.occupation||''}</td>
+        <td>${s.address||''}</td>
+        <td>${paymentsData[s.adm]||0}</td>
+        <td>-</td>
+        <td>
+          <button class="no-print" data-action="pay" data-adm="${s.adm}"><i class="fas fa-money-bill"></i></button>
+        </td>`;
+      body.appendChild(tr);
     }
+    updateCounters();
   }
-  renderStudentsTable();
-
-  // --- Payments Section ---
-  $('paymentsForm').onsubmit = async e => {
-    e.preventDefault();
-    const adm = $('payAdm').value;
-    const amt = parseFloat($('payAmt').value);
+  bind('addStudent','onclick', async () => {
+    const name = $('studentName')?.value.trim();
+    if (!name) return alert('Enter student name');
+    const adm  = await genAdmNo();
+    students.push({ adm, name,
+      parent: $('parentName')?.value,
+      contact: $('parentContact')?.value,
+      occupation: $('parentOccupation')?.value,
+      address: $('parentAddress')?.value
+    });
+    await save('students', students);
+    renderStudents();
+  });
+  // payment modal
+  document.body.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-action="pay"]');
+    if (!btn) return;
+    const adm = btn.dataset.adm;
+    $('payAdm').textContent = adm;
+    $('paymentModal').classList.remove('hidden');
+  });
+  bind('cancelPayment','onclick', () => $('paymentModal').classList.add('hidden'));
+  bind('savePayment','onclick', async () => {
+    const adm = $('payAdm').textContent;
+    const amt = parseFloat($('paymentAmount').value)||0;
     paymentsData[adm] = (paymentsData[adm]||0) + amt;
     await save('paymentsData', paymentsData);
-    renderPayments();
-    $('payAdm').value = $('payAmt').value = '';
-  };
+    $('paymentModal').classList.add('hidden');
+    renderStudents();
+  });
 
-  function renderPayments() {
-    const ul = $('paymentsList'); ul.innerHTML = '';
-    for (const adm of Object.keys(paymentsData)) {
-      const li = document.createElement('li');
-      li.textContent = `#${adm}: PKR ${paymentsData[adm]}`;
-      ul.appendChild(li);
-    }
-  }
-  renderPayments();
+  // download/share registration
+  bind('downloadRegistrationPDF','onclick', () => {
+    const doc = new jspdf.jsPDF();
+    doc.text('Student List',14,16);
+    doc.autoTable({ startY:24, head:[['Name','Adm#','Parent','Contact']], body:
+      students.map(s=>[s.name,s.adm,s.parent||'',s.contact||''])
+    });
+    downloadAndShare(doc,'registration.pdf','Student List');
+  });
+  bind('shareRegistration','onclick', () => $('downloadRegistrationPDF').click());
 
-  // --- Attendance Section ---
-  $('attendanceForm').onsubmit = async e => {
-    e.preventDefault();
+  renderStudents();
+
+  // —— 8. ATTENDANCE ——  
+  bind('loadAttendance','onclick', () => {
     const date = $('dateInput').value;
-    if (!attendanceData[date]) attendanceData[date] = {};
-    for (const { adm } of students) {
-      const val = $('att_'+adm).value;
-      attendanceData[date][adm] = val;
+    if (!date) return alert('Select date');
+    const container = $('attendanceBody');
+    container.innerHTML = '';
+    for (let s of students) {
+      const row = document.createElement('div');
+      row.innerHTML = `
+        <label>${s.adm} ${s.name}:
+          <select id="att_${s.adm}">
+            <option value="P">P</option>
+            <option value="A">A</option>
+            <option value="Lt">Lt</option>
+            <option value="HD">HD</option>
+            <option value="L">L</option>
+          </select>
+        </label>`;
+      container.appendChild(row);
+      // load saved
+      if (attendanceData[date] && attendanceData[date][s.adm]) {
+        container.querySelector(`#att_${s.adm}`).value = attendanceData[date][s.adm];
+      }
+    }
+    show('saveAttendance'); show('resetAttendance'); show('downloadAttendancePDF'); show('shareAttendanceSummary');
+  });
+  bind('saveAttendance','onclick', async () => {
+    const date = $('dateInput').value;
+    attendanceData[date] = {};
+    for (let s of students) {
+      attendanceData[date][s.adm] = $(`att_${s.adm}`).value;
     }
     await save('attendanceData', attendanceData);
+    alert('Attendance saved');
     renderAttendanceSummary();
-  };
-
-  function renderAttendanceForm() {
-    const div = $('attendanceInputs'); div.innerHTML = '';
-    for (const { adm, name } of students) {
-      const row = document.createElement('div');
-      row.innerHTML = `<label>${adm} ${name}: <select id='att_${adm}'><option value='P'>P</option><option value='A'>A</option><option value='Lt'>Lt</option><option value='HD'>HD</option><option value='L'>L</option></select></label>`;
-      div.appendChild(row);
-    }
-  }
-  renderAttendanceForm();
-
+  });
+  bind('resetAttendance','onclick', () => $('attendanceBody').innerHTML = '');
   function renderAttendanceSummary() {
-    const table = $('attendanceSummary').querySelector('table');
-    table.innerHTML = '<tr><th>Date</th><th>Present</th><th>Absent</th></tr>';
-    for (const date of Object.keys(attendanceData)) {
-      const recs = Object.values(attendanceData[date]);
-      const P = recs.filter(v=>v==='P').length;
-      const A = recs.filter(v=>v==='A').length;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${date}</td><td>${P}</td><td>${A}</td>`;
-      table.appendChild(tr);
+    const sum = $('attendanceSummary');
+    sum.innerHTML = '';
+    for (let d in attendanceData) {
+      const rec = attendanceData[d];
+      const P = Object.values(rec).filter(v => v==='P').length;
+      const A = Object.values(rec).filter(v => v==='A').length;
+      sum.innerHTML += `<div>${d}: P=${P}, A=${A}</div>`;
     }
+    show('attendanceSummary');
   }
-  renderAttendanceSummary();
+  bind('downloadAttendancePDF','onclick', () => {
+    const doc = new jspdf.jsPDF();
+    doc.text('Attendance',14,16);
+    const rows = [];
+    for (let d in attendanceData) {
+      const rec = attendanceData[d];
+      const P = Object.values(rec).filter(v => v==='P').length;
+      const A = Object.values(rec).filter(v => v==='A').length;
+      rows.push([d,P,A]);
+    }
+    doc.autoTable({ startY:24, head:[['Date','P','A']], body:rows });
+    downloadAndShare(doc,'attendance.pdf','Attendance');
+  });
+  bind('shareAttendanceSummary','onclick', () => $('downloadAttendancePDF').click());
 
-  // --- Analytics Section ---
-  $('analyticsGo').onclick = () => {
-    const from = $('analyticsFrom').value;
-    const to   = $('analyticsTo').value;
-    lastAnalyticsRange = { from, to };
+  // —— 9. ANALYTICS ——  
+  bind('loadAnalytics','onclick', () => {
+    const from = $('analyticsFrom')?.value, to = $('analyticsTo')?.value;
+    if (!from||!to) return alert('Select range');
+    analyticsFilter.options = ['all'];
+    analyticsFilter.mode = 'combined';
+    save('analyticsFilter', analyticsFilter);
+    analyticsRange = { from, to };
     const stats = [];
-    for (const { adm, name } of students) {
+    for (let s of students) {
       let P=0,A=0,Lt=0,HD=0,L=0;
-      for (const date in attendanceData) {
-        if (date<from||date>to) continue;
-        const v=attendanceData[date][adm];
-        if (v==='P') P++;
-        if (v==='A') A++;
-        if (v==='Lt') Lt++;
-        if (v==='HD') HD++;
-        if (v==='L') L++;
+      for (let d in attendanceData) if (d>=from && d<=to) {
+        const v = attendanceData[d][s.adm];
+        if (v==='P') P++; if (v==='A') A++; if (v==='Lt') Lt++;
+        if (v==='HD') HD++; if (v==='L') L++;
       }
-      const total=P+A+Lt+HD+L;
-      const paid = paymentsData[adm]||0;
-      const outstanding = Math.max(0, total*fineRates.A - paid);
-      const status = (P/total*100>=eligibilityPct && outstanding===0) ? 'Eligible' : (outstanding>0 ? 'Debarred' : 'At Risk');
-      stats.push({ adm,name,P,A,Lt,HD,L,total,outstanding,status });
+      const total = P+A+Lt+HD+L;
+      const out = Math.max(0, total*fineRates.A - (paymentsData[s.adm]||0));
+      const pct = total ? ((P/total)*100).toFixed(1) : 0;
+      const status = (pct>=eligibilityPct && out===0) ? 'Eligible' : (out>0 ? 'Debarred' : 'At Risk');
+      stats.push({ adm:s.adm, name:s.name, P, A, Lt, HD, L, total, pct, out, status });
     }
-    lastAnalyticsStats = stats;
+    window.analyticsStats = stats;
     renderAnalyticsTable(stats);
-  };
-
+    show('analyticsContainer'); show('analyticsActions');
+  });
   function renderAnalyticsTable(stats) {
-    const tbody = $('analyticsTable').querySelector('tbody');
-    tbody.innerHTML = '';
-    for (const st of stats) {
+    const tb = $('analyticsBody');
+    tb.innerHTML = '';
+    for (let st of stats) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td><td>${(st.P/st.total*100).toFixed(1)+'%'}</td><td>${st.outstanding}</td><td>${st.status}</td>`;
-      tbody.appendChild(tr);
+      tr.innerHTML = `
+        <td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td>
+        <td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td>
+        <td>${st.pct}%</td><td>${st.out}</td><td>${st.status}</td>`;
+      tb.appendChild(tr);
     }
   }
-
-  // --- Download & Share Sections ---
-  $('downloadRegistrationPDF').onclick = () => {
+  bind('downloadAnalytics','onclick', () => {
     const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Student List',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#studentsTable' });
-    downloadAndSharePDF(doc, 'registration.pdf', 'Student Registration List');
-  };
+    doc.text('Analytics',14,16);
+    const body = window.analyticsStats.map(s=>[
+      s.adm,s.name,s.P,s.A,s.Lt,s.HD,s.L,s.total,`${s.pct}%`,s.out,s.status
+    ]);
+    doc.autoTable({ startY:24, head:[['Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']], body });
+    downloadAndShare(doc,'analytics.pdf','Analytics');
+  });
+  bind('shareAnalytics','onclick', () => $('downloadAnalytics').click());
 
-  $('downloadAttendancePDF').onclick = () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#attendanceSummary table' });
-    const filename = `attendance_${$('dateInput').value}.pdf`;
-    downloadAndSharePDF(doc, filename, 'Attendance Report');
-  };
-
-  $('downloadAnalytics').onclick = async () => {
-    const filtered = lastAnalyticsStats.filter(st => {
-      if (analyticsFilterOptions.includes('all')) return true;
-      return analyticsFilterOptions.some(opt => {
-        switch(opt) {
-          case 'registered': return true;
-          case 'attendance':  return st.total>0;
-          case 'fine':        return (st.A>0||st.Lt>0||st.L>0||st.HD>0);
-          case 'cleared':     return st.outstanding===0;
-          case 'debarred':    return st.status==='Debarred';
-          case 'eligible':    return st.status==='Eligible';
-          default:            return false;
-        }
-      });
-    });
-    if (analyticsDownloadMode==='combined') {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18); doc.text('Analytics Report',14,16);
-      doc.setFontSize(12); doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`,14,24);
-      const body = filtered.map((st,i) => [
-        i+1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L,
-        st.total, `${((st.P/st.total)*100).toFixed(1)}%`,
-        `PKR ${st.outstanding}`, st.status
-      ]);
-      doc.autoTable({ startY:32, head:[['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']], body, styles:{ fontSize:10 } });
-      downloadAndSharePDF(doc, 'analytics_report.pdf', 'Analytics Report');
-    } else {
-      for (const st of filtered) {
-        const doc = new jspdf.jsPDF();
-        doc.setFontSize(16); doc.text(`Report for ${st.name} (${st.adm})`,14,16);
-        doc.setFontSize(12);
-        const rows = [
-          ['Present',st.P],['Absent',st.A],['Late',st.Lt],
-          ['Half-Day',st.HD],['Leave',st.L],['Total',st.total],
-          ['% Present',`${((st.P/st.total)*100).toFixed(1)}%`],
-          ['Outstanding',`PKR ${st.outstanding}`],['Status',st.status]
-        ];
-        doc.autoTable({ startY:24, head:[['Metric','Value']], body:rows, styles:{ fontSize:10 } });
-        downloadAndSharePDF(doc, `report_${st.adm}.pdf`, `Report for ${st.name}`);
+  // —— 10. REGISTER ——  
+  bind('loadRegister','onclick', () => {
+    const m = $('registerMonth').value;
+    if (!m) return alert('Select month');
+    const [year,month] = m.split('-');
+    const days = new Date(year,month,0).getDate();
+    const hdr = $('registerHeader'); hdr.innerHTML = '<th>Adm#</th><th>Name</th>' +
+      Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
+    const body = $('registerBody'); body.innerHTML = '';
+    for (let s of students) {
+      const tr = document.createElement('tr');
+      let row = `<td>${s.adm}</td><td>${s.name}</td>`;
+      for (let d=1; d<=days; d++) {
+        const key = `${m}-${String(d).padStart(2,'0')}`;
+        const v = attendanceData[key]?.[s.adm]||'';
+        row += `<td>${v}</td>`;
       }
+      tr.innerHTML = row;
+      body.appendChild(tr);
     }
-  };
+    show('registerTableWrapper'); show('downloadRegister'); show('shareRegister');
+  });
+  bind('downloadRegister','onclick', () => {
+    const doc = new jspdf.jsPDF({ orientation:'landscape' });
+    doc.text('Attendance Register',14,16);
+    doc.autoTable({ html:'#registerTable', startY:24, styles:{fontSize:8} });
+    downloadAndShare(doc,'register.pdf','Register');
+  });
+  bind('shareRegister','onclick', () => $('downloadRegister').click());
 
-  $('downloadRegister').onclick = () => {
-    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-    doc.setFontSize(18); doc.text('Attendance Register',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
-    downloadAndSharePDF(doc, 'attendance_register.pdf', 'Attendance Register');
-  };
-
-  // --- Service Worker Registration (unchanged) ---
+});
+// —— 11. Service Worker registration for PWA ——
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW registered', reg));
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered', reg))
+        .catch(err => console.error('SW registration failed', err));
     });
   }
-});
+
+  // —— 12. Chart rendering (Analytics section) ——
+  function renderCharts(stats) {
+    const barEl = document.getElementById('barChart');
+    const pieEl = document.getElementById('pieChart');
+    if (barEl && window.Chart) {
+      new Chart(barEl, {
+        type: 'bar',
+        data: {
+          labels: stats.map(s => s.adm),
+          datasets: [{
+            label: 'Present %',
+            data: stats.map(s => parseFloat(s.pct)),
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+    if (pieEl && window.Chart) {
+      new Chart(pieEl, {
+        type: 'pie',
+        data: {
+          labels: ['Eligible','At Risk','Debarred'],
+          datasets: [{
+            data: [
+              stats.filter(s => s.status === 'Eligible').length,
+              stats.filter(s => s.status === 'At Risk').length,
+              stats.filter(s => s.status === 'Debarred').length
+            ]
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+  }
+
+  // Hook chart rendering after analytics load
+  bind('loadAnalytics', 'onclick', () => {
+    // regenerate analytics stats
+    const from = $('analyticsFrom').value, to = $('analyticsTo').value;
+    if (!from || !to) return;
+    // compute stats (same as above)
+    const stats = students.map(s => {
+      let P=0,A=0,Lt=0,HD=0,L=0;
+      for (let d in attendanceData) if (d >= from && d <= to) {
+        const v = attendanceData[d][s.adm];
+        if (v==='P') P++; if (v==='A') A++; if (v==='Lt') Lt++;
+        if (v==='HD') HD++; if (v==='L') L++;
+      }
+      const total = P+A+Lt+HD+L;
+      const pct = total ? ((P/total)*100).toFixed(1) : '0.0';
+      const out = Math.max(0, total * fineRates.A - (paymentsData[s.adm]||0));
+      const status = (parseFloat(pct) >= eligibilityPct && out === 0) ? 'Eligible'
+                     : (out > 0 ? 'Debarred' : 'At Risk');
+      return { adm: s.adm, name: s.name, P, A, Lt, HD, L, total, pct, out, status };
+    });
+    window.analyticsStats = stats;
+    renderAnalyticsTable(stats);
+    renderCharts(stats);
+    show('analyticsContainer');
+    show('analyticsActions');
+  });
+
+}); // end DOMContentLoaded
