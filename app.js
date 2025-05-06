@@ -1,35 +1,50 @@
+// app.js
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
+    if (
+      navigator.canShare &&
+      navigator.canShare({
+        files: [new File([blob], fileName, { type: 'application/pdf' })],
+      })
+    ) {
       try {
-        await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
+        await navigator.share({
+          title,
+          files: [new File([blob], fileName, { type: 'application/pdf' })],
+        });
       } catch (err) {
         if (err.name !== 'AbortError') console.error('Share failed', err);
       }
     }
   }
 
-  // --- 0. Debug console (optional) ---
+  // --- Debug console ---
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
   erudaScript.onload = () => eruda.init();
   document.body.appendChild(erudaScript);
 
-  // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+  // --- IndexedDB helpers ---
+  if (!window.idbKeyval) {
+    console.error('idb-keyval not found');
+    return;
+  }
   const { get, set } = window.idbKeyval;
-  const save = (k, v) => set(k, v);
+  const save = (key, value) => set(key, value);
 
-  // --- 2. State & Defaults ---
-  let students       = await get('students')        || [];
-  let attendanceData = await get('attendanceData')  || {};
-  let paymentsData   = await get('paymentsData')    || {};
-  let lastAdmNo      = await get('lastAdmissionNo') || 0;
-  let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct = await get('eligibilityPct')  || 75;
-  let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
-  let lastAnalyticsStats = [], lastAnalyticsRange = { from: null, to: null }, lastAnalyticsShare = '';
+  // --- State & Defaults ---
+  let students = (await get('students')) || [];
+  let attendanceData = (await get('attendanceData')) || {};
+  let paymentsData = (await get('paymentsData')) || {};
+  let lastAdmNo = (await get('lastAdmissionNo')) || 0;
+  let fineRates = (await get('fineRates')) || { A: 50, Lt: 20, L: 10, HD: 30 };
+  let eligibilityPct = (await get('eligibilityPct')) || 75;
+  let analyticsFilterOptions = ['all'];
+  let analyticsDownloadMode = 'combined';
+  let lastAnalyticsStats = [];
+  let lastAnalyticsRange = { from: null, to: null };
+  let lastAnalyticsShare = '';
 
   async function genAdmNo() {
     lastAdmNo++;
@@ -37,16 +52,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     return String(lastAdmNo).padStart(4, '0');
   }
 
-  // --- 3. DOM Helpers ---
-  const $ = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+  // --- DOM Helpers ---
+  const $ = (id) => document.getElementById(id);
+  const show = (...els) => els.forEach((e) => e && e.classList.remove('hidden'));
+  const hide = (...els) => els.forEach((e) => e && e.classList.add('hidden'));
 
-  // --- DOWNLOAD & SHARE HANDLERS ---
+  // --- Analytics Filter & Mode wiring ---
+  document
+    .querySelectorAll('#analyticsFilterForm input[type="checkbox"]')
+    .forEach((cb) => {
+      cb.onchange = () => {
+        const checked = Array.from(
+          document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')
+        ).map((c) => c.value);
+        analyticsFilterOptions = checked.length ? checked : ['all'];
+      };
+    });
+  document
+    .querySelectorAll('#analyticsFilterForm input[name="downloadMode"]')
+    .forEach((r) => {
+      r.onchange = () => {
+        const sel = document.querySelector(
+          '#analyticsFilterForm input[name="downloadMode"]:checked'
+        );
+        analyticsDownloadMode = sel ? sel.value : 'combined';
+      };
+    });
 
-  // 3.1 Student Registration PDF
-  const downloadRegistrationBtn = $('downloadRegistrationPDF');
-  downloadRegistrationBtn.onclick = async () => {
+  // --- Download & Share Handlers ---
+  $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
@@ -57,17 +91,68 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
   };
+  $('shareRegistration').onclick = () => {
+    const header = `*Student List*\n${$('setupText').textContent}`;
+    const lines = students
+      .filter(
+        (s) =>
+          s.cls === $('teacherClassSelect').value &&
+          s.sec === $('teacherSectionSelect').value
+      )
+      .map((s) => `${s.adm} - ${s.name}`);
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(header + '\n' + lines.join('\n'))}`,
+      '_blank'
+    );
+  };
 
-  // 3.2 Analytics Download
-  const downloadAnalyticsBtn = $('downloadAnalytics');
-  downloadAnalyticsBtn.onclick = async () => {
-    const filtered = lastAnalyticsStats.filter(st =>
+  $('downloadRegister').onclick = async () => {
+    const doc = new jspdf.jsPDF({
+      orientation: 'landscape',
+      unit: 'pt',
+      format: 'a4',
+    });
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({
+      startY: 32,
+      html: '#registerTable',
+      tableWidth: 'auto',
+      styles: { fontSize: 10 },
+    });
+    const blob = doc.output('blob');
+    doc.save('attendance_register.pdf');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+  };
+  $('shareRegister').onclick = () => {
+    const header = `Attendance Register\n${$('setupText').textContent}`;
+    const rows = Array.from($('registerTable').querySelectorAll('tbody tr')).map((tr) =>
+      Array.from(tr.children)
+        .map((td) =>
+          td.querySelector('select') ? td.querySelector('select').value : td.textContent
+        )
+        .join(' ')
+    );
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`,
+      '_blank'
+    );
+  };
+
+  $('downloadAnalytics').onclick = async () => {
+    const filtered = lastAnalyticsStats.filter((st) =>
       analyticsFilterOptions.includes('all') ||
-      analyticsFilterOptions.some(opt => {
+      analyticsFilterOptions.some((opt) => {
         switch (opt) {
           case 'registered': return st.total > 0;
           case 'attendance': return st.P > 0;
-          default: return true;
+          case 'fine':       return st.outstanding > 0;
+          case 'cleared':    return st.outstanding <= 0;
+          case 'debarred':   return st.status === 'Debarred';
+          case 'eligible':   return st.status === 'Eligible';
+          default:           return true;
         }
       })
     );
@@ -77,7 +162,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       doc.setFontSize(18);
       doc.text('Analytics Report', 14, 16);
       doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
+      doc.text(
+        `Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`,
+        14,
+        24
+      );
       doc.autoTable({ startY: 32, html: '#analyticsTable' });
       const blob = doc.output('blob');
       doc.save('analytics_report.pdf');
@@ -102,79 +191,43 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
   };
-
-  // 3.3 Share Analytics via WhatsApp
-  const shareAnalyticsBtn = $('shareAnalytics');
-  shareAnalyticsBtn.onclick = () => {
-    if (!lastAnalyticsShare) {
-      alert('Please load analytics first');
-      return;
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
-  };
-
-  // 3.4 Attendance Register PDF
-  const downloadRegisterBtn = $('downloadRegister');
-  downloadRegisterBtn.onclick = async () => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(18);
-    doc.text('Attendance Register', 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({
-      startY: 32,
-      html: '#registerTable',
-      tableWidth: 'auto',
-      styles: { fontSize: 10 }
-    });
-    const blob = doc.output('blob');
-    doc.save('attendance_register.pdf');
-    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-  };
-
-  // 3.5 Share Attendance via WhatsApp
-  const shareRegisterBtn = $('shareRegister');
-  shareRegisterBtn.onclick = () => {
-    const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from($('registerTable').querySelectorAll('tbody tr')).map(tr =>
-      Array.from(tr.children).map(td =>
-        td.querySelector('.status-text') ? td.querySelector('.status-text').textContent : td.textContent
-      ).join(' ')
+  $('shareAnalytics').onclick = () => {
+    if (!lastAnalyticsShare) return alert('Generate analytics first');
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,
+      '_blank'
     );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
   };
 
-  // --- 4. SETTINGS: Fines & Eligibility ---
-  const formDiv      = $('financialForm');
-  const saveSettings = $('saveSettings');
+  // --- Settings: Fines & Eligibility ---
+  const formDiv = $('financialForm');
+  const saveSettingsBtn = $('saveSettings');
   const settingsCard = document.createElement('div');
-  settingsCard.id    = 'settingsCard';
+  settingsCard.id = 'settingsCard';
   settingsCard.className = 'card hidden';
-  const editSettings = document.createElement('button');
-  editSettings.id    = 'editSettings';
-  editSettings.className = 'btn no-print hidden';
-  editSettings.textContent = 'Edit Settings';
+  const editSettingsBtn = document.createElement('button');
+  editSettingsBtn.id = 'editSettings';
+  editSettingsBtn.className = 'btn no-print hidden';
+  editSettingsBtn.textContent = 'Edit Settings';
   formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
+  formDiv.parentNode.appendChild(editSettingsBtn);
 
-  $('fineAbsent').value     = fineRates.A;
-  $('fineLate').value       = fineRates.Lt;
-  $('fineLeave').value      = fineRates.L;
-  $('fineHalfDay').value    = fineRates.HD;
+  $('fineAbsent').value = fineRates.A;
+  $('fineLate').value = fineRates.Lt;
+  $('fineLeave').value = fineRates.L;
+  $('fineHalfDay').value = fineRates.HD;
   $('eligibilityPct').value = eligibilityPct;
 
-  saveSettings.onclick = async () => {
+  saveSettingsBtn.onclick = async () => {
     fineRates = {
-      A : Number($('fineAbsent').value)   || 0,
-      Lt: Number($('fineLate').value)     || 0,
-      L : Number($('fineLeave').value)    || 0,
-      HD: Number($('fineHalfDay').value)  || 0,
+      A: Number($('fineAbsent').value) || 0,
+      Lt: Number($('fineLate').value) || 0,
+      L: Number($('fineLeave').value) || 0,
+      HD: Number($('fineHalfDay').value) || 0,
     };
     eligibilityPct = Number($('eligibilityPct').value) || 0;
-    await Promise.all([
-      save('fineRates', fineRates),
-      save('eligibilityPct', eligibilityPct)
-    ]);
+    await save('fineRates', fineRates);
+    await save('eligibilityPct', eligibilityPct);
     settingsCard.innerHTML = `
       <div class="card-content">
         <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
@@ -182,27 +235,25 @@ window.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
         <p><strong>Fine – Half Day:</strong> PKR ${fineRates.HD}</p>
         <p><strong>Eligibility:</strong> ${eligibilityPct}%</p>
-      </div>
-    `;
+      </div>`;
     hide(formDiv);
-    show(editSettings, settingsCard);
+    show(settingsCard, editSettingsBtn);
   };
-
-  editSettings.onclick = () => {
+  editSettingsBtn.onclick = () => {
     show(formDiv);
-    hide(settingsCard, editSettings);
+    hide(settingsCard, editSettingsBtn);
   };
 
-  // --- 5. SETUP: School, Class & Section ---
+  // --- Setup: School, Class & Section ---
   async function loadSetup() {
     const [sc, cl, sec] = await Promise.all([
       get('schoolName'),
       get('teacherClass'),
-      get('teacherSection')
+      get('teacherSection'),
     ]);
     if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
+      $('schoolNameInput').value = sc;
+      $('teacherClassSelect').value = cl;
       $('teacherSectionSelect').value = sec;
       $('setupText').textContent = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
       hide($('setupForm'));
@@ -212,52 +263,54 @@ window.addEventListener('DOMContentLoaded', async () => {
       resetViews();
     }
   }
-
-  $('saveSetup').onclick = async e => {
+  $('saveSetup').onclick = async (e) => {
     e.preventDefault();
     const sc = $('schoolNameInput').value.trim(),
-          cl = $('teacherClassSelect').value,
-          sec = $('teacherSectionSelect').value;
+      cl = $('teacherClassSelect').value,
+      sec = $('teacherSectionSelect').value;
     if (!sc || !cl || !sec) {
       alert('Complete setup');
       return;
     }
-    await Promise.all([
-      save('schoolName', sc),
-      save('teacherClass', cl),
-      save('teacherSection', sec)
-    ]);
+    await save('schoolName', sc);
+    await save('teacherClass', cl);
+    await save('teacherSection', sec);
     await loadSetup();
   };
-
-  $('editSetup').onclick = e => {
+  $('editSetup').onclick = (e) => {
     e.preventDefault();
     show($('setupForm'));
     hide($('setupDisplay'));
   };
 
-  // --- 6. Utility: Counters & Views ---
+  // --- Utility: Counters & Views ---
   function updateCounters() {
     const cl = $('teacherClassSelect').value;
-    const scount = students.filter(s => s.cls === cl).length;
-    $('classCount').textContent = scount;
+    $('classCount').textContent = students.filter((s) => s.cls === cl).length;
     $('schoolCount').textContent = students.length;
-    animateCounters();
   }
-
   function resetViews() {
     hide(
-      $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
-      $('attendanceSummary'), $('downloadAttendancePDF'),
-      $('shareAttendanceSummary'), $('instructions'),
-      $('analyticsContainer'), $('graphs'), $('analyticsActions'),
-      $('registerTableWrapper'), $('changeRegister'),
-      $('saveRegister'), $('downloadRegister'), $('shareRegister')
+      $('attendanceBody'),
+      $('saveAttendance'),
+      $('resetAttendance'),
+      $('attendanceSummary'),
+      $('downloadAttendancePDF'),
+      $('shareAttendanceSummary'),
+      $('instructions'),
+      $('analyticsContainer'),
+      $('graphs'),
+      $('analyticsActions'),
+      $('registerTableWrapper'),
+      $('changeRegister'),
+      $('saveRegister'),
+      $('downloadRegister'),
+      $('shareRegister')
     );
     show($('loadRegister'));
   }
 
-  // --- 7. STUDENT REGISTRATION & MANAGEMENT ---
+  // --- 7. Student Registration & Management ---
   function renderStudents() {
     const cl = $('teacherClassSelect').value;
     const sec = $('teacherSectionSelect').value;
@@ -267,8 +320,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     students.forEach((s, i) => {
       if (s.cls !== cl || s.sec !== sec) return;
       idx++;
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.entries(attendanceData).forEach(([d, r]) => stats[r[s.adm] || 'A']++);
+      const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+      Object.entries(attendanceData).forEach(([d, r]) => {
+        stats[r[s.adm] || 'A']++;
+      });
       const totalFine =
         stats.A * fineRates.A +
         stats.Lt * fineRates.Lt +
@@ -276,8 +331,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         stats.HD * fineRates.HD;
       const paid = paymentsData[s.adm]?.paid || 0;
       const outstanding = totalFine - paid;
-      const status = (stats.P / (stats.P + stats.A + stats.L + stats.Lt + stats.HD) * 100) >= eligibilityPct
-        ? 'Eligible' : 'Debarred';
+      const status =
+        (stats.P /
+          (stats.P + stats.A + stats.L + stats.Lt + stats.HD) *
+          100) >=
+        eligibilityPct
+          ? 'Eligible'
+          : 'Debarred';
 
       const tr = document.createElement('tr');
       tr.dataset.index = i;
@@ -298,46 +358,50 @@ window.addEventListener('DOMContentLoaded', async () => {
       tbody.appendChild(tr);
     });
     $('selectAllStudents').checked = false;
-    document.querySelectorAll('.sel').forEach(c => c.onchange = toggleButtons);
+    document.querySelectorAll('.sel').forEach((c) => (c.onchange = toggleButtons));
     toggleButtons();
-    document.querySelectorAll('.add-payment-btn').forEach(b =>
-      b.onclick = () => openPaymentModal(b.dataset.adm)
-    );
+    document
+      .querySelectorAll('.add-payment-btn')
+      .forEach((b) => (b.onclick = () => openPaymentModal(b.dataset.adm)));
   }
-
   function toggleButtons() {
     const any = !!document.querySelector('.sel:checked');
     $('editSelected').disabled = !any;
     $('deleteSelected').disabled = !any;
   }
-
   $('selectAllStudents').onclick = () => {
-    document.querySelectorAll('.sel').forEach(c => c.checked = $('selectAllStudents').checked);
+    document.querySelectorAll('.sel').forEach(
+      (c) => (c.checked = $('selectAllStudents').checked)
+    );
     toggleButtons();
   };
-
-  $('addStudent').onclick = async e => {
+  $('addStudent').onclick = async (e) => {
     e.preventDefault();
     const n = $('studentName').value.trim(),
-          p = $('parentName').value.trim(),
-          c = $('parentContact').value.trim(),
-          o = $('parentOccupation').value.trim(),
-          a = $('parentAddress').value.trim(),
-          cl = $('teacherClassSelect').value,
-          sec = $('teacherSectionSelect').value;
-    if (!n||!p||!c||!o||!a) { alert('All fields required'); return; }
-    if (!/^\d{7,15}$/.test(c)) { alert('Contact 7–15 digits'); return; }
+      p = $('parentName').value.trim(),
+      c = $('parentContact').value.trim(),
+      o = $('parentOccupation').value.trim(),
+      a = $('parentAddress').value.trim(),
+      cl = $('teacherClassSelect').value,
+      sec = $('teacherSectionSelect').value;
+    if (!n || !p || !c || !o || !a) {
+      alert('All fields required');
+      return;
+    }
+    if (!/^\d{7,15}$/.test(c)) {
+      alert('Contact 7–15 digits');
+      return;
+    }
     const adm = await genAdmNo();
-    students.push({ name:n, parent:p, contact:c, occupation:o, address:a, cls, sec, adm });
+    students.push({ name: n, parent: p, contact: c, occupation: o, address: a, cls: cl, sec, adm });
     await save('students', students);
     renderStudents();
     updateCounters();
     resetViews();
   };
-
   $('deleteSelected').onclick = async () => {
     if (!confirm('Delete selected students?')) return;
-    const toDel = [...document.querySelectorAll('.sel:checked')].map(cb => +cb.closest('tr').dataset.index);
+    const toDel = [...document.querySelectorAll('.sel:checked')].map((cb) => +cb.closest('tr').dataset.index);
     students = students.filter((_, i) => !toDel.includes(i));
     await save('students', students);
     renderStudents();
@@ -345,96 +409,111 @@ window.addEventListener('DOMContentLoaded', async () => {
     resetViews();
   };
 
-  // --- 8. Attendance Marking ---
+  // --- 8. Attendance Register Section ---
   $('loadRegister').onclick = () => {
     const tbody = $('registerTable').querySelector('tbody');
     tbody.innerHTML = '';
-    const cl = $('teacherClassSelect').value;
-    students.filter(s=>s.cls===cl&&s.sec===$('teacherSectionSelect').value).forEach(s=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${s.adm}</td>
-        <td>${s.name}</td>
-        <td>
-          <select data-adm="${s.adm}">
-            <option value="P">P</option>
-            <option value="A">A</option>
-            <option value="Lt">Lt</option>
-            <option value="L">L</option>
-            <option value="HD">HD</option>
-          </select>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+    const selectedClass = $('teacherClassSelect').value;
+    const selectedSection = $('teacherSectionSelect').value;
+    students
+      .filter((s) => s.cls === selectedClass && s.sec === selectedSection)
+      .forEach((s) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.adm}</td>
+          <td>${s.name}</td>
+          <td>
+            <select data-adm="${s.adm}">
+              <option value="P">P</option>
+              <option value="A">A</option>
+              <option value="Lt">Lt</option>
+              <option value="L">L</option>
+              <option value="HD">HD</option>
+            </select>
+          </td>`;
+        tbody.appendChild(tr);
+      });
     hide($('loadRegister'));
     show($('attendanceBody'), $('saveAttendance'), $('resetAttendance'));
   };
-
   $('saveAttendance').onclick = async () => {
     const date = $('attendanceDate').value;
-    if (!date) { alert('Select date'); return; }
+    if (!date) {
+      alert('Please select a date');
+      return;
+    }
     attendanceData[date] = {};
-    document.querySelectorAll('#registerTable select').forEach(sel =>{
-      attendanceData[sel.dataset.adm ? sel.dataset.adm : sel.getAttribute('data-adm')] = {};
-    });
-    document.querySelectorAll('#registerTable select').forEach(sel=>{
+    document.querySelectorAll('#registerTable select').forEach((sel) => {
       attendanceData[date][sel.dataset.adm] = sel.value;
     });
     await save('attendanceData', attendanceData);
-    alert('Attendance saved');
+    alert('Attendance saved for ' + date);
     resetViews();
   };
-
   $('resetAttendance').onclick = () => {
-    document.querySelectorAll('#registerTable select').forEach(sel=>sel.value='A');
+    document.querySelectorAll('#registerTable select').forEach((sel) => (sel.value = 'A'));
   };
 
   // --- 9. Payment Modal & Processing ---
   function openPaymentModal(adm) {
     const modal = $('paymentModal');
-    const student = students.find(s=>s.adm===adm);
+    const student = students.find((s) => s.adm === adm);
     $('payAdm').textContent = adm;
     $('payName').textContent = student.name;
     $('payAmount').value = '';
     modal.classList.remove('hidden');
   }
-
   $('savePayment').onclick = async () => {
     const adm = $('payAdm').textContent;
     const amt = Number($('payAmount').value);
-    if (!amt || amt<=0) { alert('Enter amount'); return; }
-    paymentsData[adm] = paymentsData[adm] || { paid:0 };
+    if (!amt || amt <= 0) {
+      alert('Enter amount');
+      return;
+    }
+    paymentsData[adm] = paymentsData[adm] || { paid: 0 };
     paymentsData[adm].paid += amt;
     await save('paymentsData', paymentsData);
     $('paymentModal').classList.add('hidden');
     renderStudents();
   };
 
-  // --- 10. Analytics Generation & Graphs ---
+  // --- 10. Analytics Generation & Rendering ---
   $('generateAnalytics').onclick = () => {
     const from = $('analyticsFrom').value;
     const to = $('analyticsTo').value;
-    if (!from||!to) { alert('Select range'); return; }
+    if (!from || !to) {
+      alert('Select range');
+      return;
+    }
     lastAnalyticsRange = { from, to };
-    const dates = Object.keys(attendanceData).filter(d=>d>=from && d<=to);
-    lastAnalyticsStats = students.map(s=>{
-      const stats = { P:0,A:0,Lt:0,L:0,HD:0 };
-      dates.forEach(d=>{ const r=attendanceData[d][s.adm]||'A'; stats[r]++; });
-      const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid = paymentsData[s.adm]?.paid||0;
-      return {
-        name:s.name,
-        adm:s.adm,
-        ...stats,
-        outstanding: totalFine - paid,
-        total: dates.length
-      };
+    const dates = Object.keys(attendanceData).filter((d) => d >= from && d <= to);
+    lastAnalyticsStats = students.map((s) => {
+      const stats = { P: 0, A: 0, Lt: 0, L: 0, HD: 0 };
+      dates.forEach((d) => {
+        const r = attendanceData[d][s.adm] || 'A';
+        stats[r]++;
+      });
+      const totalFine =
+        stats.A * fineRates.A +
+        stats.Lt * fineRates.Lt +
+        stats.L * fineRates.L +
+        stats.HD * fineRates.HD;
+      const paid = paymentsData[s.adm]?.paid || 0;
+      const outstanding = totalFine - paid;
+      const status =
+        (stats.P /
+          (stats.P + stats.A + stats.L + stats.Lt + stats.HD) *
+          100) >=
+        eligibilityPct
+          ? 'Eligible'
+          : 'Debarred';
+      return { ...s, ...stats, outstanding, total: dates.length, status };
     });
+
     const tbody = $('analyticsTable').querySelector('tbody');
     tbody.innerHTML = '';
     lastAnalyticsShare = `Analytics (${from} to ${to}):\n`;
-    lastAnalyticsStats.forEach(st=>{
+    lastAnalyticsStats.forEach((st) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${st.adm}</td>
@@ -445,28 +524,56 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${st.L}</td>
         <td>${st.HD}</td>
         <td>PKR ${st.outstanding}</td>
-      `;
+        <td>${st.status}</td>`;
       tbody.appendChild(tr);
-      lastAnalyticsShare += `${st.adm}-${st.name}: P${st.P}, A${st.A}, Oust${st.outstanding}\n`;
+      lastAnalyticsShare += `${st.adm}-${st.name}: P${st.P}, A${st.A}, O${st.outstanding}, ${st.status}\n`;
     });
+
     show($('analyticsContainer'), $('analyticsActions'));
   };
 
-  // --- 11. Sharing Registration & Analytics Summaries ---
-  $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value;
-    const sec = $('teacherSectionSelect').value;
-    const header = `*Student List*\nClass ${cl} Section ${sec}`;
-    const lines = students.filter(s=>s.cls===cl&&s.sec===sec)
-      .map(s=>`${s.adm} - ${s.name}`);
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+lines.join('\n'))}`, '_blank');
-  };
-
-  // --- 12. Service Worker ---
+  // --- 11. Service Worker Registration ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 
   // Initial load
   await loadSetup();
+});
+
+
+// service-worker.js
+const CACHE_NAME = 'attendance-app-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/styles.css',
+  'https://cdn.jsdelivr.net/npm/jspdf@latest/dist/jspdf.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval.iife.js'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  const keep = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (!keep.includes(key)) return caches.delete(key);
+        })
+      )
+    )
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((resp) => resp || fetch(event.request))
+  );
 });
