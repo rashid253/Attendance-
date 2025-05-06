@@ -42,10 +42,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
-  // --- PLACE DOWNLOAD & SHARE HANDLERS HERE ---
-  // Student Registration
-  const downloadRegistrationBtn = $('downloadRegistrationPDF');
-  downloadRegistrationBtn.onclick = async () => {
+  // --- DOWNLOAD & SHARE HANDLERS ---
+  $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
@@ -57,9 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'registration.pdf', 'Student List');
   };
 
-  // Analytics download
-  const downloadAnalyticsBtn = $('downloadAnalytics');
-  downloadAnalyticsBtn.onclick = async () => {
+  $('downloadAnalytics').onclick = async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Analytics Report', 14, 16);
@@ -71,9 +67,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
   };
 
-  // Analytics share
-  const shareAnalyticsBtn = $('shareAnalytics');
-  shareAnalyticsBtn.onclick = () => {
+  $('shareAnalytics').onclick = () => {
     if (!lastAnalyticsShare) {
       alert('No analytics to share. Please generate a report first.');
       return;
@@ -81,9 +75,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
-  // Attendance Register
-  const downloadRegisterBtn = $('downloadRegister');
-  downloadRegisterBtn.onclick = async () => {
+  $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 16);
@@ -94,7 +86,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.save('attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
-  // --- END DOWNLOAD HANDLERS ---
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -267,7 +258,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td><input value="${s.parent}"></td>
         <td><input value="${s.contact}"></td>
         <td><input value="${s.occupation}"></td>
-        <td><input value="${s.address}"></td>
+        <td><input value="}
         <td colspan="3"></td>
       `;
     });
@@ -419,95 +410,130 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 10. ANALYTICS ---
-  const atg=$('analyticsTarget'), asel=$('analyticsSectionSelect'), atype=$('analyticsType'),
-        adate=$('analyticsDate'), amonth=$('analyticsMonth'),
-        sems=$('semesterStart'), seme=$('semesterEnd'), ayear=$('yearStart'),
-        asearch=$('analyticsSearch'), loadA=$('loadAnalytics'),
-        resetA=$('resetAnalytics'), instr=$('instructions'),
-        acont=$('analyticsContainer'), graphs=$('graphs'),
-        aacts=$('analyticsActions'),
-        barCtx=$('barChart').getContext('2d'), pieCtx=$('pieChart').getContext('2d');
+  const atg = $('analyticsTarget'),
+        asel = $('analyticsSectionSelect'),
+        atype = $('analyticsType'),
+        adate = $('analyticsDate'),
+        amonth = $('analyticsMonth'),
+        sems = $('semesterStart'),
+        seme = $('semesterEnd'),
+        ayear = $('yearStart'),
+        asearch = $('analyticsSearch'),
+        loadA = $('loadAnalytics'),
+        resetA = $('resetAnalytics'),
+        instr = $('instructions'),
+        acont = $('analyticsContainer'),
+        graphs = $('graphs'),
+        aacts = $('analyticsActions'),
+        barCtx = $('barChart').getContext('2d'),
+        pieCtx = $('pieChart').getContext('2d');
   let barChart, pieChart;
+
+  // Filter modal checkbox behavior
+  const filterForm = $('analyticsFilterForm');
+  const filterCheckboxes = filterForm.querySelectorAll('input[type="checkbox"]');
+  filterCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.value === 'all') {
+        filterCheckboxes.forEach(o => o.checked = cb.checked);
+      } else {
+        const allCb = filterForm.querySelector('input[value="all"]');
+        if (cb.checked) {
+          allCb.checked = false;
+        } else {
+          const anyIndividual = Array.from(filterCheckboxes)
+            .filter(o => o.value !== 'all')
+            .some(o => o.checked);
+          if (!anyIndividual) allCb.checked = true;
+        }
+      }
+    });
+  });
 
   $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
   $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
   $('applyAnalyticsFilter').onclick = () => {
-    analyticsFilterOptions = Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')).map(cb=>cb.value)||['all'];
-    analyticsDownloadMode = document.querySelector('#analyticsFilterForm input[name="downloadMode"]:checked').value;
+    analyticsFilterOptions = Array.from(filterCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+    analyticsDownloadMode = filterForm.querySelector('input[name="downloadMode"]:checked').value;
     hide($('analyticsFilterModal'));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
   };
 
   atg.onchange = () => {
     atype.disabled = false;
-    [asel,asearch].forEach(x=>x.classList.add('hidden'));
-    [instr,acont,graphs,aacts].forEach(x=>x.classList.add('hidden'));
-    if (atg.value==='section') asel.classList.remove('hidden');
-    if (atg.value==='student') asearch.classList.remove('hidden');
+    [asel, asearch].forEach(x => x.classList.add('hidden'));
+    [instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
+    if (atg.value === 'section') asel.classList.remove('hidden');
+    if (atg.value === 'student') asearch.classList.remove('hidden');
   };
 
   atype.onchange = () => {
-    [adate,amonth,sems,seme,ayear].forEach(x=>x.classList.add('hidden'));
-    [instr,acont,graphs,aacts].forEach(x=>x.classList.add('hidden'));
+    [adate, amonth, sems, seme, ayear].forEach(x => x.classList.add('hidden'));
+    [instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
     resetA.classList.remove('hidden');
-    switch(atype.value){
-      case 'date':     adate.classList.remove('hidden'); break;
-      case 'month':    amonth.classList.remove('hidden'); break;
-      case 'semester': sems.classList.remove('hidden'); seme.classList.remove('hidden'); break;
-      case 'year':     ayear.classList.remove('hidden'); break;
-    }
+    if (atype.value === 'date') adate.classList.remove('hidden');
+    if (atype.value === 'month') amonth.classList.remove('hidden');
+    if (atype.value === 'semester') { sems.classList.remove('hidden'); seme.classList.remove('hidden'); }
+    if (atype.value === 'year') ayear.classList.remove('hidden');
   };
 
   resetA.onclick = e => {
     e.preventDefault();
     atype.value = '';
-    [adate,amonth,sems,seme,ayear,instr,acont,graphs,aacts].forEach(x=>x.classList.add('hidden'));
+    [adate, amonth, sems, seme, ayear, instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
     resetA.classList.add('hidden');
   };
 
   loadA.onclick = () => {
-    if (atg.value==='student' && !asearch.value.trim()) { alert('Please enter an admission number or name'); return; }
+    if (atg.value === 'student' && !asearch.value.trim()) {
+      alert('Please enter an admission number or name');
+      return;
+    }
     let from, to;
-    if (atype.value==='date') {
+    if (atype.value === 'date') {
       from = to = adate.value;
-    } else if (atype.value==='month') {
-      const [y,m] = amonth.value.split('-').map(Number);
+    } else if (atype.value === 'month') {
+      const [y, m] = amonth.value.split('-').map(Number);
       from = `${amonth.value}-01`;
-      to   = `${amonth.value}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
-    } else if (atype.value==='semester') {
-      const [sy,sm] = sems.value.split('-').map(Number);
-      const [ey,em] = seme.value.split('-').map(Number);
+      to = `${amonth.value}-${String(new Date(y, m, 0).getDate()).padStart(2,'0')}`;
+    } else if (atype.value === 'semester') {
+      const [sy, sm] = sems.value.split('-').map(Number);
+      const [ey, em] = seme.value.split('-').map(Number);
       from = `${sems.value}-01`;
-      to   = `${seme.value}-${String(new Date(ey,em,0).getDate()).padStart(2,'0')}`;
-    } else if (atype.value==='year') {
+      to = `${seme.value}-${String(new Date(ey, em, 0).getDate()).padStart(2,'0')}`;
+    } else if (atype.value === 'year') {
       from = `${ayear.value}-01-01`;
-      to   = `${ayear.value}-12-31`;
+      to = `${ayear.value}-12-31`;
     } else {
       alert('Select a period');
       return;
     }
     const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    let pool = students.filter(s=>s.cls===cls&&s.sec===sec);
-    if (atg.value==='section') pool = pool.filter(s=>s.sec===asel.value);
-    if (atg.value==='student') {
+    let pool = students.filter(s => s.cls === cls && s.sec === sec);
+    if (atg.value === 'section') pool = pool.filter(s => s.sec === asel.value);
+    if (atg.value === 'student') {
       const q = asearch.value.trim().toLowerCase();
-      pool = pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));
+      pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
     }
-    const stats = pool.map(s=>({ adm:s.adm, name:s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
-    Object.entries(attendanceData).forEach(([d,r])=>{
-      if (d<from||d>to) return;
-      stats.forEach(st=>{
-        const c = r[st.adm]||'A';
+
+    const stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    Object.entries(attendanceData).forEach(([d, r]) => {
+      if (d < from || d > to) return;
+      stats.forEach(st => {
+        const c = r[st.adm] || 'A';
         st[c]++; st.total++;
       });
     });
-    stats.forEach(st=>{
+    stats.forEach(st => {
       const tf = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
-      const tp = (paymentsData[st.adm]||[]).reduce((a,p)=>a+p.amount,0);
+      const tp = (paymentsData[st.adm] || []).reduce((a, p) => a + p.amount, 0);
       st.outstanding = tf - tp;
-      const pct = st.total?(st.P/st.total)*100:0;
-      st.status = (st.outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      const pct = st.total ? (st.P / st.total) * 100 : 0;
+      st.status = (st.outstanding > 0 || pct < eligibilityPct) ? 'Debarred' : 'Eligible';
     });
+
     lastAnalyticsStats = stats;
     lastAnalyticsRange = { from, to };
     renderAnalytics(stats, from, to);
@@ -516,25 +542,26 @@ window.addEventListener('DOMContentLoaded', async () => {
   function renderAnalytics(stats, from, to) {
     let filtered = stats;
     if (!analyticsFilterOptions.includes('all')) {
-      filtered = stats.filter(st=>analyticsFilterOptions.some(opt=>{
-        switch(opt){
+      filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
+        switch (opt) {
           case 'registered': return true;
-          case 'attendance': return st.total>0;
-          case 'fine':       return (st.A>0||st.Lt>0||st.L>0||st.HD>0);
-          case 'cleared':    return st.outstanding===0;
-          case 'debarred':   return st.status==='Debarred';
-          case 'eligible':   return st.status==='Eligible';
+          case 'attendance': return st.total > 0;
+          case 'fine':       return st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0;
+          case 'cleared':    return st.outstanding === 0;
+          case 'debarred':   return st.status === 'Debarred';
+          case 'eligible':   return st.status === 'Eligible';
           default:           return false;
         }
       }));
     }
+
     const thead = $('analyticsTable').querySelector('thead tr');
     thead.innerHTML = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']
-      .map(h=>`<th>${h}</th>`).join('');
+      .map(h => `<th>${h}</th>`).join('');
     const tbody = $('analyticsBody');
     tbody.innerHTML = '';
-    filtered.forEach((st,i)=>{
-      const pct = st.total?((st.P/st.total)*100).toFixed(1):'0.0';
+    filtered.forEach((st, i) => {
+      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td>
@@ -543,46 +570,78 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>`;
       tbody.appendChild(tr);
     });
+
     instr.textContent = `Period: ${from} to ${to}`;
     show(instr, acont, graphs, aacts);
+
     barChart?.destroy();
-    barChart = new Chart(barCtx,{
-      type:'bar',
-      data:{ labels:filtered.map(st=>st.name), datasets:[{ label:'% Present', data:filtered.map(st=>st.total?(st.P/st.total)*100:0) }] },
-      options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+    barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: filtered.map(st => st.name),
+        datasets: [{ label: '% Present', data: filtered.map(st => st.total ? (st.P / st.total) * 100 : 0) }]
+      },
+      options: { scales: { y: { beginAtZero: true, max: 100 } } }
     });
+
     pieChart?.destroy();
-    pieChart = new Chart(pieCtx,{ type:'pie', data:{ labels:['Outstanding'], datasets:[{ data:[filtered.reduce((a,st)=>a+st.outstanding,0)] }] } });
-    lastAnalyticsShare = `Analytics (${from} to ${to})\n` + filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
+    pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: { labels: ['Outstanding'], datasets: [{ data: [filtered.reduce((a, st) => a + st.outstanding, 0)] }] }
+    });
+
+    lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
+      filtered.map((st, i) =>
+        `${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`
+      ).join('\n');
   }
 
   // --- 11. ATTENDANCE REGISTER ---
-  const loadReg=$('loadRegister'), changeReg=$('changeRegister'), saveReg=$('saveRegister'),
-        dlReg=$('downloadRegister'), shReg=$('shareRegister'),
-        rm=$('registerMonth'), rh=$('registerHeader'), rb=$('registerBody');
-  const regCodes=['A','P','Lt','HD','L'], regColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
+  const loadReg = $('loadRegister'),
+        changeReg = $('changeRegister'),
+        saveReg = $('saveRegister'),
+        dlReg = $('downloadRegister'),
+        shReg = $('shareRegister'),
+        rm = $('registerMonth'),
+        rh = $('registerHeader'),
+        rb = $('registerBody');
+  const regCodes = ['A','P','Lt','HD','L'],
+        regColors = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
 
   loadReg.onclick = () => {
-    const m=rm.value; if(!m){alert('Pick month');return;}
-    const [y,mm]=m.split('-').map(Number), days=new Date(y,mm,0).getDate();
-    rh.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>`+[...Array(days)].map((_,i)=>`<th>${i+1}</th>`).join('');
-    rb.innerHTML='';
-    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i)=>{
-      let row=`<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for(let d=1; d<=days; d++){
-        const key=`${m}-${String(d).padStart(2,'0')}`, c=(attendanceData[key]||{})[s.adm]||'A';
-        const style=c==='A'?'':`style="background:${regColors[c]};color:#fff"`;
-        row+=`<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+    const m = rm.value; if (!m) { alert('Pick month'); return; }
+    const [y, mm] = m.split('-').map(Number),
+          days = new Date(y, mm, 0).getDate();
+    rh.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+      [...Array(days)].map((_, i) => `<th>${i+1}</th>`).join('');
+    rb.innerHTML = '';
+    const cl = $('teacherClassSelect').value,
+          sec = $('teacherSectionSelect').value;
+    students.filter(s => s.cls===cl&&s.sec===sec).forEach((s,i) => {
+      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      for (let d=1; d<=days; d++) {
+        const key = `${m}-${String(d).padStart(2,'0')}`,
+              c   = (attendanceData[key]||{})[s.adm]||'A',
+              style = c==='A' ? '' : `style="background:${regColors[c]};color:#fff"`;
+        row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
       }
-      const tr=document.createElement('tr'); tr.innerHTML=row; rb.appendChild(tr);
+      const tr = document.createElement('tr');
+      tr.innerHTML = row;
+      rb.appendChild(tr);
     });
-    rb.querySelectorAll('.reg-cell').forEach(cell=>{
-      cell.onclick=()=>{
-        const span=cell.querySelector('.status-text'), idx=(regCodes.indexOf(span.textContent)+1)%regCodes.length; const c=regCodes[idx];
-        span.textContent=c;
-        if(c==='A'){cell.style.background='';cell.style.color='';}
-        else {cell.style.background=regColors[c];cell.style.color='#fff';}
+    rb.querySelectorAll('.reg-cell').forEach(cell => {
+      cell.onclick = () => {
+        const span = cell.querySelector('.status-text'),
+              idx  = (regCodes.indexOf(span.textContent) + 1) % regCodes.length,
+              c    = regCodes[idx];
+        span.textContent = c;
+        if (c === 'A') {
+          cell.style.background = '';
+          cell.style.color = '';
+        } else {
+          cell.style.background = regColors[c];
+          cell.style.color = '#fff';
+        }
       };
     });
     show($('registerTableWrapper'), saveReg);
@@ -590,41 +649,50 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   saveReg.onclick = async () => {
-    const m=rm.value,[y,mm]=m.split('-').map(Number), days=new Date(y,mm,0).getDate();
-    Array.from(rb.children).forEach(tr=>{
-      const adm=tr.children[1].textContent;
-      for(let d=1; d<=days; d++){
-        const code=tr.children[3+d-1].querySelector('.status-text').textContent;
-        const key=`${m}-${String(d).padStart(2,'0')}`;
-        attendanceData[key]=attendanceData[key]||{};
-        attendanceData[key][adm]=code;
+    const m = rm.value,
+          [y, mm] = m.split('-').map(Number),
+          days = new Date(y, mm, 0).getDate();
+    Array.from(rb.children).forEach(tr => {
+      const adm = tr.children[1].textContent;
+      for (let d=1; d<=days; d++) {
+        const code = tr.children[3 + d - 1].querySelector('.status-text').textContent,
+              key  = `${m}-${String(d).padStart(2,'0')}`;
+        attendanceData[key] = attendanceData[key]||{};
+        attendanceData[key][adm] = code;
       }
     });
     await save('attendanceData', attendanceData);
-    hide(saveReg); show(changeReg, dlReg, shReg);
+    hide(saveReg);
+    show(changeReg, dlReg, shReg);
   };
 
   changeReg.onclick = () => {
     hide($('registerTableWrapper'), changeReg, dlReg, shReg, saveReg);
-    rh.innerHTML=''; rb.innerHTML=''; show(loadReg);
+    rh.innerHTML = '';
+    rb.innerHTML = '';
+    show(loadReg);
   };
 
   dlReg.onclick = async () => {
-    const doc=new jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
-    doc.setFontSize(18); doc.text('Attendance Register',14,16);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({startY:32,html:'#registerTable',tableWidth:'auto',styles:{fontSize:10}});
-    const blob=doc.output('blob');
+    const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY:32, html:'#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
+    const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
-    await sharePdf(blob,'attendance_register.pdf','Attendance Register');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
 
   shReg.onclick = () => {
-    const header=`Attendance Register\n${$('setupText').textContent}`;
-    const rows=Array.from(rb.children).map(tr=>
-      Array.from(tr.children).map(td=>td.querySelector('.status-text')?td.querySelector('.status-text').textContent:td.textContent).join(' ')
+    const header = `Attendance Register\n${$('setupText').textContent}`;
+    const rows = Array.from(rb.children).map(tr =>
+      Array.from(tr.children)
+        .map(td => td.querySelector('.status-text') ? td.querySelector('.status-text').textContent : td.textContent)
+        .join(' ')
     );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows.join('\n'))}`,'_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
   };
 
   // --- 12. Service Worker ---
