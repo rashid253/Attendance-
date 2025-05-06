@@ -57,7 +57,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await sharePdf(blob, 'registration.pdf', 'Student List');
   };
 
-  // Analytics
+  // Analytics download
   const downloadAnalyticsBtn = $('downloadAnalytics');
   downloadAnalyticsBtn.onclick = async () => {
     const doc = new jspdf.jsPDF();
@@ -69,6 +69,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const blob = doc.output('blob');
     doc.save('analytics_report.pdf');
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
+  };
+
+  // Analytics share
+  const shareAnalyticsBtn = $('shareAnalytics');
+  shareAnalyticsBtn.onclick = () => {
+    if (!lastAnalyticsShare) {
+      alert('No analytics to share. Please generate a report first.');
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
   // Attendance Register
