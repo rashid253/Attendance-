@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- DOM Helpers ---
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+  const hide = (...els) => els.forEach(e => e.classList.add('hidden'));
 
   // --- DOWNLOAD & SHARE BUTTONS ---
   $('downloadRegistrationPDF').onclick = async () => {
@@ -427,22 +427,36 @@ window.addEventListener('DOMContentLoaded', async () => {
         pieCtx   = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  // Simplified “All” vs. individual filter logic
-  const filterForm    = $('analyticsFilterForm');
-  const allCb         = filterForm.querySelector('input[value="all"]');
-  // FIX: include radio inputs as well as checkboxes so "Individual" (radio) is recognized
-  const individualCbs = Array.from(filterForm.querySelectorAll('input[type="checkbox"], input[type="radio"]')).filter(cb => cb.value !== 'all');
-  allCb.addEventListener('change', () => individualCbs.forEach(cb => cb.checked = allCb.checked));
-  individualCbs.forEach(cb => cb.addEventListener('change', () => {
-    if (cb.checked) allCb.checked = false;
-    else if (!individualCbs.some(i => i.checked)) allCb.checked = true;
+  // Improved “All” vs. Individual filter logic
+  const filterForm       = $('analyticsFilterForm');
+  const allRadio         = filterForm.querySelector('input[type="radio"][value="all"]');
+  const individualRadio  = filterForm.querySelector('input[type="radio"][value="individual"]');
+  const filterCheckboxes = Array.from(filterForm.querySelectorAll('input[type="checkbox"]'));
+
+  allRadio.addEventListener('change', () => {
+    if (allRadio.checked) {
+      filterCheckboxes.forEach(cb => cb.checked = false);
+    }
+  });
+  filterCheckboxes.forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) {
+      allRadio.checked = false;
+      individualRadio.checked = true;
+    }
+    if (!filterCheckboxes.some(c => c.checked)) {
+      allRadio.checked = true;
+    }
   }));
 
   $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
   $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
   $('applyAnalyticsFilter').onclick = () => {
-    analyticsFilterOptions = individualCbs.filter(cb => cb.checked).map(cb => cb.value);
-    if (analyticsFilterOptions.length === 0) analyticsFilterOptions = ['all'];
+    if (allRadio.checked) {
+      analyticsFilterOptions = ['all'];
+    } else {
+      analyticsFilterOptions = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+      if (analyticsFilterOptions.length === 0) analyticsFilterOptions = ['all'];
+    }
     hide($('analyticsFilterModal'));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
   };
