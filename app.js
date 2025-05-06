@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- DOM Helpers ---
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e.classList.add('hidden'));
+  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // --- DOWNLOAD & SHARE BUTTONS ---
   $('downloadRegistrationPDF').onclick = async () => {
@@ -48,7 +48,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text('Student List', 14, 16);
     doc.setFontSize(12);
     doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable' });
+    doc.autoTable({ startY: 32, html: '#studentsTable', tableWidth: 'auto' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
@@ -59,7 +59,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text('Analytics Report', 14, 16);
     doc.setFontSize(12);
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-    doc.autoTable({ startY: 32, html: '#analyticsTable' });
+    // add tableWidth to prevent “could not fit” error
+    doc.autoTable({
+      startY: 32,
+      html: '#analyticsTable',
+      tableWidth: 'auto',
+      styles: { fontSize: 10, cellWidth: 'auto' }
+    });
     const blob = doc.output('blob');
     doc.save('analytics_report.pdf');
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
@@ -218,9 +224,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('editSelected').disabled = !any;
     $('deleteSelected').disabled = !any;
   }
-  $('studentsBody').addEventListener('change', e => { if (e.target.classList.contains('sel')) toggleButtons(); });
-  $('selectAllStudents').onclick = () => {
-    document.querySelectorAll('.sel').forEach(c => c.checked = $('selectAllStudents').checked);
+  const sb = $('studentsBody');
+  if (sb) sb.addEventListener('change', e => { if (e.target.classList.contains('sel')) toggleButtons(); });
+  const sal = $('selectAllStudents');
+  if (sal) sal.onclick = () => {
+    document.querySelectorAll('.sel').forEach(c => c.checked = sal.checked);
     toggleButtons();
   };
   $('addStudent').onclick = async e => {
@@ -393,7 +401,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
     doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
+    doc.autoTable({ startY: 32, html: '#attendanceSummary table', tableWidth: 'auto' });
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob');
     doc.save(fileName);
@@ -427,39 +435,43 @@ window.addEventListener('DOMContentLoaded', async () => {
         pieCtx   = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  // Improved “All” vs. Individual filter logic
-  const filterForm       = $('analyticsFilterForm');
-  const allRadio         = filterForm.querySelector('input[type="radio"][value="all"]');
-  const individualRadio  = filterForm.querySelector('input[type="radio"][value="individual"]');
-  const filterCheckboxes = Array.from(filterForm.querySelectorAll('input[type="checkbox"]'));
+  // guard filter form so missing ID won't break everything
+  const filterForm = document.getElementById('analyticsFilterForm');
+  if (filterForm) {
+    const allRadio         = filterForm.querySelector('input[type="radio"][value="all"]');
+    const individualRadio  = filterForm.querySelector('input[type="radio"][value="individual"]');
+    const filterCheckboxes = Array.from(filterForm.querySelectorAll('input[type="checkbox"]'));
 
-  allRadio.addEventListener('change', () => {
-    if (allRadio.checked) {
-      filterCheckboxes.forEach(cb => cb.checked = false);
-    }
-  });
-  filterCheckboxes.forEach(cb => cb.addEventListener('change', () => {
-    if (cb.checked) {
-      allRadio.checked = false;
-      individualRadio.checked = true;
-    }
-    if (!filterCheckboxes.some(c => c.checked)) {
-      allRadio.checked = true;
-    }
-  }));
+    allRadio.addEventListener('change', () => {
+      if (allRadio.checked) {
+        filterCheckboxes.forEach(cb => cb.checked = false);
+      }
+    });
+    filterCheckboxes.forEach(cb => cb.addEventListener('change', () => {
+      if (cb.checked) {
+        allRadio.checked = false;
+        individualRadio.checked = true;
+      }
+      if (!filterCheckboxes.some(c => c.checked)) {
+        allRadio.checked = true;
+      }
+    }));
 
-  $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
-  $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
-  $('applyAnalyticsFilter').onclick = () => {
-    if (allRadio.checked) {
-      analyticsFilterOptions = ['all'];
-    } else {
-      analyticsFilterOptions = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
-      if (analyticsFilterOptions.length === 0) analyticsFilterOptions = ['all'];
-    }
-    hide($('analyticsFilterModal'));
-    if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
-  };
+    $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
+    $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
+    $('applyAnalyticsFilter').onclick = () => {
+      if (allRadio.checked) {
+        analyticsFilterOptions = ['all'];
+      } else {
+        analyticsFilterOptions = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+        if (analyticsFilterOptions.length === 0) analyticsFilterOptions = ['all'];
+      }
+      hide($('analyticsFilterModal'));
+      if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
+    };
+  } else {
+    console.warn('analyticsFilterForm not found—filter UI won’t break functionality.');
+  }
 
   atg.onchange = () => {
     atype.disabled = false;
