@@ -54,6 +54,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     L : rootStyles.getPropertyValue('--primary').trim()
   };
   const statusNames = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' };
+  const statusKeys = ['P','A','Lt','HD','L'];  // ensure full 5-segment charts
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -347,7 +348,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       nameDiv.textContent=stu.name;
       const btnsDiv = document.createElement('div');
       btnsDiv.className='attendance-buttons';
-      Object.keys(statusNames).forEach(code=>{
+      statusKeys.forEach(code=>{
         const btn = document.createElement('button');
         btn.className='att-btn';
         btn.textContent=code;
@@ -577,16 +578,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       `;
       tbody.appendChild(tr);
     });
-    instr.textContent = `Period: ${from} to ${to}`;
-    show(instr, acont, graphs, aacts);
+    $('instructions').textContent = `Period: ${from} to ${to}`;
+    show($('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'));
 
-    // Multi-color stacked bar chart
+    // stacked bar
     barChart?.destroy();
     barChart = new Chart(barCtx, {
       type: 'bar',
       data: {
         labels: filtered.map(st => st.name),
-        datasets: Object.keys(statusColors).map(code => ({
+        datasets: statusKeys.map(code => ({
           label: statusNames[code],
           data: filtered.map(st => st.total ? (st[code]/st.total)*100 : 0),
           backgroundColor: statusColors[code],
@@ -598,24 +599,18 @@ window.addEventListener('DOMContentLoaded', async () => {
           x: { stacked: true }
         },
         plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } },
-        responsive: true,
-        interaction: { mode: 'index', intersect: false },
+        responsive: true, interaction: { mode: 'index', intersect: false },
       }
     });
 
-    // Multi-color pie chart
+    // pie
     pieChart?.destroy();
-    const totals = Object.keys(statusColors).map(code =>
-      filtered.reduce((sum, st) => sum + st[code], 0)
-    );
+    const totals = statusKeys.map(code => filtered.reduce((sum, st) => sum + st[code], 0));
     pieChart = new Chart(pieCtx, {
       type: 'pie',
       data: {
-        labels: Object.keys(statusNames).map(c => statusNames[c]),
-        datasets: [{
-          data: totals,
-          backgroundColor: Object.keys(statusColors).map(c => statusColors[c])
-        }]
+        labels: statusKeys.map(c => statusNames[c]),
+        datasets: [{ data: totals, backgroundColor: statusKeys.map(c => statusColors[c]) }]
       },
       options: { plugins: { legend: { position: 'right' } }, responsive: true }
     });
@@ -638,7 +633,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       for (let d=1; d<=days; d++){
         const key = `${m}-${String(d).padStart(2,'0')}`;
         const c   = (attendanceData[key]||{})[s.adm]||'A';
-        const style = c==='A' ? '' : `style="background:${c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)'};color:#fff"`;
+        const style = c==='A' ? '' : `style="background:${
+          c==='P'? 'var(--success)':
+          c==='Lt'? 'var(--warning)':
+          c==='HD'? '#FF9800':
+          c==='L'? 'var(--info)':'var(--danger)'
+        };color:#fff"`;
         row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
       }
       const tr = document.createElement('tr');
@@ -653,7 +653,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         span.textContent = c;
         if (c==='A') { cell.style.background=''; cell.style.color=''; }
         else {
-          const color = c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)';
+          const color = c==='P'? 'var(--success)':
+                        c==='Lt'? 'var(--warning)':
+                        c==='HD'? '#FF9800':
+                        c==='L'?  'var(--info)':'var(--danger)';
           cell.style.background = color; cell.style.color = '#fff';
         }
       };
@@ -678,20 +681,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     show($('changeRegister'), $('downloadRegister'), $('shareRegister'));
   };
 
-  $('changeRegister').onclick = () => {
-    hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
-    $('registerHeader').innerHTML = '';
-    $('registerBody').innerHTML   = '';
-    show($('loadRegister'));
-  };
-
   $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 16);
     doc.setFontSize(12);
     doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
+    // add padding before table in PDF:
+    doc.autoTable({ startY: 60, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
