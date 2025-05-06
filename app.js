@@ -54,7 +54,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     L : rootStyles.getPropertyValue('--primary').trim()
   };
   const statusNames = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' };
-  const statusKeys = ['P','A','Lt','HD','L'];  // ensure full 5-segment charts
+  const statusKeys = ['P','A','Lt','HD','L'];  // fixed order for stacking
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -581,7 +581,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('instructions').textContent = `Period: ${from} to ${to}`;
     show($('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'));
 
-    // stacked bar
+    // --- stacked bar chart with both axes stacked ---
     barChart?.destroy();
     barChart = new Chart(barCtx, {
       type: 'bar',
@@ -595,15 +595,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       },
       options: {
         scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: '% of Days' } },
-          x: { stacked: true }
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true, max: 100, title: { display: true, text: '% of Days' } }
         },
         plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } },
-        responsive: true, interaction: { mode: 'index', intersect: false },
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
       }
     });
 
-    // pie
+    // --- pie chart using same keys/order ---
     pieChart?.destroy();
     const totals = statusKeys.map(code => filtered.reduce((sum, st) => sum + st[code], 0));
     pieChart = new Chart(pieCtx, {
