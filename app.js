@@ -113,25 +113,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
-  $('downloadRegister').onclick = async () => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(18);
-    doc.text('Attendance Register', 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-    const blob = doc.output('blob');
-    doc.save('attendance_register.pdf');
-    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-  };
-
-  $('shareRegister').onclick = () => {
-    const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from($('registerBody').children)
-      .map(tr => Array.from(tr.children).map(td => td.querySelector('.status-text')?.textContent || td.textContent).join(' '));
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows.join('\n'))}`, '_blank');
-  };
-
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
@@ -510,7 +491,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         pieCtx = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  // reuse your status names/colors:
   const analyticsStatusNames  = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' };
   const analyticsStatusColors = {
     P: getComputedStyle(document.documentElement).getPropertyValue('--success').trim(),
@@ -688,126 +668,125 @@ window.addEventListener('DOMContentLoaded', async () => {
         .join('\n');
   }
 
-// --- 11. ATTENDANCE REGISTER ---
-$('loadRegister').onclick = () => {
-  const m = $('registerMonth').value;
-  if (!m) { alert('Pick month'); return; }
-  const [y,mm] = m.split('-').map(Number),
-        days   = new Date(y,mm,0).getDate();
-  $('registerHeader').innerHTML =
-    `<th>#</th><th>Adm#</th><th>Name</th>` +
-    [...Array(days)].map((_,i)=>`<th>${i+1}</th>`).join('');
-  $('registerBody').innerHTML = '';
-  const cl = $('teacherClassSelect').value,
-        sec= $('teacherSectionSelect').value;
-  students
-    .filter(s=>s.cls===cl&&s.sec===sec)
-    .forEach((s,i) => {
-      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      for (let d=1; d<=days; d++){
-        const key   = `${m}-${String(d).padStart(2,'0')}`;
-        const c     = (attendanceData[key]||{})[s.adm] || 'A';
-        const style = c==='A'
-          ? ''
-          : `style="background:${
-              c==='P'    ? 'var(--success)' :
-              c==='Lt'   ? 'var(--warning)' :
-              c==='HD'   ? '#FF9800' :
-              c==='L'    ? 'var(--info)' :
-              'var(--danger)'
-            };color:#fff"`;
-        row += `<td class="reg-cell" ${style}>
-                  <span class="status-text">${c}</span>
-                </td>`;
-      }
-      const tr = document.createElement('tr');
-      tr.innerHTML = row;
-      $('registerBody').appendChild(tr);
+  // --- 11. ATTENDANCE REGISTER ---
+  $('loadRegister').onclick = () => {
+    const m = $('registerMonth').value;
+    if (!m) { alert('Pick month'); return; }
+    const [y,mm] = m.split('-').map(Number),
+          days   = new Date(y,mm,0).getDate();
+    $('registerHeader').innerHTML =
+      `<th>#</th><th>Adm#</th><th>Name</th>` +
+      [...Array(days)].map((_,i)=>`<th>${i+1}</th>`).join('');
+    $('registerBody').innerHTML = '';
+    const cl = $('teacherClassSelect').value,
+          sec= $('teacherSectionSelect').value;
+    students
+      .filter(s=>s.cls===cl&&s.sec===sec)
+      .forEach((s,i) => {
+        let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+        for (let d=1; d<=days; d++){
+          const key   = `${m}-${String(d).padStart(2,'0')}`;
+          const c     = (attendanceData[key]||{})[s.adm] || 'A';
+          const style = c==='A'
+            ? ''
+            : `style="background:${
+                c==='P'    ? 'var(--success)' :
+                c==='Lt'   ? 'var(--warning)' :
+                c==='HD'   ? '#FF9800' :
+                c==='L'    ? 'var(--info)' :
+                'var(--danger)'
+              };color:#fff"`;
+          row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = row;
+        $('registerBody').appendChild(tr);
+      });
+    document.querySelectorAll('.reg-cell').forEach(cell => {
+      cell.onclick = () => {
+        const span = cell.querySelector('.status-text'),
+              codes = ['A','P','Lt','HD','L'],
+              idx   = (codes.indexOf(span.textContent) + 1) % codes.length,
+              c     = codes[idx];
+        span.textContent = c;
+        if (c==='A') {
+          cell.style.background = '';
+          cell.style.color      = '';
+        } else {
+          const color = c==='P'    ? 'var(--success)' :
+                        c==='Lt'   ? 'var(--warning)' :
+                        c==='HD'   ? '#FF9800' :
+                        c==='L'    ? 'var(--info)' :
+                                     'var(--danger)';
+          cell.style.background = color;
+          cell.style.color      = '#fff';
+        }
+      };
     });
-  document.querySelectorAll('.reg-cell').forEach(cell => {
-    cell.onclick = () => {
-      const span = cell.querySelector('.status-text'),
-            codes = ['A','P','Lt','HD','L'],
-            idx   = (codes.indexOf(span.textContent) + 1) % codes.length,
-            c     = codes[idx];
-      span.textContent = c;
-      if (c==='A') {
-        cell.style.background = '';
-        cell.style.color      = '';
-      } else {
-        const color = c==='P'    ? 'var(--success)' :
-                      c==='Lt'   ? 'var(--warning)' :
-                      c==='HD'   ? '#FF9800' :
-                      c==='L'    ? 'var(--info)' :
-                                   'var(--danger)';
-        cell.style.background = color;
-        cell.style.color      = '#fff';
+    show($('registerTableWrapper'), $('saveRegister'));
+    hide($('loadRegister'), $('changeRegister'), $('downloadRegister'), $('shareRegister'));
+  };
+
+  $('saveRegister').onclick = async () => {
+    const m = $('registerMonth').value,
+          [y,mm] = m.split('-').map(Number),
+          days   = new Date(y,mm,0).getDate();
+    Array.from($('registerBody').children).forEach(tr => {
+      const adm = tr.children[1].textContent;
+      for (let d=1; d<=days; d++){
+        const code = tr.children[3 + d - 1].querySelector('.status-text').textContent;
+        const key  = `${m}-${String(d).padStart(2,'0')}`;
+        attendanceData[key] = attendanceData[key] || {};
+        attendanceData[key][adm] = code;
       }
-    };
-  });
-  show($('registerTableWrapper'), $('saveRegister'));
-  hide($('loadRegister'), $('changeRegister'), $('downloadRegister'), $('shareRegister'));
-};
+    });
+    await save('attendanceData', attendanceData);
+    hide($('saveRegister'));
+    show($('changeRegister'), $('downloadRegister'), $('shareRegister'));
+  };
 
-$('saveRegister').onclick = async () => {
-  const m = $('registerMonth').value,
-        [y,mm] = m.split('-').map(Number),
-        days   = new Date(y,mm,0).getDate();
-  Array.from($('registerBody').children).forEach(tr => {
-    const adm = tr.children[1].textContent;
-    for (let d=1; d<=days; d++){
-      const code = tr.children[3 + d - 1].querySelector('.status-text').textContent;
-      const key  = `${m}-${String(d).padStart(2,'0')}`;
-      attendanceData[key] = attendanceData[key] || {};
-      attendanceData[key][adm] = code;
-    }
-  });
-  await save('attendanceData', attendanceData);
-  hide($('saveRegister'));
-  show($('changeRegister'), $('downloadRegister'), $('shareRegister'));
-};
+  $('changeRegister').onclick = () => {
+    hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
+    $('registerHeader').innerHTML = '';
+    $('registerBody').innerHTML   = '';
+    show($('loadRegister'));
+  };
 
-$('changeRegister').onclick = () => {
-  hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
-  $('registerHeader').innerHTML = '';
-  $('registerBody').innerHTML   = '';
-  show($('loadRegister'));
-};
+  $('downloadRegister').onclick = async () => {
+    const doc = new jspdf.jsPDF({
+      orientation: 'landscape',
+      unit: 'pt',
+      format: 'a4'
+    });
+    // Move title and subtitle down to prevent overlap
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 14, 20);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 36);
+    // Start table lower on page
+    doc.autoTable({
+      startY: 50,
+      html: '#registerTable',
+      tableWidth: 'auto',
+      styles: { fontSize: 10 }
+    });
+    const blob = doc.output('blob');
+    doc.save('attendance_register.pdf');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+  };
 
-$('downloadRegister').onclick = async () => {
-  const doc = new jspdf.jsPDF({
-    orientation: 'landscape',
-    unit: 'pt',
-    format: 'a4'
-  });
-  // Move title and subtitle down to prevent overlap
-  doc.setFontSize(18);
-  doc.text('Attendance Register', 14, 20);
-  doc.setFontSize(12);
-  doc.text($('setupText').textContent, 14, 36);
-  // Start table lower on page
-  doc.autoTable({
-    startY: 50,
-    html: '#registerTable',
-    tableWidth: 'auto',
-    styles: { fontSize: 10 }
-  });
-  const blob = doc.output('blob');
-  doc.save('attendance_register.pdf');
-  await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-};
+  $('shareRegister').onclick = () => {
+    const header = `Attendance Register\n${$('setupText').textContent}`;
+    const rows = Array.from($('registerBody').children).map(tr =>
+      Array.from(tr.children)
+           .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
+           .join(' ')
+    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+  };
 
-$('shareRegister').onclick = () => {
-  const header = `Attendance Register\n${$('setupText').textContent}`;
-  const rows = Array.from($('registerBody').children).map(tr =>
-    Array.from(tr.children)
-         .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
-         .join(' ')
-  );
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
-};
-
-// --- 12. Service Worker ---
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js').catch(console.error);
-}
+  // --- 12. Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
+});
