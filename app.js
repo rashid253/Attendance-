@@ -108,9 +108,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- Download Analytics (combined or individual) ---
   $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) {
-      alert('No analytics to download. Please generate a report first.');
-      return;
+    if (!lastAnalyticsStats.length) { 
+      alert('No analytics to download. Please generate a report first.'); 
+      return; 
     }
     const doc = new jspdf.jsPDF();
     // Determine filtered stats based on analyticsFilterOptions
@@ -149,7 +149,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         doc.setFontSize(18);
         doc.text(`Analytics Report - ${st.name}`, 14, 16);
         doc.setFontSize(12);
-        const percent = st.total ? ((st.P / st.total) * 100).toFixed(1) + '%' : '0%';
+        const percent = st.total ? ((st.P/st.total) * 100).toFixed(1) + '%' : '0%';
         const row = [
           idx + 1,
           st.adm,
@@ -172,8 +172,27 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // --- WhatsApp share for analytics ---
+  $('shareAnalytics').onclick = () => {
+    if (!lastAnalyticsShare) { 
+      alert('No analytics to share. Please generate a report first.'); 
+      return; 
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  };
+
+  // --- Download Attendance Register ---
+  $('downloadRegister').onclick = async () => {
+    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 40, 40);
+    doc.autoTable({ startY: 60, html: '#registerTable' });
+    const blob = doc.output('blob');
+    doc.save('attendance_register.pdf');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+  };
+
   // --- Remaining application initialization & UI binding ---
-  // (Inputs, settingsCard, formDiv setup, data loads, other event handlers, etc.)
   const formDiv   = $('settingsForm');
   const inputs    = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct']
                     .map(id => $(id));
@@ -190,10 +209,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load persisted settings into form
   fineRates = await load('fineRates') || { A:0, Lt:0, L:0, HD:0 };
   eligibilityPct = await load('eligibilityPct') || 0;
-  $('fineAbsent').value  = fineRates.A;
-  $('fineLate').value    = fineRates.Lt;
-  $('fineLeave').value   = fineRates.L;
-  $('fineHalfDay').value = fineRates.HD;
+  $('fineAbsent').value    = fineRates.A;
+  $('fineLate').value      = fineRates.Lt;
+  $('fineLeave').value     = fineRates.L;
+  $('fineHalfDay').value   = fineRates.HD;
   $('eligibilityPct').value = eligibilityPct;
 
   // Show settings card if needed
@@ -201,5 +220,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     show(formDiv, $('saveSettings'), ...inputs);
     hide(settingsCard, editSettings);
   };
-  // etc...
+
+  // --- 12. Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
 });
