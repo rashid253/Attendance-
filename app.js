@@ -1,27 +1,46 @@
 // attendance-app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
+  console.debug('Attendance app initializing...');
+
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
+    console.debug(`Attempting to share PDF: ${fileName}`);
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
       try {
         await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
+        console.debug(`Shared PDF successfully: ${fileName}`);
       } catch (err) {
-        if (err.name !== 'AbortError') console.error('Share failed', err);
+        if (err.name !== 'AbortError') {
+          console.error('Share failed', err);
+        } else {
+          console.debug('Share aborted by user');
+        }
       }
+    } else {
+      console.debug('Web Share API not available or cannot share files');
     }
   }
 
   // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
+  erudaScript.onload = () => {
+    console.debug('Eruda loaded for in-page debugging');
+    eruda.init();
+  };
   document.body.appendChild(erudaScript);
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+  if (!window.idbKeyval) {
+    console.error('idb-keyval not found');
+    return;
+  }
   const { get, set } = window.idbKeyval;
-  const save = (k, v) => set(k, v);
+  const save = (k, v) => {
+    console.debug(`Saving to IndexedDB: ${k}`, v);
+    return set(k, v);
+  };
 
   // --- 2. State & Defaults ---
   let students       = await get('students')        || [];
@@ -39,7 +58,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   async function genAdmNo() {
     lastAdmNo++;
     await save('lastAdmissionNo', lastAdmNo);
-    return String(lastAdmNo).padStart(4, '0');
+    const adm = String(lastAdmNo).padStart(4, '0');
+    console.debug('Generated new admission no:', adm);
+    return adm;
   }
 
   // --- 3. DOM Helpers ---
@@ -49,8 +70,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- DOWNLOAD & SHARE HANDLERS ---
 
-  // Student Registration
+  // Student Registration Download
   $('downloadRegistrationPDF').onclick = async () => {
+    console.debug('downloadRegistrationPDF clicked');
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
@@ -59,10 +81,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.autoTable({ startY: 32, html: '#studentsTable' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
+    console.debug('Saved registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
   };
 
+  // Student Registration Share
   $('shareRegistration').onclick = () => {
+    console.debug('shareRegistration clicked');
     const cl = $('teacherClassSelect').value,
           sec = $('teacherSectionSelect').value;
     const header = `*Students List*\nClass ${cl} Section ${sec}`;
@@ -90,48 +115,51 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Analytics download & share
   $('downloadAnalytics').onclick = async () => {
+    console.debug('downloadAnalytics clicked; stats count =', lastAnalyticsStats.length);
     if (!lastAnalyticsStats.length) {
       alert('No analytics to download. Please generate a report first.');
       return;
     }
-    if (analyticsDownloadMode === 'combined') {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
-    } else {
-      for (const stat of lastAnalyticsStats) {
-        const doc = new jspdf.jsPDF();
-        doc.setFontSize(18);
-        doc.text(`Analytics: ${stat.name}`, 14, 16);
-        doc.setFontSize(12);
-        doc.text(`Adm#: ${stat.adm}`, 14, 24);
-        doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-        doc.autoTable({
-          startY: 40,
-          head: [['P','A','Lt','HD','L','Total','% Present','Outstanding','Status']],
-          body: [[
-            stat.P, stat.A, stat.Lt, stat.HD, stat.L,
-            stat.total,
-            stat.total ? ((stat.P/stat.total)*100).toFixed(1)+'%' : '0.0%',
-            `PKR ${stat.outstanding}`,
-            stat.status
-          ]]
-        });
-        const fileName = `analytics_${stat.adm}.pdf`;
-        const blob = doc.output('blob');
-        doc.save(fileName);
-        await sharePdf(blob, fileName, `Analytics: ${stat.name}`);
+
+    // Build a single multi-page PDF “book”
+    const doc = new jspdf.jsPDF();
+    const { from, to } = lastAnalyticsRange;
+    console.debug(`Building PDF book for period ${from} to ${to}`);
+
+    lastAnalyticsStats.forEach((stat, i) => {
+      console.debug(`Adding page for: ${stat.adm} - ${stat.name}`);
+      if (i > 0) {
+        doc.addPage();  // new page after the first
       }
-    }
+      // Header
+      doc.setFontSize(18);
+      doc.text(`Analytics Report: ${stat.name}`, 14, 16);
+      doc.setFontSize(12);
+      doc.text(`Adm#: ${stat.adm}`, 14, 24);
+      doc.text(`Period: ${from} to ${to}`, 14, 32);
+      // Table
+      doc.autoTable({
+        startY: 40,
+        head: [['P','A','Lt','HD','L','Total','% Present','Outstanding','Status']],
+        body: [[
+          stat.P, stat.A, stat.Lt, stat.HD, stat.L,
+          stat.total,
+          stat.total ? ((stat.P / stat.total) * 100).toFixed(1) + '%' : '0.0%',
+          `PKR ${stat.outstanding}`,
+          stat.status
+        ]],
+        styles: { fontSize: 10 }
+      });
+    });
+
+    const fileName = `analytics_book_${from.replace(/-/g,'')}_to_${to.replace(/-/g,'')}.pdf`;
+    console.debug('Saving PDF book as:', fileName);
+    doc.save(fileName);
+    await sharePdf(doc.output('blob'), fileName, 'Analytics Book');
   };
 
   $('shareAnalytics').onclick = () => {
+    console.debug('shareAnalytics clicked');
     if (!lastAnalyticsShare) {
       alert('No analytics to share. Please generate a report first.');
       return;
@@ -139,8 +167,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
-  // Attendance Register
+  // Attendance Register Download
   $('downloadRegister').onclick = async () => {
+    console.debug('downloadRegister clicked');
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 16);
@@ -149,10 +178,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
+    console.debug('Saved attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
 
   $('shareRegister').onclick = () => {
+    console.debug('shareRegister clicked');
     const header = `Attendance Register\n${$('setupText').textContent}`;
     const rows = Array.from($('registerBody').children).map(tr =>
       Array.from(tr.children)
@@ -183,6 +214,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('eligibilityPct').value = eligibilityPct;
 
   saveSettings.onclick = async () => {
+    console.debug('saveSettings clicked');
     fineRates = {
       A : Number($('fineAbsent').value)   || 0,
       Lt: Number($('fineLate').value)     || 0,
@@ -204,12 +236,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   editSettings.onclick = () => {
+    console.debug('editSettings clicked');
     hide(settingsCard, editSettings);
     show(formDiv, saveSettings, ...inputs);
   };
 
   // --- 5. SETUP: School, Class & Section ---
   async function loadSetup() {
+    console.debug('Loading setup...');
     const [sc,cl,sec] = await Promise.all([
       get('schoolName'),
       get('teacherClass'),
@@ -223,10 +257,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       hide($('setupForm'));
       show($('setupDisplay'));
       renderStudents(); updateCounters(); resetViews();
+      console.debug('Setup loaded:', { sc, cl, sec });
     }
   }
   $('saveSetup').onclick = async e => {
     e.preventDefault();
+    console.debug('saveSetup clicked');
     const sc = $('schoolNameInput').value.trim(),
           cl = $('teacherClassSelect').value,
           sec= $('teacherSectionSelect').value;
@@ -240,6 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   $('editSetup').onclick = e => {
     e.preventDefault();
+    console.debug('editSetup clicked');
     show($('setupForm'));
     hide($('setupDisplay'));
   };
@@ -284,6 +321,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl=$('teacherClassSelect').value,
           sec=$('teacherSectionSelect').value,
           tbody=$('studentsBody');
+    console.debug(`Rendering students for Class ${cl} Section ${sec}`);
     tbody.innerHTML = '';
     let idx = 0;
     students.forEach((s,i) => {
@@ -323,6 +361,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   $('addStudent').onclick = async e => {
     e.preventDefault();
+    console.debug('addStudent clicked');
     const n = $('studentName').value.trim(),
           p = $('parentName').value.trim(),
           c = $('parentContact').value.trim(),
@@ -340,6 +379,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       .forEach(id => $(id).value = '');
   };
   $('editSelected').onclick = () => {
+    console.debug('editSelected clicked');
     document.querySelectorAll('.sel:checked').forEach(cb => {
       const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
       tr.innerHTML = `
@@ -357,6 +397,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('editSelected')); show($('doneEditing'));
   };
   $('doneEditing').onclick = async () => {
+    console.debug('doneEditing clicked');
     document.querySelectorAll('#studentsBody tr').forEach(tr => {
       const inps = [...tr.querySelectorAll('input:not(.sel)')];
       if (inps.length === 5) {
@@ -371,6 +412,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters();
   };
   $('deleteSelected').onclick = async () => {
+    console.debug('deleteSelected clicked');
     if (!confirm('Delete?')) return;
     const toDel = [...document.querySelectorAll('.sel:checked')].map(cb => +cb.closest('tr').dataset.index);
     students = students.filter((_,i) => !toDel.includes(i));
@@ -378,6 +420,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters(); resetViews();
   };
   $('saveRegistration').onclick = async () => {
+    console.debug('saveRegistration clicked');
     if (!$('doneEditing').classList.contains('hidden')) { alert('Finish editing'); return; }
     await save('students', students);
     hide(
@@ -388,6 +431,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderStudents(); updateCounters();
   };
   $('editRegistration').onclick = () => {
+    console.debug('editRegistration clicked');
     show(
       document.querySelector('#student-registration .row-inline'),
       $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration')
@@ -398,12 +442,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 8. PAYMENT MODAL ---
   function openPaymentModal(adm) {
+    console.debug('openPaymentModal for adm', adm);
     $('payAdm').textContent = adm;
     $('paymentAmount').value = '';
     show($('paymentModal'));
   }
-  $('paymentModalClose').onclick = () => hide($('paymentModal'));
+  $('paymentModalClose').onclick = () => {
+    console.debug('paymentModalClose clicked');
+    hide($('paymentModal'));
+  };
   $('savePayment').onclick = async () => {
+    console.debug('savePayment clicked');
     const adm = $('payAdm').textContent,
           amt = Number($('paymentAmount').value) || 0;
     paymentsData[adm] = paymentsData[adm] || [];
@@ -412,7 +461,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('paymentModal'));
     renderStudents();
   };
-  $('cancelPayment').onclick = () => hide($('paymentModal'));
+  $('cancelPayment').onclick = () => {
+    console.debug('cancelPayment clicked');
+    hide($('paymentModal'));
+  };
 
   // --- 9. MARK ATTENDANCE ---
   const dateInput             = $('dateInput'),
@@ -427,6 +479,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
 
   loadAttendanceBtn.onclick = () => {
+    console.debug('loadAttendance clicked for date', dateInput.value);
     attendanceBodyDiv.innerHTML = '';
     attendanceSummaryDiv.innerHTML = '';
     const cl = $('teacherClassSelect').value,
@@ -456,6 +509,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   saveAttendanceBtn.onclick = async () => {
+    console.debug('saveAttendance clicked');
     const date = dateInput.value;
     if (!date) { alert('Please pick a date'); return; }
     attendanceData[date] = {};
@@ -495,11 +549,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   resetAttendanceBtn.onclick = () => {
+    console.debug('resetAttendance clicked');
     show(attendanceBodyDiv, saveAttendanceBtn);
     hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
   };
 
   downloadAttendanceBtn.onclick = async () => {
+    console.debug('downloadAttendancePDF clicked');
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Attendance Report', 14, 16);
@@ -509,10 +565,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob');
     doc.save(fileName);
+    console.debug(`Saved ${fileName}`);
     await sharePdf(blob, fileName, 'Attendance Report');
   };
 
   shareAttendanceBtn.onclick = () => {
+    console.debug('shareAttendanceSummary clicked');
     const cl = $('teacherClassSelect').value,
           sec= $('teacherSectionSelect').value,
           date = dateInput.value;
@@ -545,7 +603,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
   $('analyticsFilterClose').onclick= () => hide($('analyticsFilterModal'));
-  $('applyAnalyticsFilter').onclick= ()=>{
+  $('applyAnalyticsFilter').onclick= () => {
+    console.debug('applyAnalyticsFilter clicked');
     analyticsFilterOptions = Array.from(
       document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')
     ).map(cb=>cb.value) || ['all'];
@@ -577,6 +636,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   resetA.onclick = e => {
+    console.debug('resetAnalytics clicked');
     e.preventDefault();
     atype.value = '';
     [adate, amonth, sems, seme, ayear, instr, acont, graphs, aacts].forEach(x=>x.classList.add('hidden'));
@@ -584,6 +644,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   loadA.onclick = () => {
+    console.debug('loadAnalytics clicked');
     if (atg.value === 'student' && !asearch.value.trim()) {
       alert('Please enter an admission number or name');
       return;
@@ -636,6 +697,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   function renderAnalytics(stats, from, to) {
+    console.debug('Rendering analytics for', stats.length, 'records');
     let filtered = stats;
     if (!analyticsFilterOptions.includes('all')) {
       filtered = stats.filter(st=>analyticsFilterOptions.some(opt=>{
@@ -693,6 +755,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 11. ATTENDANCE REGISTER ---
   $('loadRegister').onclick = () => {
+    console.debug('loadRegister clicked');
     const m = $('registerMonth').value;
     if (!m) { alert('Pick month'); return; }
     const [y,mm] = m.split('-').map(Number),
@@ -707,8 +770,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       for (let d=1; d<=days; d++){
         const key = `${m}-${String(d).padStart(2,'0')}`;
         const c   = (attendanceData[key]||{})[s.adm]||'A';
-        const style = c==='A' ? '' : `style="background:var(--${c==='P'?'success':c==='Lt'?'warning':c==='HD'?'orange':c==='L'?'info':'danger'})`
-                              +`;color:#fff"`;
+        const style = c==='A' ? '' : `style="background:var(--${c==='P'?'success':c==='Lt'?'warning':c==='HD'?'orange':c==='L'?'info':'danger'})`+
+                                  `;color:#fff"`;
         row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
       }
       const tr = document.createElement('tr');
@@ -735,6 +798,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('saveRegister').onclick = async () => {
+    console.debug('saveRegister clicked');
     const m = $('registerMonth').value,
           [y,mm] = m.split('-').map(Number),
           days = new Date(y,mm,0).getDate();
@@ -753,6 +817,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('changeRegister').onclick = () => {
+    console.debug('changeRegister clicked');
     hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
     $('registerHeader').innerHTML = '';
     $('registerBody').innerHTML   = '';
@@ -760,6 +825,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   $('downloadRegister').onclick = async () => {
+    console.debug('downloadRegister clicked');
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 16);
@@ -768,10 +834,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
+    console.debug('Saved attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
   };
 
   $('shareRegister').onclick = () => {
+    console.debug('shareRegister clicked');
     const header = `Attendance Register\n${$('setupText').textContent}`;
     const rows = Array.from($('registerBody').children).map(tr =>
       Array.from(tr.children).map(td => td.querySelector('.status-text')?.textContent || td.textContent).join(' ')
@@ -781,7 +849,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.debug('Service worker registered'))
+      .catch(err => console.error('Service worker registration failed', err));
   }
 
+  console.debug('Attendance app initialized successfully');
 });
