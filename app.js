@@ -90,7 +90,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (analyticsDownloadMode === 'combined') {
-      // Combined single report
       const doc = new jspdf.jsPDF();
       doc.setFontSize(18);
       doc.text('Analytics Report', 14, 16);
@@ -101,7 +100,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       doc.save('analytics_report.pdf');
       await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
     } else {
-      // Individual reports merged into one PDF book
       const doc = new jspdf.jsPDF();
       lastAnalyticsStats.forEach((stat, i) => {
         if (i > 0) doc.addPage();
@@ -688,22 +686,46 @@ window.addEventListener('DOMContentLoaded', async () => {
     instr.textContent = `Period: ${from} to ${to}`;
     show(instr, acont, graphs, aacts);
 
+    // Multi-color stacked bar chart
     barChart?.destroy();
-    barChart = new Chart(barCtx,{
+    barChart = new Chart(barCtx, {
       type: 'bar',
       data: {
-        labels: filtered.map(st=>st.name),
-        datasets: [{ label: '% Present', data: filtered.map(st=>st.total ? (st.P/st.total)*100 : 0) }]
+        labels: filtered.map(st => st.name),
+        datasets: Object.keys(statusColors).map(code => ({
+          label: statusNames[code],
+          data: filtered.map(st => st.total ? (st[code]/st.total)*100 : 0),
+          backgroundColor: statusColors[code],
+        }))
       },
-      options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '% of Days' } },
+          x: { stacked: true }
+        },
+        plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } },
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+      }
     });
 
+    // Multi-color pie chart
     pieChart?.destroy();
-    pieChart = new Chart(pieCtx,{
+    const totals = Object.keys(statusColors).map(code =>
+      filtered.reduce((sum, st) => sum + st[code], 0)
+    );
+    pieChart = new Chart(pieCtx, {
       type: 'pie',
       data: {
-        labels: ['Outstanding'],
-        datasets: [{ data: [filtered.reduce((a,st)=>a+st.outstanding,0)] }]
+        labels: Object.keys(statusNames).map(c => statusNames[c]),
+        datasets: [{
+          data: totals,
+          backgroundColor: Object.keys(statusColors).map(c => statusColors[c])
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'right' } },
+        responsive: true
       }
     });
 
