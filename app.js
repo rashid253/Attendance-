@@ -430,7 +430,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Simplified “All” vs. individual filter logic
   const filterForm    = $('analyticsFilterForm');
   const allCb         = filterForm.querySelector('input[value="all"]');
-  const individualCbs = Array.from(filterForm.querySelectorAll('input[type="checkbox"]')).filter(cb => cb.value !== 'all');
+  // FIX: include radio inputs as well as checkboxes so "Individual" (radio) is recognized
+  const individualCbs = Array.from(filterForm.querySelectorAll('input[type="checkbox"], input[type="radio"]')).filter(cb => cb.value !== 'all');
   allCb.addEventListener('change', () => individualCbs.forEach(cb => cb.checked = allCb.checked));
   individualCbs.forEach(cb => cb.addEventListener('change', () => {
     if (cb.checked) allCb.checked = false;
