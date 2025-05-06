@@ -41,14 +41,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
-  // --- DOWNLOAD & SHARE BUTTONS ---
+  // --- DOWNLOAD & SHARE BUTTONS with PDF table width fixes ---
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
     doc.setFontSize(12);
     doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable', tableWidth: 'auto' });
+    doc.autoTable({ startY: 32, html: '#studentsTable', tableWidth: 'auto', styles: { cellWidth: 'wrap' }, margin: { left:14, right:14 } });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
@@ -59,20 +59,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text('Analytics Report', 14, 16);
     doc.setFontSize(12);
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-    // add tableWidth to prevent “could not fit” error
     doc.autoTable({
       startY: 32,
       html: '#analyticsTable',
       tableWidth: 'auto',
-      styles: { fontSize: 10, cellWidth: 'auto' }
+      styles: { fontSize: 8, cellWidth: 'wrap' },
+      margin: { left: 14, right: 14 }
     });
     const blob = doc.output('blob');
     doc.save('analytics_report.pdf');
     await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
-  };
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Generate a report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
   $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -80,10 +76,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text('Attendance Register', 14, 16);
     doc.setFontSize(12);
     doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
+    doc.autoTable({
+      startY: 32,
+      html: '#registerTable',
+      tableWidth: 'auto',
+      styles: { fontSize: 6, cellWidth: 'wrap' },
+      margin: { left: 10, right: 10 }
+    });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+  };
+  $('shareAnalytics').onclick = () => {
+    if (!lastAnalyticsShare) { alert('No analytics to share. Generate a report first.'); return; }
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
   // --- SETTINGS: Fines & Eligibility ---
@@ -224,11 +230,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     $('editSelected').disabled = !any;
     $('deleteSelected').disabled = !any;
   }
-  const sb = $('studentsBody');
-  if (sb) sb.addEventListener('change', e => { if (e.target.classList.contains('sel')) toggleButtons(); });
-  const sal = $('selectAllStudents');
-  if (sal) sal.onclick = () => {
-    document.querySelectorAll('.sel').forEach(c => c.checked = sal.checked);
+  $('studentsBody').addEventListener('change', e => { if (e.target.classList.contains('sel')) toggleButtons(); });
+  $('selectAllStudents').onclick = () => {
+    document.querySelectorAll('.sel').forEach(c => c.checked = $('selectAllStudents').checked);
     toggleButtons();
   };
   $('addStudent').onclick = async e => {
@@ -401,7 +405,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
     doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table', tableWidth: 'auto' });
+    doc.autoTable({ startY: 32, html: '#attendanceSummary table', tableWidth: 'auto', styles:{ cellWidth: 'wrap' }, margin:{ left:14,right:14 } });
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob');
     doc.save(fileName);
@@ -434,44 +438,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         barCtx   = $('barChart').getContext('2d'),
         pieCtx   = $('pieChart').getContext('2d');
   let barChart, pieChart;
-
-  // guard filter form so missing ID won't break everything
-  const filterForm = document.getElementById('analyticsFilterForm');
-  if (filterForm) {
-    const allRadio         = filterForm.querySelector('input[type="radio"][value="all"]');
-    const individualRadio  = filterForm.querySelector('input[type="radio"][value="individual"]');
-    const filterCheckboxes = Array.from(filterForm.querySelectorAll('input[type="checkbox"]'));
-
-    allRadio.addEventListener('change', () => {
-      if (allRadio.checked) {
-        filterCheckboxes.forEach(cb => cb.checked = false);
-      }
-    });
-    filterCheckboxes.forEach(cb => cb.addEventListener('change', () => {
-      if (cb.checked) {
-        allRadio.checked = false;
-        individualRadio.checked = true;
-      }
-      if (!filterCheckboxes.some(c => c.checked)) {
-        allRadio.checked = true;
-      }
-    }));
-
-    $('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
-    $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
-    $('applyAnalyticsFilter').onclick = () => {
-      if (allRadio.checked) {
-        analyticsFilterOptions = ['all'];
-      } else {
-        analyticsFilterOptions = filterCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
-        if (analyticsFilterOptions.length === 0) analyticsFilterOptions = ['all'];
-      }
-      hide($('analyticsFilterModal'));
-      if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
-    };
-  } else {
-    console.warn('analyticsFilterForm not found—filter UI won’t break functionality.');
-  }
 
   atg.onchange = () => {
     atype.disabled = false;
@@ -573,8 +539,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>`;
       tbody.appendChild(tr);
     });
-    instr.textContent = `Period: ${from} to ${to}`;
-    show(instr, acont, graphs, aacts);
+    $('instructions').textContent = `Period: ${from} to ${to}`;
+    show($('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'));
 
     barChart?.destroy();
     barChart = new Chart(barCtx,{
@@ -592,7 +558,29 @@ window.addEventListener('DOMContentLoaded', async () => {
       filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${((st.P/st.total)*100).toFixed(1)}% / PKR ${st.outstanding}`).join('\n');
   }
 
-  // --- ATTENDANCE REGISTER ---
+  // --- Analytics Filter UI fix: disable/enable checkboxes ---
+  const filterForm = document.getElementById('analyticsFilterForm');
+  if (filterForm) {
+    const allRadio        = filterForm.querySelector('input[type="radio"][value="all"]');
+    const individualRadio = filterForm.querySelector('input[type="radio"][value="individual"]');
+    const filterCheckboxes = Array.from(filterForm.querySelectorAll('input[type="checkbox"]'));
+
+    function updateFilterState() {
+      const isAll = allRadio.checked;
+      filterCheckboxes.forEach(cb => cb.disabled = isAll);
+    }
+    allRadio.addEventListener('change', () => {
+      if (allRadio.checked) filterCheckboxes.forEach(cb => cb.checked = false);
+      updateFilterState();
+    });
+    individualRadio.addEventListener('change', updateFilterState);
+    filterCheckboxes.forEach(cb => cb.addEventListener('change', () => {
+      if (cb.checked) individualRadio.checked = true;
+      updateFilterState();
+    }));
+  }
+
+  // --- ATTENDANCE REGISTER UI ---
   const loadReg   = $('loadRegister'),
         changeReg = $('changeRegister'),
         saveReg   = $('saveRegister'),
@@ -665,7 +653,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
     doc.setFontSize(18); doc.text('Attendance Register',14,16);
     doc.setFontSize(12); doc.text($('setupText').textContent,14,24);
-    doc.autoTable({ startY:32, html:'#registerTable', tableWidth:'auto', styles:{fontSize:10} });
+    doc.autoTable({ startY:32, html:'#registerTable', tableWidth:'auto', styles:{fontSize:6, cellWidth:'wrap'}, margin:{left:10,right:10} });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
     await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
