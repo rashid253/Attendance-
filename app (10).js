@@ -44,121 +44,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
-  // --- DOWNLOAD & SHARE HANDLERS ---
-
-  // Student Registration PDF
-  $('downloadRegistrationPDF').onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18);
-    doc.text('Student List', 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable' });
-    const blob = doc.output('blob');
-    doc.save('registration.pdf');
-    await sharePdf(blob, 'registration.pdf', 'Student List');
+  // --- 3.a Fetch CSS variables for Chart.js colors ---
+  const rootStyles = getComputedStyle(document.documentElement);
+  const statusColors = {
+    P : rootStyles.getPropertyValue('--success').trim(),
+    A : rootStyles.getPropertyValue('--danger').trim(),
+    Lt: rootStyles.getPropertyValue('--warning').trim(),
+    HD: rootStyles.getPropertyValue('--info').trim(),
+    L : rootStyles.getPropertyValue('--primary').trim()
   };
-
-  // Share Registration via WhatsApp
-  $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const header = `*Students List*\nClass ${cl} Section ${sec}`;
-    const lines = students
-      .filter(s => s.cls === cl && s.sec === sec)
-      .map(s => {
-        const totalFine = Object.entries(attendanceData).reduce((sum,[d,r]) =>
-          sum + (r[s.adm]==='A'?fineRates.A:0)
-              + (r[s.adm]==='Lt'?fineRates.Lt:0)
-              + (r[s.adm]==='L'?fineRates.L:0)
-              + (r[s.adm]==='HD'?fineRates.HD:0)
-        , 0);
-        const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
-        const out = totalFine - paid;
-        const totalDays = Object.keys(attendanceData).length;
-        const pres = Object.values(attendanceData).filter(r=>r[s.adm]==='P').length;
-        const pct = totalDays ? (pres/totalDays)*100 : 0;
-        const st = (out>0||pct<eligibilityPct)?'Debarred':'Eligible';
-        return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${out}\nStatus: ${st}`;
-      }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines)}`, '_blank');
-  };
-
-  // Analytics download & share
-  $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) {
-      alert('No analytics to download. Please generate a report first.');
-      return;
-    }
-    if (analyticsDownloadMode === 'combined') {
-      // Combined single report
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
-    } else {
-      // Individual reports merged into one PDF book
-      const doc = new jspdf.jsPDF();
-      lastAnalyticsStats.forEach((stat, i) => {
-        if (i > 0) doc.addPage();
-        doc.setFontSize(18);
-        doc.text(`Analytics: ${stat.name} (Adm#: ${stat.adm})`, 14, 16);
-        doc.setFontSize(12);
-        doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-        doc.autoTable({
-          startY: 32,
-          head: [['P','A','Lt','HD','L','Total','% Present','Outstanding','Status']],
-          body: [[
-            stat.P,
-            stat.A,
-            stat.Lt,
-            stat.HD,
-            stat.L,
-            stat.total,
-            stat.total ? ((stat.P/stat.total)*100).toFixed(1) + '%' : '0.0%',
-            `PKR ${stat.outstanding}`,
-            stat.status
-          ]]
-        });
-      });
-      const fileName = `analytics_reports_${lastAnalyticsRange.from}_to_${lastAnalyticsRange.to}.pdf`;
-      const blob = doc.output('blob');
-      doc.save(fileName);
-      await sharePdf(blob, fileName, 'Analytics Reports');
-    }
-  };
-
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Please generate a report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
-  };
-
-  // Attendance Register PDF
-  $('downloadRegister').onclick = async () => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(18);
-    doc.text('Attendance Register', 14, 16);
-    doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-    const blob = doc.output('blob');
-    doc.save('attendance_register.pdf');
-    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-  };
-
-  $('shareRegister').onclick = () => {
-    const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from($('registerBody').children)
-      .map(tr => Array.from(tr.children)
-        .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
-        .join(' ')
-      );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows.join('\n'))}`, '_blank');
-  };
+  const statusNames = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' };
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm');
@@ -289,7 +184,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 7. STUDENT REGISTRATION & FINE/STATUS ---
   function renderStudents() {
-    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value, tbody=$('studentsBody');
+    const cl = $('teacherClassSelect').value,
+          sec = $('teacherSectionSelect').value,
+          tbody = $('studentsBody');
     tbody.innerHTML = '';
     let idx = 0;
     students.forEach((s,i) => {
@@ -331,7 +228,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     toggleButtons();
   };
 
-  // Add Student
   $('addStudent').onclick = async e => {
     e.preventDefault();
     const n = $('studentName').value.trim(),
@@ -350,7 +246,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id => $(id).value = '');
   };
 
-  // Edit, Delete, Save Registration
   $('editSelected').onclick = () => {
     document.querySelectorAll('.sel:checked').forEach(cb => {
       const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
@@ -399,8 +294,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await save('students', students);
     hide(
       document.querySelector('#student-registration .row-inline'),
-      $('editSelected'), $('deleteSelected'),
-      $('selectAllStudents'), $('saveRegistration')
+      $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration')
     );
     show($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
     renderStudents(); updateCounters();
@@ -439,9 +333,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         downloadAttendanceBtn = $('downloadAttendancePDF'),
         shareAttendanceBtn    = $('shareAttendanceSummary'),
         attendanceBodyDiv     = $('attendanceBody'),
-        attendanceSummaryDiv  = $('attendanceSummary'),
-        statusNames           = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' },
-        statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+        attendanceSummaryDiv  = $('attendanceSummary');
 
   loadAttendanceBtn.onclick = () => {
     attendanceBodyDiv.innerHTML = '';
@@ -688,23 +580,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     instr.textContent = `Period: ${from} to ${to}`;
     show(instr, acont, graphs, aacts);
 
+    // Multi-color stacked bar chart
     barChart?.destroy();
-    barChart = new Chart(barCtx,{
+    barChart = new Chart(barCtx, {
       type: 'bar',
       data: {
-        labels: filtered.map(st=>st.name),
-        datasets: [{ label: '% Present', data: filtered.map(st=>st.total ? (st.P/st.total)*100 : 0) }]
+        labels: filtered.map(st => st.name),
+        datasets: Object.keys(statusColors).map(code => ({
+          label: statusNames[code],
+          data: filtered.map(st => st.total ? (st[code]/st.total)*100 : 0),
+          backgroundColor: statusColors[code],
+        }))
       },
-      options: { scales:{ y:{ beginAtZero:true, max:100 } } }
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 100, title: { display: true, text: '% of Days' } },
+          x: { stacked: true }
+        },
+        plugins: { tooltip: { mode: 'index', intersect: false }, legend: { position: 'bottom' } },
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+      }
     });
 
+    // Multi-color pie chart
     pieChart?.destroy();
-    pieChart = new Chart(pieCtx,{
+    const totals = Object.keys(statusColors).map(code =>
+      filtered.reduce((sum, st) => sum + st[code], 0)
+    );
+    pieChart = new Chart(pieCtx, {
       type: 'pie',
       data: {
-        labels: ['Outstanding'],
-        datasets: [{ data: [filtered.reduce((a,st)=>a+st.outstanding,0)] }]
-      }
+        labels: Object.keys(statusNames).map(c => statusNames[c]),
+        datasets: [{
+          data: totals,
+          backgroundColor: Object.keys(statusColors).map(c => statusColors[c])
+        }]
+      },
+      options: { plugins: { legend: { position: 'right' } }, responsive: true }
     });
 
     lastAnalyticsShare = `Analytics (${from} to ${to})\n` +
@@ -725,7 +638,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       for (let d=1; d<=days; d++){
         const key = `${m}-${String(d).padStart(2,'0')}`;
         const c   = (attendanceData[key]||{})[s.adm]||'A';
-        const style = c==='A' ? '' : `style="background:${c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'orange':c==='L'?'var(--info)':'var(--danger)'};color:#fff"`;
+        const style = c==='A' ? '' : `style="background:${c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)'};color:#fff"`;
         row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
       }
       const tr = document.createElement('tr');
@@ -738,9 +651,8 @@ window.addEventListener('DOMContentLoaded', async () => {
               idx  = (['A','P','Lt','HD','L'].indexOf(span.textContent) + 1) % 5,
               c    = ['A','P','Lt','HD','L'][idx];
         span.textContent = c;
-        if (c==='A') {
-          cell.style.background=''; cell.style.color='';
-        } else {
+        if (c==='A') { cell.style.background=''; cell.style.color=''; }
+        else {
           const color = c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)';
           cell.style.background = color; cell.style.color = '#fff';
         }
