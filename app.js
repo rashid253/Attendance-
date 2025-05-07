@@ -45,12 +45,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
   // --- DOWNLOAD & SHARE HANDLERS ---
+
+  // Student List PDF
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
+    const today = new Date().toISOString().split('T')[0];
+    doc.text(`${$('setupText').textContent} | Date: ${today}`, 14, 24);
     doc.autoTable({ startY: 32, html: '#studentsTable' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
@@ -74,65 +77,51 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
   };
 
-  $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) {
-      alert('No analytics to download. Please generate a report first.');
+  // Attendance Summary PDF
+  const dateInput             = $('dateInput'),
+        loadAttendanceBtn     = $('loadAttendance'),
+        saveAttendanceBtn     = $('saveAttendance'),
+        resetAttendanceBtn    = $('resetAttendance'),
+        downloadAttendanceBtn = $('downloadAttendancePDF'),
+        shareAttendanceBtn    = $('shareAttendanceSummary'),
+        attendanceBodyDiv     = $('attendanceBody'),
+        attendanceSummaryDiv  = $('attendanceSummary'),
+        statusNames           = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' },
+        statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+
+  downloadAttendanceBtn.onclick = async () => {
+    if (!attendanceSummaryDiv.innerHTML.trim()) {
+      alert('No attendance to download. Please generate a report first.');
       return;
     }
-
-    if (analyticsDownloadMode === 'combined') {
-      // Combined single-report PDF
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
-    } else {
-      // Individual per-student booklet PDF
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Individual Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-
-      lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage();
-        doc.setFontSize(14);
-        doc.text(`Name: ${st.name}`, 14, 40);
-        doc.text(`Adm#: ${st.adm}`, 14, 60);
-        doc.text(`Present: ${st.P}`, 14, 80);
-        doc.text(`Absent: ${st.A}`, 14, 100);
-        doc.text(`Late: ${st.Lt}`, 14, 120);
-        doc.text(`Half-Day: ${st.HD}`, 14, 140);
-        doc.text(`Leave: ${st.L}`, 14, 160);
-        doc.text(`Total: ${st.total}`, 14, 180);
-        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-        doc.text(`% Present: ${pct}%`, 14, 200);
-        doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
-        doc.text(`Status: ${st.status}`, 14, 240);
-      });
-
-      const blob = doc.output('blob');
-      doc.save('individual_analytics_book.pdf');
-      await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Analytics');
-    }
+    const doc = new jspdf.jsPDF();
+    doc.setFontSize(18); 
+    doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text(`${$('setupText').textContent} | Date: ${dateInput.value}`, 14, 24);
+    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
+    const fileName = `attendance_${dateInput.value}.pdf`;
+    const blob = doc.output('blob');
+    doc.save(fileName);
+    await sharePdf(blob, fileName, 'Attendance Report');
   };
 
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Please generate a report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  shareAttendanceBtn.onclick = () => {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, date = dateInput.value;
+    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
+    const lines = students.filter(s=>s.cls===cl&&s.sec===sec)
+      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
   };
 
+  // Attendance Register PDF
   $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 20);
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 36);
+    const todayReg = new Date().toISOString().split('T')[0];
+    doc.text(`${$('setupText').textContent} | Date: ${todayReg}`, 14, 36);
     doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
@@ -386,17 +375,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('cancelPayment').onclick = () => hide($('paymentModal'));
 
   // --- 9. MARK ATTENDANCE ---
-  const dateInput             = $('dateInput'),
-        loadAttendanceBtn     = $('loadAttendance'),
-        saveAttendanceBtn     = $('saveAttendance'),
-        resetAttendanceBtn    = $('resetAttendance'),
-        downloadAttendanceBtn = $('downloadAttendancePDF'),
-        shareAttendanceBtn    = $('shareAttendanceSummary'),
-        attendanceBodyDiv     = $('attendanceBody'),
-        attendanceSummaryDiv  = $('attendanceSummary'),
-        statusNames           = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' },
-        statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
-
   loadAttendanceBtn.onclick = () => {
     attendanceBodyDiv.innerHTML = ''; attendanceSummaryDiv.innerHTML = '';
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
@@ -455,25 +433,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   resetAttendanceBtn.onclick = () => {
     show(attendanceBodyDiv, saveAttendanceBtn);
     hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-  };
-
-  downloadAttendanceBtn.onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
-    const fileName = `attendance_${dateInput.value}.pdf`;
-    const blob = doc.output('blob');
-    doc.save(fileName);
-    await sharePdf(blob, fileName, 'Attendance Report');
-  };
-
-  shareAttendanceBtn.onclick = () => {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, date = dateInput.value;
-    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
-    const lines = students.filter(s=>s.cls===cl&&s.sec===sec)
-      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
   };
 
   // --- 10. ANALYTICS ---
@@ -723,23 +682,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('changeRegister').onclick = () => {
     hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
     $('registerHeader').innerHTML = ''; $('registerBody').innerHTML = ''; show($('loadRegister'));
-  };
-
-  $('downloadRegister').onclick = async () => {
-    const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-    doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
-    doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-    const blob = doc.output('blob'); doc.save('attendance_register.pdf');
-    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-  };
-
-  $('shareRegister').onclick = () => {
-    const header = `Attendance Register\n${$('setupText').textContent}`;
-    const rows = Array.from($('registerBody').children).map(tr =>
-      Array.from(tr.children).map(td => td.querySelector('.status-text')?.textContent || td.textContent).join(' ')
-    );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
   };
 
   // --- 12. Service Worker ---
