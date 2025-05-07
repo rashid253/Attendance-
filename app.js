@@ -44,158 +44,222 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
-  // --- DOWNLOAD & SHARE HANDLERS ---
+  // --- 4. SETTINGS: Fines & Eligibility ---
+  const formDiv      = $('financialForm'),
+        saveSettings = $('saveSettings'),
+        inputs       = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct'].map(id => $(id)),
+        settingsCard = document.createElement('div'),
+        editSettings = document.createElement('button');
+  settingsCard.id = 'settingsCard'; settingsCard.className = 'card hidden';
+  editSettings.id = 'editSettings'; editSettings.className = 'btn no-print hidden'; editSettings.textContent = 'Edit Settings';
+  formDiv.parentNode.appendChild(settingsCard); formDiv.parentNode.appendChild(editSettings);
+
+  $('fineAbsent').value     = fineRates.A;
+  $('fineLate').value       = fineRates.Lt;
+  $('fineLeave').value      = fineRates.L;
+  $('fineHalfDay').value    = fineRates.HD;
+  $('eligibilityPct').value = eligibilityPct;
+
+  saveSettings.onclick = async () => {
+    fineRates = { A:Number($('fineAbsent').value)||0, Lt:Number($('fineLate').value)||0, L:Number($('fineLeave').value)||0, HD:Number($('fineHalfDay').value)||0 };
+    eligibilityPct = Number($('eligibilityPct').value)||0;
+    await Promise.all([ save('fineRates', fineRates), save('eligibilityPct', eligibilityPct) ]);
+    settingsCard.innerHTML = `
+      <div class="card-content">
+        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
+        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
+        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
+        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
+        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+      </div>`;
+    hide(formDiv, saveSettings, ...inputs);
+    show(settingsCard, editSettings);
+  };
+
+  editSettings.onclick = () => {
+    hide(settingsCard, editSettings);
+    show(formDiv, saveSettings, ...inputs);
+  };
+
+  // --- 5. SETUP: School, Class & Section ---
+  async function loadSetup() {
+    const [sc,cl,sec] = await Promise.all([ get('schoolName'), get('teacherClass'), get('teacherSection') ]);
+    if (sc && cl && sec) {
+      $('schoolNameInput').value      = sc;
+      $('teacherClassSelect').value   = cl;
+      $('teacherSectionSelect').value = sec;
+      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
+      hide($('setupForm')); show($('setupDisplay'));
+      renderStudents(); updateCounters(); resetViews();
+    }
+  }
+  $('saveSetup').onclick = async e => {
+    e.preventDefault();
+    const sc = $('schoolNameInput').value.trim(), cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
+    await Promise.all([ save('schoolName', sc), save('teacherClass', cl), save('teacherSection', sec) ]);
+    await loadSetup();
+  };
+  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
+  await loadSetup();
+
+  // --- 6. COUNTERS & UTILS ---
+  function animateCounters() {
+    document.querySelectorAll('.number').forEach(span => {
+      const target = +span.dataset.target; let count = 0; const step = Math.max(1, target/100);
+      (function upd() { count+=step; span.textContent = count<target?Math.ceil(count):target; if(count<target) requestAnimationFrame(upd); })();
+    });
+  }
+  function updateCounters() {
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
+    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
+    $('schoolCount').dataset.target  = students.length;
+    animateCounters();
+  }
+  function resetViews() {
+    hide($('attendanceBody'),$('saveAttendance'),$('resetAttendance'),
+         $('attendanceSummary'),$('downloadAttendancePDF'),$('shareAttendanceSummary'),
+         $('instructions'),$('analyticsContainer'),$('graphs'),$('analyticsActions'),
+         $('registerTableWrapper'),$('changeRegister'),
+         $('saveRegister'),$('downloadRegister'),$('shareRegister'));
+    show($('loadRegister'));
+  }
+  $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+  $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+
+  // --- 7. STUDENT REGISTRATION & FINE/STATUS ---
+  function renderStudents() {
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value, tbody=$('studentsBody');
+    tbody.innerHTML=''; let idx=0;
+    students.forEach(s=>{
+      if(s.cls!==cl||s.sec!==sec) return;
+      idx++;
+      const stats={P:0,A:0,Lt:0,HD:0,L:0};
+      Object.values(attendanceData).forEach(rec=>{ if(rec[s.adm]) stats[rec[s.adm]]++; });
+      const total=stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+      const fine=stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paid=(paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0), out=fine-paid;
+      const pct= total? (stats.P/total)*100:0, status=(out>0||pct<eligibilityPct)?'Debarred':'Eligible';
+      const row=`<tr data-index="${idx-1}">
+        <td>${idx}</td><td>${s.adm}</td><td>${s.name}</td><td>PKR ${out}</td><td>${status}</td>
+        <td><button onclick="openPaymentModal('${s.adm}')">Pay</button></td>
+      </tr>`;
+      tbody.insertAdjacentHTML('beforeend',row);
+    });
+  }
+
+  // --- 8. PAYMENT MODAL ---
+  function openPaymentModal(adm) {
+    $('payAdm').textContent = adm; $('paymentAmount').value=''; show($('paymentModal'));
+  }
+  $('paymentModalClose').onclick = () => hide($('paymentModal'));
+  $('savePayment').onclick = async () => {
+    const adm=$('payAdm').textContent, amt=Number($('paymentAmount').value)||0;
+    paymentsData[adm]=paymentsData[adm]||[]; paymentsData[adm].push({ date:new Date().toISOString().split('T')[0], amount:amt });
+    await save('paymentsData', paymentsData); hide($('paymentModal')); renderStudents();
+  };
+  $('cancelPayment').onclick = () => hide($('paymentModal'));
+
+  // --- DOWNLOAD & SHARE: Registration PDF ---
   $('downloadRegistrationPDF').onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18);
-    doc.text('Student List', 14, 16);
-    // add current date at top right
-    const today = new Date().toISOString().split('T')[0];
-    const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFontSize(12);
-    doc.text(today, pageWidth - 14, 16, { align: 'right' });
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable' });
-    const blob = doc.output('blob');
-    doc.save('registration.pdf');
-    await sharePdf(blob, 'registration.pdf', 'Student List');
+    const doc=new jspdf.jsPDF();
+    doc.setFontSize(18).text('Student List',14,16);
+    const today=new Date().toISOString().split('T')[0], w=doc.internal.pageSize.getWidth();
+    doc.setFontSize(12).text(today, w-14,16,{align:'right'});
+    doc.text($('setupText').textContent,14,24);
+    doc.autoTable({startY:32,html:'#studentsTable'});
+    const blob=doc.output('blob'); doc.save('registration.pdf'); await sharePdf(blob,'registration.pdf','Student List');
   };
-
   $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const header = `*Students List*\nClass ${cl} Section ${sec}`;
-    const lines = students.filter(s => s.cls === cl && s.sec === sec).map(s => {
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
-      const totalMarked = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-      const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
-      const outstanding = totalFine - paid;
-      const pct = totalMarked ? (stats.P/totalMarked)*100 : 0;
-      const status = (outstanding>0||pct<eligibilityPct) ? 'Debarred' : 'Eligible';
-      return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${outstanding}\nStatus: ${status}`;
-    }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
+    const cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    const header=`*Students List*\nClass ${cl} Section ${sec}`;
+    const lines=students.filter(s=>s.cls===cl&&s.sec===sec).map(s=>`*${s.name}* - Adm#: ${s.adm}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines.join('\n'))}`,'_blank');
   };
 
-  $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) { alert('No analytics to download. Please generate a report first.'); return; }
-    if (analyticsDownloadMode === 'combined') {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Analytics Report');
-    } else {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Individual Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage();
-        doc.setFontSize(14);
-        doc.text(`Name: ${st.name}`, 14, 40);
-        doc.text(`Adm#: ${st.adm}`, 14, 60);
-        doc.text(`Present: ${st.P}`, 14, 80);
-        doc.text(`Absent: ${st.A}`, 14, 100);
-        doc.text(`Late: ${st.Lt}`, 14, 120);
-        doc.text(`Half-Day: ${st.HD}`, 14, 140);
-        doc.text(`Leave: ${st.L}`, 14, 160);
-        doc.text(`Total: ${st.total}`, 14, 180);
-        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-        doc.text(`% Present: ${pct}%`, 14, 200);
-        doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
-        doc.text(`Status: ${st.status}`, 14, 240);
+  // --- 9. ATTENDANCE: Load/Save/Download/Share ---
+  const dateInput=$('dateInput'), loadAttendanceBtn=$('loadAttendance'), saveAttendanceBtn=$('saveAttendance'),
+        downloadAttendanceBtn=$('downloadAttendancePDF'), shareAttendanceBtn=$('shareAttendanceSummary'),
+        attendanceBodyDiv=$('attendanceBody'), attendanceSummaryDiv=$('attendanceSummary'),
+        statusNames={P:'Present',A:'Absent',Lt:'Late',HD:'Half-Day',L:'Leave'},
+        statusColors={P:'var(--success)',A:'var(--danger)',Lt:'var(--warning)',HD:'#FF9800',L:'var(--info)'};
+
+  loadAttendanceBtn.onclick=()=>{
+    attendanceBodyDiv.innerHTML=''; attendanceSummaryDiv.innerHTML='';
+    students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value)
+      .forEach(stu=>{
+        const row=document.createElement('div'), nameDiv=document.createElement('div'), btnsDiv=document.createElement('div');
+        row.className='attendance-row'; nameDiv.className='attendance-name'; nameDiv.textContent=stu.name;
+        btnsDiv.className='attendance-buttons';
+        Object.keys(statusNames).forEach(code=>{
+          const btn=document.createElement('button'); btn.className='att-btn'; btn.textContent=code;
+          btn.onclick=()=>{ btnsDiv.querySelectorAll('.att-btn').forEach(b=>{b.classList.remove('selected');b.style='';});
+                           btn.classList.add('selected'); btn.style.background=statusColors[code]; btn.style.color='#fff'; };
+          btnsDiv.appendChild(btn);
+        });
+        row.append(nameDiv,btnsDiv); attendanceBodyDiv.appendChild(row);
       });
-      const blob = doc.output('blob');
-      doc.save('individual_analytics_book.pdf');
-      await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Analytics');
-    }
+    show(attendanceBodyDiv, saveAttendanceBtn);
+    hide(downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
   };
 
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Please generate a report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  saveAttendanceBtn.onclick=async()=>{
+    const dt=dateInput.value; if(!dt){alert('Pick a date');return;}
+    attendanceData[dt]={};
+    students.filter(s=>s.cls===$('teacherClassSelect').value&&s.sec===$('teacherSectionSelect').value)
+      .forEach((s,i)=>{
+        const sel=attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
+        attendanceData[dt][s.adm]=sel?sel.textContent:'A';
+      });
+    await save('attendanceData',attendanceData);
+    attendanceSummaryDiv.innerHTML=`<h3>Attendance Report: ${dt}</h3>`;
+    show(attendanceSummaryDiv, downloadAttendanceBtn, shareAttendanceBtn);
   };
 
-  // --- 9. MARK ATTENDANCE ---
-  const dateInput             = $('dateInput'),
-        loadAttendanceBtn     = $('loadAttendance'),
-        saveAttendanceBtn     = $('saveAttendance'),
-        resetAttendanceBtn    = $('resetAttendance'),
-        downloadAttendanceBtn = $('downloadAttendancePDF'),
-        shareAttendanceBtn    = $('shareAttendanceSummary'),
-        attendanceBodyDiv     = $('attendanceBody'),
-        attendanceSummaryDiv  = $('attendanceSummary'),
-        statusNames           = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' },
-        statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
-
-  // ... load and save attendance logic unchanged ...
-
-  downloadAttendanceBtn.onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
-    // add date at top right
-    const pageW = doc.internal.pageSize.getWidth();
-    const attDate = dateInput.value;
-    doc.setFontSize(12);
-    doc.text(attDate, pageW - 14, 16, { align: 'right' });
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
-    const fileName = `attendance_${dateInput.value}.pdf`;
-    const blob = doc.output('blob');
-    doc.save(fileName);
-    await sharePdf(blob, fileName, 'Attendance Report');
+  downloadAttendanceBtn.onclick=async()=>{
+    const doc=new jspdf.jsPDF();
+    doc.setFontSize(18).text('Attendance Report',14,16);
+    const w=doc.internal.pageSize.getWidth(), dt=dateInput.value;
+    doc.setFontSize(12).text(dt, w-14,16,{align:'right'});
+    doc.text($('setupText').textContent,14,24);
+    doc.autoTable({startY:32,html:'#attendanceSummary table'});
+    const blob=doc.output('blob'), fn=`attendance_${dt}.pdf`;
+    doc.save(fn); await sharePdf(blob,fn,'Attendance Report');
   };
 
-  // --- 11. ATTENDANCE REGISTER (with working Download & Share buttons) ---
+  shareAttendanceBtn.onclick=()=>{
+    const dt=dateInput.value, cl=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
+    const header=`*Attendance Report*\nClass ${cl} Section ${sec} - ${dt}`;
+    const lines=students.filter(s=>s.cls===cl&&s.sec===sec)
+      .map(s=>`*${s.name}*: ${statusNames[attendanceData[dt][s.adm]]}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n\n'+lines.join('\n'))}`,'_blank');
+  };
+
+  // --- 11. ATTENDANCE REGISTER: Download & Share ---
   (function(){
-    const loadBtn       = $('loadRegister'),
-          saveBtn       = $('saveRegister'),
-          changeBtn     = $('changeRegister'),
-          downloadBtn   = $('downloadRegister'),
-          shareBtn      = $('shareRegister'),
-          tableWrapper  = $('registerTableWrapper'),
-          headerRow     = $('registerHeader'),
-          bodyTbody     = $('registerBody');
+    const loadBtn=$('loadRegister'), saveBtn=$('saveRegister'),
+          downloadBtn=$('downloadRegister'), shareBtn=$('shareRegister'),
+          headerRow=$('registerHeader'), bodyTbody=$('registerBody');
 
-    function bindRegisterActions() {
-      downloadBtn.onclick = async () => {
-        const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-        doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
-        // add current date at top right
-        const today = new Date().toISOString().split('T')[0];
-        const pw = doc.internal.pageSize.getWidth();
-        doc.setFontSize(12);
-        doc.text(today, pw - 14, 20, { align: 'right' });
-        doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
-        doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-        const blob = doc.output('blob');
-        doc.save('attendance_register.pdf');
-        await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-      };
+    downloadBtn.onclick=async()=>{
+      const doc=new jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+      doc.setFontSize(18).text('Attendance Register',14,20);
+      const today=new Date().toISOString().split('T')[0], pw=doc.internal.pageSize.getWidth();
+      doc.setFontSize(12).text(today,pw-14,20,{align:'right'});
+      doc.text($('setupText').textContent,14,36);
+      doc.autoTable({startY:50,html:'#registerTable',tableWidth:'auto',styles:{fontSize:10}});
+      const blob=doc.output('blob'); doc.save('attendance_register.pdf'); await sharePdf(blob,'attendance_register.pdf','Attendance Register');
+    };
 
-      shareBtn.onclick = () => {
-        const header = `Attendance Register\n${$('setupText').textContent}`;
-        const rows = Array.from(bodyTbody.children).map(tr =>
-          Array.from(tr.children)
-               .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
-               .join(' ')
-        );
-        window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
-      };
-    }
-
-    bindRegisterActions();
+    shareBtn.onclick=()=>{
+      const header=`Attendance Register\n${$('setupText').textContent}`;
+      const rows=Array.from(bodyTbody.children).map(tr=>Array.from(tr.children)
+        .map(td=>td.querySelector('.status-text')?.textContent||td.textContent).join(' '));
+      window.open(`https://wa.me/?text=${encodeURIComponent(header+'\n'+rows.join('\n'))}`,'_blank');
+    };
   })();
 
   // --- 12. Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
 });
