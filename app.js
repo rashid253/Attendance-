@@ -638,17 +638,51 @@ window.addEventListener('DOMContentLoaded', async () => {
         .join('\n');
   }
 
-  // --- 11. ATTENDANCE REGISTER (only marked days count) ---
-  $('loadRegister').onclick = () => {
-    const m = $('registerMonth').value; if (!m) { alert('Pick month'); return; }
+  // --- 11. ATTENDANCE REGISTER (with working Download & Share buttons) ---
+(function(){
+  const loadBtn       = $('loadRegister'),
+        saveBtn       = $('saveRegister'),
+        changeBtn     = $('changeRegister'),
+        downloadBtn   = $('downloadRegister'),
+        shareBtn      = $('shareRegister'),
+        tableWrapper  = $('registerTableWrapper'),
+        headerRow     = $('registerHeader'),
+        bodyTbody     = $('registerBody');
 
-    // only include dates where attendanceData has a record
+  function bindRegisterActions() {
+    downloadBtn.onclick = async () => {
+      const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
+      doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
+      doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
+      const blob = doc.output('blob');
+      doc.save('attendance_register.pdf');
+      await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+    };
+
+    shareBtn.onclick = () => {
+      const header = `Attendance Register\n${$('setupText').textContent}`;
+      const rows = Array.from(bodyTbody.children).map(tr =>
+        Array.from(tr.children)
+             .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
+             .join(' ')
+      );
+      window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+    };
+  }
+
+  loadBtn.onclick = () => {
+    const m = $('registerMonth').value;
+    if (!m) { alert('Pick month'); return; }
+
+    // only include days where attendance was actually marked
     const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
-    if (!dateKeys.length) { alert('No attendance has been marked for this month.'); return; }
+    if (!dateKeys.length) { alert('No attendance marked this month.'); return; }
 
-    $('registerHeader').innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+    headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
       dateKeys.map(k => `<th>${k.split('-')[2]}</th>`).join('');
-    $('registerBody').innerHTML = '';
+    bodyTbody.innerHTML = '';
+
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
     students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i)=>{
       let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
@@ -665,7 +699,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
         row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
       });
-      const tr = document.createElement('tr'); tr.innerHTML = row; $('registerBody').appendChild(tr);
+      const tr = document.createElement('tr'); tr.innerHTML = row; bodyTbody.appendChild(tr);
     });
 
     document.querySelectorAll('.reg-cell').forEach(cell => {
@@ -683,14 +717,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       };
     });
 
-    show($('registerTableWrapper'), $('saveRegister'));
-    hide($('loadRegister'), $('changeRegister'), $('downloadRegister'), $('shareRegister'));
+    show(tableWrapper, saveBtn);
+    hide(loadBtn, changeBtn, downloadBtn, shareBtn);
   };
 
-  $('saveRegister').onclick = async () => {
+  saveBtn.onclick = async () => {
     const m = $('registerMonth').value;
     const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
-    Array.from($('registerBody').children).forEach(tr=>{
+
+    Array.from(bodyTbody.children).forEach(tr => {
       const adm = tr.children[1].textContent;
       dateKeys.forEach((key, idx) => {
         const code = tr.children[3 + idx].querySelector('.status-text').textContent;
@@ -702,16 +737,23 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       });
     });
+
     await save('attendanceData', attendanceData);
-    hide($('saveRegister'));
-    show($('changeRegister'), $('downloadRegister'), $('shareRegister'));
+    hide(saveBtn);
+    show(changeBtn, downloadBtn, shareBtn);
+    bindRegisterActions();        // re‑bind now that buttons are visible
   };
 
-  $('changeRegister').onclick = () => {
-    hide($('registerTableWrapper'), $('changeRegister'), $('downloadRegister'), $('shareRegister'), $('saveRegister'));
-    $('registerHeader').innerHTML = ''; $('registerBody').innerHTML = ''; show($('loadRegister'));
+  changeBtn.onclick = () => {
+    hide(tableWrapper, changeBtn, downloadBtn, shareBtn, saveBtn);
+    headerRow.innerHTML = '';
+    bodyTbody.innerHTML = '';
+    show(loadBtn);
   };
 
+  // initial bind so Download & Share work after reload
+  bindRegisterActions();
+})();
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
