@@ -64,7 +64,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       font-weight: bold;
       font-size: 1.5rem;
       color: royalblue;
-      font-family: 'Fredoka', cursive;
+      font-family: 'Rubik', cursive;
     }
     .attendance-student-container {
       margin-bottom: 1rem;
