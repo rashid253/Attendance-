@@ -49,11 +49,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Student List PDF
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const today = new Date().toISOString().split('T')[0];
+
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
+
     doc.setFontSize(12);
-    const today = new Date().toISOString().split('T')[0];
-    doc.text(`${$('setupText').textContent} | Date: ${today}`, 14, 24);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.text(`Date: ${today}`, pageWidth - 14, 24, { align: 'right' });
+
     doc.autoTable({ startY: 32, html: '#studentsTable' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
@@ -95,10 +100,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     const doc = new jspdf.jsPDF();
-    doc.setFontSize(18); 
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(18);
     doc.text('Attendance Report', 14, 16);
+
     doc.setFontSize(12);
-    doc.text(`${$('setupText').textContent} | Date: ${dateInput.value}`, 14, 24);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.text(`Date: ${dateInput.value}`, pageWidth - 14, 24, { align: 'right' });
+
     doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob');
@@ -110,18 +120,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, date = dateInput.value;
     const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
     const lines = students.filter(s=>s.cls===cl&&s.sec===sec)
-      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
+      .map(s=>`*${s.name}*: ${statusNames[attendanceData[date]?.[s.adm]] || 'Not Marked'}`);
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
   };
 
   // Attendance Register PDF
   $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const todayReg = new Date().toISOString().split('T')[0];
+
     doc.setFontSize(18);
     doc.text('Attendance Register', 14, 20);
+
     doc.setFontSize(12);
-    const todayReg = new Date().toISOString().split('T')[0];
-    doc.text(`${$('setupText').textContent} | Date: ${todayReg}`, 14, 36);
+    doc.text($('setupText').textContent, 14, 36);
+    doc.text(`Date: ${todayReg}`, pageWidth - 14, 36, { align: 'right' });
+
     doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
     const blob = doc.output('blob');
     doc.save('attendance_register.pdf');
@@ -402,7 +417,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
     students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i)=>{
       const btn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = btn ? btn.textContent : 'A';
+      if (btn) {
+        attendanceData[date][s.adm] = btn.textContent;
+      }
     });
     await save('attendanceData', attendanceData);
 
@@ -410,9 +427,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const tbl = document.createElement('table');
     tbl.innerHTML = `<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
     students.filter(s=>s.cls===cl&&s.sec===sec).forEach(s=>{
-      const code = attendanceData[date][s.adm];
+      const code = attendanceData[date]?.[s.adm];
       tbl.innerHTML += `<tr>
-        <td>${s.name}</td><td>${statusNames[code]}</td>
+        <td>${s.name}</td><td>${statusNames[code] || 'Not Marked'}</td>
         <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
       </tr>`;
     });
@@ -420,8 +437,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic=>{
       ic.onclick = ()=>{
         const adm = ic.dataset.adm, st = students.find(x=>x.adm===adm);
-        const code = attendanceData[date][adm];
-        const msg = `Dear Parent, your child was ${statusNames[code]} on ${date}.`;
+        const code = attendanceData[date]?.[adm];
+        const msg = `Dear Parent, your child was ${statusNames[code] || 'Not Marked'} on ${date}.`;
         window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
       };
     });
@@ -601,7 +618,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     const totalCounts = filtered.reduce((acc,st)=>{
-      acc.P+=st.P; acc.A+=st.A; acc.Lt+=st.Lt; acc.HD+=st.HD; acc.L+=st.L;
+      acc.P+=st.P; acc.A+=st.А; acc.Lt+=st.Lt; acc.HD+=st.HD; acc.L+=st.L;
       return acc;
     },{P:0,A:0,Lt:0,HD:0,L:0});
     pieChart?.destroy();
