@@ -48,9 +48,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     const today = new Date().toISOString().split('T')[0];
-    doc.setFontSize(10); doc.text(today, 14, 14);
-    doc.setFontSize(18); doc.text('Student List', 14, 28);
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(10);
+    doc.text(today, pageWidth - 14, 14, { align: 'right' });
+    doc.setFontSize(18);
+    doc.text('Student List', 14, 28);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 36);
     doc.autoTable({ startY: 44, html: '#studentsTable' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
@@ -105,10 +109,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('downloadAttendancePDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
     const today = new Date().toISOString().split('T')[0];
-    doc.setFontSize(10); doc.text(today,14,14);
-    doc.setFontSize(18); doc.text('Attendance Report',14,28);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,36);
-    doc.autoTable({ startY:44, html:'#attendanceSummary table' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(10);
+    doc.text(today, pageWidth - 14, 14, { align: 'right' });
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 28);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 36);
+    doc.autoTable({ startY: 44, html: '#attendanceSummary table' });
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob'); doc.save(fileName); await sharePdf(blob,fileName,'Attendance Report');
   };
@@ -116,9 +124,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('downloadRegister').onclick = async () => {
     const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
     const today = new Date().toISOString().split('T')[0];
-    doc.setFontSize(10); doc.text(today,14,14);
-    doc.setFontSize(18); doc.text('Attendance Register',14,28);
-    doc.setFontSize(12); doc.text($('setupText').textContent,14,36);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(10);
+    doc.text(today, pageWidth - 14, 14, { align: 'right' });
+    doc.setFontSize(18);
+    doc.text('Attendance Register',14,28);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent,14,36);
     doc.autoTable({ startY:44, html:'#registerTable', tableWidth:'auto', styles:{fontSize:10} });
     const blob = doc.output('blob'); doc.save('attendance_register.pdf'); await sharePdf(blob,'attendance_register.pdf','Attendance Register');
   };
@@ -251,8 +263,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.sel:checked').forEach(cb=>{
       const tr=cb.closest('tr'), i=+tr.dataset.index, s=students[i];
       tr.innerHTML=`<td><input type="checkbox" class="sel" checked></td>
-        <td>${tr.children[1].textContent}</td>
-        <td><input value="${s.name}"></td><td>${s.adm}</td>
+        <td>${tr.children[1].textContent}</td><td><input value="${s.name}"></td><td>${s.adm}</td>
         <td><input value="${s.parent}"></td><td><input value="${s.contact}"></td>
         <td><input value="${s.occupation}"></td><td><input value="${s.address}"></td><td colspan="3"></td>`;
     });
@@ -335,13 +346,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       const btn=attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
       attendanceData[date][s.adm]=btn?btn.textContent:'A';
     });
-    await save('attendanceData',attendanceData);
+    await save('attendanceData',AttendanceData);
     attendanceSummaryDiv.innerHTML=`<h3>Attendance Report: ${date}</h3>`;
     const tbl=document.createElement('table'); tbl.innerHTML=`<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
     students.filter(s=>s.cls===cl&&s.sec===sec).forEach(s=>{
       const code=attendanceData[date][s.adm];
-      tbl.innerHTML+=`<tr><td>${s.name}</td><td>${statusNames[code]}</td>
-        <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td></tr>`;
+      tbl.innerHTML+=`<tr><td>${s.name}</td><td>${statusNames[code]}</td><td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td></tr>`;
     });
     attendanceSummaryDiv.appendChild(tbl);
     attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic=>{
@@ -354,11 +364,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide(attendanceBodyDiv,saveAttendanceBtn); show(resetAttendanceBtn,downloadAttendanceBtn,shareAttendanceBtn,attendanceSummaryDiv);
   };
   resetAttendanceBtn.onclick=()=>{ show(attendanceBodyDiv,saveAttendanceBtn); hide(resetAttendanceBtn,downloadAttendanceBtn,shareAttendanceBtn,attendanceSummaryDiv); };
-  downloadAttendanceBtn.onclick=async()=>{ /* handled above */ };
-  shareAttendanceBtn.onclick=()=>{ /* handled above */ };
 
-  // --- 10. ANALYTICS ---
-  // (unchanged)
+  // --- 10. ANALYTICS (unchanged) ---
 
   // --- 11. ATTENDANCE REGISTER (only marked days count) ---
   $('loadRegister').onclick=()=>{
@@ -406,5 +413,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- 12. Service Worker ---
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.error);
 });
