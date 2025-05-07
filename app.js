@@ -465,4 +465,4 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- 13. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
+  });
