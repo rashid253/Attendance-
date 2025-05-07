@@ -61,10 +61,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       color: green;
     }
     .attendance-container .student-name {
-      font-weight: 700;
+      font-weight: bold;
       font-size: 1.5rem;
       color: royalblue;
-      font-family: 'Poppins', cursive;
+      font-family: 'Fredoka', cursive;
     }
     .attendance-student-container {
       margin-bottom: 1rem;
