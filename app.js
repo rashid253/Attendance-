@@ -42,16 +42,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- 3. DOM Helpers ---
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+  const hide = (...els) => els.forEach(e => e.classList.add('hidden'));
 
   // --- DOWNLOAD & SHARE HANDLERS ---
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Title
     doc.setFontSize(18);
     doc.text('Student List', 14, 16);
+    // Date at top-right
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
+    // School name, Class & Section
+    const setupText = $('setupText').textContent; // "School 🏫 | Class: X | Section: Y"
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#studentsTable' });
+    doc.text(setupText, 14, 24);
+    // Action performed
+    doc.text('Action: Download Registration PDF', 14, 30);
+
+    // Table
+    doc.autoTable({ startY: 36, html: '#studentsTable' });
     const blob = doc.output('blob');
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
@@ -272,8 +285,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('addStudent').onclick = async e => {
     e.preventDefault();
     const n = $('studentName').value.trim(), p = $('parentName').value.trim(),
-          c = $('parentContact').value.trim(), o = $('parentOccupation').value.trim(),
-          a = $('parentAddress').value.trim(), cl = $('teacherClassSelect').value,
+          c = $('parentContact').value.trim(), o = $('parentOccupation').value.trim(), 
+          a = $('parentAddress').value.trim(), cl = $('teacherClassSelect').value, 
           sec = $('teacherSectionSelect').value;
     if (!n||!p||!c||!o||!a) { alert('All fields required'); return; }
     if (!/^\d{7,15}$/.test(c)) { alert('Contact 7–15 digits'); return; }
@@ -434,9 +447,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   downloadAttendanceBtn.onclick = async () => {
     const doc = new jspdf.jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const today = new Date().toISOString().split('T')[0];
+
     doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
     doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 32, html: '#attendanceSummary table' });
+    doc.text(`Action: Download Attendance PDF for ${dateInput.value}`, 14, 30);
+    doc.autoTable({ startY: 36, html: '#attendanceSummary table' });
     const fileName = `attendance_${dateInput.value}.pdf`;
     const blob = doc.output('blob');
     doc.save(fileName);
@@ -597,7 +615,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>
       `;
       tbody.appendChild(tr);
-    });
+    });  
 
     instr.textContent = `Period: ${from} to ${to}`;
     show(instr, acont, graphs, aacts);
@@ -639,121 +657,127 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- 11. ATTENDANCE REGISTER (with working Download & Share buttons) ---
-(function(){
-  const loadBtn       = $('loadRegister'),
-        saveBtn       = $('saveRegister'),
-        changeBtn     = $('changeRegister'),
-        downloadBtn   = $('downloadRegister'),
-        shareBtn      = $('shareRegister'),
-        tableWrapper  = $('registerTableWrapper'),
-        headerRow     = $('registerHeader'),
-        bodyTbody     = $('registerBody');
+  (function(){
+    const loadBtn       = $('loadRegister'),
+          saveBtn       = $('saveRegister'),
+          changeBtn     = $('changeRegister'),
+          downloadBtn   = $('downloadRegister'),
+          shareBtn      = $('shareRegister'),
+          tableWrapper  = $('registerTableWrapper'),
+          headerRow     = $('registerHeader'),
+          bodyTbody     = $('registerBody');
 
-  function bindRegisterActions() {
-    downloadBtn.onclick = async () => {
-      const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-      doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
-      doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
-      doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
-      const blob = doc.output('blob');
-      doc.save('attendance_register.pdf');
-      await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
-    };
+    function bindRegisterActions() {
+      downloadBtn.onclick = async () => {
+        const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const today = new Date().toISOString().split('T')[0];
 
-    shareBtn.onclick = () => {
-      const header = `Attendance Register\n${$('setupText').textContent}`;
-      const rows = Array.from(bodyTbody.children).map(tr =>
-        Array.from(tr.children)
-             .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
-             .join(' ')
-      );
-      window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
-    };
-  }
-
-  loadBtn.onclick = () => {
-    const m = $('registerMonth').value;
-    if (!m) { alert('Pick month'); return; }
-
-    // only include days where attendance was actually marked
-    const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
-    if (!dateKeys.length) { alert('No attendance marked this month.'); return; }
-
-    headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
-      dateKeys.map(k => `<th>${k.split('-')[2]}</th>`).join('');
-    bodyTbody.innerHTML = '';
-
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i)=>{
-      let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      dateKeys.forEach(key => {
-        const c = attendanceData[key][s.adm] || '';
-        let style = '';
-        if (c) {
-          const color = c==='P' ? 'var(--success)'
-                      : c==='Lt'? 'var(--warning)'
-                      : c==='HD'? '#FF9800'
-                      : c==='L'? 'var(--info)'
-                      : 'var(--danger)';
-          style = `style="background:${color};color:#fff"`;
-        }
-        row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
-      });
-      const tr = document.createElement('tr'); tr.innerHTML = row; bodyTbody.appendChild(tr);
-    });
-
-    document.querySelectorAll('.reg-cell').forEach(cell => {
-      cell.onclick = () => {
-        const span = cell.querySelector('.status-text'),
-              codes = ['','P','Lt','HD','L','A'],
-              idx   = (codes.indexOf(span.textContent) + 1) % codes.length,
-              c     = codes[idx];
-        span.textContent = c;
-        if (!c) { cell.style.background=''; cell.style.color=''; }
-        else {
-          const color = c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)';
-          cell.style.background=color; cell.style.color='#fff';
-        }
+        doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
+        doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: 'right' });
+        doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
+        doc.text(`Action: Download Attendance Register PDF`, 14, 48);
+        doc.autoTable({ startY: 60, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
+        const blob = doc.output('blob');
+        doc.save('attendance_register.pdf');
+        await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
       };
-    });
 
-    show(tableWrapper, saveBtn);
-    hide(loadBtn, changeBtn, downloadBtn, shareBtn);
-  };
+      shareBtn.onclick = () => {
+        const header = `Attendance Register\n${$('setupText').textContent}`;
+        const rows = Array.from(bodyTbody.children).map(tr =>
+          Array.from(tr.children)
+               .map(td => td.querySelector('.status-text')?.textContent || td.textContent)
+               .join(' ')
+        );
+        window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+      };
+    }
 
-  saveBtn.onclick = async () => {
-    const m = $('registerMonth').value;
-    const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
+    loadBtn.onclick = () => {
+      const m = $('registerMonth').value;
+      if (!m) { alert('Pick month'); return; }
 
-    Array.from(bodyTbody.children).forEach(tr => {
-      const adm = tr.children[1].textContent;
-      dateKeys.forEach((key, idx) => {
-        const code = tr.children[3 + idx].querySelector('.status-text').textContent;
-        if (code) {
-          attendanceData[key] = attendanceData[key] || {};
-          attendanceData[key][adm] = code;
-        } else {
-          if (attendanceData[key]) delete attendanceData[key][adm];
-        }
+      // only include days where attendance was actually marked
+      const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
+      if (!dateKeys.length) { alert('No attendance marked this month.'); return; }
+
+      headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+        dateKeys.map(k => `<th>${k.split('-')[2]}</th>`).join('');
+      bodyTbody.innerHTML = '';
+
+      const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+      students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i)=>{
+        let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+        dateKeys.forEach(key => {
+          const c = attendanceData[key][s.adm] || '';
+          let style = '';
+          if (c) {
+            const color = c==='P' ? 'var(--success)'
+                        : c==='Lt'? 'var(--warning)'
+                        : c==='HD'? '#FF9800'
+                        : c==='L'? 'var(--info)'
+                        : 'var(--danger)';
+            style = `style="background:${color};color:#fff"`;
+          }
+          row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+        });
+        const tr = document.createElement('tr'); tr.innerHTML = row; bodyTbody.appendChild(tr);
       });
-    });
 
-    await save('attendanceData', attendanceData);
-    hide(saveBtn);
-    show(changeBtn, downloadBtn, shareBtn);
-    bindRegisterActions();        // re‑bind now that buttons are visible
-  };
+      document.querySelectorAll('.reg-cell').forEach(cell => {
+        cell.onclick = () => {
+          const span = cell.querySelector('.status-text'),
+                codes = ['','P','Lt','HD','L','A'],
+                idx   = (codes.indexOf(span.textContent) + 1) % codes.length,
+                c     = codes[idx];
+          span.textContent = c;
+          if (!c) { cell.style.background=''; cell.style.color=''; }
+          else {
+            const color = c==='P'?'var(--success)':c==='Lt'?'var(--warning)':c==='HD'?'#FF9800':c==='L'?'var(--info)':'var(--danger)';
+            cell.style.background=color; cell.style.color='#fff';
+          }
+        };
+      });
 
-  changeBtn.onclick = () => {
-    hide(tableWrapper, changeBtn, downloadBtn, shareBtn, saveBtn);
-    headerRow.innerHTML = '';
-    bodyTbody.innerHTML = '';
-    show(loadBtn);
-  };
+      show(tableWrapper, saveBtn);
+      hide(loadBtn, changeBtn, downloadBtn, shareBtn);
+    };
 
-  // initial bind so Download & Share work after reload
-  bindRegisterActions();
-})();
+    saveBtn.onclick = async () => {
+      const m = $('registerMonth').value;
+      const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
+
+      Array.from(bodyTbody.children).forEach(tr => {
+        const adm = tr.children[1].textContent;
+        dateKeys.forEach((key, idx) => {
+          const code = tr.children[3 + idx].querySelector('.status-text').textContent;
+          if (code) {
+            attendanceData[key] = attendanceData[key] || {};
+            attendanceData[key][adm] = code;
+          } else {
+            if (attendanceData[key]) delete attendanceData[key][adm];
+          }
+        });
+      });
+
+      await save('attendanceData', attendanceData);
+      hide(saveBtn);
+      show(changeBtn, downloadBtn, shareBtn);
+      bindRegisterActions();
+    };
+
+    changeBtn.onclick = () => {
+      hide(tableWrapper, changeBtn, downloadBtn, shareBtn, saveBtn);
+      headerRow.innerHTML = '';
+      bodyTbody.innerHTML = '';
+      show(loadBtn);
+    };
+
+    // initial bind so Download & Share work after reload
+    bindRegisterActions();
+  })();
+
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
