@@ -653,10 +653,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     downloadBtn.onclick = async () => {
       const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
       doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
-      // add date
-        const today = new Date().toISOString().split('T')[0];
-        doc.setFontSize(12);
-        doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: 'right' });doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
+      doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
       doc.autoTable({ startY: 50, html: '#registerTable', tableWidth: 'auto', styles: { fontSize: 10 } });
       const blob = doc.output('blob');
       doc.save('attendance_register.pdf');
