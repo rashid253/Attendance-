@@ -55,7 +55,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const blob = doc.output('blob');
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Student List');
-  };
+  
+    // add class & section
+    const cl = $('teacherClassSelect').value;
+    const sec = $('teacherSectionSelect').value;
+    doc.setFontSize(12);
+    doc.text(`Class: ${cl}  Section: ${sec}`, 14, 24);
+    // add report title
+    doc.setFontSize(14);
+    doc.text('Student Registration Report', 14, 36);
+};
 
   $('shareRegistration').onclick = () => {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
@@ -115,7 +124,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       doc.save('individual_analytics_book.pdf');
       await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Analytics');
     }
-  };
+  
+      // add class & section
+      const cl = $('teacherClassSelect').value;
+      const sec = $('teacherSectionSelect').value;
+      doc.setFontSize(12);
+      doc.text(`Class: ${cl}  Section: ${sec}`, 14, 36);
+      // add report title
+      doc.setFontSize(16);
+      doc.text('Monthly Attendance Analytics Summary', 14, 20);
+
 
   $('shareAnalytics').onclick = () => {
     if (!lastAnalyticsShare) { alert('No analytics to share. Please generate a report first.'); return; }
