@@ -44,6 +44,36 @@ window.addEventListener('DOMContentLoaded', async () => {
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
+  // --- Attendance Section Styling ---
+  const attendanceStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+    .attendance-container .attendance-info-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .attendance-container .sr-num,
+    .attendance-container .adm-num {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: green;
+    }
+    .attendance-container .student-name {
+      font-weight: bold;
+      font-size: 1.5rem;
+      color: gold;
+      font-family: 'Bubblegum Sans', cursive;
+    }
+    .attendance-student-container {
+      margin-bottom: 1rem;
+    }
+  `;
+  const styleEl = document.createElement('style');
+  styleEl.textContent = attendanceStyles;
+  document.head.appendChild(styleEl);
+
   // --- 4. DOWNLOAD & SHARE HANDLERS ---
   $('downloadRegistrationPDF').onclick = async () => {
     const doc = new jspdf.jsPDF();
@@ -240,7 +270,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         <td>${s.address}</td>
         <td>PKR ${out}</td>
         <td>${status}</td>
-        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>`;
+        <td><button class="add-payment-btn" data-adm="${s.adm}">
+              <i class="fas fa-coins"></i>
+            </button>
+        </td>`;
       tbody.appendChild(tr);
     });
     $('selectAllStudents').checked = false;
@@ -361,7 +394,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           L: 'var(--info)'
         };
 
-  // mark attendance container class
+  // Add container class for styling
   attendanceBodyDiv.classList.add('attendance-container');
 
   loadAttendanceBtn.onclick = () => {
@@ -370,9 +403,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
 
     students.filter(s => s.cls === cl && s.sec === sec).forEach((stu, i) => {
+      // Container for each student
       const studentContainer = document.createElement('div');
       studentContainer.className = 'attendance-student-container';
 
+      // Info row: SR#, Adm#, Name
       const infoRow = document.createElement('div');
       infoRow.className = 'attendance-info-row';
       const srSpan = document.createElement('span');
@@ -386,6 +421,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       nameSpan.textContent = stu.name;
       infoRow.append(srSpan, admSpan, nameSpan);
 
+      // Buttons row: P, A, Lt, HD, L
       const btnsDiv = document.createElement('div');
       btnsDiv.className = 'attendance-buttons';
       Object.keys(statusNames).forEach(code => {
@@ -405,6 +441,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         btnsDiv.appendChild(btn);
       });
 
+      // Assemble student block
       studentContainer.append(infoRow, btnsDiv);
       attendanceBodyDiv.appendChild(studentContainer);
     });
@@ -571,7 +608,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     stats.forEach(st => {
       const totalFine = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
-      const paid = (paymentsData[st.adm]||[]).reduce((a,p)=ые p.amount,0);
+      const paid = (paymentsData[st.adm]||[]).reduce((a,p)=>a+p.amount,0);
       st.outstanding = totalFine - paid;
       const pct = st.total ? (st.P / st.total)*100 : 0;
       st.status = (st.outstanding > 0 || pct < eligibilityPct) ? 'Debarred' : 'Eligible';
