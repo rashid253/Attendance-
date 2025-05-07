@@ -79,7 +79,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       alert('No analytics to download. Please generate a report first.');
       return;
     }
-
     if (analyticsDownloadMode === 'combined') {
       const doc = new jspdf.jsPDF();
       doc.setFontSize(18);
@@ -96,7 +95,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       doc.text('Individual Analytics Report', 14, 16);
       doc.setFontSize(12);
       doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-
       lastAnalyticsStats.forEach((st, i) => {
         if (i > 0) doc.addPage();
         doc.setFontSize(14);
@@ -113,7 +111,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
         doc.text(`Status: ${st.status}`, 14, 240);
       });
-
       const blob = doc.output('blob');
       doc.save('individual_analytics_book.pdf');
       await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Analytics');
@@ -641,14 +638,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         .join('\n');
   }
 
-  // --- 11. ATTENDANCE REGISTER (UPDATED) ---
+  // --- 11. ATTENDANCE REGISTER (only marked days count) ---
   $('loadRegister').onclick = () => {
     const m = $('registerMonth').value; if (!m) { alert('Pick month'); return; }
 
-    // only dates with marked attendance count
-    const dateKeys = Object.keys(attendanceData)
-      .filter(d => d.startsWith(m + '-'))
-      .sort();
+    // only include dates where attendanceData has a record
+    const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
     if (!dateKeys.length) { alert('No attendance has been marked for this month.'); return; }
 
     $('registerHeader').innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
@@ -694,9 +689,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   $('saveRegister').onclick = async () => {
     const m = $('registerMonth').value;
-    const dateKeys = Object.keys(attendanceData)
-      .filter(d => d.startsWith(m + '-'))
-      .sort();
+    const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + '-')).sort();
     Array.from($('registerBody').children).forEach(tr=>{
       const adm = tr.children[1].textContent;
       dateKeys.forEach((key, idx) => {
