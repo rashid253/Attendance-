@@ -588,6 +588,39 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('analyticsFilterModal'));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
   };
+  // --- 6.b. DOWNLOAD & SHARE ANALYTICS ---
+$('downloadAnalytics').onclick = async () => {
+  const doc = new jspdf.jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const { from, to } = lastAnalyticsRange;
+  const today = new Date().toISOString().split('T')[0];
+
+  doc.setFontSize(18);
+  doc.text('Attendance Analytics', 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Period: ${from} to ${to}`, pageWidth - 14, 16, { align: 'right' });
+  doc.setFontSize(12);
+  doc.text($('setupText').textContent, 14, 24);
+
+  // Grab your analytics table
+  doc.autoTable({ startY: 30, html: '#analyticsTable' });
+
+  const blob = doc.output('blob');
+  doc.save('analytics.pdf');
+  await sharePdf(blob, 'analytics.pdf', 'Attendance Analytics');
+};
+
+$('shareAnalytics').onclick = () => {
+  // Uses the text you built in renderAnalytics
+  if (!lastAnalyticsShare) {
+    alert('Please load a report first.');
+    return;
+  }
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,
+    '_blank'
+  );
+};
 
   // --- ATTENDANCE REGISTER ---
   (function(){
