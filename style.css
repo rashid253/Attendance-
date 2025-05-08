@@ -1,4 +1,6 @@
 /* style.css */
+@import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans:wght@700&display=swap');
+
 :root {
   --primary: #2196F3;
   --success: #4caf50;
@@ -8,10 +10,12 @@
   --light: #f2f2f2;
   --dark: #333;
 }
+
 * {
   box-sizing: border-box;
   outline: none;
 }
+
 body {
   margin: 0;
   padding: 10px;
@@ -19,6 +23,7 @@ body {
   background: var(--light);
   color: var(--dark);
 }
+
 header h1 {
   background: var(--primary);
   color: #fff;
@@ -26,6 +31,7 @@ header h1 {
   padding: 10px;
   margin: 0 0 20px;
 }
+
 section {
   background: #fff;
   padding: 15px;
@@ -33,6 +39,7 @@ section {
   border: 1px solid #ccc;
   border-radius: 6px;
 }
+
 .row-inline {
   display: flex;
   gap: 10px;
@@ -40,6 +47,7 @@ section {
   align-items: center;
   margin-bottom: 10px;
 }
+
 input,
 select,
 button,
@@ -49,11 +57,13 @@ label {
   border-radius: 4px;
   font-size: 0.9rem;
 }
+
 label {
   display: flex;
   align-items: center;
   gap: 5px;
 }
+
 button {
   background: var(--primary);
   color: #fff;
@@ -62,13 +72,16 @@ button {
   align-items: center;
   gap: 5px;
 }
+
 .hidden {
   display: none !important;
 }
+
 .counter-grid {
   display: flex;
   justify-content: space-between;
 }
+
 .counter-card {
   flex: 1;
   background: #fff;
@@ -78,22 +91,27 @@ button {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   margin-right: 1rem;
 }
+
 .counter-card:last-child {
   margin-right: 0;
 }
+
 .number {
   font-size: 2rem;
   font-weight: bold;
 }
+
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-top: 10px;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
 }
+
 th,
 td {
   border: 1px solid #ccc;
@@ -101,6 +119,7 @@ td {
   text-align: left;
   white-space: nowrap;
 }
+
 .table-actions {
   display: flex;
   gap: 10px;
@@ -108,6 +127,7 @@ td {
   margin-top: 10px;
   overflow-x: auto;
 }
+
 .modal {
   position: fixed;
   top: 0;
@@ -119,22 +139,26 @@ td {
   align-items: center;
   justify-content: center;
 }
+
 .modal-content {
   background: #fff;
   padding: 20px;
   border-radius: 8px;
   width: 300px;
 }
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 10px;
 }
+
 .attendance-buttons {
   display: flex;
   gap: 0.5rem;
 }
+
 .att-btn {
   padding: 0.5rem 1rem;
   border: 1px solid var(--primary);
@@ -143,10 +167,12 @@ td {
   color: var(--dark);
   cursor: pointer;
 }
+
 .att-btn.selected {
   background: var(--primary);
   color: #fff;
 }
+
 .summary-box {
   margin-top: 1rem;
   padding: 1rem;
@@ -154,9 +180,11 @@ td {
   border: 1px solid #ddd;
   border-radius: 4px;
 }
+
 .no-print {
   display: inline-block;
 }
+
 @media (max-width: 600px) {
   .row-inline input,
   .row-inline select {
@@ -164,20 +192,27 @@ td {
   }
 }
 
-/* Special styling for attendance marking rows */
+/* --- ATTENDANCE SECTION STYLES --- */
 .attendance-row {
   display: flex;
-  align-items: center;
-  padding: 0.5rem 0;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid #e0e0e0;
+  background: #fff;
 }
+
 .attendance-name {
-  flex: 1;
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: var(--primary);
-  font-family: 'Comic Sans MS', cursive, sans-serif;
+  font-family: 'Bubblegum Sans', cursive;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  background: #333;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
+
 .attendance-row .attendance-buttons {
-  flex: 2;
+  margin-top: 0.6rem;
 }
