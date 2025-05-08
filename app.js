@@ -482,155 +482,109 @@ window.addEventListener('DOMContentLoaded', async () => {
         pieCtx = $('pieChart').getContext('2d');
   let barChart, pieChart;
 
-  $('analyticsFilterBtn').onclick   = () => show($('analyticsFilterModal'));
-  $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
-
-  atg.onchange = () => {
-    atype.disabled = false;
-    [asel, asearch].forEach(x => x.classList.add('hidden'));
-    [instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
-    if (atg.value === 'section') asel.classList.remove('hidden');
-    if (atg.value === 'student') asearch.classList.remove('hidden');
-  };
-
-  atype.onchange = () => {
-    [adate, amonth, sems, seme, ayear].forEach(x => x.classList.add('hidden'));
-    [instr, acont, graphs, aacts].forEach(x => x.classList.add('hidden'));
-    resetA.classList.remove('hidden');
-    if      (atype.value === 'date')     adate.classList.remove('hidden');
-    else if (atype.value === 'month')    amonth.classList.remove('hidden');
-    else if (atype.value === 'semester') { sems.classList.remove('hidden'); seme.classList.remove('hidden'); }
-    else if (atype.value === 'year')     ayear.classList.remove('hidden');
-  };
-
-  loadA.onclick = () => {
-    if (atype.value === 'student' && !asearch.value.trim()) {
-      alert('Enter admission number or name');
-      return;
-    }
-    let from, to;
-    if      (atype.value === 'date')     { from = to = adate.value; }
-    else if (atype.value === 'month')    {
-      const [y,m] = amonth.value.split('-').map(Number);
-      from = `${amonth.value}-01`;
-      to   = `${amonth.value}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
-    }
-    else if (atype.value === 'semester') {
-      const [sy,sm] = sems.value.split('-').map(Number);
-      const [ey,em] = seme.value.split('-').map(Number);
-      from = `${sems.value}-01`;
-      to   = `${seme.value}-${String(new Date(ey,em,0).getDate()).padStart(2,'0')}`;
-    }
-    else if (atype.value === 'year')     {
-      from = `${ayear.value}-01-01`;
-      to   = `${ayear.value}-12-31`;
-    } else { alert('Select period'); return; }
-
-    const cls = $('teacherClassSelect').value;
-    let pool = students.filter(s => s.cls === cls);
-    if (atg.value === 'section') pool = pool.filter(s => s.sec === asel.value);
-    if (atg.value === 'student') {
-      const q = asearch.value.trim().toLowerCase();
-      pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
-    }
-
-    const stats = pool.map(s => ({ adm:s.adm, name:s.name, P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
-    Object.entries(attendanceData).forEach(([d,rec]) => {
-      if (d < from || d > to) return;
-      stats.forEach(st => {
-        if (rec[st.adm]) { st[rec[st.adm]]++; st.total++; }
-      });
-    });
-    stats.forEach(st => {
-      const totalFine = st.A*fineRates.A + st.Lt*fineRates.Lt + st.L*fineRates.L + st.HD*fineRates.HD;
-      const paid = (paymentsData[st.adm]||[]).reduce((a,p)=>a+p.amount,0);
-      st.outstanding = totalFine - paid;
-      const pct = st.total ? (st.P/st.total)*100 : 0;
-      st.status = (st.outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
-    });
-
-    lastAnalyticsStats = stats;
-    lastAnalyticsRange = { from, to };
-    renderAnalytics(stats, from, to);
-  };
-
-  $('applyAnalyticsFilter').onclick = () => {
-    analyticsFilterOptions = Array.from(
-      document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')
-    ).map(cb => cb.value);
-    if (!analyticsFilterOptions.length) analyticsFilterOptions = ['all'];
-    analyticsDownloadMode = document.querySelector(
-      '#analyticsFilterForm input[name="downloadMode"]:checked'
-    ).value;
-    hide($('analyticsFilterModal'));
-    if (!lastAnalyticsStats.length) {
-      alert('Please Load a report first.');
-    } else {
-      renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
-    }
-  };
-
-  function renderAnalytics(stats, from, to) {
-    const filters = analyticsFilterOptions;
-    const filtered = filters.includes('all')
-      ? stats
-      : stats.filter(st =>
-          filters.some(opt => {
-            switch (opt) {
-              case 'registered': return true;
-              case 'attendance': return st.total > 0;
-              case 'fine':       return st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0;
-              case 'cleared':    return st.outstanding === 0;
-              case 'debarred':   return st.status === 'Debarred';
-              case 'eligible':   return st.status === 'Eligible';
-              default:           return false;
-            }
-          })
-        );
-
-    const thead = $('analyticsTable').querySelector('thead tr');
-    thead.innerHTML = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']
-      .map(h => `<th>${h}</th>`).join('');
-    const tbody = $('analyticsBody');
-    tbody.innerHTML = '';
-    filtered.forEach((st,i) => {
-      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : '0.0';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td>
-        <td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td>
-        <td>${st.HD}</td><td>${st.L}</td><td>${st.total}</td>
-        <td>${pct}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    $('instructions').textContent = `Period: ${from} to ${to}`;
-    show($('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'));
-
-    // Bar & Pie charts (unchanged)...
-
-    // re‑bind handlers
-    $('downloadAnalytics').onclick = downloadAnalyticsHandler;
-    $('shareAnalytics').onclick    = shareAnalyticsHandler;
-  }
-
   async function downloadAnalyticsHandler() {
-    // calls the same code as $('downloadAnalytics').onclick above
-    await $('downloadAnalytics').onclick();
+    if (!lastAnalyticsStats.length) { alert('Load a report first'); return; }
+    const doc = new jspdf.jsPDF();
+    const { from, to } = lastAnalyticsRange;
+
+    doc.setFontSize(18);
+    doc.text('Attendance Analytics', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Period: ${from} to ${to}`, doc.internal.pageSize.getWidth() - 14, 16, { align: 'right' });
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 30);
+
+    const filters = analyticsFilterOptions;
+    const stats = lastAnalyticsStats;
+    const filtered = filters.includes('all') ? stats : stats.filter(st => {
+      if (filters.includes('attendance') && st.total === 0) return false;
+      if (filters.includes('fine') && (st.A+st.Lt+st.L+st.HD) === 0) return false;
+      if (filters.includes('cleared') && st.outstanding !== 0) return false;
+      if (filters.includes('debarred') && st.status !== 'Debarred') return false;
+      if (filters.includes('eligible') && st.status !== 'Eligible') return false;
+      return true;
+    });
+
+    if (analyticsDownloadMode === 'combined') {
+      doc.autoTable({
+        startY: 40,
+        head: [['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']],
+        body: filtered.map((st,i)=>[
+          i+1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L, st.total,
+          st.total? (st.P/st.total*100).toFixed(1)+'%' : '0.0%', 'PKR '+st.outstanding, st.status
+        ])
+      });
+      const grand = filtered.reduce((g,st)=>{
+        g.P+=st.P; g.A+=st.A; g.Lt+=st.Lt; g.HD+=st.HD; g.L+=st.L; return g;
+      }, {P:0,A:0,Lt:0,HD:0,L:0});
+      const y = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(10);
+      doc.text(`Totals → P: ${grand.P}, A: ${grand.A}, Lt: ${grand.Lt}, HD: ${grand.HD}, L: ${grand.L}`, 14, y);
+    } else {
+      filtered.forEach((st, idx) => {
+        if (idx > 0) doc.addPage();
+        doc.setFontSize(16);
+        doc.text('Attendance Analytics', 14, 16);
+        doc.setFontSize(12);
+        doc.text($('setupText').textContent, 14, 30);
+        doc.setFontSize(14);
+        doc.text(`Student Report: ${st.name} (${st.adm})`, 14, 46);
+
+        doc.setFontSize(12);
+        doc.text(`P: ${st.P}`, 14, 60);
+        doc.text(`A: ${st.A}`, 50, 60);
+        doc.text(`Lt: ${st.Lt}`, 90, 60);
+        doc.text(`HD: ${st.HD}`, 130, 60);
+        doc.text(`L: ${st.L}`, 170, 60);
+        doc.text(`Fine O/S: PKR ${st.outstanding}`, 14, 72);
+
+        const datesBy = { P:[], A:[], Lt:[], HD:[], L:[] };
+        Object.entries(attendanceData).forEach(([date, rec]) => {
+          const c = rec[st.adm];
+          if (datesBy[c]) datesBy[c].push(date);
+        });
+        let y2 = 84;
+        for (const [code, arr] of Object.entries(datesBy)) {
+          const label = code==='P'? 'Present on' : code==='A'? 'Absent on' : code==='Lt'? 'Late on' : code==='HD'? 'Half‑day on' : 'Leave on';
+          doc.text(`${label}: ${arr.length? arr.join(', '): 'None'}`, 14, y2);
+          y2 += 6;
+          if (y2 > 270) { doc.addPage(); y2 = 20; }
+        }
+
+        const ph = doc.internal.pageSize.getHeight();
+        doc.setFontSize(12);
+        doc.text('HOD Signature:', doc.internal.pageSize.getWidth() - 60, ph - 20, { align: 'right' });
+        doc.line(doc.internal.pageSize.getWidth() - 60, ph - 18, doc.internal.pageSize.getWidth() - 14, ph - 18);
+      });
+    }
+
+    const blob = doc.output('blob');
+    doc.save('analytics.pdf');
+    await sharePdf(blob, 'analytics.pdf', 'Attendance Analytics');
   }
+
   function shareAnalyticsHandler() {
-    $('shareAnalytics').onclick();
+    if (!lastAnalyticsStats.length) { alert('Load a report first'); return; }
+    const { from, to } = lastAnalyticsRange;
+    const header = `Attendance Analytics (${from} to ${to})`;
+    const lines = lastAnalyticsStats.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${(st.total? (st.P/st.total*100).toFixed(1):'0.0')}% / PKR ${st.outstanding}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + lines.join('\n'))}`, '_blank');
   }
-// --- 8. ATTENDANCE REGISTER ---
+
+  // Bind analytics buttons
+  $('downloadAnalytics').onclick = downloadAnalyticsHandler;
+  $('shareAnalytics').onclick    = shareAnalyticsHandler;
+
+  // --- 8. ATTENDANCE REGISTER ---
   (function(){
-    const loadBtn     = document.getElementById('loadRegister'),
-          saveBtn     = document.getElementById('saveRegister'),
-          changeBtn   = document.getElementById('changeRegister'),
-          downloadBtn = document.getElementById('downloadRegister'),
-          shareBtn    = document.getElementById('shareRegister'),
-          headerRow   = document.getElementById('registerHeader'),
-          bodyTbody   = document.getElementById('registerBody'),
-          tableWrapper= document.getElementById('registerTableWrapper');
+    const loadBtn     = $('loadRegister'),
+          saveBtn     = $('saveRegister'),
+          changeBtn   = $('changeRegister'),
+          downloadBtn = $('downloadRegister'),
+          shareBtn    = $('shareRegister'),
+          headerRow   = $('registerHeader'),
+          bodyTbody   = $('registerBody'),
+          tableWrapper= $('registerTableWrapper');
 
     function bindRegisterActions(){
       downloadBtn.onclick = async () => {
@@ -638,14 +592,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         doc.setFontSize(18);
         doc.text('Attendance Register', 14, 20);
         doc.setFontSize(12);
-        doc.text(document.getElementById('setupText').textContent, 14, 36);
+        doc.text($('setupText').textContent, 14, 36);
         doc.autoTable({ startY: 50, html: '#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
 
-        // compute section totals for this month
-        const m = document.getElementById('registerMonth').value;
+        const m = $('registerMonth').value;
         const keys = Object.keys(attendanceData).filter(d => d.startsWith(m+'-'));
-        const cls = document.getElementById('teacherClassSelect').value;
-        const sec = document.getElementById('teacherSectionSelect').value;
+        const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
         const secTotals = { P:0, A:0, Lt:0, HD:0, L:0 };
         keys.forEach(date => {
           students.filter(s => s.cls===cls && s.sec===sec).forEach(s => {
@@ -666,7 +618,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       };
 
       shareBtn.onclick = () => {
-        const header = `Attendance Register\n${document.getElementById('setupText').textContent}`;
+        const header = `Attendance Register\n${$('setupText').textContent}`;
         const rows = Array.from(bodyTbody.children).map(tr =>
           Array.from(tr.children).map(td => td.textContent.trim()).join(' ')
         );
@@ -675,15 +627,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     loadBtn.onclick = () => {
-      const m = document.getElementById('registerMonth').value;
+      const m = $('registerMonth').value;
       if (!m) { alert('Pick month'); return; }
       const keys = Object.keys(attendanceData).filter(d => d.startsWith(m+'-')).sort();
       if (!keys.length) { alert('No attendance marked this month.'); return; }
       headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
         keys.map(k => `<th>${k.split('-')[2]}</th>`).join('');
       bodyTbody.innerHTML = '';
-      const cls = document.getElementById('teacherClassSelect').value;
-      const sec = document.getElementById('teacherSectionSelect').value;
+      const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
       students.filter(s => s.cls===cls && s.sec===sec).forEach((s,i) => {
         let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
         keys.forEach(key => {
@@ -726,7 +677,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
 
     saveBtn.onclick = async () => {
-      const m = document.getElementById('registerMonth').value;
+      const m = $('registerMonth').value;
       const keys = Object.keys(attendanceData).filter(d => d.startsWith(m+'-')).sort();
       Array.from(bodyTbody.children).forEach(tr => {
         const adm = tr.children[1].textContent;
@@ -761,5 +712,3 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
-  
-  
