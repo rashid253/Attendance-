@@ -108,8 +108,6 @@ button {
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-  white-space: nowrap;
 }
 
 th,
@@ -117,6 +115,7 @@ td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .table-actions {
@@ -197,6 +196,7 @@ td {
   flex-direction: column;
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--dark);
+  /* removed background for clarity */
 }
 
 .attendance-name {
@@ -204,12 +204,9 @@ td {
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--dark);
-  margin-bottom: 0.25rem;
+  /* no background for easy reading */
 }
 
-/* --- ATTENDANCE SUMMARY SCROLLABLE --- */
-#attendanceSummary {
-  max-height: 300px;
-  overflow-y: auto;
-  overflow-x: auto;
+.attendance-row .attendance-buttons {
+  margin-top: 0.4rem;
 }
