@@ -60,6 +60,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     doc.text($('setupText').textContent, 14, 24);
 
     doc.autoTable({ startY: 30, html: '#studentsTable' });
+    const total = students.length;
+    const y = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Total Students: ${total}`, 14, y);
+
     const blob = doc.output('blob');
     doc.save('registration.pdf');
     await sharePdf(blob, 'registration.pdf', 'Registered Students');
@@ -436,22 +441,28 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   downloadAttendanceBtn.onclick = async () => {
     const doc = new jspdf.jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toISOString().split('T')[0];
-    doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
-    doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 30, html: '#attendanceSummary table' });
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 30);
+    doc.autoTable({ startY: 40, html: '#attendanceSummary table' });
+    let P=0,A=0,Lt=0,HD=0,L=0;
+    Object.values(attendanceData[$('dateInput').value]||{}).forEach(c=>{
+      if(c==='P')P++; if(c==='A')A++; if(c==='Lt')Lt++; if(c==='HD')HD++; if(c==='L')L++;
+    });
+    const y = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Totals → P: ${P}, A: ${A}, Lt: ${Lt}, HD: ${HD}, L: ${L}`, 14, y);
     const blob = doc.output('blob');
-    doc.save(`attendance_${today}.pdf`);
-    await sharePdf(blob, `attendance_${today}.pdf`, 'Attendance Report');
+    doc.save(`attendance_${$('dateInput').value}.pdf`);
+    await sharePdf(blob, `attendance_${$('dateInput').value}.pdf`, 'Attendance Report');
   };
 
   shareAttendanceBtn.onclick = () => {
     const cl   = $('teacherClassSelect').value,
           sec  = $('teacherSectionSelect').value,
           date = dateInput.value;
-    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
+    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;   
     const lines = students.filter(s => s.cls===cl && s.sec===sec)
       .map(s => `*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
@@ -651,12 +662,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!lastAnalyticsStats.length) { alert('Load a report first'); return; }
     const doc = new jspdf.jsPDF();
     const { from, to } = lastAnalyticsRange;
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.text('Attendance Analytics', 14, 16);
-    doc.setFontSize(10);
-    doc.text(`Period: ${from} to ${to}`, doc.internal.pageSize.getWidth() - 14, 16, { align: 'right' });
     doc.setFontSize(12);
-    doc.text($('setupText').textContent, 14, 24);
+    doc.text(`Period: ${from} to ${to}`, doc.internal.pageSize.getWidth() - 14, 16, { align: 'right' });
+    doc.setFontSize(14);
+    doc.text($('setupText').textContent, 14, 30);
 
     const filters = analyticsFilterOptions;
     const stats = lastAnalyticsStats;
@@ -675,16 +686,60 @@ window.addEventListener('DOMContentLoaded', async () => {
     );
 
     if (analyticsDownloadMode === 'combined') {
-      doc.autoTable({ startY: 30, html: '#analyticsTable' });
-    } else if (analyticsDownloadMode === 'individual') {
+      doc.autoTable({
+        startY: 40,
+        head: [['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status']],
+        body: filtered.map((st,i)=>[
+          i+1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L, st.total,
+          st.total? (st.P/st.total*100).toFixed(1)+'%' : '0.0%', 'PKR '+st.outstanding, st.status
+        ])
+      });
+      const grand = filtered.reduce((g,st)=>{
+        g.P+=st.P; g.A+=st.A; g.Lt+=st.Lt; g.HD+=st.HD; g.L+=st.L; return g;
+      }, {P:0,A:0,Lt:0,HD:0,L:0});
+      const y2 = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.text(`Totals → P: ${grand.P}, A: ${grand.A}, Lt: ${grand.Lt}, HD: ${grand.HD}, L: ${grand.L}`, 14, y2);
+    }
+    else if (analyticsDownloadMode === 'individual') {
       filtered.forEach((st, idx) => {
         if (idx > 0) doc.addPage();
-        doc.setFontSize(16);
+        doc.setFontSize(18);
         doc.text(`Student Report: ${st.name} (${st.adm})`, 14, 20);
-        const headers = ['#','Adm#','Name','P','A','Lt','HD','L','Total','%','Outstanding','Status'];
-        const row = [1, st.adm, st.name, st.P, st.A, st.Lt, st.HD, st.L, st.total, st.total? (st.P/st.total*100).toFixed(1) : '0.0', `PKR ${st.outstanding}`, st.status];
-        doc.autoTable({ head: [headers], body: [row], startY: 30 });
+        doc.setFontSize(14);
+        doc.text(`Present: ${st.P}`, 14, 36);
+        doc.text(`Absent: ${st.A}`, 80, 36);
+        doc.text(`Late: ${st.Lt}`, 140, 36);
+        doc.text(`Half‑Day: ${st.HD}`, 190, 36);
+        doc.text(`Leave: ${st.L}`, 270, 36);
+
+        const datesByStatus = { P:[], A:[], Lt:[], HD:[], L:[] };
+        Object.entries(attendanceData).forEach(([date, rec]) => {
+          const code = rec[st.adm];
+          if (datesByStatus[code]) datesByStatus[code].push(date);
+        });
+        let y3 = 50;
+        doc.setFontSize(12);
+        ['P','A','Lt','HD','L'].forEach(code => {
+          const label = code==='P'? 'Present' : code==='A'? 'Absent' : code==='Lt'? 'Late' : code==='HD'? 'Half-Day' : 'Leave';
+          const list = datesByStatus[code].join(', ') || 'None';
+          doc.text(`${label}: ${list}`, 14, y3);
+          y3 += 7;
+          if (y3 > 280) { doc.addPage(); y3 = 20; }
+        });
       });
+      const grand2 = filtered.reduce((g,st)=>{
+        g.P+=st.P; g.A+=st.A; g.Lt+=st.Lt; g.HD+=st.HD; g.L+=st.L; return g;
+      }, {P:0,A:0,Lt:0,HD:0,L:0});
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text('Grand Totals', 14, 20);
+      doc.setFontSize(14);
+      doc.text(`Present: ${grand2.P}`, 14, 36);
+      doc.text(`Absent: ${grand2.A}`, 80, 36);
+      doc.text(`Late: ${grand2.Lt}`, 140, 36);
+      doc.text(`Half‑Day: ${grand2.HD}`, 190, 36);
+      doc.text(`Leave: ${grand2.L}`, 270, 36);
     }
 
     const blob = doc.output('blob');
@@ -711,12 +766,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     function bindRegisterActions(){
       downloadBtn.onclick = async () => {
         const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const today = new Date().toISOString().split('T')[0];
-        doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
-        doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: 'right' });
-        doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
-        doc.autoTable({ startY:60, html:'#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
+        doc.setFontSize(18);
+        doc.text('Attendance Register', 14, 20);
+        doc.setFontSize(12);
+        doc.text($('setupText').textContent, 14, 36);
+        doc.autoTable({ startY: 50, html: '#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
+        const cols = Array.from(headerRow.querySelectorAll('th')).slice(3).map((_,i)=>i);
+        const counts = cols.map((_,ci)=>{
+          let sum=0;
+          bodyTbody.querySelectorAll(`tr td:nth-child(${ci+4}) .status-text`).forEach(span=>{
+            if(span.textContent) sum++;
+          });
+          return sum;
+        });
+        const y4 = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.text('Column totals (days marked): ' + counts.join(', '), 14, y4);
         const blob = doc.output('blob');
         doc.save('attendance_register.pdf');
         await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
