@@ -1,6 +1,4 @@
 /* style.css */
-@import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans:wght@700&display=swap');
-
 :root {
   --primary: #2196F3;
   --success: #4caf50;
@@ -196,23 +194,19 @@ td {
 .attendance-row {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e0e0e0;
-  background: #fff;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--dark);
+  /* removed background for clarity */
 }
 
 .attendance-name {
-  font-family: 'Bubblegum Sans', cursive;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #fff;
-  background: #333;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  width: 100%;
-  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--dark);
+  /* no background for easy reading */
 }
 
 .attendance-row .attendance-buttons {
-  margin-top: 0.6rem;
+  margin-top: 0.4rem;
 }
