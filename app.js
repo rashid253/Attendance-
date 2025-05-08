@@ -588,6 +588,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     hide($('analyticsFilterModal'));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
   };
+  // Analytics Filter Modal: open/close handlers
+$('analyticsFilterBtn').onclick = () => show($('analyticsFilterModal'));
+$('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
+
+// DOWNLOAD & SHARE ANALYTICS
+$('downloadAnalytics').onclick = async () => {
+  if (!lastAnalyticsStats.length) { alert('Load a report first'); return; }
+  const doc = new jspdf.jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const { from, to } = lastAnalyticsRange;
+  doc.setFontSize(18);
+  doc.text('Attendance Analytics', 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Period: ${from} to ${to}`, pageWidth - 14, 16, { align: 'right' });
+  doc.setFontSize(12);
+  doc.text($('setupText').textContent, 14, 24);
+  doc.autoTable({ startY: 30, html: '#analyticsTable' });
+  const blob = doc.output('blob');
+  doc.save('analytics.pdf');
+  await sharePdf(blob, 'analytics.pdf', 'Attendance Analytics');
+};
+
+$('shareAnalytics').onclick = () => {
+  if (!lastAnalyticsShare) { alert('Load a report first'); return; }
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`,
+    '_blank'
+  );
+};
   // --- 6.b. DOWNLOAD & SHARE ANALYTICS ---
 $('downloadAnalytics').onclick = async () => {
   const doc = new jspdf.jsPDF();
