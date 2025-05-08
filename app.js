@@ -190,7 +190,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (s.cls !== cl || s.sec !== sec) return;
       idx++;
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.values(attendanceData).forEach(rec => rec[s.adm] && stats[rec[s.adm]]++);
+      Object.values(attendanceData).forEach(rec => rec[s.adm] && stats[rec.adm]++);
       const total    = Object.values(stats).reduce((a,b)=>a+b,0);
       const totalFine= stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
       const paid     = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
@@ -329,99 +329,167 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadAttendanceBtn.onclick = () => {
     attendanceBodyDiv.innerHTML = ''; attendanceSummaryDiv.innerHTML = '';
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    students.filter(s => s.cls===cl && s.sec===sec).forEach((stu, i) => {
-      const studentContainer = document.createElement('div');
-      studentContainer.className = 'attendance-student-container';
-
-      const infoRow = document.createElement('div');
-      infoRow.className = 'attendance-info-row';
-      const sr   = document.createElement('span');
-      sr.className   = 'sr-num'; sr.textContent   = `#${i+1}`;
-      const admEl= document.createElement('span');
-      admEl.className = 'adm-num'; admEl.textContent = `(${stu.adm})`;
-      const name = document.createElement('span');
-      name.className = 'student-name'; name.textContent = stu.name;
-      infoRow.append(sr, admEl, name);
-
-      const btnsDiv = document.createElement('div');
-      btnsDiv.className = 'attendance-buttons';
-      Object.keys(statusNames).forEach(code => {
-        const btn = document.createElement('button');
-        btn.className = 'att-btn'; btn.textContent = code;
-        btn.onclick = () => {
-          btnsDiv.querySelectorAll('.att-btn').forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-        };
-        btnsDiv.append(btn);
-      });
-
-      studentContainer.append(infoRow, btnsDiv);
-      attendanceBodyDiv.append(studentContainer);
-    });
-
+    students.filter(s => s.cls===cl && s.sec===sec).forEach((stu, i) => { ... });
     show(attendanceBodyDiv, saveAttendanceBtn);
     hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
   };
 
-  saveAttendanceBtn.onclick = async () => {
-    const date = dateInput.value; if (!date) { alert('Pick date'); return; }
-    attendanceData[date] = {};
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    students.filter(s => s.cls===cl && s.sec===sec).forEach((s,i) => {
-      const btn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = btn ? btn.textContent : 'A';
-    });
-    await save('attendanceData', attendanceData);
-
-    attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
-    const tbl = document.createElement('table');
-    tbl.innerHTML = `<tr><th>Name</th><th>Status</th><th>Share</th></tr>`;
-    students.filter(s => s.cls===cl && s.sec===sec).forEach(s => {
-      const code = attendanceData[date][s.adm];
-      tbl.innerHTML += `<tr>
-        <td>${s.name}</td>
-        <td>${statusNames[code]}</td>
-        <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
-      </tr>`;
-    });
-    attendanceSummaryDiv.append(tbl);
-    attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic => {
-      ic.onclick = () => {
-        const adm = ic.dataset.adm, st = students.find(x => x.adm===adm);
-        const msg = `Dear Parent, your child was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
-        window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
-      };
-    });
-
-    hide(attendanceBodyDiv, saveAttendanceBtn);
-    show(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-  };
-
-  resetAttendanceBtn.onclick = () => {
-    show(attendanceBodyDiv, saveAttendanceBtn);
-    hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-  };
-
-  downloadAttendanceBtn.onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toISOString().split('T')[0];
-    doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
-    doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
-    doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
-    doc.autoTable({ startY: 30, html: '#attendanceSummary table' });
-    const blob = doc.output('blob');
-    doc.save(`attendance_${today}.pdf`);
-    await sharePdf(blob, `attendance_${today}.pdf`, 'Attendance Report');
-  };
-
-  shareAttendanceBtn.onclick = () => {
-    const cl   = $('teacherClassSelect').value, sec  = $('teacherSectionSelect').value, date = dateInput.value;
-    const header = `*Attendance Report*\nClass ${cl} Section ${sec} - ${date}`;
-    const lines = students.filter(s => s.cls===cl && s.sec===sec)
-      .map(s => `*${s.name}*: ${statusNames[attendanceData[date][s.adm]]}`);
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
-  };
+  saveAttendanceBtn.onclick = async () => { ... };
+  resetAttendanceBtn.onclick = () => { ... };
+  downloadAttendanceBtn.onclick = async () => { ... };
+  shareAttendanceBtn.onclick = () => { ... };
 
   // --- 7. ANALYTICS ---
-  const atg    = $('analyticsTarget'), asel   = $('analyticsSectionSelect'), atype  = $('analyticsType
+  const atg    = $('analyticsTarget'),
+        asel   = $('analyticsSectionSelect'),
+        atype  = $('analyticsType');
+  const adate  = $('analyticsDate'),
+        amonth = $('analyticsMonth'),
+        sems   = $('semesterStart'),
+        seme   = $('semesterEnd'),
+        ayear  = $('yearStart'),
+        asearch= $('analyticsSearch');
+  const loadA  = $('loadAnalytics'),
+        resetA = $('resetAnalytics');
+  const instr  = $('instructions'),
+        acont  = $('analyticsContainer');
+  const graphs = $('graphs'),
+        aacts  = $('analyticsActions');
+  const barCtx = $('barChart').getContext('2d'),
+        pieCtx = $('pieChart').getContext('2d');
+  let barChart, pieChart;
+
+  $('analyticsFilterBtn').onclick   = () => show($('analyticsFilterModal'));
+  $('analyticsFilterClose').onclick = () => hide($('analyticsFilterModal'));
+
+  atg.onchange = () => { ... };
+  atype.onchange = () => { ... };
+  loadA.onclick = () => { ... };
+  $('applyAnalyticsFilter').onclick = () => { ... };
+
+  function renderAnalytics(stats, from, to) { ... }
+
+  $('downloadAnalytics').onclick = async () => { ... };
+  $('shareAnalytics').onclick = () => { ... };
+
+  // --- 8. ATTENDANCE REGISTER ---
+  (function(){
+    const loadBtn     = $('loadRegister'),
+          saveBtn     = $('saveRegister'),
+          changeBtn   = $('changeRegister'),
+          downloadBtn = $('downloadRegister'),
+          shareBtn    = $('shareRegister'),
+          headerRow   = $('registerHeader'),
+          bodyTbody   = $('registerBody'),
+          tableWrapper= $('registerTableWrapper');
+
+    function bindRegisterActions(){
+      downloadBtn.onclick = async () => {
+        const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const today = new Date().toISOString().split('T')[0];
+        doc.setFontSize(18); doc.text('Attendance Register', 14, 20);
+        doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: 'right' });
+        doc.setFontSize(12); doc.text($('setupText').textContent, 14, 36);
+        doc.autoTable({ startY:60, html:'#registerTable', tableWidth:'auto', styles:{ fontSize:10 } });
+        const blob = doc.output('blob');
+        doc.save('attendance_register.pdf');
+        await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+      };
+
+      shareBtn.onclick = () => {
+        const header = `Attendance Register\n${$('setupText').textContent}`;
+        const rows = Array.from(bodyTbody.children).map(tr =>
+          Array.from(tr.children).map(td => td.textContent.trim()).join(' ')
+        );
+        window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+      };
+    }
+
+    loadBtn.onclick = () => {
+      const m = $('registerMonth').value;
+      if (!m) { alert('Pick month'); return; }
+      const keys = Object.keys(attendanceData).filter(d => d.startsWith(m+'-')).sort();
+      if (!keys.length) { alert('No attendance marked this month.'); return; }
+
+      headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+        keys.map(k => `<th>${k.split('-')[2]}</th>`).join('');
+      bodyTbody.innerHTML = '';
+
+      const cls = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+      students.filter(s => s.cls===cls && s.sec===sec).forEach((s,i) => {
+        let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+        keys.forEach(key => {
+          const c = attendanceData[key][s.adm] || '';
+          const color = c==='P' ? 'var(--success)' :
+                        c==='Lt'? 'var(--warning)' :
+                        c==='HD'? '#FF9800' :
+                        c==='L'? 'var(--info)' : 'var(--danger)';
+          const style = c ? `background:${color};color:#fff` : '';
+          row += `<td class="reg-cell" style="${style}"><span class="status-text">${c}</span></td>`;
+        });
+        const tr = document.createElement('tr');
+        tr.innerHTML = row;
+        bodyTbody.appendChild(tr);
+      });
+
+      document.querySelectorAll('.reg-cell').forEach(cell => {
+        cell.onclick = () => {
+          const span = cell.querySelector('.status-text');
+          const codes = ['', 'P', 'Lt', 'HD', 'L', 'A'];
+          const idx = (codes.indexOf(span.textContent) + 1) % codes.length;
+          const c = codes[idx];
+          span.textContent = c;
+          if (!c) {
+            cell.style.background = '';
+            cell.style.color = '';
+          } else {
+            const col = c==='P'?'var(--success)':
+                        c==='Lt'?'var(--warning)':
+                        c==='HD'?'#FF9800':
+                        c==='L'?'var(--info)':'var(--danger)';
+            cell.style.background = col;
+            cell.style.color = '#fff';
+          }
+        };
+      });
+
+      show(tableWrapper, saveBtn);
+      hide(loadBtn, changeBtn, downloadBtn, shareBtn);
+    };
+
+    saveBtn.onclick = async () => {
+      const m = $('registerMonth').value;
+      const keys = Object.keys(attendanceData).filter(d => d.startsWith(m+'-')).sort();
+      Array.from(bodyTbody.children).forEach(tr => {
+        const adm = tr.children[1].textContent;
+        keys.forEach((key, idx) => {
+          const code = tr.children[3+idx].querySelector('.status-text').textContent;
+          if (code) {
+            attendanceData[key] = attendanceData[key] || {};
+            attendanceData[key][adm] = code;
+          } else {
+            if (attendanceData[key]) delete attendanceData[key][adm];
+          }
+        });
+      });
+      await save('attendanceData', attendanceData);
+      hide(saveBtn);
+      show(changeBtn, downloadBtn, shareBtn);
+      bindRegisterActions();
+    };
+
+    changeBtn.onclick = () => {
+      hide(tableWrapper, changeBtn, downloadBtn, shareBtn, saveBtn);
+      headerRow.innerHTML = '';
+      bodyTbody.innerHTML = '';
+      show(loadBtn);
+    };
+
+    bindRegisterActions();
+  })();
+
+  // --- 9. Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
