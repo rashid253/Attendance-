@@ -196,7 +196,6 @@ td {
   flex-direction: column;
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--dark);
-  /* removed background for clarity */
 }
 
 .attendance-name {
@@ -204,9 +203,18 @@ td {
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--dark);
-  /* no background for easy reading */
+  margin-bottom: 0.25rem;
 }
 
-.attendance-row .attendance-buttons {
-  margin-top: 0.4rem;
+/* --- ATTENDANCE SUMMARY SCROLL & COLUMN HIDE --- */
+#attendanceSummary {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#attendanceSummary th:nth-child(1),
+#attendanceSummary td:nth-child(1),
+#attendanceSummary th:nth-child(2),
+#attendanceSummary td:nth-child(2) {
+  display: none;
 }
