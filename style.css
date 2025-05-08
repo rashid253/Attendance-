@@ -108,6 +108,8 @@ button {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+  white-space: nowrap;
 }
 
 th,
@@ -115,7 +117,6 @@ td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
-  white-space: nowrap;
 }
 
 .table-actions {
@@ -206,15 +207,9 @@ td {
   margin-bottom: 0.25rem;
 }
 
-/* --- ATTENDANCE SUMMARY SCROLL & COLUMN HIDE --- */
+/* --- ATTENDANCE SUMMARY SCROLLABLE --- */
 #attendanceSummary {
   max-height: 300px;
   overflow-y: auto;
-}
-
-#attendanceSummary th:nth-child(1),
-#attendanceSummary td:nth-child(1),
-#attendanceSummary th:nth-child(2),
-#attendanceSummary td:nth-child(2) {
-  display: none;
+  overflow-x: auto;
 }
