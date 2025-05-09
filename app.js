@@ -325,89 +325,81 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('cancelPayment').onclick=()=>hide($('paymentModal'));
 
   // --- 9. MARK ATTENDANCE ---
-const dateInput = $('dateInput'),
-      loadAttendanceBtn = $('loadAttendance'),
-      saveAttendanceBtn = $('saveAttendance'),
-      resetAttendanceBtn = $('resetAttendance'),
-      downloadAttendanceBtn = $('downloadAttendancePDF'),
-      shareAttendanceBtn = $('shareAttendanceSummary'),
-      attendanceBodyDiv = $('attendanceBody'),
-      attendanceSummaryDiv = $('attendanceSummary'),
-      statusNames = { P: 'Present', A: 'Absent', Lt: 'Late', HD: 'Half-Day', L: 'Leave' },
-      statusColors = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: '#FF9800', L: 'var(--info)' };
+const dateInput               = $('dateInput');
+const loadAttendanceBtn       = $('loadAttendance');
+const saveAttendanceBtn       = $('saveAttendance');
+const resetAttendanceBtn      = $('resetAttendance');
+const downloadAttendanceBtn   = $('downloadAttendancePDF');
+const shareAttendanceBtn      = $('shareAttendanceSummary');
+const attendanceBodyDiv       = $('attendanceBody');
+const attendanceSummaryDiv    = $('attendanceSummary');
+const statusNames             = { P: 'Present', A: 'Absent', Lt: 'Late', HD: 'Half-Day', L: 'Leave' };
+const statusColors            = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: '#FF9800', L: 'var(--info)' };
 
-// Load attendance UI
+// 1. Load attendance UI
 loadAttendanceBtn.onclick = () => {
   attendanceBodyDiv.innerHTML = '';
   attendanceSummaryDiv.innerHTML = '';
-  const cl = $('teacherClassSelect').value,
-        sec = $('teacherSectionSelect').value;
-  attendanceBodyDiv.style.overflowX = 'auto';  // horizontal scroll if needed
+  const cl  = $('teacherClassSelect').value;
+  const sec = $('teacherSectionSelect').value;
 
-  students.filter(s => s.cls === cl && s.sec === sec)
-          .forEach((stu, i) => {
-    const row = document.createElement('div');
-    row.className = 'attendance-row';
+  attendanceBodyDiv.style.overflowX = 'auto';
 
-    // Serial #
-    const srDiv = document.createElement('div');
-    srDiv.className = 'attendance-sr';
-    srDiv.textContent = i + 1;
+  students
+    .filter(s => s.cls === cl && s.sec === sec)
+    .forEach((stu, i) => {
+      const row = document.createElement('div');
+      row.className = 'attendance-row';
 
-    // Admission #
-    const admDiv = document.createElement('div');
-    admDiv.className = 'attendance-adm';
-    admDiv.textContent = stu.adm;
+      // Header: Sr#. Name (Adm#)
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'attendance-header';
+      headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
 
-    // Name
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'attendance-name';
-    nameDiv.textContent = stu.name;
+      // Status buttons
+      const btnsDiv = document.createElement('div');
+      btnsDiv.className = 'attendance-buttons';
+      Object.keys(statusNames).forEach(code => {
+        const btn = document.createElement('button');
+        btn.className = 'att-btn';
+        btn.textContent = code;
+        btn.onclick = () => {
+          btnsDiv.querySelectorAll('.att-btn').forEach(b => {
+            b.classList.remove('selected');
+            b.style = '';
+          });
+          btn.classList.add('selected');
+          btn.style.background = statusColors[code];
+          btn.style.color = '#fff';
+        };
+        btnsDiv.appendChild(btn);
+      });
 
-    // Status buttons
-    const btnsDiv = document.createElement('div');
-    btnsDiv.className = 'attendance-buttons';
-    Object.keys(statusNames).forEach(code => {
-      const btn = document.createElement('button');
-      btn.className = 'att-btn';
-      btn.textContent = code;
-      btn.onclick = () => {
-        btnsDiv.querySelectorAll('.att-btn').forEach(b => {
-          b.classList.remove('selected');
-          b.style = '';
-        });
-        btn.classList.add('selected');
-        btn.style.background = statusColors[code];
-        btn.style.color = '#fff';
-      };
-      btnsDiv.appendChild(btn);
+      row.append(headerDiv, btnsDiv);
+      attendanceBodyDiv.appendChild(row);
     });
-
-    row.append(srDiv, admDiv, nameDiv, btnsDiv);
-    attendanceBodyDiv.appendChild(row);
-  });
 
   show(attendanceBodyDiv, saveAttendanceBtn);
   hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
 };
 
-// Save & show summary
+// 2. Save attendance & show summary
 saveAttendanceBtn.onclick = async () => {
   const date = dateInput.value;
   if (!date) { alert('Pick date'); return; }
 
   attendanceData[date] = {};
-  const cl = $('teacherClassSelect').value,
-        sec = $('teacherSectionSelect').value;
+  const cl  = $('teacherClassSelect').value;
+  const sec = $('teacherSectionSelect').value;
 
-  students.filter(s => s.cls === cl && s.sec === sec)
-          .forEach((s, i) => {
-    const sel = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
-    attendanceData[date][s.adm] = sel ? sel.textContent : 'A';
-  });
+  students
+    .filter(s => s.cls === cl && s.sec === sec)
+    .forEach((s, i) => {
+      const selBtn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
+      attendanceData[date][s.adm] = selBtn ? selBtn.textContent : 'A';
+    });
   await save('attendanceData', attendanceData);
 
-  // Build summary table
   attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
   const tbl = document.createElement('table');
   tbl.id = 'attendanceSummaryTable';
@@ -416,26 +408,26 @@ saveAttendanceBtn.onclick = async () => {
       <th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th>
     </tr>`;
 
-  students.filter(s => s.cls === cl && s.sec === sec)
-          .forEach((s, i) => {
-    const code = attendanceData[date][s.adm];
-    tbl.innerHTML += `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${s.adm}</td>
-        <td>${s.name}</td>
-        <td>${statusNames[code]}</td>
-        <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
-      </tr>`;
-  });
+  students
+    .filter(s => s.cls === cl && s.sec === sec)
+    .forEach((s, i) => {
+      const code = attendanceData[date][s.adm];
+      tbl.innerHTML += `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${s.adm}</td>
+          <td>${s.name}</td>
+          <td>${statusNames[code]}</td>
+          <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
+        </tr>`;
+    });
 
   attendanceSummaryDiv.appendChild(tbl);
 
-  // Bind individual share buttons
   attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic => {
     ic.onclick = () => {
       const adm = ic.dataset.adm;
-      const st = students.find(x => x.adm === adm);
+      const st  = students.find(x => x.adm === adm);
       const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
       window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
     };
@@ -445,34 +437,43 @@ saveAttendanceBtn.onclick = async () => {
   show(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
 };
 
-// Reset to marking view
+// 3. Reset view
 resetAttendanceBtn.onclick = () => {
   show(attendanceBodyDiv, saveAttendanceBtn);
   hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
 };
 
-// Download PDF
+// 4. Download PDF
 downloadAttendanceBtn.onclick = async () => {
-  const doc = new jspdf.jsPDF();
-  const w = doc.internal.pageSize.getWidth(), today = new Date().toISOString().split('T')[0];
-  doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
-  doc.setFontSize(10); doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
-  doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
+  const doc   = new jspdf.jsPDF();
+  const w     = doc.internal.pageSize.getWidth();
+  const today = new Date().toISOString().split('T')[0];
+  doc.setFontSize(18);
+  doc.text('Attendance Report', 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
+  doc.setFontSize(12);
+  doc.text($('setupText').textContent, 14, 24);
   doc.autoTable({ startY: 30, html: '#attendanceSummaryTable' });
   const fileName = `attendance_${dateInput.value}.pdf`;
-  const blob = doc.output('blob');
+  const blob     = doc.output('blob');
   doc.save(fileName);
   await sharePdf(blob, fileName, 'Attendance Report');
 };
 
-// Share via WhatsApp
+// 5. Share via WhatsApp
 shareAttendanceBtn.onclick = () => {
-  const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, date = dateInput.value;
-  const header = `*Attendance Report*\\nClass ${cl} Section ${sec} - ${date}`;
-  const lines = students.filter(s => s.cls === cl && s.sec === sec)
-                .map((s, i) => `${i+1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\\n\\n' + lines.join('\\n'))}`, '_blank');
+  const cl    = $('teacherClassSelect').value;
+  const sec   = $('teacherSectionSelect').value;
+  const date  = dateInput.value;
+  const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
+  const lines = students
+    .filter(s => s.cls === cl && s.sec === sec)
+    .map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
+  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
 };
+
+
 
   // --- 10. ANALYTICS ---
   const atg=$('analyticsTarget'), asel=$('analyticsSectionSelect'), atype=$('analyticsType'),
