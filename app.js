@@ -1,5 +1,3 @@
-// app.js
-
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
@@ -70,7 +68,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const header = `*Students List*\nClass ${cl} Section ${sec}`;
     const lines = students.filter(s => s.cls === cl && s.sec === sec).map(s => {
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec.adm]++; });
+      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
       const totalMarked = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
       const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
       const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
@@ -80,52 +78,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${outstanding}\nStatus: ${status}`;
     }).join('\n\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-  };
-
-  // Analytics PDF
-  $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) { alert('No analytics to download. Generate report first.'); return; }
-    if (analyticsDownloadMode === 'combined') {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Attendance Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
-    } else {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Individual Attendance Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage();
-        doc.setFontSize(14);
-        doc.text(`Name: ${st.name}`, 14, 40);
-        doc.text(`Adm#: ${st.adm}`, 14, 60);
-        doc.text(`Present: ${st.P}`, 14, 80);
-        doc.text(`Absent: ${st.A}`, 14, 100);
-        doc.text(`Late: ${st.Lt}`, 14, 120);
-        doc.text(`Half-Day: ${st.HD}`, 14, 140);
-        doc.text(`Leave: ${st.L}`, 14, 160);
-        doc.text(`Total: ${st.total}`, 14, 180);
-        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-        doc.text(`% Present: ${pct}%`, 14, 200);
-        doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
-        doc.text(`Status: ${st.status}`, 14, 240);
-      });
-      const blob = doc.output('blob');
-      doc.save('individual_analytics_book.pdf');
-      await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
-    }
-  };
-
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Generate report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
   };
 
   // --- 4. SETTINGS: Fines & Eligibility ---
@@ -325,94 +277,87 @@ window.addEventListener('DOMContentLoaded', async () => {
   $('cancelPayment').onclick=()=>hide($('paymentModal'));
 
   // --- 9. MARK ATTENDANCE ---
-const dateInput               = $('dateInput');
-const loadAttendanceBtn       = $('loadAttendance');
-const saveAttendanceBtn       = $('saveAttendance');
-const resetAttendanceBtn      = $('resetAttendance');
-const downloadAttendanceBtn   = $('downloadAttendancePDF');
-const shareAttendanceBtn      = $('shareAttendanceSummary');
-const attendanceBodyDiv       = $('attendanceBody');
-const attendanceSummaryDiv    = $('attendanceSummary');
-const statusNames             = { P: 'Present', A: 'Absent', Lt: 'Late', HD: 'Half-Day', L: 'Leave' };
-const statusColors            = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: '#FF9800', L: 'var(--info)' };
+  const dateInput               = $('dateInput');
+  const loadAttendanceBtn       = $('loadAttendance');
+  const saveAttendanceBtn       = $('saveAttendance');
+  const resetAttendanceBtn      = $('resetAttendance');
+  const downloadAttendanceBtn   = $('downloadAttendancePDF');
+  const shareAttendanceBtn      = $('shareAttendanceSummary');
+  const attendanceBodyDiv       = $('attendanceBody');
+  const attendanceSummaryDiv    = $('attendanceSummary');
+  const statusNames             = { P: 'Present', A: 'Absent', Lt: 'Late', HD: 'Half-Day', L: 'Leave' };
+  const statusColors            = { P: 'var(--success)', A: 'var(--danger)', Lt: 'var(--warning)', HD: '#FF9800', L: 'var(--info)' };
 
-// 1. Load attendance UI
-loadAttendanceBtn.onclick = () => {
-  attendanceBodyDiv.innerHTML = '';
-  attendanceSummaryDiv.innerHTML = '';
-  const cl  = $('teacherClassSelect').value;
-  const sec = $('teacherSectionSelect').value;
+  loadAttendanceBtn.onclick = () => {
+    attendanceBodyDiv.innerHTML = '';
+    attendanceSummaryDiv.innerHTML = '';
+    const cl  = $('teacherClassSelect').value;
+    const sec = $('teacherSectionSelect').value;
 
-  attendanceBodyDiv.style.overflowX = 'auto';
+    attendanceBodyDiv.style.overflowX = 'auto';
 
-  students
-    .filter(s => s.cls === cl && s.sec === sec)
-    .forEach((stu, i) => {
-      const row = document.createElement('div');
-      row.className = 'attendance-row';
+    students
+      .filter(s => s.cls === cl && s.sec === sec)
+      .forEach((stu, i) => {
+        const row = document.createElement('div');
+        row.className = 'attendance-row';
 
-      // Header: Sr#. Name (Adm#)
-      const headerDiv = document.createElement('div');
-      headerDiv.className = 'attendance-header';
-      headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'attendance-header';
+        headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
 
-      // Status buttons
-      const btnsDiv = document.createElement('div');
-      btnsDiv.className = 'attendance-buttons';
-      Object.keys(statusNames).forEach(code => {
-        const btn = document.createElement('button');
-        btn.className = 'att-btn';
-        btn.textContent = code;
-        btn.onclick = () => {
-          btnsDiv.querySelectorAll('.att-btn').forEach(b => {
-            b.classList.remove('selected');
-            b.style = '';
-          });
-          btn.classList.add('selected');
-          btn.style.background = statusColors[code];
-          btn.style.color = '#fff';
-        };
-        btnsDiv.appendChild(btn);
+        const btnsDiv = document.createElement('div');
+        btnsDiv.className = 'attendance-buttons';
+        Object.keys(statusNames).forEach(code => {
+          const btn = document.createElement('button');
+          btn.className = 'att-btn';
+          btn.textContent = code;
+          btn.onclick = () => {
+            btnsDiv.querySelectorAll('.att-btn').forEach(b => { b.classList.remove('selected'); b.style = ''; });
+            btn.classList.add('selected');
+            btn.style.background = statusColors[code];
+            btn.style.color = '#fff';
+          };
+          btnsDiv.appendChild(btn);
+        });
+
+        row.append(headerDiv, btnsDiv);
+        attendanceBodyDiv.appendChild(row);
       });
 
-      row.append(headerDiv, btnsDiv);
-      attendanceBodyDiv.appendChild(row);
-    });
+    show(attendanceBodyDiv, saveAttendanceBtn);
+    hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+  };
 
-  show(attendanceBodyDiv, saveAttendanceBtn);
-  hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-};
+  saveAttendanceBtn.onclick = async () => {
+    const date = dateInput.value;
+    if (!date) { alert('Pick date'); return; }
 
-// 2. Save attendance & show summary
-saveAttendanceBtn.onclick = async () => {
-  const date = dateInput.value;
-  if (!date) { alert('Pick date'); return; }
+    attendanceData[date] = {};
+    const cl  = $('teacherClassSelect').value;
+    const sec = $('teacherSectionSelect').value;
 
-  attendanceData[date] = {};
-  const cl  = $('teacherClassSelect').value;
-  const sec = $('teacherSectionSelect').value;
+    students
+      .filter(s => s.cls === cl && s.sec === sec)
+      .forEach((s, i) => {
+        const selBtn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
+        attendanceData[date][s.adm] = selBtn ? selBtn.textContent : 'A';
+      });
+    await save('attendanceData', attendanceData);
 
-  students
-    .filter(s => s.cls === cl && s.sec === sec)
-    .forEach((s, i) => {
-      const selBtn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
-      attendanceData[date][s.adm] = selBtn ? selBtn.textContent : 'A';
-    });
-  await save('attendanceData', attendanceData);
+    attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
+    const tbl = document.createElement('table');
+    tbl.id = 'attendanceSummaryTable';
+    tbl.innerHTML = `
+      <tr>
+        <th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th>
+      </tr>`;
 
-  attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
-  const tbl = document.createElement('table');
-  tbl.id = 'attendanceSummaryTable';
-  tbl.innerHTML = `
-    <tr>
-      <th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th>
-    </tr>`;
-
-  students
-    .filter(s => s.cls === cl && s.sec === sec)
-    .forEach((s, i) => {
-      const code = attendanceData[date][s.adm];
-      tbl.innerHTML += `
+    students
+      .filter(s => s.cls === cl && s.sec === sec)
+      .forEach((s, i) => {
+        const code = attendanceData[date][s.adm];
+        tbl.innerHTML += `
         <tr>
           <td>${i + 1}</td>
           <td>${s.adm}</td>
@@ -420,60 +365,55 @@ saveAttendanceBtn.onclick = async () => {
           <td>${statusNames[code]}</td>
           <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
         </tr>`;
+      });
+
+    attendanceSummaryDiv.appendChild(tbl);
+
+    attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic => {
+      ic.onclick = () => {
+        const adm = ic.dataset.adm;
+        const st  = students.find(x => x.adm === adm);
+        const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
+        window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+      };
     });
 
-  attendanceSummaryDiv.appendChild(tbl);
+    hide(attendanceBodyDiv, saveAttendanceBtn);
+    show(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+  };
 
-  attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic => {
-    ic.onclick = () => {
-      const adm = ic.dataset.adm;
-      const st  = students.find(x => x.adm === adm);
-      const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
-      window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
-    };
-  });
+  resetAttendanceBtn.onclick = () => {
+    show(attendanceBodyDiv, saveAttendanceBtn);
+    hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+  };
 
-  hide(attendanceBodyDiv, saveAttendanceBtn);
-  show(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-};
+  downloadAttendanceBtn.onclick = async () => {
+    const doc   = new jspdf.jsPDF();
+    const w     = doc.internal.pageSize.getWidth();
+    const today = new Date().toISOString().split('T')[0];
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY: 30, html: '#attendanceSummaryTable' });
+    const fileName = `attendance_${dateInput.value}.pdf`;
+    const blob     = doc.output('blob');
+    doc.save(fileName);
+    await sharePdf(blob, fileName, 'Attendance Report');
+  };
 
-// 3. Reset view
-resetAttendanceBtn.onclick = () => {
-  show(attendanceBodyDiv, saveAttendanceBtn);
-  hide(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
-};
-
-// 4. Download PDF
-downloadAttendanceBtn.onclick = async () => {
-  const doc   = new jspdf.jsPDF();
-  const w     = doc.internal.pageSize.getWidth();
-  const today = new Date().toISOString().split('T')[0];
-  doc.setFontSize(18);
-  doc.text('Attendance Report', 14, 16);
-  doc.setFontSize(10);
-  doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
-  doc.setFontSize(12);
-  doc.text($('setupText').textContent, 14, 24);
-  doc.autoTable({ startY: 30, html: '#attendanceSummaryTable' });
-  const fileName = `attendance_${dateInput.value}.pdf`;
-  const blob     = doc.output('blob');
-  doc.save(fileName);
-  await sharePdf(blob, fileName, 'Attendance Report');
-};
-
-// 5. Share via WhatsApp
-shareAttendanceBtn.onclick = () => {
-  const cl    = $('teacherClassSelect').value;
-  const sec   = $('teacherSectionSelect').value;
-  const date  = dateInput.value;
-  const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
-  const lines = students
-    .filter(s => s.cls === cl && s.sec === sec)
-    .map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
-};
-
-
+  shareAttendanceBtn.onclick = () => {
+    const cl    = $('teacherClassSelect').value;
+    const sec   = $('teacherSectionSelect').value;
+    const date  = dateInput.value;
+    const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
+    const lines = students
+      .filter(s => s.cls === cl && s.sec === sec)
+      .map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
+  };
 
   // --- 10. ANALYTICS ---
   const atg=$('analyticsTarget'), asel=$('analyticsSectionSelect'), atype=$('analyticsType'),
@@ -495,8 +435,9 @@ shareAttendanceBtn.onclick = () => {
 
   $('analyticsFilterBtn').onclick=()=>show($('analyticsFilterModal'));
   $('analyticsFilterClose').onclick=()=>hide($('analyticsFilterModal'));
-  $('applyAnalyticsFilter').onclick=()=>{
-    analyticsFilterOptions=Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked')).map(cb=>cb.value)||['all'];
+  $('applyAnalyticsFilter').onclick=()=>{ 
+    analyticsFilterOptions=Array.from(document.querySelectorAll('#analyticsFilterForm input[type="checkbox"]:checked'))
+      .map(cb=>cb.value)||['all'];
     analyticsDownloadMode=document.querySelector('#analyticsFilterForm input[name="downloadMode"]:checked').value;
     hide($('analyticsFilterModal'));
     if(lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats,lastAnalyticsRange.from,lastAnalyticsRange.to);
@@ -630,9 +571,71 @@ shareAttendanceBtn.onclick = () => {
 
     lastAnalyticsShare=
       `Attendance Analytics (${from} to ${to})\n`+
-      filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${ (st.total? (st.P/st.total*100).toFixed(1) : '0.0')}% / PKR ${st.outstanding}`)
+      filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${(st.total? (st.P/st.total*100).toFixed(1) : '0.0')}% / PKR ${st.outstanding}`)
         .join('\n');
   }
+
+  // --- 10. DOWNLOAD & SHARE HANDLERS (ANALYTICS) ---
+  $('downloadAnalytics').onclick = async () => {
+    if (!lastAnalyticsStats.length) { alert('No analytics to download. Generate report first.'); return; }
+
+    const setupText = $('setupText').textContent;
+    const periodText = `Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`;
+
+    if (analyticsDownloadMode === 'combined') {
+      const doc = new jspdf.jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFontSize(18);
+      doc.text('Attendance Analytics Report', 14, 16);
+      doc.setFontSize(12);
+      doc.text(setupText, 14, 24);
+      doc.text(periodText, 14, 32);
+
+      doc.autoTable({ startY: 40, html: '#analyticsTable' });
+      const blob = doc.output('blob');
+      doc.save('analytics_report.pdf');
+      await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
+
+    } else {
+      const doc = new jspdf.jsPDF();
+      lastAnalyticsStats.forEach((st, i) => {
+        if (i > 0) doc.addPage();
+
+        doc.setFontSize(18);
+        doc.text('Individual Attendance Analytics', 14, 16);
+        doc.setFontSize(12);
+        doc.text(setupText, 14, 24);
+        doc.text(periodText, 14, 32);
+
+        doc.setFontSize(14);
+        doc.text(`Name: ${st.name}`, 14, 40);
+        doc.text(`Adm#: ${st.adm}`, 14, 60);
+
+        doc.setFontSize(12);
+        doc.text(`Present: ${st.P}`, 14, 80);
+        doc.text(`Absent: ${st.A}`, 14, 100);
+        doc.text(`Late: ${st.Lt}`, 14, 120);
+        doc.text(`Half-Day: ${st.HD}`, 14, 140);
+        doc.text(`Leave: ${st.L}`, 14, 160);
+        doc.text(`Total: ${st.total}`, 14, 180);
+
+        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
+        doc.text(`% Present: ${pct}%`, 14, 200);
+        doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
+        doc.text(`Status: ${st.status}`, 14, 240);
+      });
+
+      const blob = doc.output('blob');
+      doc.save('individual_analytics_book.pdf');
+      await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
+    }
+  };
+
+  $('shareAnalytics').onclick = () => {
+    if (!lastAnalyticsShare) { alert('No analytics to share. Generate report first.'); return; }
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
+  };
 
   // --- 11. ATTENDANCE REGISTER ---
   (function(){
