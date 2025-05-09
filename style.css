@@ -71,7 +71,9 @@ button:disabled {
 }
 
 table {
-  width: 100%;
+  /* Make all tables flexible */
+  table-layout: auto !important;
+  width: auto !important;
   border-collapse: collapse;
   margin-top: 1em;
 }
@@ -80,6 +82,9 @@ th, td {
   padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
+  /* Allow text to wrap and break if needed */
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .no-print {
@@ -197,8 +202,8 @@ th, td {
   padding: 2mm !important;
 }
 
-/* Make the attendance report scrollable */
-#attendance-section #attendanceBody {
+/* Make the Mark Attendance section scrollable */
+#attendanceBody {
   max-height: 400px;
   overflow-y: auto;
   overflow-x: auto;
