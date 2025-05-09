@@ -75,10 +75,12 @@ table {
   margin-top: 1em;
 }
 
+/* Flexible cells: no wrapping, auto-expand width */
 th, td {
   padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
+  white-space: nowrap;
 }
 
 .no-print {
@@ -180,15 +182,6 @@ th, td {
   background-color: rgba(3,169,244,0.2);
   color: var(--info);
   border: 1px solid rgba(3,169,244,0.5);
-}
-
-/* Use transparent light blue for all status buttons */
-.attendance-row .attendance-buttons .present,
-.attendance-row .attendance-buttons .absent,
-.attendance-row .attendance-buttons .late,
-.attendance-row .attendance-buttons .leave {
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
 }
 
 /* Buttons under tables padding */
