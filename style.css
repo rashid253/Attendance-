@@ -76,7 +76,7 @@ table {
 }
 
 th, td {
-  padding: 0.5em;
+  padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
 }
@@ -177,27 +177,30 @@ th, td {
   padding: 0.5em;
   font-size: 0.9rem;
   border-radius: 4px;
+  background-color: rgba(3,169,244,0.2);
+  color: var(--info);
+  border: 1px solid rgba(3,169,244,0.5);
 }
 
-/* Status button colors */
-.attendance-row .attendance-buttons .present {
-  background: var(--success);
-}
-.attendance-row .attendance-buttons .absent {
-  background: var(--danger);
-}
-.attendance-row .attendance-buttons .late {
-  background: var(--warning);
-}
+/* Use transparent light blue for all status buttons */
+.attendance-row .attendance-buttons .present,
+.attendance-row .attendance-buttons .absent,
+.attendance-row .attendance-buttons .late,
 .attendance-row .attendance-buttons .leave {
-  background: var(--info);
+  background-color: rgba(3,169,244,0.2);
+  color: var(--info);
+}
+
+/* Buttons under tables padding */
+.table-actions button {
+  padding: 2mm !important;
 }
 
 /* Make the attendance report scrollable */
 #attendance-section #attendanceBody {
-  max-height: 400px;    /* adjust height as needed */
-  overflow-y: auto;     /* vertical scrollbar */
-  overflow-x: auto;     /* horizontal scrollbar if needed */
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
   border: 1px solid var(--light);
   padding: 0.5em;
   background: #fff;
