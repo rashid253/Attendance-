@@ -165,7 +165,32 @@ th, td {
 }
 
 .attendance-row .attendance-buttons {
-  margin-top: 0.4rem;
+  display: flex;
+  gap: 0.5em;
+}
+
+.attendance-row .attendance-buttons button {
+  flex: 1 1 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.5em;
+  font-size: 0.9rem;
+  border-radius: 4px;
+}
+
+/* Status button colors */
+.attendance-row .attendance-buttons .present {
+  background: var(--success);
+}
+.attendance-row .attendance-buttons .absent {
+  background: var(--danger);
+}
+.attendance-row .attendance-buttons .late {
+  background: var(--warning);
+}
+.attendance-row .attendance-buttons .leave {
+  background: var(--info);
 }
 
 /* Make the attendance report scrollable */
