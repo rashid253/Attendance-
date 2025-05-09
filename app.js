@@ -82,51 +82,90 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
   };
 
-  // Analytics PDF
-  $('downloadAnalytics').onclick = async () => {
-    if (!lastAnalyticsStats.length) { alert('No analytics to download. Generate report first.'); return; }
-    if (analyticsDownloadMode === 'combined') {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Attendance Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      doc.autoTable({ startY: 32, html: '#analyticsTable' });
-      const blob = doc.output('blob');
-      doc.save('analytics_report.pdf');
-      await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
-    } else {
-      const doc = new jspdf.jsPDF();
-      doc.setFontSize(18);
-      doc.text('Individual Attendance Analytics Report', 14, 16);
-      doc.setFontSize(12);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 24);
-      lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage();
-        doc.setFontSize(14);
-        doc.text(`Name: ${st.name}`, 14, 40);
-        doc.text(`Adm#: ${st.adm}`, 14, 60);
-        doc.text(`Present: ${st.P}`, 14, 80);
-        doc.text(`Absent: ${st.A}`, 14, 100);
-        doc.text(`Late: ${st.Lt}`, 14, 120);
-        doc.text(`Half-Day: ${st.HD}`, 14, 140);
-        doc.text(`Leave: ${st.L}`, 14, 160);
-        doc.text(`Total: ${st.total}`, 14, 180);
-        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-        doc.text(`% Present: ${pct}%`, 14, 200);
-        doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
-        doc.text(`Status: ${st.status}`, 14, 240);
-      });
-      const blob = doc.output('blob');
-      doc.save('individual_analytics_book.pdf');
-      await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
-    }
+  // 10. ANALYTICS PDF its part of Analytics Section 
+$('downloadAnalytics').onclick = async () => {
+  // nothing to download if no analytics generated
+  if (!lastAnalyticsStats.length) {
+    alert('No analytics to download. Generate report first.');
+    return;
+  }
+
+  // helper to build header on each new PDF
+  const buildHeader = doc => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const today     = new Date().toISOString().split('T')[0];
+
+    // School | Class | Section
+    doc.setFontSize(18);
+    doc.text(
+      `${$('schoolNameInput').value} | Class ${$('teacherClassSelect').value} Section ${$('teacherSectionSelect').value}`,
+      14,
+      16
+    );
+
+    // Title (size slightly smaller)
+    doc.setFontSize(14);
+    doc.text('Attendance Analytics Report', 14, 26);
+
+    // Date on top‑right
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
+
+    // Period under title
+    doc.text(
+      `Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`,
+      14,
+      34
+    );
+
+    // back to normal text size
+    doc.setFontSize(12);
   };
 
-  $('shareAnalytics').onclick = () => {
-    if (!lastAnalyticsShare) { alert('No analytics to share. Generate report first.'); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
-  };
+  if (analyticsDownloadMode === 'combined') {
+    // Combined report: one table
+    const doc = new jspdf.jsPDF();
+    buildHeader(doc);
+    doc.autoTable({ startY:  Forty‑something, html: '#analyticsTable' });
+    const blob = doc.output('blob');
+    doc.save('analytics_report.pdf');
+    await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
+
+  } else {
+    // Individual reports: one student per page
+    const doc = new jspdf.jsPDF();
+    buildHeader(doc);
+
+    lastAnalyticsStats.forEach((st, i) => {
+      if (i > 0) {
+        doc.addPage();
+        buildHeader(doc);
+      }
+
+      doc.setFontSize(14);
+      doc.text(`Name: ${st.name}`, 14, 40);
+      doc.text(`Adm#: ${st.adm}`, 14, 60);
+
+      doc.setFontSize(12);
+      doc.text(`Present: ${st.P}`, 14, 80);
+      doc.text(`Absent: ${st.A}`, 14, 100);
+      doc.text(`Late: ${st.Lt}`, 14, 120);
+      doc.text(`Half‑Day: ${st.HD}`, 14, 140);
+      doc.text(`Leave: ${st.L}`, 14, 160);
+      doc.text(`Total: ${st.total}`, 14, 180);
+
+      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
+      doc.text(`% Present: ${pct}%`, 14, 200);
+
+      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 220);
+      doc.text(`Status: ${st.status}`, 14, 240);
+    });
+
+    const blob = doc.output('blob');
+    doc.save('individual_analytics_book.pdf');
+    await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
+  }
+};
 
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
