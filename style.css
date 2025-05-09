@@ -1,102 +1,118 @@
-/* Universal Mobile-Friendly Responsive Stylesheet */
+/* style.css – fully self-contained, with only minimal tweaks for universal mobile-friendliness */
 
-/* 1. Root variables for scalable sizing */
+/* 1. CSS Variables */
 :root {
+  --primary: #2196F3;
+  --success: #4caf50;
+  --danger: #f44336;
+  --warning: #ffeb3b;
+  --info: #03a9f4;
+  --light: #f2f2f2;
+  --dark: #333;
+
+  /* spacing & type scale */
   --spacing: 1rem;
-  --gutter: 1rem;
   --font-base: 1rem;
   --font-scale: 1.2;
-  --max-content-width: 1200px;
 }
 
-/* 2. Global reset and box-sizing */
-*, *::before, *::after {
+/* 2. Global reset & box-sizing */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  outline: none;
 }
 
-/* 3. Body and container */
+/* 3. Body */
 body {
+  margin: 0 auto;
+  padding: var(--spacing);
+  font-family: Arial, sans-serif;
   font-size: var(--font-base);
   line-height: 1.5;
-  padding: var(--spacing);
-  margin: 0 auto;
-  max-width: var(--max-content-width);
-  color: #333;
-  background-color: #fafafa;
+  background: var(--light);
+  color: var(--dark);
+  max-width: 100%; /* allow full-width on smallest devices */
 }
 
-/* 4. Images and media responsive */
-img, video, canvas {
+/* 4. Headings */
+h1 {
+  font-size: calc(var(--font-base) * var(--font-scale) * 2);
+}
+h2 {
+  font-size: calc(var(--font-base) * var(--font-scale) * 1.75);
+}
+h3 {
+  font-size: calc(var(--font-base) * var(--font-scale) * 1.5);
+}
+h4 {
+  font-size: calc(var(--font-base) * var(--font-scale) * 1.25);
+}
+
+/* 5. Responsive images/media */
+img,
+video,
+canvas {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-/* 5. Headings scale responsively */
-h1 { font-size: calc(var(--font-base) * var(--font-scale) * 2); }
-h2 { font-size: calc(var(--font-base) * var(--font-scale) * 1.75); }
-h3 { font-size: calc(var(--font-base) * var(--font-scale) * 1.5); }
-h4 { font-size: calc(var(--font-base) * var(--font-scale) * 1.25); }
-
-/* 6. Responsive grid/flex utilities */
-.flex-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gutter);
-}
-
-/* 7. Counter grid/cards */
+/* 6. Counter grid/cards */
 .counter-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--gutter);
-  justify-content: space-between;
+  flex-wrap: wrap;       /* allow wrapping on narrow screens */
+  gap: var(--spacing);    /* use gap instead of fixed margins */
 }
 .counter-card {
-  flex: 1 1 200px;
+  flex: 1 1 150px;        /* narrower basis for small screens */
   background: #fff;
   padding: var(--spacing);
   border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   text-align: center;
 }
 .counter-card .number {
-  font-size: 2rem;
+  font-size: 1.5rem;      /* reduced from 2rem */
+  font-weight: bold;
   margin-bottom: 0.5rem;
 }
 
-/* 8. Tables responsive wrapper */
+/* 7. Modal adjustments */
+.modal-content {
+  width: 95% !important;  /* fluid on mobile */
+  max-width: 360px;       /* reasonable max on larger screens */
+  margin: 0 auto;
+}
+
+/* 8. Tables */
 .table-wrapper {
-  overflow-x: auto;
+  overflow-x: auto;       /* wrap tables in scroll container */
   width: 100%;
 }
 table {
   width: 100%;
   border-collapse: collapse;
 }
-th, td {
+th,
+td {
   padding: 0.5rem;
   text-align: left;
   word-break: break-word;
 }
 
-/* 9. Modal responsiveness */
-.modal-content {
-  width: 90%;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-/* 10. Form row-inline improved */
+/* 9. Forms – inline rows */
 .row-inline {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gutter);
+  gap: var(--spacing);
 }
 .row-inline label {
   flex: 1 1 100%;
+  margin-bottom: 0.25rem;
 }
 .row-inline input,
 .row-inline select,
@@ -105,9 +121,20 @@ th, td {
   padding: 0.5rem;
   font-size: var(--font-base);
 }
+@media (min-width: 600px) {
+  .row-inline label {
+    flex: 1 1 25%;
+  }
+  .row-inline input,
+  .row-inline select,
+  .row-inline textarea {
+    flex: 1 1 70%;
+  }
+}
 
-/* 11. Buttons fluid */
-button, .btn {
+/* 10. Buttons */
+button,
+.btn {
   display: inline-block;
   padding: 0.75rem 1.5rem;
   font-size: var(--font-base);
@@ -116,40 +143,21 @@ button, .btn {
   cursor: pointer;
 }
 
-/* 12. Utility classes */
-.text-center { text-align: center; }
-.mt-1 { margin-top: var(--spacing); }
-.mb-1 { margin-bottom: var(--spacing); }
-.p-1 { padding: var(--spacing); }
-
-/* 13. Media queries for breakpoints */
-@media (min-width: 600px) {
-  .row-inline label {
-    flex: 1 1 30%;
-  }
-  .row-inline input,
-  .row-inline select,
-  .row-inline textarea {
-    flex: 1 1 65%;
-  }
+/* 11. Utility classes */
+.text-center {
+  text-align: center;
 }
-@media (min-width: 900px) {
-  body {
-    padding: calc(var(--spacing) * 2);
-  }
-  .counter-card {
-    flex: 1 1 250px;
-  }
+.mt-1 {
+  margin-top: var(--spacing);
+}
+.mb-1 {
+  margin-bottom: var(--spacing);
+}
+.p-1 {
+  padding: var(--spacing);
 }
 
-/* 14. Ensure links wrap */
-a {
-  word-break: break-all;
-}
-
-/* 15. Smooth scrolling */
+/* 12. Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
-
-/* End of responsive stylesheet */
