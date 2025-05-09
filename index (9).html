@@ -30,18 +30,39 @@
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Hide in PDF/print -->
+  <!-- Hide in PDF/print & scrolling fix -->
   <style>
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
     .btn { margin-top: 0.5em; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+
     /* Filter button positioning */
     #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
+
+    /* Modal styling */
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
     .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
+
+    /* --- SCROLLING FIX FOR ATTENDANCE REPORT --- */
+    /* wrap the generated attendance table so it scrolls when overflowing */
+    #attendanceBody {
+      max-height: 300px;    /* adjust height as needed */
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid #ddd;
+      margin-top: 1em;
+    }
+    #attendanceBody table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #attendanceBody th, #attendanceBody td {
+      padding: 0.5em;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -145,6 +166,7 @@
       <input type="date" id="dateInput" />
       <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
+    <!-- Wrapped attendance table for scrolling -->
     <div id="attendanceBody"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
