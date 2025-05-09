@@ -66,38 +66,25 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* All tables expand horizontally based on content */
+.table-wrapper {
+  overflow-x: auto;
+}
+
 table {
+  /* Make all tables flexible */
   table-layout: auto !important;
   width: auto !important;
   border-collapse: collapse;
   margin-top: 1em;
 }
 
-/* Prevent wrapping so cells grow in width */
 th, td {
   padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
-  white-space: nowrap;    /* no wrap */
+  /* Prevent wrapping so cells expand horizontally */
+  white-space: nowrap;
 }
-
-/* Wrapper to allow horizontal scroll when table is too wide */
-.table-wrapper, 
-#attendanceBody {
-  overflow-x: auto;
-}
-
-/* Vertical scroll only for Mark Attendance list */
-#attendanceBody {
-  max-height: 400px;
-  overflow-y: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
-  background: #fff;
-}
-
-/* Remaining styles unchanged */
 
 .no-print {
   /* hide in print */
@@ -205,4 +192,23 @@ th, td {
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 0.5em;
+}
+
+/* Make the Mark Attendance list scrollable vertically and horizontally */
+#attendanceBody {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid var(--light);
+  padding: 0.5em;
+  background: #fff;
+}
+
+/* Make the Attendance Report table scrollable horizontally */
+#attendanceSummary {
+  overflow-x: auto;
+  padding-bottom: 0.5em;
+}
+#attendanceSummary table {
+  min-width: 600px; /* adjust as needed so scroll appears */
 }
