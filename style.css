@@ -66,26 +66,38 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.table-wrapper {
-  overflow-x: auto;
-}
-
+/* All tables expand horizontally based on content */
 table {
-  /* Make all tables flexible */
   table-layout: auto !important;
   width: auto !important;
   border-collapse: collapse;
   margin-top: 1em;
 }
 
+/* Prevent wrapping so cells grow in width */
 th, td {
   padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
-  /* Allow text to wrap and break if needed */
-  white-space: normal !important;
-  word-break: break-word !important;
+  white-space: nowrap;    /* no wrap */
 }
+
+/* Wrapper to allow horizontal scroll when table is too wide */
+.table-wrapper, 
+#attendanceBody {
+  overflow-x: auto;
+}
+
+/* Vertical scroll only for Mark Attendance list */
+#attendanceBody {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--light);
+  padding: 0.5em;
+  background: #fff;
+}
+
+/* Remaining styles unchanged */
 
 .no-print {
   /* hide in print */
@@ -186,30 +198,6 @@ th, td {
   background-color: rgba(3,169,244,0.2);
   color: var(--info);
   border: 1px solid rgba(3,169,244,0.5);
-}
-
-/* Use transparent light blue for all status buttons */
-.attendance-row .attendance-buttons .present,
-.attendance-row .attendance-buttons .absent,
-.attendance-row .attendance-buttons .late,
-.attendance-row .attendance-buttons .leave {
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
-}
-
-/* Buttons under tables padding */
-.table-actions button {
-  padding: 2mm !important;
-}
-
-/* Make the Mark Attendance section scrollable */
-#attendanceBody {
-  max-height: 400px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
-  background: #fff;
 }
 
 /* Updated styling for attendance row header */
