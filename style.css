@@ -83,8 +83,14 @@ th, td {
   white-space: nowrap;
 }
 
+/* Default `.no-print` visible but hidden when printing */
 .no-print {
-  /* hide in print */
+  display: inline-block;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
 
 .hidden {
@@ -184,8 +190,19 @@ th, td {
   border: 1px solid rgba(3,169,244,0.5);
 }
 
-/* Buttons under tables padding */
-.table-actions button {
+/* Buttons under tables padding and layout */
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.5em;
+  position: relative;
+  z-index: 1;
+}
+.table-actions button.no-print {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 2mm !important;
 }
 
