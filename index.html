@@ -47,13 +47,12 @@
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
 
     /* --- SCROLLING FIX FOR ATTENDANCE REPORT --- */
-    /* wrap the generated attendance table so it scrolls when overflowing */
     #attendanceBody {
-      max-height: 300px;    /* adjust height as needed */
+      max-height: 300px;    /* adjust as needed */
       overflow-y: auto;
       overflow-x: auto;
-      border: 1px solid #ddd;
       margin-top: 1em;
+      border: 1px solid #ddd;
     }
     #attendanceBody table {
       width: 100%;
@@ -166,7 +165,6 @@
       <input type="date" id="dateInput" />
       <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
-    <!-- Wrapped attendance table for scrolling -->
     <div id="attendanceBody"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
