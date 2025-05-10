@@ -116,45 +116,67 @@ $('downloadAnalytics').onclick = async () => {
     doc.save('analytics_report.pdf');
     await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
 
-  } else {
-    const doc = new jspdf.jsPDF();
+ } else {
+  const doc = new jspdf.jsPDF();
+  
+  // Title
+  doc.setFontSize(18);
+  doc.text('Individual Attendance Analytics Report', 14, 16);
+  
+  // School / Class / Section
+  doc.setFontSize(12);
+  doc.text(setupHeader, 14, 24);
+  
+  // Period
+  doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
+
+  lastAnalyticsStats.forEach((st, i) => {
+    if (i > 0) doc.addPage();
     
-    // Title
-    doc.setFontSize(18);
-    doc.text('Individual Attendance Analytics Report', 14, 16);
-    
-    // Added: school / class / section
+    let y = 48;
+    // Basic Info
+    doc.setFontSize(14);
+    doc.text(`Name: ${st.name}`, 14, y); y += 16;
+    doc.text(`Adm#: ${st.adm}`, 14, y);  y += 16;
+    doc.text(`Total Days: ${st.total}`, 14, y); y += 16;
+
+    // Summary counts
     doc.setFontSize(12);
-    doc.text(setupHeader, 14, 24);
-    
-    // Period
-    doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    
-    lastAnalyticsStats.forEach((st, i) => {
-      if (i > 0) doc.addPage();
-      
-      doc.setFontSize(14);
-      doc.text(`Name: ${st.name}`, 14, 48);
-      doc.text(`Adm#: ${st.adm}`, 14, 64);
-      doc.text(`Present: ${st.P}`, 14, 80);
-      doc.text(`Absent: ${st.A}`, 14, 96);
-      doc.text(`Late: ${st.Lt}`, 14, 112);
-      doc.text(`Half-Day: ${st.HD}`, 14, 128);
-      doc.text(`Leave: ${st.L}`, 14, 144);
-      doc.text(`Total: ${st.total}`, 14, 160);
+    doc.text(`Present: ${st.P}`, 14, y);
+    doc.text(`Absent: ${st.A}`, 60, y);
+    doc.text(`Late: ${st.Lt}`, 110, y);
+    y += 12;
+    doc.text(`Half-Day: ${st.HD}`, 14, y);
+    doc.text(`Leave: ${st.L}`, 60, y);
+    y += 16;
 
-      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-      doc.text(`% Present: ${pct}%`, 14, 176);
-      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 192);
-      doc.text(`Status: ${st.status}`, 14, 208);
+    // Detailed per-date entries table
+    doc.text('Date-wise Attendance:', 14, y); y += 8;
+    doc.autoTable({
+      startY: y,
+      head: [['Date', 'Status']],
+      body: st.entries.map(e => [e.date, e.status]),
+      theme: 'grid',
+      headStyles: { fillColor: [230, 230, 230] },
+      styles: { fontSize: 10, cellPadding: 2 }
     });
+    y = doc.lastAutoTable.finalY + 8;
 
-    const blob = doc.output('blob');
-    doc.save('individual_analytics_book.pdf');
-    await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
-  }
-};
+    // Fine & Eligibility
+    doc.text(`Fine Applied: PKR ${st.fine}`, 14, y); y += 12;
+    doc.text(`Eligibility: ${st.eligibility}`, 14, y); y += 16;
 
+    // Percentage & Status
+    const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
+    doc.text(`% Present: ${pct}%`, 14, y); y += 12;
+    doc.text(`Outstanding: PKR ${st.outstanding}`, 14, y); y += 12;
+    doc.text(`Status: ${st.status}`, 14, y);
+  });
+
+  const blob = doc.output('blob');
+  doc.save('individual_analytics_book.pdf');
+  await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
+}
 // --- Share Analytics via WhatsApp ---
 $('shareAnalytics').onclick = () => {
   if (!lastAnalyticsShare) {
