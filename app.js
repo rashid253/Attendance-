@@ -643,51 +643,99 @@ shareAttendanceBtn.onclick = () => {
     resetA.classList.add('hidden');
   };
 
-  loadA.onclick=()=>{
-    if(atg.value==='student'&&!asearch.value.trim()){alert('Enter admission number or name');return;}
-    let from,to;
-    if(atype.value==='date'){ from=to=adate.value; }
-    else if(atype.value==='month'){
-      const [y,m]=amonth.value.split('-').map(Number);
-      from=`${amonth.value}-01`;
-      to=`${amonth.value}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
-    }
-    else if(atype.value==='semester'){
-      const [sy,sm]=sems.value.split('-').map(Number);
-      const [ey,em]=seme.value.split('-').map(Number);
-      from=`${sems.value}-01`;
-      to=`${seme.value}-${String(new Date(ey,em,0).getDate()).padStart(2,'0')}`;
-    }
-    else if(atype.value==='year'){
-      from=`${ayear.value}-01-01`; to=`${ayear.value}-12-31`;
-    }
-    else{alert('Select period');return;}
+  
+loadA.onclick = () => {
+  if (atg.value === 'student' && !asearch.value.trim()) {
+    alert('Enter admission number or name');
+    return;
+  }
 
-    const cls=$('teacherClassSelect').value, sec=$('teacherSectionSelect').value;
-    let pool=students.filter(s=>s.cls===cls&&s.sec===sec);
-    if(atg.value==='section') pool=pool.filter(s=>s.sec===asel.value);
-    if(atg.value==='student'){
-      const q=asearch.value.trim().toLowerCase();
-      pool=pool.filter(s=>s.adm===q||s.name.toLowerCase().includes(q));
-    }
+  // 1) Determine date range
+  let from, to;
+  if (atype.value === 'date') {
+    from = to = adate.value;
+  } else if (atype.value === 'month') {
+    const [y, m] = amonth.value.split('-').map(Number);
+    from = `${amonth.value}-01`;
+    to   = `${amonth.value}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+  } else if (atype.value === 'semester') {
+    const [sy, sm] = sems.value.split('-').map(Number);
+    const [ey, em] = seme.value.split('-').map(Number);
+    from = `${sems.value}-01`;
+    to   = `${seme.value}-${String(new Date(ey, em, 0).getDate()).padStart(2, '0')}`;
+  } else if (atype.value === 'year') {
+    from = `${ayear.value}-01-01`;
+    to   = `${ayear.value}-12-31`;
+  } else {
+    alert('Select period');
+    return;
+  }
 
-    const stats=pool.map(s=>({ adm:s.adm,name:s.name,P:0,A:0,Lt:0,HD:0,L:0,total:0 }));
-    Object.entries(attendanceData).forEach(([d,rec])=>{
-      if(d<from||d>to) return;
-      stats.forEach(st=>{ if(rec[st.adm]){ st[rec[st.adm]]++; st.total++; } });
-    });
-    stats.forEach(st=>{
-      const totalFine=st.A*fineRates.A+st.Lt*fineRates.Lt+st.L*fineRates.L+st.HD*fineRates.HD;
-      const paid=(paymentsData[st.adm]||[]).reduce((a,p)=>a+p.amount,0);
-      st.outstanding=totalFine-paid;
-      const pct=st.total? (st.P/st.total)*100:0;
-      st.status=(st.outstanding>0||pct<eligibilityPct)?'Debarred':'Eligible';
-    });
+  // 2) Build student pool
+  const cls = $('teacherClassSelect').value;
+  const sec = $('teacherSectionSelect').value;
+  let pool = students.filter(s => s.cls === cls && s.sec === sec);
+  if (atg.value === 'section') {
+    pool = pool.filter(s => s.sec === asel.value);
+  }
+  if (atg.value === 'student') {
+    const q = asearch.value.trim().toLowerCase();
+    pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
+  }
 
-    lastAnalyticsStats=stats; lastAnalyticsRange={from,to};
-    renderAnalytics(stats,from,to);
-  };
+  // 3) Compute detailed stats for each student
+  const stats = pool.map(stu => {
+    // A) Date-wise entries
+    const entries = Object.entries(attendanceData)
+      .filter(([date, rec]) =>
+        date >= from && date <= to && rec[stu.adm]
+      )
+      .map(([date, rec]) => ({ date, status: rec[stu.adm] }));
 
+    // B) Summary counts
+    const P  = entries.filter(e => e.status === 'P').length;
+    const A  = entries.filter(e => e.status === 'A').length;
+    const Lt = entries.filter(e => e.status === 'Lt').length;
+    const HD = entries.filter(e => e.status === 'HD').length;
+    const L  = entries.filter(e => e.status === 'L').length;
+    const total = entries.length;
+
+    // C) Fine & Eligibility based on settings
+    const fine = 
+      A  * fineRates.A  +
+      Lt * fineRates.Lt +
+      L  * fineRates.L  +
+      HD * fineRates.HD;
+    const eligibility = (total && (P / total * 100) >= eligibilityPct)
+      ? 'Eligible'
+      : 'Not Eligible';
+
+    // D) Outstanding dues and final status
+    const paid = (paymentsData[stu.adm] || [])
+      .reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = fine - paid;
+    const pct = total ? (P / total) * 100 : 0;
+    const status = (outstanding > 0 || pct < eligibilityPct)
+      ? 'Debarred'
+      : 'Eligible';
+
+    return {
+      adm:         stu.adm,
+      name:        stu.name,
+      entries,     // for PDF date-wise table
+      P, A, Lt, HD, L, total,
+      fine,        // for PDF “Fine Applied”
+      eligibility, // for PDF “Eligibility”
+      outstanding,
+      status
+    };
+  });
+
+  // 4) Render and save
+  lastAnalyticsStats  = stats;
+  lastAnalyticsRange  = { from, to };
+  renderAnalytics(stats, from, to);
+};
   function renderAnalytics(stats,from,to){
     let filtered=stats;
     if(!analyticsFilterOptions.includes('all')){
