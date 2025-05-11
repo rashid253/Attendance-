@@ -208,27 +208,127 @@ $('shareAnalytics').onclick = () => {
   };
 
   // --- 5. SETUP: School, Class & Section ---
-  async function loadSetup() {
-    const [sc,cl,sec] = await Promise.all([ get('schoolName'), get('teacherClass'), get('teacherSection') ]);
-    if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
-      $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide($('setupForm'));
-      show($('setupDisplay'));
+  // --- 5. SETUP: Multiple Schools, Classes & Sections ---
+  const schoolInput     = $('schoolNameInput');
+  const addSchoolBtn    = $('addSchoolBtn');
+  const schoolSelect    = $('schoolSelect');
+  const classInput      = $('classInput');
+  const addClassBtn     = $('addClassBtn');
+  const classSelect     = $('classSelect');
+  const sectionSelect   = $('teacherSectionSelect');
+  const saveSetupBtn    = $('saveSetup');
+  const editSetupBtn    = $('editSetup');
+  const setupForm       = $('setupForm');
+  const setupDisplay    = $('setupDisplay');
+  const setupText       = $('setupText');
+
+  // Load saved schools, classes & teacher’s choice
+  async function loadSetupData() {
+    const schools       = (await get('schools'))       || [];
+    const teacherSchool = (await get('teacherSchool')) || '';
+    const teacherClass  = (await get('teacherClass'))  || '';
+    const teacherSec    = (await get('teacherSection'))|| '';
+
+    // Populate School dropdown
+    schoolSelect.innerHTML = `
+      <option value="">-- Select School --</option>
+      ${schools.map(s => `
+        <option value="${s.name}" ${s.name===teacherSchool?'selected':''}>
+          ${s.name}
+        </option>
+      `).join('')}
+    `;
+
+    // Populate Class dropdown for the selected school
+    if (teacherSchool) {
+      const sch = schools.find(s => s.name===teacherSchool) || { classes: [] };
+      classSelect.innerHTML = `
+        <option value="">-- Select Class --</option>
+        ${sch.classes.map(c => `
+          <option value="${c}" ${c===teacherClass?'selected':''}>
+            ${c}
+          </option>
+        `).join('')}
+      `;
+    } else {
+      classSelect.innerHTML = `<option value="">-- Select Class --</option>`;
+    }
+
+    // Restore Section
+    sectionSelect.value = teacherSec;
+
+    // If fully set, show display; otherwise show form
+    if (teacherSchool && teacherClass && teacherSec) {
+      setupText.textContent = 
+        `${teacherSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSec}`;
+      setupForm.classList.add('hidden');
+      setupDisplay.classList.remove('hidden');
       renderStudents(); updateCounters(); resetViews();
+    } else {
+      setupForm.classList.remove('hidden');
+      setupDisplay.classList.add('hidden');
     }
   }
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    const sc = $('schoolNameInput').value.trim(), cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
-    await Promise.all([ save('schoolName', sc), save('teacherClass', cl), save('teacherSection', sec) ]);
-    await loadSetup();
+
+  // Add a new school
+  addSchoolBtn.onclick = async () => {
+    const name = schoolInput.value.trim();
+    if (!name) return alert('Enter a school name');
+    const schools = await get('schools') || [];
+    if (schools.some(s => s.name===name))
+      return alert('That school already exists');
+    schools.push({ name, classes: [] });
+    await set('schools', schools);
+    schoolInput.value = '';
+    await loadSetupData();
   };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
-  await loadSetup();
+
+  // When school changes, clear classes & section
+  schoolSelect.onchange = () => {
+    classSelect.innerHTML = `<option value="">-- Select Class --</option>`;
+    sectionSelect.value = '';
+  };
+
+  // Add a new class under the selected school
+  addClassBtn.onclick = async () => {
+    const cls = classInput.value.trim();
+    const schName = schoolSelect.value;
+    if (!schName) return alert('Select a school first');
+    if (!cls)     return alert('Enter a class');
+    const schools = await get('schools') || [];
+    const sch     = schools.find(s => s.name===schName);
+    if (sch.classes.includes(cls))
+      return alert('That class already exists');
+    sch.classes.push(cls);
+    await set('schools', schools);
+    classInput.value = '';
+    await loadSetupData();
+  };
+
+  // Save teacher’s selections
+  saveSetupBtn.onclick = async e => {
+    e.preventDefault();
+    const sc  = schoolSelect.value;
+    const cl  = classSelect.value;
+    const sec = sectionSelect.value;
+    if (!sc || !cl || !sec) return alert('Complete all fields');
+    await Promise.all([
+      set('teacherSchool', sc),
+      set('teacherClass',  cl),
+      set('teacherSection',sec)
+    ]);
+    await loadSetupData();
+  };
+
+  // Switch back to form for editing
+  editSetupBtn.onclick = e => {
+    e.preventDefault();
+    setupForm.classList.remove('hidden');
+    setupDisplay.classList.add('hidden');
+  };
+
+  // Initialize on page load
+  await loadSetupData();
 
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
