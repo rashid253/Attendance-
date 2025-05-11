@@ -208,27 +208,65 @@ $('shareAnalytics').onclick = () => {
   };
 
   // --- 5. SETUP: School, Class & Section ---
-  async function loadSetup() {
-    const [sc,cl,sec] = await Promise.all([ get('schoolName'), get('teacherClass'), get('teacherSection') ]);
-    if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
-      $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide($('setupForm'));
-      show($('setupDisplay'));
-      renderStudents(); updateCounters(); resetViews();
-    }
+async function loadSetup() {
+  // If no school selected, show selector and hide main app
+  if (!currentSchool) {
+    show($('schoolSetup'));
+    hide($('mainApp'));
+    return;
   }
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    const sc = $('schoolNameInput').value.trim(), cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
-    await Promise.all([ save('schoolName', sc), save('teacherClass', cl), save('teacherSection', sec) ]);
-    await loadSetup();
-  };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
+  // School is selected: hide selector, show main app
+  hide($('schoolSetup'));
+  show($('mainApp'));
+
+  // Load saved class & section for this school
+  const [cl, sec] = await Promise.all([
+    get(key('teacherClass')),
+    get(key('teacherSection'))
+  ]);
+
+  if (cl && sec) {
+    // Populate UI
+    $('teacherClassSelect').value = cl;
+    $('teacherSectionSelect').value = sec;
+    $('setupText').textContent = `${currentSchool} 🏫 | Class: ${cl} | Section: ${sec}`;
+    hide($('setupForm'));
+    show($('setupDisplay'));
+
+    // Load and render school data
+    await loadSchoolData();
+    renderStudents();
+    updateCounters();
+    resetViews();
+  }
+}
+
+// Save setup handler
+$('saveSetup').onclick = async e => {
+  e.preventDefault();
+  const clv = $('teacherClassSelect').value;
+  const secv = $('teacherSectionSelect').value;
+  if (!currentSchool || !clv || !secv) {
+    alert('Complete setup');
+    return;
+  }
+  // Save class & section under current school namespace
+  await Promise.all([
+    save(key('teacherClass'), clv),
+    save(key('teacherSection'), secv)
+  ]);
   await loadSetup();
+};
+
+// Edit setup handler
+$('editSetup').onclick = e => {
+  e.preventDefault();
+  show($('setupForm'));
+  hide($('setupDisplay'));
+};
+
+// Initialize setup on load
+await loadSetup();
 
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
