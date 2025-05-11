@@ -1,6 +1,21 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
+  console.log('Binding listeners…');
+
+[
+  'saveSetup','editSetup',
+  'saveSettings','editSettings',
+  'addStudentBtn','editSelected','deleteSelected',
+  'loadAttendance','saveAttendance','resetAttendance',
+  'loadRegister','saveRegister','changeRegister',
+  'downloadRegistrationPDF','shareRegistration',
+  'downloadAttendancePDF','shareAttendanceSummary',
+  'downloadRegister','shareRegister'
+].forEach(id => {
+  const el = document.getElementById(id);
+  console.log(id, el ? 'FOUND' : 'MISSING');
+});
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
