@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Multi-School Attendance Mgmt</title>
 
-  <!-- idb-keyval for IndexedDB helper -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-  <!-- Font Awesome for icons -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <!-- jsPDF and autotable for PDF export -->
+  <!-- jsPDF & AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <!-- Chart.js for analytics -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Your custom styles -->
+  <!-- Your styles -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -39,7 +39,7 @@
     </div>
   </header>
 
-  <!-- LOGIN SECTION -->
+  <!-- LOGIN -->
   <section id="loginSection">
     <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
     <div class="row-inline">
@@ -60,36 +60,34 @@
     </div>
   </section>
 
-  <!-- MAIN APP AREA (hidden until login) -->
+  <!-- SETUP (moved outside #app) -->
+  <section id="setupForm">
+    <h2><i class="fas fa-cog"></i> Setup</h2>
+    <div class="row-inline">
+      <input id="schoolNameInput" placeholder="School Name" />
+      <select id="teacherClassSelect">
+        <option disabled selected>-- Class --</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
+        <option>Class One</option><option>Class Two</option><option>Class Three</option>
+        <option>Class Four</option><option>Class Five</option><option>Class Six</option>
+        <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
+        <option>Class Ten</option>
+      </select>
+      <select id="teacherSectionSelect">
+        <option disabled selected>-- Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <button id="saveSetup" class="btn"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </section>
+  <section id="setupDisplay" class="hidden">
+    <h3><span id="setupText"></span></h3>
+    <button id="editSetup" class="btn"><i class="fas fa-edit"></i> Change</button>
+  </section>
+
+  <!-- MAIN APP (hidden until login) -->
   <div id="app" class="hidden">
-    <!-- SETUP FORM -->
-    <section id="setupForm">
-      <h2><i class="fas fa-cog"></i> Setup</h2>
-      <div class="row-inline">
-        <input id="schoolNameInput" placeholder="School Name" />
-        <select id="teacherClassSelect">
-          <option disabled selected>-- Class --</option>
-          <option>Play Group</option><option>Nursery</option><option>KG</option>
-          <option>Class One</option><option>Class Two</option><option>Class Three</option>
-          <option>Class Four</option><option>Class Five</option><option>Class Six</option>
-          <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
-          <option>Class Ten</option>
-        </select>
-        <select id="teacherSectionSelect">
-          <option disabled selected>-- Section --</option>
-          <option>A</option><option>B</option><option>C</option>
-        </select>
-        <button id="saveSetup" class="btn"><i class="fas fa-save"></i> Save</button>
-      </div>
-    </section>
-
-    <!-- SETUP DISPLAY -->
-    <section id="setupDisplay" class="hidden">
-      <h3><span id="setupText"></span></h3>
-      <button id="editSetup" class="btn"><i class="fas fa-edit"></i> Change</button>
-    </section>
-
-    <!-- FINANCIAL SETTINGS -->
+    <!-- 2. Financial Settings -->
     <section id="financial-settings">
       <h2><i class="fas fa-dollar-sign"></i> Financial Settings</h2>
       <div class="row-inline">
@@ -98,7 +96,7 @@
       </div>
     </section>
 
-    <!-- DATE RANGE & COUNTERS -->
+    <!-- 3. Date Range & Counters -->
     <section id="counter-settings">
       <h2><i class="fas fa-calendar-alt"></i> Date Range & Counters</h2>
       <div class="row-inline">
@@ -107,7 +105,7 @@
       </div>
     </section>
 
-    <!-- REGISTER STUDENT -->
+    <!-- 4. Register Student -->
     <section id="student-register">
       <h2><i class="fas fa-user-plus"></i> Register Student</h2>
       <div class="row-inline">
@@ -117,14 +115,14 @@
       </div>
     </section>
 
-    <!-- ATTENDANCE -->
+    <!-- 5. Attendance -->
     <section id="attendance">
       <h2><i class="fas fa-check-square"></i> Attendance</h2>
       <div id="attendanceList"></div>
       <button id="saveAttendance" class="btn"><i class="fas fa-save"></i> Save Attendance</button>
     </section>
 
-    <!-- ANALYTICS -->
+    <!-- 6. Analytics -->
     <section id="analytics">
       <h2><i class="fas fa-chart-bar"></i> Analytics</h2>
       <canvas id="attendanceChart"></canvas>
@@ -134,7 +132,7 @@
       </div>
     </section>
 
-    <!-- EXPORT / IMPORT CSV -->
+    <!-- 7. Export / Import CSV -->
     <section id="export-import">
       <h2><i class="fas fa-file-export"></i> Export / Import</h2>
       <div class="row-inline">
@@ -143,12 +141,9 @@
         <input type="file" id="csvFile" accept=".csv" class="hidden" />
       </div>
     </section>
-
-    <!-- RESTORE FILE INPUT -->
-    <input type="file" id="restoreFile" accept=".json" class="hidden"/>
-
   </div>
 
   <!-- Link to your JavaScript -->
   <script src="app.js"></script>
 </body>
+</html>
