@@ -207,56 +207,117 @@ $('shareAnalytics').onclick = () => {
     show(formDiv, saveSettings, ...inputs);
   };
 
-  // --- 5. SETUP: School, Class & Section ---
-  async function loadSetup() {
-    const [sc,cl,sec] = await Promise.all([ get('schoolName'), get('teacherClass'), get('teacherSection') ]);
-    if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
-      $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide($('setupForm'));
-      show($('setupDisplay'));
+  // --- 5. SETUP: Schools, Classes & Sections ---
+  // Data structure in IndexedDB: 
+  //   schools: [{ name: 'School A', classes: ['1','2','3'] }, ...]
+  //   teacherSchool: 'School A'
+  //   teacherClass : '2'
+  //   teacherSection: 'A'
+
+  // DOM elements
+  const setupForm       = $('setupForm'),
+        setupDisplay    = $('setupDisplay'),
+        schoolInput     = $('schoolNameInput'),
+        addSchoolBtn    = $('addSchoolBtn'),
+        schoolSelect    = $('schoolSelect'),
+        classInput      = $('classInput'),
+        addClassBtn     = $('addClassBtn'),
+        classSelect     = $('classSelect'),
+        sectionSelect   = $('teacherSectionSelect'),
+        saveSetupBtn    = $('saveSetup'),
+        editSetupBtn    = $('editSetup'),
+        setupText       = $('setupText');
+
+  async function loadSetupData() {
+    // fetch from IDB
+    const schools       = await get('schools')       || [];
+    const teacherSchool = await get('teacherSchool') || '';
+    const teacherClass  = await get('teacherClass')  || '';
+    const teacherSec    = await get('teacherSection')|| '';
+
+    // populate school dropdown
+    schoolSelect.innerHTML = `<option value="">Select School</option>` +
+      schools.map(s => `<option ${s.name===teacherSchool?'selected':''}>${s.name}</option>`).join('');
+
+    // when a school is selected, load its classes
+    if (teacherSchool) {
+      const sch = schools.find(s => s.name === teacherSchool);
+      classSelect.innerHTML = `<option value="">Select Class</option>` +
+        (sch ? sch.classes : []).map(c =>
+          `<option ${c===teacherClass?'selected':''}>${c}</option>`
+        ).join('');
+    }
+
+    // set section dropdown (unchanged)
+    sectionSelect.value = teacherSec;
+
+    // if fully configured, show display
+    if (teacherSchool && teacherClass && teacherSec) {
+      setupText.textContent = `${teacherSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSec}`;
+      hide(setupForm);
+      show(setupDisplay);
       renderStudents(); updateCounters(); resetViews();
     }
   }
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    const sc = $('schoolNameInput').value.trim(), cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
-    await Promise.all([ save('schoolName', sc), save('teacherClass', cl), save('teacherSection', sec) ]);
-    await loadSetup();
+
+  // add new school
+  addSchoolBtn.onclick = async () => {
+    const name = schoolInput.value.trim();
+    if (!name) { alert('Enter school name'); return; }
+    const schools = await get('schools') || [];
+    if (schools.find(s => s.name === name)) { alert('School already exists'); return; }
+    schools.push({ name, classes: [] });
+    await save('schools', schools);
+    schoolInput.value = '';
+    await loadSetupData();
   };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
-  await loadSetup();
 
-  // --- 6. COUNTERS & UTILS ---
-  function animateCounters() {
-    document.querySelectorAll('.number').forEach(span => {
-      const target = +span.dataset.target; let count = 0; const step = Math.max(1, target/100);
-      (function upd(){ count+=step; span.textContent = count<target?Math.ceil(count):target; if(count<target) requestAnimationFrame(upd); })();
-    });
-  }
-  function updateCounters() {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
-    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
-    $('schoolCount').dataset.target  = students.length;
-    animateCounters();
-  }
-  function resetViews() {
-    hide(
-      $('attendanceBody'), $('saveAttendance'), $('resetAttendance'),
-      $('attendanceSummary'), $('downloadAttendancePDF'), $('shareAttendanceSummary'),
-      $('instructions'), $('analyticsContainer'), $('graphs'), $('analyticsActions'),
-      $('registerTableWrapper'), $('changeRegister'),
-      $('saveRegister'), $('downloadRegister'), $('shareRegister')
-    );
-    show($('loadRegister'));
-  }
-  $('teacherClassSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
-  $('teacherSectionSelect').onchange = () => { renderStudents(); updateCounters(); resetViews(); };
+  // when school changes, clear classSelect and sectionSelect
+  schoolSelect.onchange = () => {
+    classSelect.innerHTML = `<option value="">Select Class</option>`;
+    sectionSelect.value = '';
+  };
 
+  // add new class to selected school
+  addClassBtn.onclick = async () => {
+    const cls = classInput.value.trim();
+    const schoolName = schoolSelect.value;
+    if (!schoolName) { alert('Select a school first'); return; }
+    if (!cls)         { alert('Enter class'); return; }
+    const schools = await get('schools') || [];
+    const sch = schools.find(s => s.name === schoolName);
+    if (sch.classes.includes(cls)) { alert('Class already exists'); return; }
+    sch.classes.push(cls);
+    await save('schools', schools);
+    classInput.value = '';
+    await loadSetupData();
+  };
+
+  // Save teacher's selection
+  saveSetupBtn.onclick = async e => {
+    e.preventDefault();
+    const sc  = schoolSelect.value;
+    const cl  = classSelect.value;
+    const sec = sectionSelect.value;
+    if (!sc || !cl || !sec) { alert('Complete setup'); return; }
+    await Promise.all([
+      save('teacherSchool', sc),
+      save('teacherClass', cl),
+      save('teacherSection', sec)
+    ]);
+    await loadSetupData();
+  };
+
+  // Edit setup
+  editSetupBtn.onclick = e => {
+    e.preventDefault();
+    show(setupForm);
+    hide(setupDisplay);
+  };
+
+  // initialize on load
+  await loadSetupData();
+  
   // --- 7. STUDENT REGISTRATION & FINE/STATUS ---
   function renderStudents() {
     const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, tbody = $('studentsBody');
