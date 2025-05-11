@@ -49,30 +49,52 @@
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
   </header>
 
-  <!-- 1. SETUP -->
   <section id="teacher-setup">
-    <h2><i class="fas fa-cog"></i> Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input id="schoolNameInput" placeholder="School Name" />
+  <!-- 1. School Selector -->
+  <div id="schoolSetup">
+    <h2><i class="fas fa-school"></i> Select School</h2>
+    <label for="schoolSelect">School:</label>
+    <select id="schoolSelect">
+      <!-- JS سے Populate ہوگا -->
+    </select>
+    <button id="addSchoolBtn" class="no-print"><i class="fas fa-plus-circle"></i> Add School</button>
+  </div>
+
+  <!-- 2. Main App Setup (چھپا ہوا) -->
+  <div id="mainApp" class="hidden">
+    <!-- Display saved Class & Section -->
+    <div id="setupDisplay" class="hidden">
+      <h2><i class="fas fa-cog"></i> Setup</h2>
+      <h3>
+        <i class="fas fa-school no-print"></i>
+        <span id="setupText"></span>
+      </h3>
+      <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
+    </div>
+
+    <!-- Edit/Class-Section Form -->
+    <form id="setupForm" class="row-inline">
+      <h2><i class="fas fa-cog"></i> Setup</h2>
+      <label for="teacherClassSelect">Class:</label>
       <select id="teacherClassSelect">
         <option disabled selected>-- Select Class --</option>
-        <option>Play Group</option><option>Nursary</option><option>KG</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
         <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
         <option>Class Ten</option>
       </select>
+
+      <label for="teacherSectionSelect">Section:</label>
       <select id="teacherSectionSelect">
         <option disabled selected>-- Select Section --</option>
         <option>A</option><option>B</option><option>C</option>
       </select>
+
       <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
-    </div>
-    <div id="setupDisplay" class="hidden">
-      <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
-      <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
-    </div>
-  </section>
+    </form>
+  </div>
+</section>
 
   <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
