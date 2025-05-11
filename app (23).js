@@ -90,7 +90,11 @@ $('downloadAnalytics').onclick = async () => {
   }
 
   // Get school, class, section from your setup panel
-  const setupHeader = $('setupText').textContent; // مثال: "My School 🏫 | Class: 5 | Section: A"
+  const setupHeader = $('setupText').textContent; // e.g.: "My School 🏫 | Class: 5 | Section: A"
+
+  // Assumes you have `fineRates` and `eligibilityPct` defined and updated elsewhere
+  // e.g.: const fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+  //       const eligibilityPct = 75;
 
   if (analyticsDownloadMode === 'combined') {
     const doc = new jspdf.jsPDF();
@@ -99,16 +103,22 @@ $('downloadAnalytics').onclick = async () => {
     doc.setFontSize(18);
     doc.text('Attendance Analytics Report', 14, 16);
     
-    // Added: school / class / section
+    // School / Class / Section
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
     
     // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
     
-    // Table
+    // Fines & Eligibility
+    const fineLine = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
+    const eligLine = `Eligibility: ≥ ${eligibilityPct}%`;
+    doc.text(fineLine, 14, 40);
+    doc.text(eligLine, 14, 46);
+
+    // Table (moved down to make room)
     doc.autoTable({
-      startY: 40,
+      startY: 52,
       html: '#analyticsTable'
     });
 
@@ -123,30 +133,37 @@ $('downloadAnalytics').onclick = async () => {
     doc.setFontSize(18);
     doc.text('Individual Attendance Analytics Report', 14, 16);
     
-    // Added: school / class / section
+    // School / Class / Section
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
     
     // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    
+
+    // Fines & Eligibility
+    const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
+    const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
+    doc.text(fineLineInd, 14, 40);
+    doc.text(eligLineInd, 14, 46);
+
+    // Start individual stats lower
     lastAnalyticsStats.forEach((st, i) => {
       if (i > 0) doc.addPage();
       
       doc.setFontSize(14);
-      doc.text(`Name: ${st.name}`, 14, 48);
-      doc.text(`Adm#: ${st.adm}`, 14, 64);
-      doc.text(`Present: ${st.P}`, 14, 80);
-      doc.text(`Absent: ${st.A}`, 14, 96);
-      doc.text(`Late: ${st.Lt}`, 14, 112);
-      doc.text(`Half-Day: ${st.HD}`, 14, 128);
-      doc.text(`Leave: ${st.L}`, 14, 144);
-      doc.text(`Total: ${st.total}`, 14, 160);
+      doc.text(`Name: ${st.name}`, 14, 60);
+      doc.text(`Adm#: ${st.adm}`, 14, 76);
+      doc.text(`Present: ${st.P}`, 14, 92);
+      doc.text(`Absent: ${st.A}`, 14, 108);
+      doc.text(`Late: ${st.Lt}`, 14, 124);
+      doc.text(`Half-Day: ${st.HD}`, 14, 140);
+      doc.text(`Leave: ${st.L}`, 14, 156);
+      doc.text(`Total: ${st.total}`, 14, 172);
 
       const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-      doc.text(`% Present: ${pct}%`, 14, 176);
-      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 192);
-      doc.text(`Status: ${st.status}`, 14, 208);
+      doc.text(`% Present: ${pct}%`, 14, 188);
+      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 204);
+      doc.text(`Status: ${st.status}`, 14, 220);
     });
 
     const blob = doc.output('blob');
@@ -154,6 +171,7 @@ $('downloadAnalytics').onclick = async () => {
     await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
   }
 };
+
 
 // --- Share Analytics via WhatsApp ---
 $('shareAnalytics').onclick = () => {
