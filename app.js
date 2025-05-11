@@ -218,24 +218,24 @@ $('shareAnalytics').onclick = () => {
   const saveSetupBtn  = $('saveSetup');
   const editSetupBtn  = $('editSetup');
 
-  // Renders list of schools with Edit/Delete buttons
+  // Render schools with Edit/Delete buttons
   function renderSchoolList() {
     const listContainer = $('schoolList');
-    if (!listContainer) return;
     listContainer.innerHTML = '';
     schools.forEach((school, idx) => {
       const row = document.createElement('div');
       row.className = 'row-inline';
-      row.style.marginBottom = '0.5em';
       row.innerHTML = `
         <span>${school}</span>
-        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+        <div>
+          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+        </div>
       `;
       listContainer.appendChild(row);
     });
 
-    // Attach Edit handlers
+    // Edit handler
     document.querySelectorAll('.edit-school').forEach(btn => {
       btn.onclick = async () => {
         const idx = +btn.dataset.idx;
@@ -243,33 +243,32 @@ $('shareAnalytics').onclick = () => {
         if (newName && newName.trim()) {
           schools[idx] = newName.trim();
           await save('schools', schools);
-          loadSetup();
+          await loadSetup();
         }
       };
     });
 
-    // Attach Delete handlers
+    // Delete handler
     document.querySelectorAll('.delete-school').forEach(btn => {
       btn.onclick = async () => {
         const idx = +btn.dataset.idx;
         if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        schools.splice(idx, 1);
+        const removed = schools.splice(idx, 1);
         await save('schools', schools);
-        // Clear selection if currentSchool was deleted
+        // If deleted current, clear selection
         const cur = await get('currentSchool');
-        if (cur === schools[idx]) {
+        if (cur === removed[0]) {
           await save('currentSchool', null);
           await save('teacherClass', null);
           await save('teacherSection', null);
         }
-        loadSetup();
+        await loadSetup();
       };
     });
   }
 
-  // Load and render setup UI
+  // Load & display setup UI
   async function loadSetup() {
-    // Load stored schools and selection
     schools = (await get('schools')) || [];
     const [curSchool, curClass, curSection] = await Promise.all([
       get('currentSchool'),
@@ -277,9 +276,9 @@ $('shareAnalytics').onclick = () => {
       get('teacherSection')
     ]);
 
-    // Populate schoolSelect
+    // Populate dropdown
     schoolSelect.innerHTML = [
-      `<option disabled selected>-- Select School --</option>`,
+      '<option disabled selected>-- Select School --</option>',
       ...schools.map(s => `<option value="${s}">${s}</option>`)
     ].join('');
     if (curSchool) schoolSelect.value = curSchool;
@@ -287,14 +286,13 @@ $('shareAnalytics').onclick = () => {
     // Render management list
     renderSchoolList();
 
-    // Show summary or form
+    // Toggle form/display
     if (curSchool && curClass && curSection) {
       classSelect.value   = curClass;
       sectionSelect.value = curSection;
       setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
       setupForm.classList.add('hidden');
       setupDisplay.classList.remove('hidden');
-      // Restore views
       renderStudents();
       updateCounters();
       resetViews();
@@ -304,7 +302,7 @@ $('shareAnalytics').onclick = () => {
     }
   }
 
-  // Save button handler (add/edit school or lock in selection)
+  // Save button: add new school or lock in selection
   saveSetupBtn.onclick = async e => {
     e.preventDefault();
     const newSchool = schoolInput.value.trim();
@@ -328,17 +326,17 @@ $('shareAnalytics').onclick = () => {
       save('teacherClass',   selClass),
       save('teacherSection', selSection)
     ]);
-    loadSetup();
+    await loadSetup();
   };
 
-  // Edit button handler (re-open form)
+  // Edit button: reopen the form
   editSetupBtn.onclick = e => {
     e.preventDefault();
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
   };
 
-  // Kick off on page load
+  // Initialize on load
   await loadSetup();
   
   // --- 6. COUNTERS & UTILS ---
