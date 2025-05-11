@@ -1,334 +1,36 @@
 // app.js
-
 window.addEventListener('DOMContentLoaded', async () => {
-  // --- Universal PDF share helper (must come first) ---
-  async function sharePdf(blob, fileName, title) {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
-      try {
-        await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
-      } catch (err) {
-        if (err.name !== 'AbortError') console.error('Share failed', err);
-      }
-    }
+  const $=id=>document.getElementById(id),show=(...e)=>e.forEach(el=>el?.classList.remove('hidden')),hide=(...e)=>e.forEach(el=>el?.classList.add('hidden')),{set,get}=idbKeyval,save=(k,v)=>set(k,v);
+  let students=await get('students')||[],attendanceData=await get('attendanceData')||{},paymentsData=await get('paymentsData')||{},lastAdmNo=await get('lastAdmissionNo')||0,fineRates=await get('fineRates')||{A:50,Lt:20,L:10,HD:30},eligibilityPct=await get('eligibilityPct')||75,analyticsFilterOptions=['all'],analyticsDownloadMode='combined',lastAnalyticsStats=[],lastAnalyticsRange={from:null,to:null},lastAnalyticsShare='';
+
+  async function genAdmNo(){lastAdmNo++;await save('lastAdmissionNo',lastAdmNo);return String(lastAdmNo).padStart(4,'0');}
+  async function sharePdf(blob,name,title){if(navigator.canShare&&navigator.canShare({files:[new File([blob],name,{type:'application/pdf'})]})){try{await navigator.share({title,files:[new File([blob],name,{type:'application/pdf'})]});}catch(e){if(e.name!=='AbortError')console.error('Share failed',e);}}}
+
+  // --- 1. SETUP ---
+  const setupForm=$('setupForm'),setupDisplay=$('setupDisplay'),setupText=$('setupText'),schoolInput=$('schoolNameInput'),addSchoolBtn=$('addSchoolBtn'),schoolSelect=$('schoolSelect'),classInput=$('classInput'),addClassBtn=$('addClassBtn'),classSelect=$('classSelect'),sectionSelect=$('teacherSectionSelect'),saveSetupBtn=$('saveSetup'),editSetupBtn=$('editSetup');
+
+  async function loadSetupData(){
+    const schools=await get('schools')||[],sc=await get('teacherSchool')||'',cl=await get('teacherClass')||'',sec=await get('teacherSection')||'';
+    schoolSelect.innerHTML=`<option value="">-- Select School --</option>`+schools.map(s=>`<option value="${s.name}" ${s.name===sc?'selected':''}>${s.name}</option>`).join('');
+    const sch=schools.find(s=>s.name===sc)||{classes:[]};
+    classSelect.innerHTML=`<option value="">-- Select Class --</option>`+sch.classes.map(c=>`<option value="${c}" ${c===cl?'selected':''}>${c}</option>`).join('');
+    sectionSelect.value=sec;
+    if(sc&&cl&&sec){setupText.textContent=`${sc} 🏫 | Class: ${cl} | Section: ${sec}`;hide(setupForm);show(setupDisplay);renderStudents();updateCounters();resetViews();}
+    else{show(setupForm);hide(setupDisplay);}
   }
 
-  // --- 0. Debug console (optional) ---
-  const erudaScript = document.createElement('script');
-  erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
-
-  // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
-  const { get, set } = window.idbKeyval;
-  const save = (k, v) => set(k, v);
-
-  // --- 2. State & Defaults ---
-  let students       = await get('students')        || [];
-  let attendanceData = await get('attendanceData')  || {};
-  let paymentsData   = await get('paymentsData')    || {};
-  let lastAdmNo      = await get('lastAdmissionNo') || 0;
-  let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct = await get('eligibilityPct')  || 75;
-  let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
-  let lastAnalyticsStats = [], lastAnalyticsRange = { from: null, to: null }, lastAnalyticsShare = '';
-
-  async function genAdmNo() {
-    lastAdmNo++;
-    await save('lastAdmissionNo', lastAdmNo);
-    return String(lastAdmNo).padStart(4, '0');
-  }
-
-  // --- 3. DOM Helpers ---
-  const $ = id => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
-  const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
-
-  // --- DOWNLOAD & SHARE HANDLERS ---
-  // Student Registration PDF
-  $('downloadRegistrationPDF').onclick = async () => {
-    const doc = new jspdf.jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toISOString().split('T')[0];
-
-    doc.setFontSize(18);
-    doc.text('Registered Students', 14, 16);
-    doc.setFontSize(10);
-    doc.text(`Date: ${today}`, pageWidth - 14, 16, { align: 'right' });
-    const setupText = $('setupText').textContent;
-    doc.setFontSize(12);
-    doc.text(setupText, 14, 24);
-
-    doc.autoTable({ startY: 30, html: '#studentsTable' });
-    const blob = doc.output('blob');
-    doc.save('registration.pdf');
-    await sharePdf(blob, 'registration.pdf', 'Registered Students');
-  };
-
-  $('shareRegistration').onclick = () => {
-    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    const header = `*Students List*\nClass ${cl} Section ${sec}`;
-    const lines = students.filter(s => s.cls === cl && s.sec === sec).map(s => {
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec.adm]++; });
-      const totalMarked = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-      const totalFine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
-      const outstanding = totalFine - paid;
-      const pct = totalMarked ? (stats.P/totalMarked)*100 : 0;
-      const status = (outstanding>0||pct<eligibilityPct) ? 'Debarred' : 'Eligible';
-      return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${outstanding}\nStatus: ${status}`;
-    }).join('\n\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
-  };
-
-// --- Analytics PDF ---
-$('downloadAnalytics').onclick = async () => {
-  if (!lastAnalyticsStats.length) {
-    alert('No analytics to download. Generate report first.');
-    return;
-  }
-
-  const setupHeader = $('setupText').textContent; // e.g.: "My School 🏫 | Class: 5 | Section: A"
-
-  if (analyticsDownloadMode === 'combined') {
-    const doc = new jspdf.jsPDF();
-
-    // Title
-    doc.setFontSize(18);
-    doc.text('Attendance Analytics Report', 14, 16);
-
-    // Header Info
-    doc.setFontSize(12);
-    doc.text(setupHeader, 14, 24);
-    doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    const fineLine = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
-    const eligLine = `Eligibility: ≥ ${eligibilityPct}%`;
-    doc.text(fineLine, 14, 40);
-    doc.text(eligLine, 14, 46);
-
-    // Table
-    doc.autoTable({
-      startY: 52,
-      html: '#analyticsTable'
-    });
-
-    const blob = doc.output('blob');
-    doc.save('analytics_report.pdf');
-    await sharePdf(blob, 'analytics_report.pdf', 'Attendance Analytics Report');
-
-  } else {
-    const doc = new jspdf.jsPDF();
-
-    lastAnalyticsStats.forEach((st, i) => {
-      if (i > 0) doc.addPage();
-
-      // --- Header on Every Page ---
-      doc.setFontSize(18);
-      doc.text('Individual Attendance Analytics Report', 14, 16);
-
-      doc.setFontSize(12);
-      doc.text(setupHeader, 14, 24);
-      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-      const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
-      const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
-      doc.text(fineLineInd, 14, 40);
-      doc.text(eligLineInd, 14, 46);
-
-      // --- Student Data ---
-      doc.setFontSize(14);
-      doc.text(`Name: ${st.name}`, 14, 60);
-      doc.text(`Adm#: ${st.adm}`, 14, 76);
-      doc.text(`Present: ${st.P}`, 14, 92);
-      doc.text(`Absent: ${st.A}`, 14, 108);
-      doc.text(`Late: ${st.Lt}`, 14, 124);
-      doc.text(`Half-Day: ${st.HD}`, 14, 140);
-      doc.text(`Leave: ${st.L}`, 14, 156);
-      doc.text(`Total: ${st.total}`, 14, 172);
-
-      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-      doc.text(`% Present: ${pct}%`, 14, 188);
-      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 204);
-      doc.text(`Status: ${st.status}`, 14, 220);
-    });
-
-    const blob = doc.output('blob');
-    doc.save('individual_analytics_book.pdf');
-    await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
-  }
-};
-
-// --- Share Analytics via WhatsApp ---
-$('shareAnalytics').onclick = () => {
-  if (!lastAnalyticsShare) {
-    alert('No analytics to share. Generate report first.');
-    return;
-  }
-  window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
-};
-  // --- 4. SETTINGS: Fines & Eligibility ---
-  const formDiv      = $('financialForm'),
-        saveSettings = $('saveSettings'),
-        inputs       = ['fineAbsent','fineLate','fineLeave','fineHalfDay','eligibilityPct'].map(id => $(id)),
-        settingsCard = document.createElement('div'),
-        editSettings = document.createElement('button');
-  settingsCard.id = 'settingsCard';
-  settingsCard.className = 'card hidden';
-  editSettings.id = 'editSettings';
-  editSettings.className = 'btn no-print hidden';
-  editSettings.textContent = 'Edit Settings';
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
-
-  $('fineAbsent').value     = fineRates.A;
-  $('fineLate').value       = fineRates.Lt;
-  $('fineLeave').value      = fineRates.L;
-  $('fineHalfDay').value    = fineRates.HD;
-  $('eligibilityPct').value = eligibilityPct;
-
-  saveSettings.onclick = async () => {
-    fineRates = { A:Number($('fineAbsent').value)||0, Lt:Number($('fineLate').value)||0, L:Number($('fineLeave').value)||0, HD:Number($('fineHalfDay').value)||0 };
-    eligibilityPct = Number($('eligibilityPct').value)||0;
-    await Promise.all([ save('fineRates', fineRates), save('eligibilityPct', eligibilityPct) ]);
-    settingsCard.innerHTML = `
-      <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
-      </div>`;
-    hide(formDiv, saveSettings, ...inputs);
-    show(settingsCard, editSettings);
-  };
-
-  editSettings.onclick = () => {
-    hide(settingsCard, editSettings);
-    show(formDiv, saveSettings, ...inputs);
-  };
-
-  // --- 5. SETUP: School, Class & Section ---
-  // --- 5. SETUP: Multiple Schools, Classes & Sections ---
-  const schoolInput     = $('schoolNameInput');
-  const addSchoolBtn    = $('addSchoolBtn');
-  const schoolSelect    = $('schoolSelect');
-  const classInput      = $('classInput');
-  const addClassBtn     = $('addClassBtn');
-  const classSelect     = $('classSelect');
-  const sectionSelect   = $('teacherSectionSelect');
-  const saveSetupBtn    = $('saveSetup');
-  const editSetupBtn    = $('editSetup');
-  const setupForm       = $('setupForm');
-  const setupDisplay    = $('setupDisplay');
-  const setupText       = $('setupText');
-
-  // Load saved schools, classes & teacher’s choice
-  async function loadSetupData() {
-    const schools       = (await get('schools'))       || [];
-    const teacherSchool = (await get('teacherSchool')) || '';
-    const teacherClass  = (await get('teacherClass'))  || '';
-    const teacherSec    = (await get('teacherSection'))|| '';
-
-    // Populate School dropdown
-    schoolSelect.innerHTML = `
-      <option value="">-- Select School --</option>
-      ${schools.map(s => `
-        <option value="${s.name}" ${s.name===teacherSchool?'selected':''}>
-          ${s.name}
-        </option>
-      `).join('')}
-    `;
-
-    // Populate Class dropdown for the selected school
-    if (teacherSchool) {
-      const sch = schools.find(s => s.name===teacherSchool) || { classes: [] };
-      classSelect.innerHTML = `
-        <option value="">-- Select Class --</option>
-        ${sch.classes.map(c => `
-          <option value="${c}" ${c===teacherClass?'selected':''}>
-            ${c}
-          </option>
-        `).join('')}
-      `;
-    } else {
-      classSelect.innerHTML = `<option value="">-- Select Class --</option>`;
-    }
-
-    // Restore Section
-    sectionSelect.value = teacherSec;
-
-    // If fully set, show display; otherwise show form
-    if (teacherSchool && teacherClass && teacherSec) {
-      setupText.textContent = 
-        `${teacherSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSec}`;
-      setupForm.classList.add('hidden');
-      setupDisplay.classList.remove('hidden');
-      renderStudents(); updateCounters(); resetViews();
-    } else {
-      setupForm.classList.remove('hidden');
-      setupDisplay.classList.add('hidden');
-    }
-  }
-
-  // Add a new school
-  addSchoolBtn.onclick = async () => {
-    const name = schoolInput.value.trim();
-    if (!name) return alert('Enter a school name');
-    const schools = await get('schools') || [];
-    if (schools.some(s => s.name===name))
-      return alert('That school already exists');
-    schools.push({ name, classes: [] });
-    await set('schools', schools);
-    schoolInput.value = '';
-    await loadSetupData();
-  };
-
-  // When school changes, clear classes & section
-  schoolSelect.onchange = () => {
-    classSelect.innerHTML = `<option value="">-- Select Class --</option>`;
-    sectionSelect.value = '';
-  };
-
-  // Add a new class under the selected school
-  addClassBtn.onclick = async () => {
-    const cls = classInput.value.trim();
-    const schName = schoolSelect.value;
-    if (!schName) return alert('Select a school first');
-    if (!cls)     return alert('Enter a class');
-    const schools = await get('schools') || [];
-    const sch     = schools.find(s => s.name===schName);
-    if (sch.classes.includes(cls))
-      return alert('That class already exists');
-    sch.classes.push(cls);
-    await set('schools', schools);
-    classInput.value = '';
-    await loadSetupData();
-  };
-
-  // Save teacher’s selections
-  saveSetupBtn.onclick = async e => {
-    e.preventDefault();
-    const sc  = schoolSelect.value;
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
-    if (!sc || !cl || !sec) return alert('Complete all fields');
-    await Promise.all([
-      set('teacherSchool', sc),
-      set('teacherClass',  cl),
-      set('teacherSection',sec)
-    ]);
-    await loadSetupData();
-  };
-
-  // Switch back to form for editing
-  editSetupBtn.onclick = e => {
-    e.preventDefault();
-    setupForm.classList.remove('hidden');
-    setupDisplay.classList.add('hidden');
-  };
-
-  // Initialize on page load
+  addSchoolBtn.onclick=async()=>{const name=schoolInput.value.trim();if(!name)return alert('Enter school name');const schools=await get('schools')||[];if(schools.some(s=>s.name===name))return alert('School exists');schools.push({name,classes:[]});await set('schools',schools);schoolInput.value='';await loadSetupData();};
+  schoolSelect.onchange=()=>{classSelect.innerHTML='<option value="">-- Select Class --</option>';sectionSelect.value='';};
+  addClassBtn.onclick=async()=>{const cls=classInput.value.trim(),schName=schoolSelect.value;if(!schName)return alert('Select a school');if(!cls)return alert('Enter class');const schools=await get('schools')||[],sch=schools.find(s=>s.name===schName);if(sch.classes.includes(cls))return alert('Class exists');sch.classes.push(cls);await set('schools',schools);classInput.value='';await loadSetupData();};
+  saveSetupBtn.onclick=async e=>{e.preventDefault();const sc=schoolSelect.value,cl=classSelect.value,sec=sectionSelect.value;if(!sc||!cl||!sec)return alert('Complete all fields');await Promise.all([set('teacherSchool',sc),set('teacherClass',cl),set('teacherSection',sec)]);await loadSetupData();};
+  editSetupBtn.onclick=e=>{e.preventDefault();show(setupForm);hide(setupDisplay);};
   await loadSetupData();
+
+  // --- 2. FINANCIAL SETTINGS ---
+  const fineAbsent=$('fineAbsent'),fineLate=$('fineLate'),fineLeave=$('fineLeave'),fineHalfDay=$('fineHalfDay'),eligibilityPctInput=$('eligibilityPct'),saveSettings=$('saveSettings');
+  fineAbsent.value=fineRates.A;fineLate.value=fineRates.Lt;fineLeave.value=fineRates.L;fineHalfDay.value=fineRates.HD;eligibilityPctInput.value=eligibilityPct;
+  saveSettings.onclick=async()=>{fineRates={A:+fineAbsent.value||0,Lt:+fineLate.value||0,L:+fineLeave.value||0,HD:+fineHalfDay.value||0};eligibilityPct=+eligibilityPctInput.value||0;await save('fineRates',fineRates);await save('eligibilityPct',eligibilityPct);alert('Saved');};
+
 
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
