@@ -92,9 +92,9 @@ $('downloadAnalytics').onclick = async () => {
   // Get school, class, section from your setup panel
   const setupHeader = $('setupText').textContent; // e.g.: "My School 🏫 | Class: 5 | Section: A"
 
-  // Assumes you have `fineRates` and `eligibilityPct` defined and updated elsewhere
-  // e.g.: const fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
-  //       const eligibilityPct = 75;
+  // Ensure you have these defined & populated elsewhere:
+  // const fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+  // const eligibilityPct = 75;
 
   if (analyticsDownloadMode === 'combined') {
     const doc = new jspdf.jsPDF();
@@ -115,8 +115,8 @@ $('downloadAnalytics').onclick = async () => {
     const eligLine = `Eligibility: ≥ ${eligibilityPct}%`;
     doc.text(fineLine, 14, 40);
     doc.text(eligLine, 14, 46);
-
-    // Table (moved down to make room)
+    
+    // Table (moved down)
     doc.autoTable({
       startY: 52,
       html: '#analyticsTable'
@@ -139,14 +139,14 @@ $('downloadAnalytics').onclick = async () => {
     
     // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-
+    
     // Fines & Eligibility
     const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
     const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
     doc.text(fineLineInd, 14, 40);
     doc.text(eligLineInd, 14, 46);
-
-    // Start individual stats lower
+    
+    // Individual stats start lower
     lastAnalyticsStats.forEach((st, i) => {
       if (i > 0) doc.addPage();
       
