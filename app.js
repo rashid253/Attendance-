@@ -1,30 +1,27 @@
-// app.js — Multi‐School / Auth / Backup & Full Original Logic
+// app.js — Multi-School Login / Setup / Backup-Restore + Full Original Logic
 
 // 1) Credentials & Namespacing
 const CRED_KEY = 'credentials';
 const { get: _get, set: _set, entries, clear } = idbKeyval;
-
-function namespacedKey(key) {
+function namespacedKey(k) {
   const cred = JSON.parse(localStorage.getItem(CRED_KEY)) || {};
-  return `${cred.school}::${cred.cls}::${cred.sec}::${key}`;
+  return `${cred.school}::${cred.cls}::${cred.sec}::${k}`;
 }
-
-// Override idbKeyval to use namespaced keys
 idbKeyval.get = k => _get(namespacedKey(k));
 idbKeyval.set = (k, v) => _set(namespacedKey(k), v);
 
-// 2) Show / Hide Helpers
+// 2) Show/Hide Helpers
 const $ = id => document.getElementById(id);
 const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
 const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
 
-// 3) LOGIN / LOGOUT Flow
+// 3) Login / Logout Flow
 async function doLogin() {
   const school = $('loginSchool').value.trim();
   const cls    = $('loginClass').value;
   const sec    = $('loginSectionSelect').value;
   if (!school || !cls || !sec) {
-    alert('Please complete School, Class and Section.');
+    alert('Please complete School, Class, and Section.');
     return;
   }
   localStorage.setItem(CRED_KEY, JSON.stringify({ school, cls, sec }));
@@ -49,8 +46,7 @@ $('restoreBtn').onclick = () => $('restoreFile').click();
 $('restoreFile').onchange = async e => {
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
-  const data = JSON.parse(text);
+  const data = JSON.parse(await file.text());
   await clear();
   for (const [k, v] of Object.entries(data)) {
     await _set(k, v);
@@ -59,246 +55,553 @@ $('restoreFile').onchange = async e => {
   location.reload();
 };
 
-// 5) Start the App After Login
+// 5) Start App After Login
 async function startApp() {
-  // hide login; show header actions
   hide($('loginSection'));
   show($('authActions'));
 
-  // after login, we still allow Setup; show or hide based on saved state
   const { school, cls, sec } = JSON.parse(localStorage.getItem(CRED_KEY));
-  $('schoolNameInput').value    = school;
-  $('teacherClassSelect').value = cls;
+  $('schoolNameInput').value      = school;
+  $('teacherClassSelect').value   = cls;
   $('teacherSectionSelect').value = sec;
-  $('setupText').textContent    = `${school} | ${cls} | Section ${sec}`;
+  $('setupText').textContent      = `${school} | ${cls} | Section ${sec}`;
 
-  // if setup already saved, show display; else show form
   const saved = await idbKeyval.get('schoolName');
   if (saved) {
-    hide($('setupForm'));
-    show($('setupDisplay'));
+    hide($('setupForm')); show($('setupDisplay'));
   } else {
-    show($('setupForm'));
-    hide($('setupDisplay'));
+    show($('setupForm')); hide($('setupDisplay'));
   }
 
-  // now reveal the main app container
   show($('app'));
-
-  // invoke original logic
   await initOriginalApp();
 }
 
-// 6) Setup Save/Edit
+// 6) Setup Save / Edit
 $('saveSetup').onclick = async () => {
-  const s = $('schoolNameInput').value.trim();
-  const c = $('teacherClassSelect').value;
-  const t = $('teacherSectionSelect').value;
-  if (!s || !c || !t) {
-    return alert('Please fill all setup fields');
+  const sc = $('schoolNameInput').value.trim();
+  const cl = $('teacherClassSelect').value;
+  const se = $('teacherSectionSelect').value;
+  if (!sc || !cl || !se) {
+    alert('Please complete setup fields');
+    return;
   }
-  await idbKeyval.set('schoolName', s);
-  await idbKeyval.set('teacherClass', c);
-  await idbKeyval.set('teacherSection', t);
-  $('setupText').textContent = `${s} | ${c} | Section ${t}`;
-  hide($('setupForm'));
-  show($('setupDisplay'));
+  await Promise.all([
+    idbKeyval.set('schoolName', sc),
+    idbKeyval.set('teacherClass', cl),
+    idbKeyval.set('teacherSection', se)
+  ]);
+  $('setupText').textContent = `${sc} | ${cl} | Section ${se}`;
+  hide($('setupForm')); show($('setupDisplay'));
 };
-$('editSetup').onclick = () => {
-  hide($('setupDisplay'));
+$('editSetup').onclick = e => {
+  e.preventDefault();
   show($('setupForm'));
+  hide($('setupDisplay'));
 };
 
-// 7) Original App Code (now async)
+// 7) Original App Logic
 async function initOriginalApp() {
-  // --- Universal PDF share helper ---
+  // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({
-      files: [new File([blob], fileName, { type: 'application/pdf' })]
+      files: [ new File([blob], fileName, { type: 'application/pdf' }) ]
     })) {
       try {
-        await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
+        await navigator.share({
+          title,
+          files: [ new File([blob], fileName, { type: 'application/pdf' }) ]
+        });
       } catch (err) {
         if (err.name !== 'AbortError') console.error('Share failed', err);
       }
     }
   }
 
-  // --- Debug console (optional) ---
+  // --- 0. Debug console (optional) ---
   const erudaScript = document.createElement('script');
   erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
   erudaScript.onload = () => eruda.init();
   document.body.appendChild(erudaScript);
 
-  // --- Load stored state ---
-  let lastAdmNo = parseInt(await idbKeyval.get('lastAdmissionNo') || '0', 10);
-  let students = JSON.parse(await idbKeyval.get('students') || '[]');
-  let attendance = JSON.parse(await idbKeyval.get('attendance') || '{}');
-  const feeAmount = await idbKeyval.get('feeAmount');
-  const storedFrom = await idbKeyval.get('fromDate');
-  const storedTo   = await idbKeyval.get('toDate');
+  // --- 1. IndexedDB helpers (idb-keyval) ---
+  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+  const { get, set } = window.idbKeyval;
+  const save = (k, v) => set(k, v);
 
-  // --- DOM Helpers ---
-  function createEl(tag, attrs = {}, ...children) {
-    const el = document.createElement(tag);
-    Object.entries(attrs).forEach(([k, v]) => {
-      if (k === 'class') el.className = v;
-      else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
-      else el.setAttribute(k, v);
-    });
-    children.forEach(c => el.append(typeof c === 'string' ? document.createTextNode(c) : c));
-    return el;
-  }
+  // --- 2. State & Defaults ---
+  let students       = await get('students')        || [];
+  let attendanceData = await get('attendanceData')  || {};
+  let paymentsData   = await get('paymentsData')    || {};
+  let lastAdmNo      = await get('lastAdmissionNo') || 0;
+  let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
+  let eligibilityPct = await get('eligibilityPct')  || 75;
+  let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
+  let lastAnalyticsStats = [], lastAnalyticsRange = { from:null, to:null }, lastAnalyticsShare = '';
 
-  // --- Admission No gen & initial render ---
-  function genAdmNo() {
+  async function genAdmNo() {
     lastAdmNo++;
-    idbKeyval.set('lastAdmissionNo', lastAdmNo.toString());
-    return lastAdmNo;
+    await save('lastAdmissionNo', lastAdmNo);
+    return String(lastAdmNo).padStart(4, '0');
   }
-  $('admNoInput').value = students.length ? students[students.length-1].adm + 1 : genAdmNo();
 
-  // --- Fee Settings init & handler ---
-  if (feeAmount) $('feeInput').value = feeAmount;
-  $('saveFee').onclick = async () => {
-    const f = $('feeInput').value;
-    if (!f) return alert('Enter fee amount');
-    await idbKeyval.set('feeAmount', f);
-    alert('Fee saved');
+  // --- 3. DOM Helpers ---
+  const $  = id => document.getElementById(id);
+  const show_ = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
+  const hide_ = (...els) => els.forEach(e => e && e.classList.add('hidden'));
+
+  // --- 4. Registration PDF & WhatsApp share handlers ---
+  $('downloadRegistrationPDF').onclick = async () => {
+    const doc = new jspdf.jsPDF();
+    const w   = doc.internal.pageSize.getWidth();
+    const today = new Date().toISOString().split('T')[0];
+    doc.setFontSize(18);
+    doc.text('Registered Students', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({ startY: 30, html: '#studentsTable' });
+    const blob = doc.output('blob');
+    doc.save('registration.pdf');
+    await sharePdf(blob, 'registration.pdf', 'Registered Students');
   };
-
-  // --- Date Range init & handler ---
-  if (storedFrom) $('fromDate').value = storedFrom;
-  if (storedTo) $('toDate').value = storedTo;
-  $('loadRange').onclick = async () => {
-    const from = $('fromDate').value, to = $('toDate').value;
-    if (!from || !to) return alert('Select both dates');
-    await idbKeyval.set('fromDate', from);
-    await idbKeyval.set('toDate', to);
-    renderAttendance();
-    renderAnalytics();
-  };
-
-  // --- Student Registration ---
-  function renderStudentTable() {
-    const old = document.querySelector('#student-register table');
-    if (old) old.remove();
-    const tbl = createEl('table', {},
-      createEl('thead', {}, createEl('tr', {},
-        createEl('th', {}, 'No'), createEl('th', {}, 'Name')
-      )),
-      createEl('tbody', {},
-        ...students.map(s => createEl('tr', {},
-          createEl('td', {}, s.adm.toString()),
-          createEl('td', {}, s.name)
-        ))
-      )
-    );
-    $('student-register').append(tbl);
-  }
-  $('saveStudent').onclick = async () => {
-    const name = $('studentNameInput').value.trim();
-    const adm  = parseInt($('admNoInput').value, 10);
-    if (!name) return alert('Enter student name');
-    students.push({ name, adm });
-    await idbKeyval.set('students', JSON.stringify(students));
-    $('studentNameInput').value = '';
-    $('admNoInput').value = genAdmNo();
-    renderStudentTable();
-  };
-  renderStudentTable();
-
-  // --- Attendance ---
-  function renderAttendance() {
-    const from = $('fromDate').value, to = $('toDate').value;
-    const container = $('attendanceList');
-    container.innerHTML = '';
-    for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate()+1)) {
-      const date = d.toISOString().slice(0,10);
-      const div = createEl('div', { class: 'attendance-day' }, date);
-      students.forEach(s => {
-        const cb = createEl('input', {
-          type: 'checkbox',
-          checked: (attendance[date]||[]).includes(s.adm)
+  $('shareRegistration').onclick = () => {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    const header = `*Students List*\nClass ${cl} Section ${sec}`;
+    const lines = students
+      .filter(s => s.cls === cl && s.sec === sec)
+      .map(s => {
+        const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+        Object.values(attendanceData).forEach(rec => {
+          if (rec[s.adm]) stats[rec[s.adm]]++;
         });
-        div.append(cb, createEl('span', {}, s.name));
-      });
-      container.append(div);
-    }
-  }
-  $('saveAttendance').onclick = async () => {
-    document.querySelectorAll('#attendanceList .attendance-day').forEach(div => {
-      const date = div.childNodes[0].textContent;
-      attendance[date] = Array.from(div.querySelectorAll('input:checked'))
-        .map((cb,i) => students[i].adm);
-    });
-    await idbKeyval.set('attendance', JSON.stringify(attendance));
-    alert('Attendance saved');
-    renderAnalytics();
+        const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+        const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+        const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+        const out   = fine - paid;
+        const pct   = total ? (stats.P/total)*100 : 0;
+        const status = (out>0||pct<eligibilityPct)? 'Debarred' : 'Eligible';
+        return `*${s.name}*\nAdm#: ${s.adm}\nOutstanding: PKR ${out}\nStatus: ${status}`;
+      }).join('\n\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
   };
-  renderAttendance();
 
-  // --- Analytics ---
-  function renderAnalytics() {
-    const from = $('fromDate').value, to = $('toDate').value;
-    const labels = [], data = [];
-    for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate()+1)) {
-      const date = d.toISOString().slice(0,10);
-      labels.push(date);
-      data.push((attendance[date]||[]).length);
+  // --- 5. Financial Settings ---
+  (async () => {
+    const fr = await get('fineRates');
+    if (fr) {
+      fineRates = fr;
+      $('fineAbsent').value  = fr.A;
+      $('fineLate').value    = fr.Lt;
+      $('fineLeave').value   = fr.L;
+      $('fineHalfDay').value = fr.HD;
     }
-    const ctx = $('attendanceChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'Present', data }] },
-      options: { responsive: true }
-    });
-  }
-  $('downloadChart').onclick = () => {
-    const img = $('attendanceChart').toDataURL('image/png');
-    const pdf = new jspdf.jsPDF();
-    pdf.addImage(img, 'PNG', 10, 10, 180, 80);
-    pdf.save('attendance-chart.pdf');
-  };
-  $('shareChart').onclick = () => {
-    $('attendanceChart').toBlob(blob => sharePdf(blob, 'chart.pdf', 'Attendance Chart'));
-  };
-  renderAnalytics();
-
-  // --- CSV Export / Import ---
-  $('exportCsv').onclick = () => {
-    const header = 'Admission,Name\n';
-    const rows = students.map(s => `${s.adm},${s.name}`).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'students.csv';
-    a.click();
-  };
-  $('importCsv').onclick = () => $('csvFile').click();
-  $('csvFile').onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const fr = new FileReader();
-    fr.onload = async () => {
-      const lines = fr.result.trim().split('\n').slice(1);
-      students = lines.map(l => {
-        const [adm, name] = l.split(',');
-        return { adm: parseInt(adm,10), name };
-      });
-      await idbKeyval.set('students', JSON.stringify(students));
-      renderStudentTable();
+    const ep = await get('eligibilityPct');
+    if (ep) $('eligibilityPct').value = ep;
+  })();
+  $('saveSettings').onclick = async () => {
+    fineRates = {
+      A: Number($('fineAbsent').value),
+      Lt: Number($('fineLate').value),
+      L:  Number($('fineLeave').value),
+      HD: Number($('fineHalfDay').value)
     };
-    fr.readAsText(file);
+    eligibilityPct = Number($('eligibilityPct').value);
+    await Promise.all([
+      save('fineRates', fineRates),
+      save('eligibilityPct', eligibilityPct)
+    ]);
+    alert('Settings saved');
   };
 
-  // --- Service Worker ---
+  // --- 6. Animated Counters ---
+  function animateCounters() {
+    document.querySelectorAll('.number').forEach(span => {
+      const target = +span.dataset.target;
+      let count = 0, step = Math.max(1, target/100);
+      (function upd() {
+        count += step;
+        span.textContent = count < target ? Math.ceil(count) : target;
+        if (count < target) requestAnimationFrame(upd);
+      })();
+    });
+  }
+  function updateCounters() {
+    const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+    $('sectionCount').dataset.target = students.filter(s=>s.cls===cl&&s.sec===sec).length;
+    $('classCount').dataset.target   = students.filter(s=>s.cls===cl).length;
+    $('schoolCount').dataset.target  = students.length;
+    animateCounters();
+  }
+  $('teacherClassSelect').onchange = updateCounters;
+  $('teacherSectionSelect').onchange = updateCounters;
+  updateCounters();
+
+  // --- 7. Student Registration, Edit/Delete, Payment Modal, etc. ---
+  (async () => {
+    // Admission number generation & initial rendering
+    const selAll = $('selectAllStudents');
+    function renderStudents() {
+      const tbody = $('studentsBody');
+      tbody.innerHTML = '';
+      let idx = 0;
+      students.forEach((s,i) => {
+        if (s.cls !== $('teacherClassSelect').value || s.sec !== $('teacherSectionSelect').value) return;
+        idx++;
+        const stats = { P:0,A:0,Lt:0,HD:0,L:0 };
+        Object.values(attendanceData).forEach(rec => rec[s.adm] && stats[rec[s.adm]]++);
+        const total = stats.P+stats.A+stats.Lt+stats.HD+stats.L;
+        const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+        const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+        const out   = fine - paid;
+        const pct   = total ? (stats.P/total)*100 : 0;
+        const status = (out>0||pct<eligibilityPct) ? 'Debarred' : 'Eligible';
+
+        const tr = document.createElement('tr');
+        tr.dataset.index = i;
+        tr.innerHTML = `
+          <td><input type="checkbox" class="sel"></td>
+          <td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>
+          <td>${s.parent}</td><td>${s.contact}</td><td>${s.occupation}</td><td>${s.address}</td>
+          <td>PKR ${out}</td><td>${status}</td>
+          <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      selAll.checked = false;
+      toggleButtons();
+      document.querySelectorAll('.add-payment-btn').forEach(b => b.onclick = () => openPaymentModal(b.dataset.adm));
+    }
+    function toggleButtons() {
+      const any = !!document.querySelector('.sel:checked');
+      $('editSelected').disabled = !any;
+      $('deleteSelected').disabled = !any;
+    }
+    $('studentsBody').addEventListener('change', e => {
+      if (e.target.classList.contains('sel')) toggleButtons();
+    });
+    selAll.onclick = () => {
+      document.querySelectorAll('.sel').forEach(c => c.checked = selAll.checked);
+      toggleButtons();
+    };
+
+    $('addStudent').onclick = async () => {
+      const n = $('studentName').value.trim(),
+            p = $('parentName').value.trim(),
+            c = $('parentContact').value.trim(),
+            o = $('parentOccupation').value.trim(),
+            a = $('parentAddress').value.trim(),
+            cl= $('teacherClassSelect').value,
+            se= $('teacherSectionSelect').value;
+      if (!n||!p||!c||!o||!a) { alert('All fields required'); return; }
+      if (!/^\d{7,15}$/.test(c)) { alert('Contact 7–15 digits'); return; }
+      const adm = await genAdmNo();
+      students.push({ name:n, adm, parent:p, contact:c, occupation:o, address:a, cls:cl, sec:se });
+      await save('students', students);
+      renderStudents(); updateCounters(); resetViews();
+      ['studentName','parentName','parentContact','parentOccupation','parentAddress'].forEach(id=>$(id).value='');
+    };
+
+    $('editSelected').onclick = () => {
+      document.querySelectorAll('.sel:checked').forEach(cb => {
+        const tr = cb.closest('tr'), i = +tr.dataset.index, s = students[i];
+        tr.innerHTML = `
+          <td><input type="checkbox" class="sel" checked></td>
+          <td>${tr.children[1].textContent}</td>
+          <td><input value="${s.name}"></td><td>${s.adm}</td>
+          <td><input value="${s.parent}"></td><td><input value="${s.contact}"></td>
+          <td><input value="${s.occupation}"></td><td><input value="${s.address}"></td>
+          <td colspan="3"></td>
+        `;
+      });
+      hide_($('editSelected')); show_($('doneEditing'));
+    };
+    $('doneEditing').onclick = async () => {
+      document.querySelectorAll('#studentsBody tr').forEach(tr => {
+        const inps = [...tr.querySelectorAll('input:not(.sel)')];
+        if (inps.length === 5) {
+          const [n,p,c,o,a] = inps.map(i => i.value.trim());
+          const adm = tr.children[3].textContent;
+          const idx = students.findIndex(x => x.adm === adm);
+          if (idx > -1) students[idx] = { ...students[idx], name:n, parent:p, contact:c, occupation:o, address:a };
+        }
+      });
+      await save('students', students);
+      hide_($('doneEditing')); show_($('editSelected'), $('deleteSelected'), $('saveRegistration'));
+      renderStudents(); updateCounters();
+    };
+    $('deleteSelected').onclick = async () => {
+      if (!confirm('Delete?')) return;
+      const toDel = [...document.querySelectorAll('.sel:checked')].map(cb => +cb.closest('tr').dataset.index);
+      students = students.filter((_,i) => !toDel.includes(i));
+      await save('students', students); renderStudents(); updateCounters(); resetViews();
+    };
+    $('saveRegistration').onclick = async () => {
+      if (!$('doneEditing').classList.contains('hidden')) { alert('Finish editing'); return; }
+      await save('students', students);
+      hide_(
+        document.querySelector('#student-registration .row-inline'),
+        $('editSelected'), $('deleteSelected'), $('selectAllStudents'), $('saveRegistration')
+      );
+      show_($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+      renderStudents(); updateCounters();
+    };
+    $('editRegistration').onclick = () => {
+      show_(
+        document.querySelector('#student-registration .row-inline'),
+        $('selectAllStudents'), $('editSelected'), $('deleteSelected'), $('saveRegistration')
+      );
+      hide_($('editRegistration'), $('shareRegistration'), $('downloadRegistrationPDF'));
+      renderStudents(); updateCounters();
+    };
+
+    // --- 8. PAYMENT MODAL ---
+    function openPaymentModal(adm){
+      $('payAdm').textContent = adm;
+      $('paymentAmount').value = '';
+      show_($('paymentModal'));
+    }
+    $('paymentModalClose').onclick = () => hide_($('paymentModal'));
+    $('savePayment').onclick = async () => {
+      const adm = $('payAdm').textContent, amt = Number($('paymentAmount').value) || 0;
+      paymentsData[adm] = paymentsData[adm]||[];
+      paymentsData[adm].push({ date:new Date().toISOString().split('T')[0], amount:amt });
+      await save('paymentsData', paymentsData); hide_($('paymentModal')); renderStudents();
+    };
+    $('cancelPayment').onclick = () => hide_($('paymentModal'));
+
+    // --- 9. MARK ATTENDANCE ---
+    const dateInput             = $('dateInput');
+    const loadAttendanceBtn     = $('loadAttendance');
+    const saveAttendanceBtn     = $('saveAttendance');
+    const resetAttendanceBtn    = $('resetAttendance');
+    const downloadAttendanceBtn = $('downloadAttendancePDF');
+    const shareAttendanceBtn    = $('shareAttendanceSummary');
+    const attendanceBodyDiv     = $('attendanceBody');
+    const attendanceSummaryDiv  = $('attendanceSummary');
+    const statusNames           = { P:'Present', A:'Absent', Lt:'Late', HD:'Half-Day', L:'Leave' };
+    const statusColors          = { P:'var(--success)', A:'var(--danger)', Lt:'var(--warning)', HD:'#FF9800', L:'var(--info)' };
+
+    loadAttendanceBtn.onclick = () => {
+      attendanceBodyDiv.innerHTML = '';
+      attendanceSummaryDiv.innerHTML = '';
+      const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+      attendanceBodyDiv.style.overflowX = 'auto';
+
+      students.filter(s => s.cls===cl&&s.sec===sec).forEach((stu,i) => {
+        const row = document.createElement('div');
+        row.className = 'attendance-row';
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'attendance-header';
+        headerDiv.textContent = `${i+1}. ${stu.name} (${stu.adm})`;
+        const btnsDiv = document.createElement('div');
+        btnsDiv.className = 'attendance-buttons';
+        Object.keys(statusNames).forEach(code => {
+          const btn = document.createElement('button');
+          btn.className = 'att-btn'; btn.textContent = code;
+          btn.onclick = () => {
+            btnsDiv.querySelectorAll('.att-btn').forEach(b => { b.classList.remove('selected'); b.style=''; });
+            btn.classList.add('selected');
+            btn.style.background = statusColors[code];
+            btn.style.color = '#fff';
+          };
+          btnsDiv.appendChild(btn);
+        });
+        row.append(headerDiv, btnsDiv);
+        attendanceBodyDiv.appendChild(row);
+      });
+      show_(attendanceBodyDiv, saveAttendanceBtn);
+      hide_(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+    };
+
+    saveAttendanceBtn.onclick = async () => {
+      const date = dateInput.value;
+      if (!date) { alert('Pick date'); return; }
+      attendanceData[date] = {};
+      const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
+      students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i) => {
+        const selBtn = attendanceBodyDiv.children[i].querySelector('.att-btn.selected');
+        attendanceData[date][s.adm] = selBtn ? selBtn.textContent : 'A';
+      });
+      await save('attendanceData', attendanceData);
+
+      attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
+      const tbl = document.createElement('table');
+      tbl.id = 'attendanceSummaryTable';
+      tbl.innerHTML = `<tr><th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th></tr>`;
+      students.filter(s=>s.cls===cl&&s.sec===sec).forEach((s,i) => {
+        tbl.innerHTML += `
+          <tr>
+            <td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>
+            <td>${statusNames[attendanceData[date][s.adm]]}</td>
+            <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
+          </tr>`;
+      });
+      attendanceSummaryDiv.appendChild(tbl);
+      attendanceSummaryDiv.querySelectorAll('.share-individual').forEach(ic => {
+        ic.onclick = () => {
+          const adm = ic.dataset.adm;
+          const st  = students.find(x=>x.adm===adm);
+          const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
+          window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+      });
+      hide_(attendanceBodyDiv, saveAttendanceBtn);
+      show_(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+    };
+
+    resetAttendanceBtn.onclick = () => {
+      show_(attendanceBodyDiv, saveAttendanceBtn);
+      hide_(resetAttendanceBtn, downloadAttendanceBtn, shareAttendanceBtn, attendanceSummaryDiv);
+    };
+
+    downloadAttendanceBtn.onclick = async () => {
+      const doc = new jspdf.jsPDF();
+      const w   = doc.internal.pageSize.getWidth();
+      const today = new Date().toISOString().split('T')[0];
+      doc.setFontSize(18); doc.text('Attendance Report', 14, 16);
+      doc.setFontSize(10); doc.text(`Date: ${today}`, w - 14, 16, { align: 'right' });
+      doc.setFontSize(12); doc.text($('setupText').textContent, 14, 24);
+      doc.autoTable({ startY: 30, html: '#attendanceSummaryTable' });
+      const fileName = `attendance_${dateInput.value}.pdf`;
+      const blob     = doc.output('blob');
+      doc.save(fileName);
+      await sharePdf(blob, fileName, 'Attendance Report');
+    };
+
+    shareAttendanceBtn.onclick = () => {
+      const cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value, date = dateInput.value;
+      const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
+      const lines  = students.filter(s=>s.cls===cl&&s.sec===sec)
+        .map((s,i)=>`${i+1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
+      window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines.join('\n'))}`, '_blank');
+    };
+
+    // --- 11. ATTENDANCE REGISTER ---
+  (function(){
+    const loadBtn    = $('loadRegister'),
+          saveBtn    = $('saveRegister'),
+          changeBtn  = $('changeRegister'),
+          downloadBtn= $('downloadRegister'),
+          shareBtn   = $('shareRegister'),
+          tableWrap  = $('registerTableWrapper'),
+          headerRow  = $('registerHeader'),
+          bodyTbody  = $('registerBody');
+
+    function bindRegisterActions(){
+      downloadBtn.onclick = async () => {
+        const doc = new jspdf.jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+        const pw  = doc.internal.pageSize.getWidth(),
+              today = new Date().toISOString().split('T')[0];
+        doc.setFontSize(18); doc.text('Attendance Register',14,20);
+        doc.setFontSize(10); doc.text(`Date: ${today}`, pw-14,20,{align:'right'});
+        doc.setFontSize(12); doc.text($('setupText').textContent,14,36);
+        doc.autoTable({
+          startY: 60,
+          html: '#registerTable',
+          tableWidth:'auto', styles:{ fontSize:10 }
+        });
+        const blob = doc.output('blob');
+        doc.save('attendance_register.pdf');
+        await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+      };
+      shareBtn.onclick = () => {
+        const header = `Attendance Register\n${$('setupText').textContent}`;
+        const rows   = Array.from(bodyTbody.children).map(tr =>
+          Array.from(tr.children).map(td =>
+            td.querySelector('.status-text')?.textContent || td.textContent
+          ).join(' ')
+        );
+        window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n' + rows.join('\n'))}`, '_blank');
+      };
+    }
+
+    loadBtn.onclick = () => {
+      const m = $('registerMonth').value;
+      if (!m) { alert('Pick month'); return; }
+      const dateKeys = Object.keys(attendanceData)
+        .filter(d=>d.startsWith(m+'-')).sort();
+      if (!dateKeys.length) { alert('No attendance marked this month.'); return; }
+
+      headerRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
+        dateKeys.map(k=>`<th>${k.split('-')[2]}</th>`).join('');
+      bodyTbody.innerHTML = '';
+
+      const cls = $('teacherClassSelect').value,
+            sec = $('teacherSectionSelect').value;
+      students.filter(s=>s.cls===cls&&s.sec===sec).forEach((s,i) => {
+        let row = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+        dateKeys.forEach(key => {
+          const c = attendanceData[key][s.adm]||'';
+          const color = c==='P'?'var(--success)':
+                        c==='Lt'?'var(--warning)':
+                        c==='HD'?'#FF9800':
+                        c==='L'?'var(--info)':'var(--danger)';
+          const style = c ? `style="background:${color};color:#fff"` : '';
+          row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+        });
+        const tr = document.createElement('tr');
+        tr.innerHTML = row;
+        bodyTbody.appendChild(tr);
+      });
+
+      document.querySelectorAll('.reg-cell').forEach(cell => {
+        cell.onclick = () => {
+          const span = cell.querySelector('.status-text');
+          const codes = ['', 'P', 'Lt', 'HD', 'L', 'A'];
+          const idx = (codes.indexOf(span.textContent) + 1) % codes.length;
+          const c = codes[idx];
+          span.textContent = c;
+          if (!c) {
+            cell.style.background = ''; cell.style.color = '';
+          } else {
+            const col = c==='P'?'var(--success)':
+                        c==='Lt'?'var(--warning)':
+                        c==='HD'?'#FF9800':
+                        c==='L'?'var(--info)':'var(--danger)';
+            cell.style.background = col; cell.style.color = '#fff';
+          }
+        };
+      });
+
+      show(tableWrap, changeBtn, saveBtn, downloadBtn, shareBtn);
+    };
+
+    changeBtn.onclick = () => {
+      hide(saveBtn, downloadBtn, shareBtn);
+      show(loadBtn);
+    };
+
+    saveBtn.onclick = async () => {
+      const m = $('registerMonth').value;
+      const dateKeys = Object.keys(attendanceData)
+        .filter(d=>d.startsWith(m+'-')).sort();
+      dateKeys.forEach((key,di) => {
+        const cls = $('teacherClassSelect').value,
+              sec = $('teacherSectionSelect').value,
+              rows = bodyTbody.children;
+        attendanceData[key] = {};
+        Array.from(rows).forEach((tr,ri) => {
+          const st = students.filter(s=>s.cls===cls&&s.sec===sec)[ri];
+          const c = tr.querySelector('.status-text').textContent || 'A';
+          attendanceData[key][st.adm] = c;
+        });
+      });
+      await save('attendanceData', attendanceData);
+      alert('Register saved');
+    };
+
+    bindRegisterActions();
+  })();
+    // --- Final: Service Worker Registration ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
-}
 
-// 8) DOMContentLoaded → Entry Point
+} // end of initOriginalApp()
+
+// 8) Bootstrap on page load
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem(CRED_KEY)) {
     startApp();
