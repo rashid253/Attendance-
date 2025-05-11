@@ -465,6 +465,89 @@ window.addEventListener('DOMContentLoaded', async () => {
     lastAnalyticsStats = [];
     $('analyticsTableBody').innerHTML='';
   };
+  // --- 10. ATTENDANCE REGISTER (missing section) ---
+  const loadRegisterBtn       = $('loadRegister'),
+        registerTableWrapper  = $('registerTableWrapper'),
+        registerTableBody     = $('registerTableBody'),
+        changeRegisterBtn     = $('changeRegister'),
+        downloadRegisterBtn   = $('downloadRegister'),
+        shareRegisterBtn      = $('shareRegister');
+
+  loadRegisterBtn.onclick = () => {
+    renderAttendanceRegister();
+    show(registerTableWrapper, changeRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
+    hide(loadRegisterBtn);
+  };
+
+  changeRegisterBtn.onclick = () => {
+    hide(registerTableWrapper, changeRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
+    show(loadRegisterBtn);
+  };
+
+  function renderAttendanceRegister() {
+    const cl = $('teacherClassSelect').value,
+          sec = $('teacherSectionSelect').value;
+    const dates = Object.keys(attendanceData)
+                        .filter(d => attendanceData[d])
+                        .sort();
+    // build header row
+    const thead = $('registerTableHead');
+    thead.innerHTML = '';
+    let trHead = document.createElement('tr');
+    trHead.innerHTML = `<th>#</th><th>Name</th><th>Adm#</th>` +
+                       dates.map(d => `<th>${d}</th>`).join('');
+    thead.appendChild(trHead);
+
+    // build body rows
+    registerTableBody.innerHTML = '';
+    let idx = 0;
+    students.forEach(s => {
+      if (s.cls !== cl || s.sec !== sec) return;
+      idx++;
+      const tr = document.createElement('tr');
+      const cells = dates.map(d => {
+        const code = (attendanceData[d] || {})[s.adm] || 'P';
+        return `<td>${statusNames[code] || code}</td>`;
+      }).join('');
+      tr.innerHTML = `<td>${idx}</td><td>${s.name}</td><td>${s.adm}</td>${cells}`;
+      registerTableBody.appendChild(tr);
+    });
+  }
+
+  // Download Attendance Register PDF
+  downloadRegisterBtn.onclick = async () => {
+    const doc = new jspdf.jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(18);
+    doc.text('Attendance Register', 14, 16);
+    doc.setFontSize(12);
+    doc.text($('setupText').textContent, 14, 24);
+    doc.autoTable({
+      startY: 32,
+      html: '#registerTable',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [240,240,240] }
+    });
+    const blob = doc.output('blob');
+    doc.save('attendance_register.pdf');
+    await sharePdf(blob, 'attendance_register.pdf', 'Attendance Register');
+  };
+
+  // Share Attendance Register via WhatsApp (as plain text)
+  shareRegisterBtn.onclick = () => {
+    const cl = $('teacherClassSelect').value,
+          sec = $('teacherSectionSelect').value;
+    const dates = Object.keys(attendanceData).sort();
+    let text = `Register: Class ${cl} Section ${sec}\nDates: ${dates.join(', ')}\n\n`;
+    students.forEach(s => {
+      if (s.cls !== cl || s.sec !== sec) return;
+      const row = dates.map(d => {
+        const code = (attendanceData[d] || {})[s.adm] || 'P';
+        return statusNames[code] || code;
+      }).join(' | ');
+      text += `${s.name} (${s.adm}): ${row}\n`;
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   // --- 11. Service Worker ---
   if ('serviceWorker' in navigator) {
