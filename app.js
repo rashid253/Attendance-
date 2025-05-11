@@ -83,6 +83,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // --- Analytics PDF ---
+
 $('downloadAnalytics').onclick = async () => {
   if (!lastAnalyticsStats.length) {
     alert('No analytics to download. Generate report first.');
@@ -92,6 +93,11 @@ $('downloadAnalytics').onclick = async () => {
   // Get school, class, section from your setup panel
   const setupHeader = $('setupText').textContent; // مثال: "My School 🏫 | Class: 5 | Section: A"
 
+  // **New**: Fine Rates & Eligibility Threshold (define کر کے رکھیں کہیں بالائی حصے میں)
+  // مثال:
+  // const fineRates = { A: 50, Lt: 20, L: 30, HD: 40 };
+  // const eligibilityPct = 75;
+  
   if (analyticsDownloadMode === 'combined') {
     const doc = new jspdf.jsPDF();
     
@@ -99,16 +105,28 @@ $('downloadAnalytics').onclick = async () => {
     doc.setFontSize(18);
     doc.text('Attendance Analytics Report', 14, 16);
     
-    // Added: school / class / section
+    // School / Class / Section
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
     
     // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
+
+    // Fine Rates & Eligibility Threshold
+    doc.text(
+      `Fine Rates – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`,
+      14,
+      40
+    );
+    doc.text(
+      `Eligibility Threshold: ≥ ${eligibilityPct}%`,
+      14,
+      48
+    );
     
     // Table
     doc.autoTable({
-      startY: 40,
+      startY: 56,
       html: '#analyticsTable'
     });
 
@@ -123,30 +141,42 @@ $('downloadAnalytics').onclick = async () => {
     doc.setFontSize(18);
     doc.text('Individual Attendance Analytics Report', 14, 16);
     
-    // Added: school / class / section
+    // School / Class / Section
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
     
     // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
+
+    // Fine Rates & Eligibility Threshold
+    doc.text(
+      `Fine Rates – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`,
+      14,
+      40
+    );
+    doc.text(
+      `Eligibility Threshold: ≥ ${eligibilityPct}%`,
+      14,
+      48
+    );
     
     lastAnalyticsStats.forEach((st, i) => {
       if (i > 0) doc.addPage();
       
       doc.setFontSize(14);
-      doc.text(`Name: ${st.name}`, 14, 48);
-      doc.text(`Adm#: ${st.adm}`, 14, 64);
-      doc.text(`Present: ${st.P}`, 14, 80);
-      doc.text(`Absent: ${st.A}`, 14, 96);
-      doc.text(`Late: ${st.Lt}`, 14, 112);
-      doc.text(`Half-Day: ${st.HD}`, 14, 128);
-      doc.text(`Leave: ${st.L}`, 14, 144);
-      doc.text(`Total: ${st.total}`, 14, 160);
+      doc.text(`Name: ${st.name}`, 14, 64);
+      doc.text(`Adm#: ${st.adm}`, 14, 80);
+      doc.text(`Present: ${st.P}`, 14, 96);
+      doc.text(`Absent: ${st.A}`, 14, 112);
+      doc.text(`Late: ${st.Lt}`, 14, 128);
+      doc.text(`Half-Day: ${st.HD}`, 14, 144);
+      doc.text(`Leave: ${st.L}`, 14, 160);
+      doc.text(`Total: ${st.total}`, 14, 176);
 
       const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : '0.0';
-      doc.text(`% Present: ${pct}%`, 14, 176);
-      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 192);
-      doc.text(`Status: ${st.status}`, 14, 208);
+      doc.text(`% Present: ${pct}%`, 14, 192);
+      doc.text(`Outstanding: PKR ${st.outstanding}`, 14, 208);
+      doc.text(`Status: ${st.status}`, 14, 224);
     });
 
     const blob = doc.output('blob');
@@ -154,7 +184,6 @@ $('downloadAnalytics').onclick = async () => {
     await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
   }
 };
-
 // --- Share Analytics via WhatsApp ---
 $('shareAnalytics').onclick = () => {
   if (!lastAnalyticsShare) {
