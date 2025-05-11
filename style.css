@@ -234,8 +234,4 @@ th, td {
   margin-left: 0.25em;
   flex-shrink: 0;
 }
-/* Backup & Restore Buttons Positioning */
-#backupBtn,
-#restoreBtn {
-  position: fixed;
-  left: 10px;
+
