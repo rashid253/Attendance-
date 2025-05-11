@@ -219,21 +219,22 @@ $('shareAnalytics').onclick = () => {
   const editSetupBtn    = $('editSetup');
 
   async function loadSetup() {
-    // Ensure all our elements exist
+    // ensure elements exist
     if (!setupForm || !setupDisplay || !schoolSelect || !classSelect || !sectionSelect || !setupText) {
-      console.error('One or more setup elements are missing from the DOM');
+      console.error('Setup: missing DOM elements');
       return;
     }
 
-    // 1. Load saved schools and current selection
-    schools = (await get('schools')) || [];
+    // 1. Load stored schools and current selection
+    const storedSchools = await get('schools') || [];
+    schools = storedSchools; // global array
     const [curSchool, curClass, curSection] = await Promise.all([
       get('currentSchool'),
       get('teacherClass'),
       get('teacherSection')
     ]);
 
-    // 2. Populate school dropdown
+    // 2. Populate schools dropdown
     schoolSelect.innerHTML = schools
       .map(s => `<option value="${s}">${s}</option>`)
       .join('');
@@ -247,7 +248,7 @@ $('shareAnalytics').onclick = () => {
       setupForm.classList.add('hidden');
       setupDisplay.classList.remove('hidden');
 
-      // Restore the rest of the app’s state
+      // restore app state
       renderStudents();
       updateCounters();
       resetViews();
@@ -257,11 +258,10 @@ $('shareAnalytics').onclick = () => {
     }
   }
 
-  // Add a new school or save the selected school/class/section
   saveSetupBtn.onclick = async e => {
     e.preventDefault();
 
-    // 1. If the user typed a new school, add it
+    // adding a new school?
     const newSchool = schoolInput.value.trim();
     if (newSchool) {
       if (!schools.includes(newSchool)) {
@@ -272,12 +272,12 @@ $('shareAnalytics').onclick = () => {
       return loadSetup();
     }
 
-    // 2. Otherwise save the current selection
+    // otherwise save current selection
     const selSchool  = schoolSelect.value;
     const selClass   = classSelect.value;
     const selSection = sectionSelect.value;
     if (!selSchool || !selClass || !selSection) {
-      alert('Please select a school, class, and section before saving.');
+      alert('Please select a school, class, and section.');
       return;
     }
     await Promise.all([
@@ -288,50 +288,14 @@ $('shareAnalytics').onclick = () => {
     await loadSetup();
   };
 
-  // Allow the user to re-open the form
   editSetupBtn.onclick = e => {
     e.preventDefault();
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
   };
 
-  // Kick things off on load
+  // Initialize on page load
   await loadSetup();
-
-  // Add a new school if provided
-  if (newSchool) {
-    if (!schools.includes(newSchool)) {
-      schools.push(newSchool);
-      await save('schools', schools);
-    }
-    $('schoolInput').value = '';
-    return loadSetup();
-  }
-
-  // Otherwise, save the selected school/class/section
-  const selSchool  = $('schoolSelect').value;
-  const selClass   = $('teacherClassSelect').value;
-  const selSection = $('teacherSectionSelect').value;
-  if (!selSchool || !selClass || !selSection) {
-    alert('Please select a school, class and section before saving.');
-    return;
-  }
-  await Promise.all([
-    save('currentSchool',  selSchool),
-    save('teacherClass',   selClass),
-    save('teacherSection', selSection)
-  ]);
-  loadSetup();
-};
-
-$('editSetup').onclick = () => {
-  // Allow user to change setup
-  show($('setupForm'));
-  hide($('setupDisplay'));
-};
-
-// Initialize setup on page load
-await loadSetup();
   
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
