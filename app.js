@@ -22,7 +22,56 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
   const { get, set } = window.idbKeyval;
   const save = (k, v) => set(k, v);
+  
+// --- 2.1. Backup & Restore Helpers ---
+  const backupBtn  = document.getElementById('backupBtn');
+  const restoreBtn = document.getElementById('restoreBtn');
 
+  // Backup: پوری ایپ کا سٹور ڈیٹا localStorage یا IndexedDB میں بیک اپ کریں
+  backupBtn.onclick = async () => {
+    const data = {
+      students,
+      attendanceData,
+      paymentsData,
+      lastAdmNo,
+      fineRates,
+      eligibilityPct,
+      // اگر آپ نے schools وغیرہ بھی محفوظ کیے ہیں:
+      schools: await get('schools'),
+      currentSchool: await get('currentSchool'),
+      teacherClass: await get('teacherClass'),
+      teacherSection: await get('teacherSection')
+    };
+    // مقامی بیک اپ کلید
+    await save('appBackup', data);
+    alert('✅ بیک اپ محفوظ ہوگیا!');
+  };
+
+  // Restore: بیک اپ ڈیٹا واپس لوڈ کریں
+  restoreBtn.onclick = async () => {
+    const data = await get('appBackup');
+    if (!data) {
+      alert('⚠️ کوئی بیک اپ نہیں ملا۔');
+      return;
+    }
+    // لوکل ویریبلز اپڈیٹ
+    ({ students, attendanceData, paymentsData, lastAdmNo, fineRates, eligibilityPct } = data);
+    // IndexedDB میں ری سیو کریں
+    await Promise.all([
+      save('students', students),
+      save('attendanceData', attendanceData),
+      save('paymentsData', paymentsData),
+      save('lastAdmissionNo', lastAdmNo),
+      save('fineRates', fineRates),
+      save('eligibilityPct', eligibilityPct),
+      save('schools', data.schools),
+      save('currentSchool', data.currentSchool),
+      save('teacherClass', data.teacherClass),
+      save('teacherSection', data.teacherSection)
+    ]);
+    alert('🔄 ڈیٹا بحال ہوگیا! اب پیج ریفریش ہو رہا ہے…');
+    location.reload();
+  };
   // --- 2. State & Defaults ---
   let students       = await get('students')        || [];
   let attendanceData = await get('attendanceData')  || {};
