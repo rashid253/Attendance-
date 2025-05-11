@@ -207,41 +207,96 @@ $('shareAnalytics').onclick = () => {
     show(formDiv, saveSettings, ...inputs);
   };
 
-  
-// --- Setup: Manage Multiple Schools, Classes & Sections ---
-async function loadSetup() {
-  // Fetch stored data
-  const [schList, curSchool, curClass, curSection] = await Promise.all([
-    get('schools'), 
-    get('currentSchool'), 
-    get('teacherClass'), 
-    get('teacherSection')
-  ]);
+  // --- Setup: Multiple Schools, Classes & Sections ---
+  const setupForm       = $('setupForm');
+  const setupDisplay    = $('setupDisplay');
+  const schoolSelect    = $('schoolSelect');
+  const schoolInput     = $('schoolInput');
+  const classSelect     = $('teacherClassSelect');
+  const sectionSelect   = $('teacherSectionSelect');
+  const setupText       = $('setupText');
+  const saveSetupBtn    = $('saveSetup');
+  const editSetupBtn    = $('editSetup');
 
-  // Populate schools dropdown
-  schools = schList || [];
-  const schoolSelect = $('schoolSelect');
-  schoolSelect.innerHTML = schools
-    .map(s => `<option value="${s}">${s}</option>`)
-    .join('');
-  if (curSchool) schoolSelect.value = curSchool;
+  async function loadSetup() {
+    // Ensure all our elements exist
+    if (!setupForm || !setupDisplay || !schoolSelect || !classSelect || !sectionSelect || !setupText) {
+      console.error('One or more setup elements are missing from the DOM');
+      return;
+    }
 
-  // If setup previously done, display summary
-  if (curSchool && curClass && curSection) {
-    $('teacherClassSelect').value   = curClass;
-    $('teacherSectionSelect').value = curSection;
-    $('setupText').textContent      = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
-    hide($('setupForm'));
-    show($('setupDisplay'));
-    renderStudents();
-    updateCounters();
-    resetViews();
+    // 1. Load saved schools and current selection
+    schools = (await get('schools')) || [];
+    const [curSchool, curClass, curSection] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection')
+    ]);
+
+    // 2. Populate school dropdown
+    schoolSelect.innerHTML = schools
+      .map(s => `<option value="${s}">${s}</option>`)
+      .join('');
+    if (curSchool) schoolSelect.value = curSchool;
+
+    // 3. If fully configured, show summary; else show form
+    if (curSchool && curClass && curSection) {
+      classSelect.value   = curClass;
+      sectionSelect.value = curSection;
+      setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
+      setupForm.classList.add('hidden');
+      setupDisplay.classList.remove('hidden');
+
+      // Restore the rest of the app’s state
+      renderStudents();
+      updateCounters();
+      resetViews();
+    } else {
+      setupForm.classList.remove('hidden');
+      setupDisplay.classList.add('hidden');
+    }
   }
-}
 
-$('saveSetup').onclick = async e => {
-  e.preventDefault();
-  const newSchool = $('schoolInput').value.trim();
+  // Add a new school or save the selected school/class/section
+  saveSetupBtn.onclick = async e => {
+    e.preventDefault();
+
+    // 1. If the user typed a new school, add it
+    const newSchool = schoolInput.value.trim();
+    if (newSchool) {
+      if (!schools.includes(newSchool)) {
+        schools.push(newSchool);
+        await save('schools', schools);
+      }
+      schoolInput.value = '';
+      return loadSetup();
+    }
+
+    // 2. Otherwise save the current selection
+    const selSchool  = schoolSelect.value;
+    const selClass   = classSelect.value;
+    const selSection = sectionSelect.value;
+    if (!selSchool || !selClass || !selSection) {
+      alert('Please select a school, class, and section before saving.');
+      return;
+    }
+    await Promise.all([
+      save('currentSchool',  selSchool),
+      save('teacherClass',   selClass),
+      save('teacherSection', selSection)
+    ]);
+    await loadSetup();
+  };
+
+  // Allow the user to re-open the form
+  editSetupBtn.onclick = e => {
+    e.preventDefault();
+    setupForm.classList.remove('hidden');
+    setupDisplay.classList.add('hidden');
+  };
+
+  // Kick things off on load
+  await loadSetup();
 
   // Add a new school if provided
   if (newSchool) {
