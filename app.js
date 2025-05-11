@@ -769,8 +769,70 @@ shareAttendanceBtn.onclick = () => {
     bindRegisterActions();
   })();
 
-  // --- 12. Service Worker ---
+// --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
-});
+
+  // --- 13. DATA BACKUP & RESTORE ---
+
+  // HTML needed:
+  // <button id="exportDataBtn" class="btn">Export Data</button>
+  // <input type="file" id="importFileInput" accept="application/json" style="display:none" />
+  // <button id="importDataBtn" class="btn">Import Data</button>
+
+  const exportBtn   = $('exportDataBtn');
+  const importBtn   = $('importDataBtn');
+  const importInput = $('importFileInput');
+
+  // 13.1 Export
+  exportBtn.onclick = async () => {
+    const allData = {
+      students:       await get('students')        || [],
+      attendanceData: await get('attendanceData')  || {},
+      paymentsData:   await get('paymentsData')    || {},
+      lastAdmissionNo:await get('lastAdmissionNo') || 0,
+      fineRates:      await get('fineRates')       || fineRates,
+      eligibilityPct: await get('eligibilityPct')  || eligibilityPct,
+      schoolName:     await get('schoolName')      || '',
+      teacherClass:   await get('teacherClass')    || '',
+      teacherSection: await get('teacherSection')  || ''
+    };
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 13.2 Trigger import picker
+  importBtn.onclick = () => importInput.click();
+
+  // 13.3 Read & restore
+  importInput.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await Promise.all([
+        set('students',        data.students),
+        set('attendanceData',  data.attendanceData),
+        set('paymentsData',    data.paymentsData),
+        set('lastAdmissionNo', data.lastAdmissionNo),
+        set('fineRates',       data.fineRates),
+        set('eligibilityPct',  data.eligibilityPct),
+        set('schoolName',      data.schoolName),
+        set('teacherClass',    data.teacherClass),
+        set('teacherSection',  data.teacherSection)
+      ]);
+      alert('Data imported successfully. Please refresh the page.');
+    } catch (err) {
+      console.error(err);
+      alert('Import failed: invalid file.');
+    }
+  };
+
+});  // <— Make sure this closing brace + parenthesis stays here, after Section 13
