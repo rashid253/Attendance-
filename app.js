@@ -207,48 +207,94 @@ $('shareAnalytics').onclick = () => {
     show(formDiv, saveSettings, ...inputs);
   };
 
-  // --- Setup: Multiple Schools, Classes & Sections ---
-  const setupForm       = $('setupForm');
-  const setupDisplay    = $('setupDisplay');
-  const schoolSelect    = $('schoolSelect');
-  const schoolInput     = $('schoolInput');
-  const classSelect     = $('teacherClassSelect');
-  const sectionSelect   = $('teacherSectionSelect');
-  const setupText       = $('setupText');
-  const saveSetupBtn    = $('saveSetup');
-  const editSetupBtn    = $('editSetup');
+  // --- Setup: Manage Schools, Classes & Sections ---
+  const setupForm     = $('setupForm');
+  const setupDisplay  = $('setupDisplay');
+  const schoolInput   = $('schoolInput');
+  const schoolSelect  = $('schoolSelect');
+  const classSelect   = $('teacherClassSelect');
+  const sectionSelect = $('teacherSectionSelect');
+  const setupText     = $('setupText');
+  const saveSetupBtn  = $('saveSetup');
+  const editSetupBtn  = $('editSetup');
 
+  // Renders list of schools with Edit/Delete buttons
+  function renderSchoolList() {
+    const listContainer = $('schoolList');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+    schools.forEach((school, idx) => {
+      const row = document.createElement('div');
+      row.className = 'row-inline';
+      row.style.marginBottom = '0.5em';
+      row.innerHTML = `
+        <span>${school}</span>
+        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+      `;
+      listContainer.appendChild(row);
+    });
+
+    // Attach Edit handlers
+    document.querySelectorAll('.edit-school').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = +btn.dataset.idx;
+        const newName = prompt('Edit School Name:', schools[idx]);
+        if (newName && newName.trim()) {
+          schools[idx] = newName.trim();
+          await save('schools', schools);
+          loadSetup();
+        }
+      };
+    });
+
+    // Attach Delete handlers
+    document.querySelectorAll('.delete-school').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = +btn.dataset.idx;
+        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
+        schools.splice(idx, 1);
+        await save('schools', schools);
+        // Clear selection if currentSchool was deleted
+        const cur = await get('currentSchool');
+        if (cur === schools[idx]) {
+          await save('currentSchool', null);
+          await save('teacherClass', null);
+          await save('teacherSection', null);
+        }
+        loadSetup();
+      };
+    });
+  }
+
+  // Load and render setup UI
   async function loadSetup() {
-    // ensure elements exist
-    if (!setupForm || !setupDisplay || !schoolSelect || !classSelect || !sectionSelect || !setupText) {
-      console.error('Setup: missing DOM elements');
-      return;
-    }
-
-    // 1. Load stored schools and current selection
-    const storedSchools = await get('schools') || [];
-    schools = storedSchools; // global array
+    // Load stored schools and selection
+    schools = (await get('schools')) || [];
     const [curSchool, curClass, curSection] = await Promise.all([
       get('currentSchool'),
       get('teacherClass'),
       get('teacherSection')
     ]);
 
-    // 2. Populate schools dropdown
-    schoolSelect.innerHTML = schools
-      .map(s => `<option value="${s}">${s}</option>`)
-      .join('');
+    // Populate schoolSelect
+    schoolSelect.innerHTML = [
+      `<option disabled selected>-- Select School --</option>`,
+      ...schools.map(s => `<option value="${s}">${s}</option>`)
+    ].join('');
     if (curSchool) schoolSelect.value = curSchool;
 
-    // 3. If fully configured, show summary; else show form
+    // Render management list
+    renderSchoolList();
+
+    // Show summary or form
     if (curSchool && curClass && curSection) {
       classSelect.value   = curClass;
       sectionSelect.value = curSection;
       setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
       setupForm.classList.add('hidden');
       setupDisplay.classList.remove('hidden');
-
-      // restore app state
+      // Restore views
       renderStudents();
       updateCounters();
       resetViews();
@@ -258,10 +304,9 @@ $('shareAnalytics').onclick = () => {
     }
   }
 
+  // Save button handler (add/edit school or lock in selection)
   saveSetupBtn.onclick = async e => {
     e.preventDefault();
-
-    // adding a new school?
     const newSchool = schoolInput.value.trim();
     if (newSchool) {
       if (!schools.includes(newSchool)) {
@@ -271,8 +316,6 @@ $('shareAnalytics').onclick = () => {
       schoolInput.value = '';
       return loadSetup();
     }
-
-    // otherwise save current selection
     const selSchool  = schoolSelect.value;
     const selClass   = classSelect.value;
     const selSection = sectionSelect.value;
@@ -285,16 +328,17 @@ $('shareAnalytics').onclick = () => {
       save('teacherClass',   selClass),
       save('teacherSection', selSection)
     ]);
-    await loadSetup();
+    loadSetup();
   };
 
+  // Edit button handler (re-open form)
   editSetupBtn.onclick = e => {
     e.preventDefault();
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
   };
 
-  // Initialize on page load
+  // Kick off on page load
   await loadSetup();
   
   // --- 6. COUNTERS & UTILS ---
