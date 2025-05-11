@@ -71,7 +71,6 @@ button:disabled {
 }
 
 table {
-  /* Make all tables flexible */
   table-layout: auto !important;
   width: auto !important;
   border-collapse: collapse;
@@ -82,7 +81,6 @@ th, td {
   padding: 2mm;
   border: 1px solid #ddd;
   text-align: left;
-  /* Prevent wrapping so cells expand horizontally */
   white-space: nowrap;
 }
 
@@ -194,7 +192,7 @@ th, td {
   margin-bottom: 0.5em;
 }
 
-/* Make the Mark Attendance list scrollable vertically and horizontally */
+/* Make the Mark Attendance list scrollable */
 #attendanceBody {
   max-height: 400px;
   overflow-y: auto;
@@ -210,5 +208,29 @@ th, td {
   padding-bottom: 0.5em;
 }
 #attendanceSummary table {
-  min-width: 600px; /* adjust as needed so scroll appears */
+  min-width: 600px;
+}
+
+/* Make school list scrollable with fixed height */
+#schoolList {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 0.5em;
+  background: #fafafa;
+  border-radius: 4px;
+  margin-top: 0.5em;
+}
+
+/* Style each school row with full width and spaced buttons */
+#schoolList .row-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+#schoolList .row-inline button {
+  margin-left: 0.25em;
+  flex-shrink: 0;
 }
