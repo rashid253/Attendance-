@@ -28,7 +28,7 @@ async function doLogin() {
     return;
   }
   localStorage.setItem(CRED_KEY, JSON.stringify({ school, cls, sec }));
-  startApp();
+  await startApp();
 }
 $('loginBtn').onclick = doLogin;
 $('logoutBtn').onclick = () => {
@@ -60,7 +60,7 @@ $('restoreFile').onchange = async e => {
 };
 
 // 5) Start the App After Login
-function startApp() {
+async function startApp() {
   hide($('loginSection'));
   show($('app'), $('authActions'));
 
@@ -71,21 +71,18 @@ function startApp() {
   show($('setupDisplay'));
 
   // Now invoke the original app logic
-  initOriginalApp();
+  await initOriginalApp();
 }
 
-// 6) Original App Code (verbatim from your uploaded app.js)
-function initOriginalApp() {
+// 6) Original App Code (now async)
+async function initOriginalApp() {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({
       files: [new File([blob], fileName, { type: 'application/pdf' })]
     })) {
       try {
-        await navigator.share({
-          title,
-          files: [new File([blob], fileName, { type: 'application/pdf' })]
-        });
+        await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
       } catch (err) {
         if (err.name !== 'AbortError') console.error('Share failed', err);
       }
@@ -121,30 +118,23 @@ function initOriginalApp() {
     return el;
   }
 
-  // --- 4. Upgrade Helpers & Buttons ---
+  // --- 4. Setup Save/Edit ---
   $('saveSetup').onclick = async () => {
     const s = $('schoolNameInput').value.trim();
     const c = $('teacherClassSelect').value;
     const t = $('teacherSectionSelect').value;
-    if (!s || !c || !t) {
-      alert('Please fill all setup fields');
-      return;
-    }
+    if (!s || !c || !t) return alert('Please fill all setup fields');
     await idbKeyval.set('schoolName', s);
     await idbKeyval.set('teacherClass', c);
     await idbKeyval.set('teacherSection', t);
     $('setupText').textContent = `${s} | ${c} | Section ${t}`;
     hide($('setupForm')); show($('setupDisplay'));
   };
-  $('editSetup').onclick = () => {
-    hide($('setupDisplay')); show($('setupForm'));
-  };
+  $('editSetup').onclick = () => { hide($('setupDisplay')); show($('setupForm')); };
 
   // --- 5. Fee Settings ---
-  (async () => {
-    const fee = await idbKeyval.get('feeAmount');
-    if (fee) $('feeInput').value = fee;
-  })();
+  const feeStored = await idbKeyval.get('feeAmount');
+  if (feeStored) $('feeInput').value = feeStored;
   $('saveFee').onclick = async () => {
     const f = $('feeInput').value;
     if (!f) return alert('Enter fee amount');
@@ -158,13 +148,12 @@ function initOriginalApp() {
     if (!from || !to) return alert('Select both dates');
     await idbKeyval.set('fromDate', from);
     await idbKeyval.set('toDate', to);
-    renderAttendance(); renderAnalytics();
+    await renderAttendance(); await renderAnalytics();
   };
-  (async () => {
-    const from = await idbKeyval.get('fromDate'), to = await idbKeyval.get('toDate');
-    if (from) $('fromDate').value = from;
-    if (to) $('toDate').value = to;
-  })();
+  const storedFrom = await idbKeyval.get('fromDate');
+  const storedTo   = await idbKeyval.get('toDate');
+  if (storedFrom) $('fromDate').value = storedFrom;
+  if (storedTo)   $('toDate').value = storedTo;
 
   // --- 7. Student Registration ---
   let students = [];
@@ -186,10 +175,10 @@ function initOriginalApp() {
   $('saveStudent').onclick = saveStudent;
 
   function renderStudentTable() {
+    const old = document.querySelector('#student-register table');
+    if (old) old.remove();
     const tbl = createEl('table', { class: 'table' },
-      createEl('thead', {}, createEl('tr', {},
-        'No,Name'.split(',').map(h => createEl('th', {}, h))
-      )),
+      createEl('thead', {}, createEl('tr', {}, 'No,Name'.split(',').map(h => createEl('th', {}, h)))),
       createEl('tbody', {},
         ...students.map(s => createEl('tr', {},
           createEl('td', {}, s.adm.toString()),
@@ -202,39 +191,40 @@ function initOriginalApp() {
 
   // --- 8. Attendance ---
   let attendance = {};
-  function renderAttendance() {
+  async function renderAttendance() {
     attendance = JSON.parse(await idbKeyval.get('attendance') || '{}');
     const from = $('fromDate').value, to = $('toDate').value;
     const dates = [];
     for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate() + 1)) {
       dates.push(d.toISOString().slice(0, 10));
     }
-    const list = dates.map(date => {
-      const div = createEl('div', { class: 'attendance-day' }, date);
-      students.forEach(s => {
-        const cb = createEl('input', { type: 'checkbox', checked: attendance[date]?.includes(s.adm) });
-        div.append(cb, createEl('span', {}, s.name));
-      });
-      return div;
-    });
     const container = $('attendanceList');
     container.innerHTML = '';
-    list.forEach(el => container.append(el));
+    dates.forEach(date => {
+      const div = createEl('div', { class: 'attendance-day' }, date);
+      students.forEach(s => {
+        const cb = createEl('input', {
+          type: 'checkbox',
+          checked: (attendance[date] || []).includes(s.adm)
+        });
+        div.append(cb, createEl('span', {}, s.name));
+      });
+      container.append(div);
+    });
   }
   $('saveAttendance').onclick = async () => {
-    const list = document.querySelectorAll('#attendanceList .attendance-day');
-    list.forEach(div => {
+    document.querySelectorAll('#attendanceList .attendance-day').forEach(div => {
       const date = div.childNodes[0].textContent;
       const checked = Array.from(div.querySelectorAll('input:checked')).map((cb,i) => students[i].adm);
       attendance[date] = checked;
     });
     await idbKeyval.set('attendance', JSON.stringify(attendance));
     alert('Attendance saved');
-    renderAnalytics();
+    await renderAnalytics();
   };
 
   // --- 9. Analytics ---
-  function renderAnalytics() {
+  async function renderAnalytics() {
     const from = $('fromDate').value, to = $('toDate').value;
     const dates = [], counts = [];
     for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate() + 1)) {
@@ -256,9 +246,8 @@ function initOriginalApp() {
     pdf.addImage(imgData, 'PNG', 10, 10, 180, 80);
     pdf.save('attendance-chart.pdf');
   };
-  $('shareChart').onclick = async () => {
-    const canvas = $('attendanceChart');
-    canvas.toBlob(blob => sharePdf(blob, 'chart.pdf', 'Attendance Chart'));
+  $('shareChart').onclick = () => {
+    $('attendanceChart').toBlob(blob => sharePdf(blob, 'chart.pdf', 'Attendance Chart'));
   };
 
   // --- 10. CSV Export / Import ---
@@ -276,8 +265,8 @@ function initOriginalApp() {
     if (!file) return;
     const fr = new FileReader();
     fr.onload = async () => {
-      const lines = fr.result.split('\n').slice(1);
-      students = lines.filter(l => l).map(l => {
+      const lines = fr.result.trim().split('\n').slice(1);
+      students = lines.map(l => {
         const [adm, name] = l.split(',');
         return { adm: parseInt(adm,10), name };
       });
@@ -288,11 +277,9 @@ function initOriginalApp() {
   };
 
   // --- 11. Init on load ---
-  (async () => {
-    await loadStudents();
-    renderAttendance();
-    renderAnalytics();
-  })();
+  await loadStudents();
+  await renderAttendance();
+  await renderAnalytics();
 
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
@@ -302,10 +289,6 @@ function initOriginalApp() {
 
 // 7) DOMContentLoaded → Show login or start
 window.addEventListener('DOMContentLoaded', () => {
-  // Bind login button
-  $('loginBtn').onclick = doLogin;
-
-  // If already logged in, start immediately
   if (localStorage.getItem(CRED_KEY)) {
     startApp();
   } else {
