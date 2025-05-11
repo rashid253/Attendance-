@@ -207,29 +207,77 @@ $('shareAnalytics').onclick = () => {
     show(formDiv, saveSettings, ...inputs);
   };
 
-  // --- 5. SETUP: School, Class & Section ---
-  async function loadSetup() {
-    const [sc,cl,sec] = await Promise.all([ get('schoolName'), get('teacherClass'), get('teacherSection') ]);
-    if (sc && cl && sec) {
-      $('schoolNameInput').value      = sc;
-      $('teacherClassSelect').value   = cl;
-      $('teacherSectionSelect').value = sec;
-      $('setupText').textContent      = `${sc} 🏫 | Class: ${cl} | Section: ${sec}`;
-      hide($('setupForm'));
-      show($('setupDisplay'));
-      renderStudents(); updateCounters(); resetViews();
-    }
-  }
-  $('saveSetup').onclick = async e => {
-    e.preventDefault();
-    const sc = $('schoolNameInput').value.trim(), cl = $('teacherClassSelect').value, sec = $('teacherSectionSelect').value;
-    if (!sc||!cl||!sec) { alert('Complete setup'); return; }
-    await Promise.all([ save('schoolName', sc), save('teacherClass', cl), save('teacherSection', sec) ]);
-    await loadSetup();
-  };
-  $('editSetup').onclick = e => { e.preventDefault(); show($('setupForm')); hide($('setupDisplay')); };
-  await loadSetup();
+  
+// --- Setup: Manage Multiple Schools, Classes & Sections ---
+async function loadSetup() {
+  // Fetch stored data
+  const [schList, curSchool, curClass, curSection] = await Promise.all([
+    get('schools'), 
+    get('currentSchool'), 
+    get('teacherClass'), 
+    get('teacherSection')
+  ]);
 
+  // Populate schools dropdown
+  schools = schList || [];
+  const schoolSelect = $('schoolSelect');
+  schoolSelect.innerHTML = schools
+    .map(s => `<option value="${s}">${s}</option>`)
+    .join('');
+  if (curSchool) schoolSelect.value = curSchool;
+
+  // If setup previously done, display summary
+  if (curSchool && curClass && curSection) {
+    $('teacherClassSelect').value   = curClass;
+    $('teacherSectionSelect').value = curSection;
+    $('setupText').textContent      = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
+    hide($('setupForm'));
+    show($('setupDisplay'));
+    renderStudents();
+    updateCounters();
+    resetViews();
+  }
+}
+
+$('saveSetup').onclick = async e => {
+  e.preventDefault();
+  const newSchool = $('schoolInput').value.trim();
+
+  // Add a new school if provided
+  if (newSchool) {
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await save('schools', schools);
+    }
+    $('schoolInput').value = '';
+    return loadSetup();
+  }
+
+  // Otherwise, save the selected school/class/section
+  const selSchool  = $('schoolSelect').value;
+  const selClass   = $('teacherClassSelect').value;
+  const selSection = $('teacherSectionSelect').value;
+  if (!selSchool || !selClass || !selSection) {
+    alert('Please select a school, class and section before saving.');
+    return;
+  }
+  await Promise.all([
+    save('currentSchool',  selSchool),
+    save('teacherClass',   selClass),
+    save('teacherSection', selSection)
+  ]);
+  loadSetup();
+};
+
+$('editSetup').onclick = () => {
+  // Allow user to change setup
+  show($('setupForm'));
+  hide($('setupDisplay'));
+};
+
+// Initialize setup on page load
+await loadSetup();
+  
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
