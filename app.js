@@ -82,41 +82,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + '\n\n' + lines)}`, '_blank');
   };
 
-  // --- Analytics PDF ---
+// --- Analytics PDF ---
 $('downloadAnalytics').onclick = async () => {
   if (!lastAnalyticsStats.length) {
     alert('No analytics to download. Generate report first.');
     return;
   }
 
-  // Get school, class, section from your setup panel
   const setupHeader = $('setupText').textContent; // e.g.: "My School 🏫 | Class: 5 | Section: A"
-
-  // Ensure you have these defined & populated elsewhere:
-  // const fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
-  // const eligibilityPct = 75;
 
   if (analyticsDownloadMode === 'combined') {
     const doc = new jspdf.jsPDF();
-    
+
     // Title
     doc.setFontSize(18);
     doc.text('Attendance Analytics Report', 14, 16);
-    
-    // School / Class / Section
+
+    // Header Info
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
-    
-    // Period
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    
-    // Fines & Eligibility
     const fineLine = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
     const eligLine = `Eligibility: ≥ ${eligibilityPct}%`;
     doc.text(fineLine, 14, 40);
     doc.text(eligLine, 14, 46);
-    
-    // Table (moved down)
+
+    // Table
     doc.autoTable({
       startY: 52,
       html: '#analyticsTable'
@@ -128,28 +119,23 @@ $('downloadAnalytics').onclick = async () => {
 
   } else {
     const doc = new jspdf.jsPDF();
-    
-    // Title
-    doc.setFontSize(18);
-    doc.text('Individual Attendance Analytics Report', 14, 16);
-    
-    // School / Class / Section
-    doc.setFontSize(12);
-    doc.text(setupHeader, 14, 24);
-    
-    // Period
-    doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    
-    // Fines & Eligibility
-    const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
-    const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
-    doc.text(fineLineInd, 14, 40);
-    doc.text(eligLineInd, 14, 46);
-    
-    // Individual stats start lower
+
     lastAnalyticsStats.forEach((st, i) => {
       if (i > 0) doc.addPage();
-      
+
+      // --- Header on Every Page ---
+      doc.setFontSize(18);
+      doc.text('Individual Attendance Analytics Report', 14, 16);
+
+      doc.setFontSize(12);
+      doc.text(setupHeader, 14, 24);
+      doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
+      const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
+      const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
+      doc.text(fineLineInd, 14, 40);
+      doc.text(eligLineInd, 14, 46);
+
+      // --- Student Data ---
       doc.setFontSize(14);
       doc.text(`Name: ${st.name}`, 14, 60);
       doc.text(`Adm#: ${st.adm}`, 14, 76);
@@ -171,7 +157,6 @@ $('downloadAnalytics').onclick = async () => {
     await sharePdf(blob, 'individual_analytics_book.pdf', 'Individual Attendance Analytics');
   }
 };
-
 
 // --- Share Analytics via WhatsApp ---
 $('shareAnalytics').onclick = () => {
