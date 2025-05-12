@@ -46,8 +46,22 @@
 </head>
 <body>
   <header>
-    <h1><i class="fas fa-school"></i> Attendance Management</h1>
-  </header>
+    <!-- index.html کے اندر header میں: -->
+<header>
+  <h1><i class="fas fa-school"></i> Attendance Management</h1>
+
+  <!-- نیا: Backup/Restore بٹنز -->
+  <div id="appActions" class="row-inline">
+    <button id="backupData" class="no-print">
+      <i class="fas fa-database"></i> Backup
+    </button>
+    <button id="restoreData" class="no-print">
+      <i class="fas fa-upload"></i> Restore
+    </button>
+    <!-- فائل انپٹ invisible, صرف JS سے trigger ہوگی -->
+    <input type="file" id="restoreFile" accept="application/json" class="hidden" />
+  </div>
+</header>
 
   <!-- 1. SETUP -->
   <section id="teacher-setup">
