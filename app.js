@@ -166,6 +166,43 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  // Backup & Restore handlers:
+  const backupBtn  = document.getElementById('backupData');
+  const restoreBtn = document.getElementById('restoreData');
+  const fileInput  = document.getElementById('restoreFile');
+
+  backupBtn.addEventListener('click', () => {
+    const data = { students, attendanceData, paymentsData, fineRates, eligibilityPct, lastAdmNo };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'attendance-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  restoreBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const obj = JSON.parse(text);
+      await Promise.all([
+        save('students',       obj.students),
+        save('attendanceData', obj.attendanceData),
+        save('paymentsData',   obj.paymentsData),
+        save('fineRates',      obj.fineRates),
+        save('eligibilityPct', obj.eligibilityPct),
+        save('lastAdmissionNo', obj.lastAdmNo)
+      ]);
+      alert('Data restored successfully. Please reload the page.');
+    } catch {
+      alert('Invalid backup file!');
+    }
+  });
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
