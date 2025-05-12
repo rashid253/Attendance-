@@ -1,3 +1,5 @@
+/* style.css */
+
 :root {
   --primary: #2196F3;
   --success: #4caf50;
@@ -209,33 +211,27 @@ th, td {
   min-width: 600px;
 }
 
-/* Horizontal carousel for School List: one school per view */
+/* Make school list scrollable with fixed height */
 #schoolList {
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
   padding: 0.5em;
   background: #fafafa;
-  border: 1px solid #ccc;
   border-radius: 4px;
   margin-top: 0.5em;
 }
 
+/* Style each school row with full width and spaced buttons */
 #schoolList .row-inline {
-  flex: 0 0 100%;
-  box-sizing: border-box;
-  scroll-snap-align: start;
-  margin: 0 0.5em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5em;
 }
 
-/* Hide scrollbar for a cleaner carousel */
-#schoolList::-webkit-scrollbar {
-  display: none;
+#schoolList .row-inline button {
+  margin-left: 0.25em;
+  flex-shrink: 0;
 }
-#schoolList {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+
