@@ -182,7 +182,11 @@ $('shareAnalytics').onclick = () => {
     URL.revokeObjectURL(url);
   });
 
-  restoreBtn.addEventListener('click', () => fileInput.click());
+  // Data Restore
+restoreBtn.addEventListener('click', () => {
+  alert('Please select the backup file: attendance-backup.json');
+  fileInput.click();
+});
 
   fileInput.addEventListener('change', async e => {
     const file = e.target.files[0];
