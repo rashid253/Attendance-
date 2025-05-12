@@ -166,16 +166,17 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
-
-   // --- 1) Backup Handler ---
+// --- 1) Backup Handler ---
   const backupBtn = document.getElementById('backupData');
   backupBtn.addEventListener('click', async () => {
+    // grab the current setup & all schools
     const [curSchool, curClass, curSection, schools] = await Promise.all([
       get('currentSchool'),
       get('teacherClass'),
       get('teacherSection'),
       get('schools')
     ]);
+
     const data = {
       students,
       attendanceData,
@@ -183,11 +184,13 @@ $('shareAnalytics').onclick = () => {
       fineRates,
       eligibilityPct,
       lastAdmNo,
+      // include your setup state:
       schools,
       currentSchool: curSchool,
       teacherClass: curClass,
       teacherSection: curSection
     };
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -200,16 +203,21 @@ $('shareAnalytics').onclick = () => {
   // --- 2) Restore Handler ---
   const restoreBtn = document.getElementById('restoreData');
   const fileInput  = document.getElementById('restoreFile');
+
   restoreBtn.addEventListener('click', () => {
     alert('Please select the backup file: attendance-backup.json');
     fileInput.click();
   });
+
   fileInput.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
     const text = await file.text();
+
     try {
       const obj = JSON.parse(text);
+
+      // restore **every** piece of your state, including setup
       await Promise.all([
         save('students',        obj.students),
         save('attendanceData',  obj.attendanceData),
@@ -222,7 +230,9 @@ $('shareAnalytics').onclick = () => {
         save('teacherClass',    obj.teacherClass || null),
         save('teacherSection',  obj.teacherSection || null)
       ]);
-      alert('Data restored successfully. Please reload the page.');
+
+      alert('Data restored successfully. Reloading the page to apply settings…');
+      location.reload();    // ← auto-reload so loadSetup() picks up your restored schools & selection
     } catch {
       alert('Invalid backup file!');
     }
@@ -233,14 +243,17 @@ $('shareAnalytics').onclick = () => {
   resetBtn.addEventListener('click', async () => {
     if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
     try {
-      await clear();
-      alert('All data cleared. Reloading page...');
+      await clear();    // clears **all** key-val entries, including schools & setup
+      alert('All data cleared. Reloading page…');
       location.reload();
     } catch (err) {
       console.error('Reset failed', err);
       alert('Failed to clear data.');
     }
   });
+
+  // --- 4. SETTINGS: Fines & Eligibility ---
+   
 
 
   // --- 4. SETTINGS: Fines & Eligibility ---
