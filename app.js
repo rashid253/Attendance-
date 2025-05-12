@@ -203,6 +203,20 @@ $('shareAnalytics').onclick = () => {
       alert('Invalid backup file!');
     }
   });
+  // --- 3rd: Factory Reset Handler ---
+const resetBtn = document.getElementById('resetData');
+
+resetBtn.addEventListener('click', async () => {
+  if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
+  try {
+    await window.idbKeyval.clear();    // Clears all keyval stores
+    alert('All data cleared. Reloading page...');
+    location.reload();
+  } catch (err) {
+    console.error('Reset failed', err);
+    alert('Failed to clear data.');
+  }
+});
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
