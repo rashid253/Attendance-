@@ -166,13 +166,28 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
-  // Backup & Restore handlers:
-  const backupBtn  = document.getElementById('backupData');
-  const restoreBtn = document.getElementById('restoreData');
-  const fileInput  = document.getElementById('restoreFile');
 
-  backupBtn.addEventListener('click', () => {
-    const data = { students, attendanceData, paymentsData, fineRates, eligibilityPct, lastAdmNo };
+   // --- 1) Backup Handler ---
+  const backupBtn = document.getElementById('backupData');
+  backupBtn.addEventListener('click', async () => {
+    const [curSchool, curClass, curSection, schools] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection'),
+      get('schools')
+    ]);
+    const data = {
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: curSchool,
+      teacherClass: curClass,
+      teacherSection: curSection
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -182,12 +197,13 @@ $('shareAnalytics').onclick = () => {
     URL.revokeObjectURL(url);
   });
 
-  // Data Restore
-restoreBtn.addEventListener('click', () => {
-  alert('Please select the backup file: attendance-backup.json');
-  fileInput.click();
-});
-
+  // --- 2) Restore Handler ---
+  const restoreBtn = document.getElementById('restoreData');
+  const fileInput  = document.getElementById('restoreFile');
+  restoreBtn.addEventListener('click', () => {
+    alert('Please select the backup file: attendance-backup.json');
+    fileInput.click();
+  });
   fileInput.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -195,32 +211,38 @@ restoreBtn.addEventListener('click', () => {
     try {
       const obj = JSON.parse(text);
       await Promise.all([
-        save('students',       obj.students),
-        save('attendanceData', obj.attendanceData),
-        save('paymentsData',   obj.paymentsData),
-        save('fineRates',      obj.fineRates),
-        save('eligibilityPct', obj.eligibilityPct),
-        save('lastAdmissionNo', obj.lastAdmNo)
+        save('students',        obj.students),
+        save('attendanceData',  obj.attendanceData),
+        save('paymentsData',    obj.paymentsData),
+        save('fineRates',       obj.fineRates),
+        save('eligibilityPct',  obj.eligibilityPct),
+        save('lastAdmissionNo', obj.lastAdmNo),
+        save('schools',         obj.schools     || []),
+        save('currentSchool',   obj.currentSchool || null),
+        save('teacherClass',    obj.teacherClass || null),
+        save('teacherSection',  obj.teacherSection || null)
       ]);
       alert('Data restored successfully. Please reload the page.');
     } catch {
       alert('Invalid backup file!');
     }
   });
-  // --- 3rd: Factory Reset Handler ---
-const resetBtn = document.getElementById('resetData');
 
-resetBtn.addEventListener('click', async () => {
-  if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
-  try {
-    await window.idbKeyval.clear();    // Clears all keyval stores
-    alert('All data cleared. Reloading page...');
-    location.reload();
-  } catch (err) {
-    console.error('Reset failed', err);
-    alert('Failed to clear data.');
-  }
-});
+  // --- 3) Factory Reset Handler ---
+  const resetBtn = document.getElementById('resetData');
+  resetBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
+    try {
+      await clear();
+      alert('All data cleared. Reloading page...');
+      location.reload();
+    } catch (err) {
+      console.error('Reset failed', err);
+      alert('Failed to clear data.');
+    }
+  });
+
+
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
