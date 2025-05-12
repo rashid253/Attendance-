@@ -1,5 +1,6 @@
 /* style.css */
 
+/* 1. Root variables */
 :root {
   --primary: #2196F3;
   --success: #4caf50;
@@ -10,6 +11,7 @@
   --dark: #333;
 }
 
+/* 2. Global resets */
 * {
   box-sizing: border-box;
   outline: none;
@@ -22,23 +24,45 @@ body {
   color: var(--dark);
 }
 
+/* 3. Header */
 header {
-  position: relative;
+  position: relative;       /* so that #appActions is positioned relative to header */
   background: var(--primary);
   color: #fff;
-  padding: 1.5em 1em;
+  padding: 1.2em 1em;       /* ایک ہی padding value */
   text-align: center;
-  z-index: 1;
+  z-index: 1;               /* ensure header stays above other content */
 }
 
 header h1 {
-  margin: 0 0 0.5em;
+  margin: 0 0 0.5em;        /* صرف h1 کے لیے margin-bottom */
+  font-size: 1.8rem;
 }
 
+/* 4. Backup/Restore buttons container */
+#appActions {
+  position: absolute;
+  top: 1em;                 /* header کے padding کے اندر adjust کریں */
+  right: 1em;
+  display: flex;
+  gap: 0.5rem;
+}
+
+#appActions button {
+  padding: 0.4em 0.8em;
+  font-size: 0.9rem;
+  background: #fff;         /* اگر آپ alternate رنگ چاہتے ہیں */
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+}
+
+/* 5. Headings */
 h2, h3 {
   margin: 0 0 10px;
 }
 
+/* 6. Sections & cards */
 section {
   background: #fff;
   padding: 1em;
@@ -46,6 +70,14 @@ section {
   border-radius: 4px;
 }
 
+.card {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin-top: 1em;
+  border-radius: 4px;
+}
+
+/* 7. Forms and controls */
 .row-inline > * {
   display: inline-block;
   vertical-align: middle;
@@ -72,105 +104,33 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 8. Tables */
 .table-wrapper {
   overflow-x: auto;
 }
 
 table {
-  table-layout: auto !important;
-  width: auto !important;
   border-collapse: collapse;
   margin-top: 1em;
+  width: 100%;
 }
 
 th, td {
-  padding: 2mm;
+  padding: 4px 8px;
   border: 1px solid #ddd;
   text-align: left;
   white-space: nowrap;
 }
 
-.no-print {
-  /* hide in print */
-}
+/* 9. Utility classes */
+.no-print { /* hide in print */ }
+.hidden { display: none !important; }
 
-.hidden {
-  display: none !important;
-}
-
-.card {
-  border: 1px solid #ccc;
-  padding: 1em;
-  margin-top: 1em;
-  border-radius: 4px;
-}
-
-.btn {
-  margin-top: 0.5em;
-}
-
-.counter-grid {
-  display: flex;
-  gap: 1em;
-}
-
-.counter-card {
-  flex: 1;
-  text-align: center;
-  padding: 1em;
-  background: #fff;
-  border-radius: 4px;
-}
-
-.counter-card .number {
-  font-size: 2rem;
-  display: block;
-}
-
-#analyticsFilterBtn {
-  float: right;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2em;
-  color: #555;
-}
-
-/* Modal */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background: #fff;
-  padding: 1.5em;
-  border-radius: 6px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-}
-
-.modal-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  cursor: pointer;
-  font-size: 1.2em;
-}
-
-/* Attendance List Styling */
-.attendance-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--dark);
+/* 10. Attendance list styling */
+.attendance-header {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.5em;
 }
 
 .attendance-row .attendance-buttons {
@@ -179,88 +139,57 @@ th, td {
 }
 
 .attendance-row .attendance-buttons button {
-  flex: 1 1 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.5em;
+  flex: 1;
   font-size: 0.9rem;
   border-radius: 4px;
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
-  border: 1px solid rgba(3,169,244,0.5);
 }
 
-/* Updated styling for attendance row header */
-.attendance-header {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 0.5em;
-}
-
-/* Make the Mark Attendance list scrollable */
+/* Scrollable areas */
 #attendanceBody {
   max-height: 400px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
+  overflow: auto;
   background: #fff;
+  padding: 0.5em;
+  border: 1px solid var(--light);
 }
 
-/* Make the Attendance Report table scrollable horizontally */
 #attendanceSummary {
   overflow-x: auto;
   padding-bottom: 0.5em;
 }
+
 #attendanceSummary table {
   min-width: 600px;
 }
 
-/* Make school list scrollable with fixed height */
+/* 11. School list */
 #schoolList {
   max-height: 150px;
   overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 0.5em;
   background: #fafafa;
+  padding: 0.5em;
+  border: 1px solid #ccc;
   border-radius: 4px;
   margin-top: 0.5em;
 }
 
-/* Style each school row with full width and spaced buttons */
 #schoolList .row-inline {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5em;
   padding: 0.5em;
   border-radius: 4px;
+  margin-bottom: 0.5em;
 }
 
-/* Alternating row colors for better prominence */
 #schoolList .row-inline:nth-child(odd) {
-  background-color: #e6f7ff;  /* Light blue */
+  background-color: #e6f7ff;   /* Light blue */
 }
 
 #schoolList .row-inline:nth-child(even) {
-  background-color: #f2f2f2;  /* Light grey */
+  background-color: #f2f2f2;   /* Light grey */
 }
 
-#schoolList .row-inline button {
-  margin-left: 0.25em;
+#schoolList button {
   flex-shrink: 0;
-}
-
-/* Backup & Restore buttons in header (appActions) */
-#appActions {
-  position: absolute;
-  top: 1.2rem;
-  right: 1rem;
-  display: flex;
-  gap: 0.5rem;
-}
-#appActions button {
-  padding: 0.4em 0.8em;
-  font-size: 0.9rem;
 }
