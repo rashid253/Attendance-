@@ -251,6 +251,69 @@ $('shareAnalytics').onclick = () => {
       alert('Failed to clear data.');
     }
   });
+  // --- 5) Auto-Backup Scheduler ---
+(function scheduleDailyBackup() {
+  const BACKUP_HOUR = 2;  // ہر رات 2 بجے
+  const now = new Date();
+  const next = new Date();
+  next.setHours(BACKUP_HOUR, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+
+  const msUntilNext = next - now;
+  console.log(`⏱️ Scheduling next auto-backup in ${msUntilNext/1000/60} minutes`);
+
+  setTimeout(async () => {
+    // کال اپنی Backup handler والی logic:
+    await backupBtn.click();  
+    // پھر اگلے دن Schedule کریں:
+    scheduleDailyBackup();
+  }, msUntilNext);
+})();
+
+// --- 6) Auto-Restore Last Backup from Firebase ---
+const autoRestoreBtn = document.getElementById('restoreData');
+autoRestoreBtn.addEventListener('click', async () => {
+  try {
+    // 1) listAll سے backups فولڈر میں فائلز لیں:
+    const listRef = storage.ref().child('backups');
+    const res     = await listRef.listAll();
+    if (!res.items.length) throw new Error('No backups found');
+
+    // 2) timestamp order میں سب سے last item پکڑیں:
+    // فرض کریں فائلز کے نام YYYY-MM-DD.json فارمیٹ میں ہیں
+    const lastItem = res.items
+      .map(item => ({  
+        ref: item, 
+        date: new Date(item.name.slice(18, 28)) // name = backups/attendance-backup-YYYY-MM-DD.json
+      }))
+      .sort((a,b) => b.date - a.date)[0].ref;
+
+    // 3) download URL حاصل کریں اور fetch کریں:
+    const url  = await lastItem.getDownloadURL();
+    const resp = await fetch(url);
+    const obj  = await resp.json();
+
+    // 4) restore logic (بغیر File Picker):
+    await Promise.all([
+      save('students',        obj.students),
+      save('attendanceData',  obj.attendanceData),
+      save('paymentsData',    obj.paymentsData),
+      save('fineRates',       obj.fineRates),
+      save('eligibilityPct',  obj.eligibilityPct),
+      save('lastAdmissionNo', obj.lastAdmNo),
+      save('schools',         obj.schools     || []),
+      save('currentSchool',   obj.currentSchool || null),
+      save('teacherClass',    obj.teacherClass || null),
+      save('teacherSection',  obj.teacherSection || null)
+    ]);
+
+    alert(`Restored backup from ${obj.currentSchool}, ${obj.teacherClass}-${obj.teacherSection}`);
+    location.reload();
+  } catch (err) {
+    console.error('Auto-restore failed', err);
+    alert('Failed to auto-restore latest backup: ' + err.message);
+  }
+});
 
   // --- 4. SETTINGS: Fines & Eligibility ---
    
