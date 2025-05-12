@@ -61,17 +61,19 @@ th, td { padding: 2mm; border: 1px solid #ddd; text-align: left; white-space: no
 
 #attendanceSummary table { min-width: 600px; }
 
-/* Professional, colorful School List Carousel */ #schoolList { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 0.5em; background: var(--light); border: 1px solid var(--primary); border-radius: 4px; }
+/* Professional, alternating School List Carousel */ #schoolList { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 0.5em; background: var(--light); border: 1px solid var(--primary); border-radius: 4px; }
 
 #schoolList::-webkit-scrollbar { display: none; }
 
 #schoolList { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Alternate each row’s background for prominence */ #schoolList .row-inline:nth-child(odd) .school-card { background: var(--light); }
+
+#schoolList .row-inline:nth-child(even) .school-card { background: var(--primary); color: #fff; }
+
 #schoolList .row-inline { flex: 0 0 100%; min-width: 100%; box-sizing: border-box; scroll-snap-align: start; margin: 0; padding: 1em; }
 
-#schoolList .row-inline .school-card { background: #fff; border: 1px solid var(--primary); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5em; transition: transform 0.3s, box-shadow 0.3s; }
-
-#schoolList .row-inline .school-card:nth-child(odd) { background: var(--light); }
+#schoolList .row-inline .school-card { border: 1px solid var(--primary); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5em; transition: transform 0.3s, box-shadow 0.3s; }
 
 #schoolList .row-inline .school-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
