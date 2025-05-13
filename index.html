@@ -47,23 +47,28 @@
 <body>
   
 <header class="app-header">
-  <h1>
-    <i class="fas fa-school"></i>
-    Attendance Management
-  </h1>
+  <h1><i class="fas fa-school"></i> Attendance Management</h1>
   <div class="header-buttons">
-    <button id="chooseBackupFolder" class="btn">
+    <!-- File System Access API backup chooser -->
+    <button id="chooseBackupFolder" class="btn" style="display: none;">
       <i class="fas fa-folder-open"></i>
       Select Backup Folder
     </button>
 
+    <!-- Traditional download fallback -->
+    <button id="backupData" class="btn" style="display: none;">
+      <i class="fas fa-download"></i>
+      Download Backup
+    </button>
+
+    <!-- Restore (seamless or manual) -->
     <button id="restoreData" class="btn">
       <i class="fas fa-upload"></i>
       Restore Backup
     </button>
-    <!-- hidden file input for restore -->
     <input type="file" id="restoreFile" accept=".json" hidden />
 
+    <!-- Factory reset -->
     <button id="resetData" class="btn btn-danger">
       <i class="fas fa-trash-alt"></i>
       Factory Reset
