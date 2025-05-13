@@ -45,16 +45,20 @@
   </style>
 </head>
 <body>
-  <header>
+  
+<header>
   <h1><i class="fas fa-school"></i> Attendance Management</h1>
   <div id="appActions" class="row-inline no-print">
-    <!-- Only the Reset All button remains here -->
+    <!-- One-time folder picker button -->
+    <button id="chooseBackupFolder">
+      <i class="fas fa-folder-plus"></i> Select Backup Folder
+    </button>
+    <!-- Reset All button -->
     <button id="resetData">
       <i class="fas fa-trash-alt"></i> Reset All
     </button>
   </div>
 </header>
-
   <!-- 1. SETUP -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
