@@ -166,6 +166,63 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  // --- File System Access–based Backup & Restore ---
+
+const chooseBtn = document.getElementById('chooseBackupFolder');
+let backupParentHandle = null;
+
+chooseBtn.onclick = async () => {
+  try {
+    // Check if a folder is already selected
+    const savedHandle = backupParentHandle || await get('backupParentHandle');
+    if (savedHandle) {
+      const change = confirm('A backup folder is already selected. Do you want to choose a different one?');
+      if (!change) return;
+    }
+
+    // Prompt for (new) folder
+    alert('Please select a folder to store your Attendance backups.');
+    backupParentHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set('backupParentHandle', backupParentHandle);
+    alert('✅ Backup folder selected! Automatic backups will now run.');
+
+    // Define the backup routine
+    async function writeBackupFile() {
+      const [curSchool, curClass, curSection, schools] = await Promise.all([
+        get('currentSchool'),
+        get('teacherClass'),
+        get('teacherSection'),
+        get('schools')
+      ]);
+      const data = {
+        students,
+        attendanceData,
+        paymentsData,
+        fineRates,
+        eligibilityPct,
+        lastAdmNo,
+        schools,
+        currentSchool: curSchool,
+        teacherClass: curClass,
+        teacherSection: curSection
+      };
+      const subDir = await backupParentHandle.getDirectoryHandle('Attendance Backup', { create: true });
+      const fileHandle = await subDir.getFileHandle('attendance-backup.json', { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      console.log('✅ Backup written to Attendance Backup folder');
+    }
+
+    // Run one immediately and schedule repeats
+    await writeBackupFile();
+    setInterval(writeBackupFile, 5 * 60 * 1000);
+
+  } catch (err) {
+    console.error('Backup setup failed:', err);
+    alert('Could not set up automatic backup.');
+  }
+};
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
