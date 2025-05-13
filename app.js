@@ -166,6 +166,37 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  
++  // --- Auto-Restore from Backup Folder on Startup ---
++  const savedHandle = await get('backupParentHandle');
++  if (savedHandle) {
++    try {
++      const subDir   = await savedHandle.getDirectoryHandle('Attendance Backup');
++      const file     = await subDir.getFileHandle('attendance-backup.json');
++      const contents = await (await file.getFile()).text();
++      const obj      = JSON.parse(contents);
++
++      await Promise.all([
++        save('students',        obj.students),
++        save('attendanceData',  obj.attendanceData),
++        save('paymentsData',    obj.paymentsData),
++        save('fineRates',       obj.fineRates),
++        save('eligibilityPct',  obj.eligibilityPct),
++        save('lastAdmissionNo', obj.lastAdmNo),
++        save('schools',         obj.schools     || []),
++        save('currentSchool',   obj.currentSchool || null),
++        save('teacherClass',    obj.teacherClass || null),
++        save('teacherSection',  obj.teacherSection || null)
++      ]);
++      console.log('🔄 Auto-restored from backup folder');
++    } catch (err) {
++      console.warn('⚠️ Auto-restore failed:', err);
++    }
++  }
++
+   // --- File System Access–based Backup & Restore ---
+   const chooseBtn = document.getElementById('chooseBackupFolder');
+   // … باقی Backup & Restore کوڈ …
   // --- File System Access–based Backup & Restore ---
 
 const chooseBtn = document.getElementById('chooseBackupFolder');
