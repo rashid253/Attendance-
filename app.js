@@ -166,6 +166,117 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  // In app.js, inside your existing DOMContentLoaded listener, replace your old Backup/Restore handlers with this:
+
+window.addEventListener('DOMContentLoaded', async () => {
+  // … your idb-keyval setup, state initialization, loadSetup(), etc. …
+
+  //
+  // File System–based Auto Backup & Restore
+  //
+
+  // 1) Get (or prompt for) a persistent directory handle
+  async function getBackupDirHandle() {
+    let dir = await get('backupDirHandle');
+    if (!dir) {
+      dir = await window.showDirectoryPicker();
+      await set('backupDirHandle', dir);
+    }
+    return dir;
+  }
+
+  // 2) Collect your full app state into one object
+  async function collectAppState() {
+    const [curSchool, curClass, curSection, schools] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection'),
+      get('schools')
+    ]);
+    return {
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: curSchool,
+      teacherClass: curClass,
+      teacherSection: curSection
+    };
+  }
+
+  // 3) Write (or overwrite) the single backup file in that folder
+  async function writeBackupFile(data) {
+    const dir      = await getBackupDirHandle();
+    const fileName = 'attendance-backup.json';
+    const handle   = await dir.getFileHandle(fileName, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+    console.log('✅ Auto-backup written at', new Date().toLocaleTimeString());
+  }
+
+  // 4) Restore app state from that single file
+  async function restoreAppState(obj) {
+    await Promise.all([
+      save('students',        obj.students),
+      save('attendanceData',  obj.attendanceData),
+      save('paymentsData',    obj.paymentsData),
+      save('fineRates',       obj.fineRates),
+      save('eligibilityPct',  obj.eligibilityPct),
+      save('lastAdmissionNo', obj.lastAdmNo),
+      save('schools',         obj.schools     || []),
+      save('currentSchool',   obj.currentSchool || null),
+      save('teacherClass',    obj.teacherClass || null),
+      save('teacherSection',  obj.teacherSection || null)
+    ]);
+  }
+
+  // 5) On startup, if local data is missing, auto-restore
+  const localStudents = await get('students');
+  if (!localStudents || localStudents.length === 0) {
+    try {
+      const dir    = await getBackupDirHandle();
+      const handle = await dir.getFileHandle('attendance-backup.json');
+      const file   = await handle.getFile();
+      const obj    = JSON.parse(await file.text());
+      await restoreAppState(obj);
+      console.log('🔄 Auto-restored on startup');
+    } catch (err) {
+      console.warn('⚠️ No local backup available to restore');
+    }
+  }
+
+  // 6) Schedule auto-backup every 5 minutes
+  setInterval(async () => {
+    try {
+      const state = await collectAppState();
+      await writeBackupFile(state);
+    } catch (err) {
+      console.error('Auto-backup error:', err);
+    }
+  }, 5 * 60 * 1000);
+
+  //
+  // Keep only the Reset All button for manual data-clear
+  //
+  const resetBtn = document.getElementById('resetData');
+  resetBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
+    try {
+      await clear();    // clears all IndexedDB entries
+      console.log('🗑 All data cleared');
+      location.reload();
+    } catch (err) {
+      console.error('Reset failed', err);
+      alert('Failed to clear data.');
+    }
+  });
+
+  // … continue with the rest of your app logic (loadSetup, renderStudents, etc.) …
+});
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
