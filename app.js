@@ -166,6 +166,66 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  // --- File System Access–based Backup on first user click ---
+
+let backupParentHandle = null;
+
+// This listener will fire only once, on the very first click anywhere in the app
+document.body.addEventListener('click', async function initialPicker() {
+  document.body.removeEventListener('click', initialPicker);
+
+  try {
+    alert('Attendance Management needs access to create backups. Please select a folder.');
+    backupParentHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set('backupParentHandle', backupParentHandle);
+    console.log('✅ Backup folder selected');
+
+    // Perform an initial backup immediately
+    await writeBackupFile(await collectAppState());
+
+    // Then schedule automatic backups every 5 minutes
+    setInterval(async () => {
+      await writeBackupFile(await collectAppState());
+    }, 5 * 60 * 1000);
+
+  } catch (err) {
+    console.warn('Backup folder selection skipped or failed:', err);
+  }
+}, { once: true });
+
+// Helper: gather all your app state
+async function collectAppState() {
+  const [curSchool, curClass, curSection, schools] = await Promise.all([
+    get('currentSchool'),
+    get('teacherClass'),
+    get('teacherSection'),
+    get('schools')
+  ]);
+  return {
+    students,
+    attendanceData,
+    paymentsData,
+    fineRates,
+    eligibilityPct,
+    lastAdmNo,
+    schools,
+    currentSchool: curSchool,
+    teacherClass: curClass,
+    teacherSection: curSection
+  };
+}
+
+// Helper: write (or overwrite) the single backup file
+async function writeBackupFile(data) {
+  if (!backupParentHandle) return;
+  const subDir      = await backupParentHandle.getDirectoryHandle('Attendance Backup', { create: true });
+  const fileHandle  = await subDir.getFileHandle('attendance-backup.json', { create: true });
+  const writable    = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(data, null, 2));
+  await writable.close();
+  console.log('✅ Backup written to Attendance Backup folder');
+}
+
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
