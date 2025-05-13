@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | MySchoolApp</title>
+  <!-- External CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <header>
+    <h1>MySchoolApp</h1>
+  </header>
+  <section class="login-card">
+    <h2>Login to MySchoolApp</h2>
+    <div id="errorMsg" class="danger"></div>
+    <div class="input-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" />
+    </div>
+    <div class="input-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" />
+    </div>
+    <button class="btn" id="btnLogin">Login</button>
+  </section>
+
+  <script>
+    // Initialize Firebase (paste your config below)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    document.getElementById('btnLogin').onclick = () => {
+      const email = document.getElementById('email').value;
+      const pw    = document.getElementById('password').value;
+      const errEl = document.getElementById('errorMsg');
+      errEl.style.display = 'none';
+      auth.signInWithEmailAndPassword(email, pw)
+        .then(userCred => {
+          // Redirect or load app
+          location.href = 'app.html';
+        })
+        .catch(err => {
+          errEl.textContent = err.message;
+          errEl.style.display = 'block';
+        });
+    };
+  </script>
+</body>
+</html>
