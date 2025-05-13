@@ -166,115 +166,70 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
-  // --- File System Access–based Backup & Restore ---
+ 
+ // --- File System Access–based Backup & Restore ---
 
-// 0.a) Prompt once for parent backup folder
-async function requestParentDir() {
-  let parent = await get('backupParentHandle');
-  if (!parent) {
+  // “Select Backup Folder” button handler
+  const chooseBtn = document.getElementById('chooseBackupFolder');
+  let backupParent;
+  chooseBtn.onclick = async () => {
     alert('Please select a folder to store your Attendance backups.');
-    parent = await window.showDirectoryPicker({ mode: 'readwrite' });
-    await set('backupParentHandle', parent);
-  }
-  return parent;
-}
-
-// Immediately grab it once
-const backupParent = await requestParentDir();
-
-// 0.b) Ensure “Attendance Backup” subfolder exists
-async function getBackupDirHandle() {
-  return backupParent.getDirectoryHandle('Attendance Backup', { create: true });
-}
-
-// 1) Gather full app state
-async function collectAppState() {
-  const [curSchool, curClass, curSection, schools] = await Promise.all([
-    get('currentSchool'),
-    get('teacherClass'),
-    get('teacherSection'),
-    get('schools')
-  ]);
-  return {
-    students,
-    attendanceData,
-    paymentsData,
-    fineRates,
-    eligibilityPct,
-    lastAdmNo,
-    schools,
-    currentSchool: curSchool,
-    teacherClass: curClass,
-    teacherSection: curSection
+    backupParent = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set('backupParentHandle', backupParent);
+    alert('Backup folder selected! Automatic backups will now run.');
+    startAutoBackup();
   };
-}
 
-// 2) Write (overwrite) the single backup file
-async function writeBackupFile(data) {
-  const backupDir  = await getBackupDirHandle();
-  const fileHandle = await backupDir.getFileHandle('attendance-backup.json', { create: true });
-  const writable   = await fileHandle.createWritable();
-  await writable.write(JSON.stringify(data, null, 2));
-  await writable.close();
-  console.log('✅ Backup written to Attendance Backup folder');
-}
-
-// 3) Restore app state from that file
-async function restoreAppState(obj) {
-  await Promise.all([
-    save('students',        obj.students),
-    save('attendanceData',  obj.attendanceData),
-    save('paymentsData',    obj.paymentsData),
-    save('fineRates',       obj.fineRates),
-    save('eligibilityPct',  obj.eligibilityPct),
-    save('lastAdmissionNo', obj.lastAdmNo),
-    save('schools',         obj.schools     || []),
-    save('currentSchool',   obj.currentSchool || null),
-    save('teacherClass',    obj.teacherClass || null),
-    save('teacherSection',  obj.teacherSection || null)
-  ]);
-}
-
-// 4) Auto-restore on startup if local DB is empty
-const studentsData = await get('students');
-if (!studentsData || studentsData.length === 0) {
-  try {
-    const backupDir = await getBackupDirHandle();
-    const file      = await (await backupDir.getFileHandle('attendance-backup.json')).getFile();
-    const obj       = JSON.parse(await file.text());
-    await restoreAppState(obj);
-    console.log('🔄 Restored from local backup');
-  } catch {
-    console.warn('⚠️ No local backup available');
+  // Gather full app state
+  async function collectAppState() {
+    const [curSchool, curClass, curSection, schools] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection'),
+      get('schools')
+    ]);
+    return {
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: curSchool,
+      teacherClass: curClass,
+      teacherSection: curSection
+    };
   }
-}
 
-// 5) Initial backup immediately
-try {
-  await writeBackupFile(await collectAppState());
-} catch (err) {
-  console.error('Initial backup failed:', err);
-}
-
-// 6) Schedule auto-backup every 5 minutes
-setInterval(async () => {
-  try {
-    await writeBackupFile(await collectAppState());
-  } catch (err) {
-    console.error('Auto-backup error:', err);
+  // Write (overwrite) the single backup file in the chosen folder
+  async function writeBackupFile(data) {
+    if (!backupParent) return;
+    const sub        = await backupParent.getDirectoryHandle('Attendance Backup', { create: true });
+    const fileHandle = await sub.getFileHandle('attendance-backup.json', { create: true });
+    const writable   = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+    console.log('✅ Backup written to Attendance Backup folder');
   }
-}, 5 * 60 * 1000);
 
-// 7) Reset All button handler
-$('resetData').onclick = async () => {
-  if (!confirm('Delete all data? This cannot be undone.')) return;
-  try {
+  // Start auto-backup every 5 minutes
+  function startAutoBackup() {
+    writeBackupFile(await collectAppState());
+    setInterval(async () => {
+      await writeBackupFile(await collectAppState());
+    }, 5 * 60 * 1000);
+  }
+
+  // Reset All button handler
+  $('resetData').onclick = async () => {
+    if (!confirm('Delete all data? This cannot be undone.')) return;
     await clear();
     location.reload();
-  } catch {
-    alert('Reset failed');
-  }
-};
+  };
+
+  // --- 4. SETTINGS: Fines & Eligibility ---
+
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
