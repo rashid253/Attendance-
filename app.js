@@ -166,6 +166,142 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
+  // --- 1) File System Access–based Backup & Auto-Save ---
+
+const chooseBackupFolderBtn = document.getElementById('chooseBackupFolder');
+let backupParentHandle = null;
+let backupIntervalId = null;
+
+// The actual backup routine (pulled out so both init and "choose" can call it)
+async function writeBackupFile() {
+  try {
+    if (!backupParentHandle) throw new Error('No backup folder handle available');
+    const [curSchool, curClass, curSection, schools] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection'),
+      get('schools')
+    ]);
+
+    const data = {
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: curSchool,
+      teacherClass: curClass,
+      teacherSection: curSection
+    };
+
+    const subDir = await backupParentHandle.getDirectoryHandle('Attendance Backup', { create: true });
+    const fileHandle = await subDir.getFileHandle('attendance-backup.json', { create: true, writable: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+
+    console.log('✅ Backup written to "Attendance Backup/attendance-backup.json"');
+  } catch (err) {
+    console.error('Backup write failed:', err);
+  }
+}
+
+// Kick off backups on page load if a folder was already selected
+(async function initAutomaticBackup() {
+  try {
+    const saved = await get('backupParentHandle');
+    if (saved) {
+      backupParentHandle = saved;
+      console.log('Found existing backup folder handle; starting auto-backup.');
+      // run one immediately
+      await writeBackupFile();
+      // schedule repeats
+      backupIntervalId = setInterval(writeBackupFile, 5 * 60 * 1000);
+    }
+  } catch (err) {
+    console.error('Automatic backup initialization failed:', err);
+  }
+})();
+
+chooseBackupFolderBtn.addEventListener('click', async () => {
+  try {
+    if (backupParentHandle) {
+      const change = confirm('A backup folder is already selected. Do you want to choose a different one?');
+      if (!change) return;
+      // clear existing interval so we don’t double-schedule
+      clearInterval(backupIntervalId);
+    }
+
+    alert('Please select a folder to store your Attendance backups.');
+    backupParentHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await set('backupParentHandle', backupParentHandle);
+    alert('✅ Backup folder selected! Automatic backups will now run every 5 minutes.');
+
+    // run one immediately
+    await writeBackupFile();
+    // schedule repeats
+    backupIntervalId = setInterval(writeBackupFile, 5 * 60 * 1000);
+
+  } catch (err) {
+    console.error('Backup setup failed:', err);
+    alert('❌ Could not set up automatic backup—see console for details.');
+  }
+});
+
+// --- 2) Restore Handler ---
+
+const restoreBtn = document.getElementById('restoreData');
+const fileInput  = document.getElementById('restoreFile');
+
+restoreBtn.addEventListener('click', () => {
+  alert('Please select the backup file: attendance-backup.json');
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+
+  try {
+    const obj = JSON.parse(text);
+
+    await Promise.all([
+      save('students',        obj.students),
+      save('attendanceData',  obj.attendanceData),
+      save('paymentsData',    obj.paymentsData),
+      save('fineRates',       obj.fineRates),
+      save('eligibilityPct',  obj.eligibilityPct),
+      save('lastAdmissionNo', obj.lastAdmNo),
+      save('schools',         obj.schools     || []),
+      save('currentSchool',   obj.currentSchool || null),
+      save('teacherClass',    obj.teacherClass || null),
+      save('teacherSection',  obj.teacherSection || null)
+    ]);
+
+    alert('Data restored successfully. Reloading the page to apply settings…');
+    location.reload();
+  } catch {
+    alert('Invalid backup file!');
+  }
+});
+
+// --- 3) Factory Reset Handler ---
+
+const resetBtn = document.getElementById('resetData');
+resetBtn.addEventListener('click', async () => {
+  if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
+  try {
+    await clear();
+    alert('All data cleared. Reloading page…');
+    location.reload();
+  } catch (err) {
+    console.error('Reset failed', err);
+    alert('Failed to clear data.');
+  }
+});
   // --- 4. SETTINGS: Fines & Eligibility ---
   const formDiv      = $('financialForm'),
         saveSettings = $('saveSettings'),
