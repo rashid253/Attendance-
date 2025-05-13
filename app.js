@@ -193,10 +193,7 @@ $('shareAnalytics').onclick = () => {
 +      console.warn('⚠️ Auto-restore failed:', err);
 +    }
 +  }
-+
-   // --- File System Access–based Backup & Restore ---
-   const chooseBtn = document.getElementById('chooseBackupFolder');
-   // … باقی Backup & Restore کوڈ …
+
   // --- File System Access–based Backup & Restore ---
 
 const chooseBtn = document.getElementById('chooseBackupFolder');
