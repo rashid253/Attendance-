@@ -43,7 +43,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
   const hide = (...els) => els.forEach(e => e && e.classList.add('hidden'));
-  
+  // --- 4. PWA Install Prompt ---
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+if (installBtn) {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.remove('hidden');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    installBtn.classList.add('hidden');
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Install response:', outcome);
+    deferredPrompt = null;
+  });
 }
   // --- DOWNLOAD & SHARE HANDLERS ---
   // Student Registration PDF
@@ -1002,6 +1019,6 @@ shareAttendanceBtn.onclick = () => {
 
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
