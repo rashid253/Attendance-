@@ -1,40 +1,6 @@
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
-  let deferredPrompt;
-const installBtn = document.getElementById('installBtn');
-
-// 1) Listen for the browser’s install prompt
-window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent automatic prompt
-  e.preventDefault();
-  deferredPrompt = e;
-
-  // Show your install button
-  installBtn.classList.remove('hidden');
-});
-
-// 2) When the user clicks your button…
-installBtn.addEventListener('click', async () => {
-  // Hide it again, to prevent multiple clicks
-  installBtn.classList.add('hidden');
-
-  if (!deferredPrompt) return;
-
-  // Show the actual prompt
-  deferredPrompt.prompt();
-
-  // Wait for the user to respond
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') {
-    console.log('User accepted install prompt');
-  } else {
-    console.log('User dismissed install prompt');
-  }
-
-  // Clear the saved prompt
-  deferredPrompt = null;
-});
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {

@@ -69,9 +69,6 @@
       Factory Reset
     </button>
   </div>
-  <button id="installBtn" class="no-print hidden">
-  <i class="fas fa-download"></i> Install App
-</button>
 </header>
   <!-- 1. SETUP -->
   <section id="teacher-setup">
@@ -289,15 +286,7 @@
       </form>
     </div>
   </div>
-  
+
   <script src="app.js"></script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('service-worker.js')
-      .then(() => console.log('✅ Service Worker registered'))
-      .catch(err => console.error('❌ SW registration failed:', err));
-  }
-</script>
 </body>
 </html>
