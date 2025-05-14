@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
+  <!-- PWA Manifest & Meta -->
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
@@ -17,64 +17,43 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   />
 
-  <!-- idb-keyval -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-
-  <!-- jsPDF + AutoTable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 
-  <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
-    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .counter-grid { display: flex; gap: 1em; margin-bottom: 1em; }
-    .counter-card { flex: 1; text-align: center; padding: 1em; border: 1px solid #ddd; border-radius: 4px; }
-  </style>
+  <!-- Firebase SDKs -->
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js"></script>
+
+  <!-- idb-keyval for offline fallback -->
+  <script defer src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+  <!-- jsPDF + AutoTable for PDF export -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Chart.js for analytics -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  
-<header class="app-header">
-  <h1><i class="fas fa-school"></i> Attendance Management</h1>
-  <div class="header-buttons">
-    <!-- File System Access API backup chooser -->
-    <button id="chooseBackupFolder" class="btn" style="display: none;">
-      <i class="fas fa-folder-open"></i>
-      Select Backup Folder
-    </button>
+  <header class="app-header">
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
+    <div class="header-buttons">
+      <button id="chooseBackupFolder" class="btn" style="display: none;">
+        <i class="fas fa-folder-open"></i> Select Backup Folder
+      </button>
+      <button id="backupData" class="btn" style="display: none;">
+        <i class="fas fa-download"></i> Download Backup
+      </button>
+      <button id="restoreData" class="btn">
+        <i class="fas fa-upload"></i> Restore Backup
+      </button>
+      <input type="file" id="restoreFile" accept=".json" hidden />
+      <button id="resetData" class="btn btn-danger">
+        <i class="fas fa-trash-alt"></i> Factory Reset
+      </button>
+    </div>
+  </header>
 
-    <!-- Traditional download fallback -->
-    <button id="backupData" class="btn" style="display: none;">
-      <i class="fas fa-download"></i>
-      Download Backup
-    </button>
-
-    <!-- Restore (seamless or manual) -->
-    <button id="restoreData" class="btn">
-      <i class="fas fa-upload"></i>
-      Restore Backup
-    </button>
-    <input type="file" id="restoreFile" accept=".json" hidden />
-
-    <!-- Factory reset -->
-    <button id="resetData" class="btn btn-danger">
-      <i class="fas fa-trash-alt"></i>
-      Factory Reset
-    </button>
-  </div>
-</header>
   <!-- 1. SETUP -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
@@ -218,7 +197,6 @@
       <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
       <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
     </div>
-    <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
       <table id="analyticsTable">
         <thead><tr></tr></thead>
@@ -242,7 +220,7 @@
       <input type="month" id="registerMonth" />
       <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper">
+    <div id="registerTableWrapper" class="table-wrapper hidden">
       <table id="registerTable">
         <thead><tr id="registerHeader"></tr></thead>
         <tbody id="registerBody"></tbody>
@@ -256,7 +234,7 @@
     </div>
   </section>
 
-  <!-- PAYMENT MODAL -->
+  <!-- Payment Modal -->
   <div id="paymentModal" class="modal hidden">
     <div class="modal-content">
       <span id="paymentModalClose" class="modal-close">&times;</span>
@@ -269,7 +247,7 @@
     </div>
   </div>
 
-  <!-- ANALYTICS FILTER MODAL -->
+  <!-- Analytics Filter Modal -->
   <div id="analyticsFilterModal" class="modal hidden">
     <div class="modal-content">
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
@@ -292,13 +270,34 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.error('SW registration failed:', err));
-  }
-</script>
+  <!-- Firebase Initialization -->
+  <script defer>
+    // TODO: replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: 'YOUR_API_KEY',
+      authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+      projectId: 'YOUR_PROJECT_ID',
+      storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+      messagingSenderId: 'YOUR_SENDER_ID',
+      appId: 'YOUR_APP_ID'
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const storage = firebase.storage();
+    db.enablePersistence().catch(err => console.warn('Persistence error:', err));
+  </script>
+
+  <!-- Main App Logic -->
+  <script defer src="/app.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script defer>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.error('SW registration failed:', err));
+    }
+  </script>
 </body>
 </html>
