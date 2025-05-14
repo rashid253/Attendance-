@@ -5,20 +5,20 @@ const ASSETS = [
   '/style.css',
   '/app.js',
   '/manifest.json',
-  '/offline.html',      // optional
+  '/offline.html',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
 
-self.addEventListener('install', event => {
+self.addEventListener('install', event =>
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(ASSETS))
       .then(() => self.skipWaiting())
-  );
-});
+  )
+);
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate', event =>
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
@@ -26,18 +26,31 @@ self.addEventListener('activate', event => {
             .map(key => caches.delete(key))
       )
     ).then(() => self.clients.claim())
-  );
-});
+  )
+);
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(cached => cached || fetch(event.request)
-        .then(response => {
-          caches.open(CACHE_NAME)
-            .then(cache => cache.put(event.request, response.clone()));
-          return response;
+  // 1) Handle page navigations (reloads, URL-bar loads)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(resp => {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, resp.clone()));
+          return resp;
         })
-      ).catch(() => caches.match('/offline.html'))
+        .catch(() => caches.match('/index.html').then(c => c || caches.match('/offline.html')))
+    );
+    return;
+  }
+
+  // 2) Handle other assets (CSS, JS, images…)
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(networkResp => {
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResp.clone()));
+        return networkResp;
+      });
+    }).catch(() => caches.match('/offline.html'))
   );
 });
