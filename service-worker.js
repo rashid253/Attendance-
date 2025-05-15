@@ -1,16 +1,15 @@
 const CACHE_NAME = 'attendance-app-v2';
 const ASSETS = [
-  '/',
+  '/',                // root
   '/index.html',
+  '/offline.html',
   '/style.css',
   '/app.js',
   '/manifest.json',
-  '/offline.html',               // optional: only used for non-navigation failover
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
 
-// Install: cache core assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,57 +18,55 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: delete old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
+    caches.keys().then(keys =>
+      Promise.all(
         keys
           .filter(key => key !== CACHE_NAME)
           .map(key => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch: App Shell for navigations, cache-first for others
 self.addEventListener('fetch', event => {
-  // 1) Navigation requests → app shell
-  if (event.request.mode === 'navigate') {
+  const { request } = event;
+
+  // 1) Navigation requests → try network, fallback to cache
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then(response => {
-          // Update the cache in the background
+          // update cache in the background
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
           return response;
         })
-        .catch(() =>
-          // Always serve the cached index.html for navigations
-          caches.match('/index.html')
-        )
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  // 2) Other requests → cache-first, then network, then offline.html
-  event.respondWith(
-    caches.match(event.request)
-      .then(cached => {
+  // 2) Other GET requests → cache-first, then network, then offline.html
+  if (request.method === 'GET') {
+    event.respondWith(
+      caches.match(request).then(cached => {
         if (cached) return cached;
-        return fetch(event.request)
+
+        return fetch(request)
           .then(networkResp => {
-            // Cache the new resource
-            const respCopy = networkResp.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, respCopy));
+            // only cache successful responses
+            if (networkResp.ok) {
+              const respCopy = networkResp.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(request, respCopy));
+            }
             return networkResp;
-          });
+          })
+          .catch(() => caches.match('/offline.html'));
       })
-      .catch(() =>
-        // Optional: show a generic offline page for images/API calls
-        caches.match('/offline.html')
-      )
-  );
+    );
+  }
 });
 
 // Optional: listen for skipWaiting message to activate new SW immediately
