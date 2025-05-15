@@ -451,15 +451,30 @@ resetBtn.addEventListener('click', async () => {
     });
   }
 
-  // Load & display setup UI
-  async function loadSetup() {
-    let schools = [];
-    schools = (await get('schools')) || [];
-    const [curSchool, curClass, curSection] = await Promise.all([
-      get('currentSchool'),
-      get('teacherClass'),
-      get('teacherSection')
-    ]);
+  // — Load & display setup UI —
+let schools = [];  // globally accessible
+
+async function loadSetup() {
+  schools = (await get('schools')) || [];
+
+  const [curSchool, curClass, curSection] = await Promise.all([
+    get('currentSchool'),
+    get('teacherClass'),
+    get('teacherSection')
+  ]);
+
+  renderSchoolList();
+  renderClassList();
+  renderSectionList();
+
+  // Set current selections
+  if (curSchool) schoolSelect.value = curSchool;
+  if (curClass) classSelect.value = curClass;
+  if (curSection) sectionSelect.value = curSection;
+
+  // Display summary text
+  setupText.textContent = `${curSchool || 'School'} > ${curClass || 'Class'} > ${curSection || 'Section'}`;
+}
 
     // Populate dropdown
     schoolSelect.innerHTML = [
