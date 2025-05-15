@@ -2,14 +2,14 @@
 
 // —————————— START Firebase SETUP ——————————
 
-// 1) SDK امپورٹ کریں
-import { initializeApp } from "firebase/app";
-import { getFirestore }   from "firebase/firestore";
-import { getAuth }        from "firebase/auth";
-import { getAnalytics }   from "firebase/analytics";
-import { collection, addDoc } from "firebase/firestore";
+// ——— Replace your imports with CDN module imports ———
 
-// 2) اپنا کنفیگ پیسٹ کریں
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { getAuth }      from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+
+// ——— Your Firebase config ———
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -20,13 +20,13 @@ const firebaseConfig = {
   measurementId: "G-V2MY85R73B"
 };
 
-// 3) انیشیئلائز کریں
+// ——— Initialize Firebase ———
 const app       = initializeApp(firebaseConfig);
 const db        = getFirestore(app);
 const auth      = getAuth(app);
 const analytics = getAnalytics(app);
 
-// 4) Attendance ریجسٹر کرنے والا فنکشن
+// ——— Your registerAttendance function ———
 async function registerAttendance(studentId) {
   try {
     await addDoc(collection(db, "attendance"), {
@@ -38,7 +38,6 @@ async function registerAttendance(studentId) {
     console.error("❌ Error registering attendance:", e);
   }
 }
-
 // 5) (اختیاری) فائر اسٹور میں ٹیسٹ ریکارڈ بھیجیں
 // ایک بار کنسول میں چیک کرنے کے بعد اس لائن کو ہٹا یا کومنٹ کر دیں
 registerAttendance("TEST123");
