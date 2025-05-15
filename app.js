@@ -1,6 +1,29 @@
 // app.js
+// --- PWA: catch install prompt as soon as possible ---
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn?.classList.remove('hidden');
+});
 
-window.addEventListener('DOMContentLoaded', async () => {
+installBtn?.addEventListener('click', async () => {
+  installBtn.classList.add('hidden');
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('Install response:', outcome);
+  deferredPrompt = null;
+});
+
+// --- Service Worker registration early ---
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/service-worker.js')
+    .then(() => console.log('SW registered'))
+    .catch(console.error);
+}
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
@@ -1016,9 +1039,3 @@ shareAttendanceBtn.onclick = () => {
 
     bindRegisterActions();
   })();
-
-  // --- 12. Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(console.error);
-  }
-});
