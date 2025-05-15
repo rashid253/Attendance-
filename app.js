@@ -64,9 +64,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
-  const { get, set } = window.idbKeyval;
-  const save = (k, v) => set(k, v);
-  ;(function enableAutoBackup() {
+const { get, set } = window.idbKeyval;
+let save = (k, v) => set(k, v);
+
+;(async function enableAutoBackup() {
   const origSave = save;
   const synced = new Set((await get('students') || []).map(s => s.adm));
 
