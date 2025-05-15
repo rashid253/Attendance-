@@ -1,13 +1,6 @@
 // app.js
-
-// --- Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
-});
 window.addEventListener('DOMContentLoaded', async () => {
-  
-  // --- Universal PDF share helper (must come first) ---
+    // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
       try {
@@ -1022,3 +1015,9 @@ shareAttendanceBtn.onclick = () => {
 
     bindRegisterActions();
   })();
+  
+// --- Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
+});
