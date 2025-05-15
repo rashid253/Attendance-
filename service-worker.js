@@ -1,12 +1,9 @@
 // service-worker.js
 
-// CHANGE THIS to bust caches when you update your SW:
 const CACHE_VERSION = 'v1';
 const CACHE_NAME = `attendance-app-${CACHE_VERSION}`;
-
-// List all resources you want to precache:
 const PRECACHE_ASSETS = [
-  '/',                   // root → serves index.html
+  '/',                // root (index.html)
   '/index.html',
   '/style.css',
   '/app.js',
@@ -16,41 +13,39 @@ const PRECACHE_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
-// Install: precache the shell and offline page
-self.addEventListener('install', event => {
-  event.waitUntil(
+// Install: cache shell + offline page, then activate immediately
+self.addEventListener('install', evt => {
+  evt.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
   );
 });
 
-// Activate: clean up old caches and take control immediately
-self.addEventListener('activate', event => {
-  event.waitUntil(
+// Activate: remove old caches, take control of clients
+self.addEventListener('activate', evt => {
+  evt.waitUntil(
     caches.keys()
-      .then(keys =>
-        Promise.all(
-          keys
-            .filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-        )
-      )
+      .then(keys => Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch handler
-self.addEventListener('fetch', event => {
-  const req = event.request;
+// Fetch: network-first for navigation, cache-first for assets
+self.addEventListener('fetch', evt => {
+  const req = evt.request;
 
-  // 1) Navigation requests → network-first, fallback to index.html
+  // A) Navigation requests (HTML pages)
   if (req.mode === 'navigate' ||
       (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
-    event.respondWith(
+    evt.respondWith(
       fetch(req)
         .then(networkRes => {
-          // Update cache for next offline use
+          // update cache
           const copy = networkRes.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
           return networkRes;
@@ -60,9 +55,9 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 2) Other GET requests (CSS/JS/images) → cache-first, then network, then offline.html
+  // B) Static assets (CSS/JS/Images/etc)
   if (req.method === 'GET') {
-    event.respondWith(
+    evt.respondWith(
       caches.match(req).then(cachedRes => {
         if (cachedRes) return cachedRes;
 
@@ -80,9 +75,9 @@ self.addEventListener('fetch', event => {
   }
 });
 
-// Listen for a “skip waiting” message to immediately activate new SW
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+// Listen for skipWaiting message
+self.addEventListener('message', evt => {
+  if (evt.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
