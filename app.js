@@ -6,37 +6,30 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-// ——— Firebase Config ———
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
   projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
+  storageBucket: "attandace-management.appspot.com", // ← صحیح والا
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
   measurementId: "G-V2MY85R73B"
 };
 
-// ——— Initialize Firebase ———
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ——— Register Single Attendance Record ———
 async function registerAttendance(studentId) {
   try {
     await addDoc(collection(db, "attendance"), {
       studentId,
       timestamp: Date.now()
     });
-    console.log("✅ Attendance synced for:", studentId);
-  } catch (err) {
-    console.error("❌ Firestore sync failed:", err);
+    console.log("✅ Synced:", studentId);
+  } catch (e) {
+    console.error("❌ Firebase sync error:", e);
   }
 }
-// 5) (اختیاری) فائر اسٹور میں ٹیسٹ ریکارڈ بھیجیں
-// ایک بار کنسول میں چیک کرنے کے بعد اس لائن کو ہٹا یا کومنٹ کر دیں
-registerAttendance("TEST123");
-
 // —————————— END Firebase SETUP ——————————
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
@@ -59,6 +52,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- 1. IndexedDB helpers (idb-keyval) ---
 if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
 const { get, set } = window.idbKeyval;
+
 let save = (k, v) => set(k, v);
 
 ;(async function enableAutoBackup() {
@@ -77,7 +71,6 @@ let save = (k, v) => set(k, v);
     }
   };
 })();
-
   // --- 2. State & Defaults ---
   let students       = await get('students')        || [];
   let attendanceData = await get('attendanceData')  || {};
@@ -460,6 +453,7 @@ resetBtn.addEventListener('click', async () => {
 
   // Load & display setup UI
   async function loadSetup() {
+    let schools = [];
     schools = (await get('schools')) || [];
     const [curSchool, curClass, curSection] = await Promise.all([
       get('currentSchool'),
