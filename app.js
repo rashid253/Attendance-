@@ -1,6 +1,12 @@
-// app.js
 
-window.addEventListener('DOMContentLoaded', async () => {
+    // ---  Service Worker ---
+window.addEventListener('DOMContentLoaded', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+      .then(reg => console.log('SW registered:', reg))
+      .catch(err => console.error('SW registration failed:', err));
+  }
+});
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'application/pdf' })] })) {
@@ -999,10 +1005,3 @@ shareAttendanceBtn.onclick = () => {
     bindRegisterActions();
   })();
 
-  // --- 12. Service Worker ---
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-    .then(reg => console.log('SW registered:', reg))
-    .catch(err => console.error('SW registration failed:', err));
-}
-});
