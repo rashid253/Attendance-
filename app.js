@@ -998,10 +998,10 @@ shareAttendanceBtn.onclick = () => {
 
     bindRegisterActions();
   })();
-
-  if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   navigator.serviceWorker
-    .register('/Attendance-/service-worker.js', { scope: '/Attendance-/' })
+    .register('service-worker.js')
     .then(() => console.log('SW registered!'))
     .catch(console.error);
 }
+  
