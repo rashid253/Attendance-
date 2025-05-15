@@ -1001,6 +1001,12 @@ shareAttendanceBtn.onclick = () => {
 
   // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
-  }
-});
+  navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+    .then(reg => {
+      console.log('SW registered:', reg);
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+    })
+    .catch(err => console.error('SW registration failed:', err));
+}
