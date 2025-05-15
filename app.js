@@ -7,7 +7,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       try {
         await navigator.share({ title, files: [new File([blob], fileName, { type: 'application/pdf' })] });
       } catch (err) {
-        if (err.name !== 'A IbortError') console.error('Share failed', err);
+        if (err.name !== 'AbortError') console.error('Share failed', err);
       }
     }
   }
@@ -998,10 +998,9 @@ shareAttendanceBtn.onclick = () => {
 
     bindRegisterActions();
   })();
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker
-    .register('service-worker.js')
-    .then(() => console.log('SW registered!'))
-    .catch(console.error);
-}
-  
+
+  // --- 12. Service Worker ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  }
+});
