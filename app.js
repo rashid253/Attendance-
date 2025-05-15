@@ -392,68 +392,67 @@ resetBtn.addEventListener('click', async () => {
   };
 
   // --- Setup: Manage Schools, Classes & Sections ---
-  const setupForm     = $('setupForm');
-  const setupDisplay  = $('setupDisplay');
-  const schoolInput   = $('schoolInput');
-  const schoolSelect  = $('schoolSelect');
-  const classSelect   = $('teacherClassSelect');
-  const sectionSelect = $('teacherSectionSelect');
-  const setupText     = $('setupText');
-  const saveSetupBtn  = $('saveSetup');
-  const editSetupBtn  = $('editSetup');
+const setupForm     = $('setupForm');
+const setupDisplay  = $('setupDisplay');
+const schoolInput   = $('schoolInput');
+const schoolSelect  = $('schoolSelect');
+const classSelect   = $('teacherClassSelect');
+const sectionSelect = $('teacherSectionSelect');
+const setupText     = $('setupText');
+const saveSetupBtn  = $('saveSetup');
+const editSetupBtn  = $('editSetup');
 
-  // Render schools with Edit/Delete buttons
-  function renderSchoolList() {
-    const listContainer = $('schoolList');
-    listContainer.innerHTML = '';
-    schools.forEach((school, idx) => {
-      const row = document.createElement('div');
-      row.className = 'row-inline';
-      row.innerHTML = `
-        <span>${school}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>
-      `;
-      listContainer.appendChild(row);
-    });
-
-    // Edit handler
-    document.querySelectorAll('.edit-school').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt('Edit School Name:', schools[idx]);
-        if (newName && newName.trim()) {
-          schools[idx] = newName.trim();
-          await save('schools', schools);
-          await loadSetup();
-        }
-      };
-    });
-
-    // Delete handler
-    document.querySelectorAll('.delete-school').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1);
-        await save('schools', schools);
-        // If deleted current, clear selection
-        const cur = await get('currentSchool');
-        if (cur === removed[0]) {
-          await save('currentSchool', null);
-          await save('teacherClass', null);
-          await save('teacherSection', null);
-        }
-        await loadSetup();
-      };
-    });
-  }
-
-  // — Load & display setup UI —
 let schools = [];  // globally accessible
 
+// Render schools with Edit/Delete buttons
+function renderSchoolList() {
+  const listContainer = $('schoolList');
+  listContainer.innerHTML = '';
+  schools.forEach((school, idx) => {
+    const row = document.createElement('div');
+    row.className = 'row-inline';
+    row.innerHTML = `
+      <span>${school}</span>
+      <div>
+        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+    listContainer.appendChild(row);
+  });
+
+  // Edit handler
+  document.querySelectorAll('.edit-school').forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      const newName = prompt('Edit School Name:', schools[idx]);
+      if (newName && newName.trim()) {
+        schools[idx] = newName.trim();
+        await save('schools', schools);
+        await loadSetup();
+      }
+    };
+  });
+
+  // Delete handler
+  document.querySelectorAll('.delete-school').forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      if (!confirm(`Delete school "${schools[idx]}"?`)) return;
+      const removed = schools.splice(idx, 1);
+      await save('schools', schools);
+      const cur = await get('currentSchool');
+      if (cur === removed[0]) {
+        await save('currentSchool', null);
+        await save('teacherClass', null);
+        await save('teacherSection', null);
+      }
+      await loadSetup();
+    };
+  });
+}
+
+// — Load & display setup UI —
 async function loadSetup() {
   schools = (await get('schools')) || [];
 
@@ -463,81 +462,91 @@ async function loadSetup() {
     get('teacherSection')
   ]);
 
+  // Render management lists
   renderSchoolList();
   renderClassList();
   renderSectionList();
 
-  // Set current selections
+  // — Populate school dropdown —
+  schoolSelect.innerHTML = [
+    '<option disabled selected>-- Select School --</option>',
+    ...schools.map(s => `<option value="${s}">${s}</option>`)
+  ].join('');
   if (curSchool) schoolSelect.value = curSchool;
+
+  // — Populate class dropdown —
+  classSelect.innerHTML = [
+    '<option disabled selected>-- Select Class --</option>',
+    ...Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">Class ${i + 1}</option>`)
+  ].join('');
   if (curClass) classSelect.value = curClass;
+
+  // — Populate section dropdown —
+  sectionSelect.innerHTML = [
+    '<option disabled selected>-- Select Section --</option>',
+    ...['A', 'B', 'C', 'D', 'E'].map(sec => `<option value="${sec}">Section ${sec}</option>`)
+  ].join('');
   if (curSection) sectionSelect.value = curSection;
 
-  // Display summary text
+  // — Display summary text —
   setupText.textContent = `${curSchool || 'School'} > ${curClass || 'Class'} > ${curSection || 'Section'}`;
-}
 
-    // Populate dropdown
-    schoolSelect.innerHTML = [
-      '<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>`)
-    ].join('');
-    if (curSchool) schoolSelect.value = curSchool;
-
-    // Render management list
-    renderSchoolList();
-
-    // Toggle form/display
-    if (curSchool && curClass && curSection) {
-      classSelect.value   = curClass;
-      sectionSelect.value = curSection;
-      setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
-      setupForm.classList.add('hidden');
-      setupDisplay.classList.remove('hidden');
-      renderStudents();
-      updateCounters();
-      resetViews();
-    } else {
-      setupForm.classList.remove('hidden');
-      setupDisplay.classList.add('hidden');
-    }
-  }
-
-  // Save button: add new school or lock in selection
-  saveSetupBtn.onclick = async e => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await save('schools', schools);
-      }
-      schoolInput.value = '';
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert('Please select a school, class, and section.');
-      return;
-    }
-    await Promise.all([
-      save('currentSchool',  selSchool),
-      save('teacherClass',   selClass),
-      save('teacherSection', selSection)
-    ]);
-    await loadSetup();
-  };
-
-  // Edit button: reopen the form
-  editSetupBtn.onclick = e => {
-    e.preventDefault();
+  // — Toggle form/display —
+  if (curSchool && curClass && curSection) {
+    classSelect.value   = curClass;
+    sectionSelect.value = curSection;
+    setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
+    setupForm.classList.add('hidden');
+    setupDisplay.classList.remove('hidden');
+    renderStudents();
+    updateCounters();
+    resetViews();
+  } else {
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
-  };
+  }
+}
 
-  // Initialize on load
+// — Save button: add new school or lock in selection —
+saveSetupBtn.onclick = async e => {
+  e.preventDefault();
+  const newSchool = schoolInput.value.trim();
+  if (newSchool) {
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await save('schools', schools);
+    }
+    schoolInput.value = '';
+    return loadSetup();
+  }
+
+  const selSchool  = schoolSelect.value;
+  const selClass   = classSelect.value;
+  const selSection = sectionSelect.value;
+
+  if (!selSchool || !selClass || !selSection) {
+    alert('Please select a school, class, and section.');
+    return;
+  }
+
+  await Promise.all([
+    save('currentSchool',  selSchool),
+    save('teacherClass',   selClass),
+    save('teacherSection', selSection)
+  ]);
+
   await loadSetup();
+};
+
+// — Edit button: reopen the form —
+editSetupBtn.onclick = e => {
+  e.preventDefault();
+  setupForm.classList.remove('hidden');
+  setupDisplay.classList.add('hidden');
+};
+
+// — Initialize on page load —
+await loadSetup();
   
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
