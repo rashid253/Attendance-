@@ -402,9 +402,12 @@ const setupText     = $('setupText');
 const saveSetupBtn  = $('saveSetup');
 const editSetupBtn  = $('editSetup');
 
-let schools = [];  // globally accessible
+let schools = [];   // globally accessible
+let classes = [];   // optional if you want to make class list dynamic later
+let sections = [];  // optional if you want to make section list dynamic
+let students = [];  // will hold current student list
 
-// Render schools with Edit/Delete buttons
+// --- Render School List ---
 function renderSchoolList() {
   const listContainer = $('schoolList');
   listContainer.innerHTML = '';
@@ -421,7 +424,7 @@ function renderSchoolList() {
     listContainer.appendChild(row);
   });
 
-  // Edit handler
+  // Edit
   document.querySelectorAll('.edit-school').forEach(btn => {
     btn.onclick = async () => {
       const idx = +btn.dataset.idx;
@@ -434,7 +437,7 @@ function renderSchoolList() {
     };
   });
 
-  // Delete handler
+  // Delete
   document.querySelectorAll('.delete-school').forEach(btn => {
     btn.onclick = async () => {
       const idx = +btn.dataset.idx;
@@ -452,9 +455,32 @@ function renderSchoolList() {
   });
 }
 
-// — Load & display setup UI —
+// --- Render Class List (for future extension) ---
+function renderClassList() {
+  // Future: Dynamic class list from DB
+}
+
+// --- Render Section List (for future extension) ---
+function renderSectionList() {
+  // Future: Dynamic section list from DB
+}
+
+// --- Render Students List (basic) ---
+function renderStudents() {
+  const studentList = $('studentList');
+  studentList.innerHTML = '';
+  students.forEach(std => {
+    const div = document.createElement('div');
+    div.className = 'student-row';
+    div.textContent = `${std.adm} - ${std.name}`;
+    studentList.appendChild(div);
+  });
+}
+
+// --- Load & Display Setup UI ---
 async function loadSetup() {
   schools = (await get('schools')) || [];
+  students = (await get('students')) || [];
 
   const [curSchool, curClass, curSection] = await Promise.all([
     get('currentSchool'),
@@ -462,36 +488,35 @@ async function loadSetup() {
     get('teacherSection')
   ]);
 
-  // Render management lists
   renderSchoolList();
   renderClassList();
   renderSectionList();
 
-  // — Populate school dropdown —
+  // Populate school dropdown
   schoolSelect.innerHTML = [
     '<option disabled selected>-- Select School --</option>',
     ...schools.map(s => `<option value="${s}">${s}</option>`)
   ].join('');
   if (curSchool) schoolSelect.value = curSchool;
 
-  // — Populate class dropdown —
+  // Populate class dropdown
   classSelect.innerHTML = [
     '<option disabled selected>-- Select Class --</option>',
     ...Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">Class ${i + 1}</option>`)
   ].join('');
   if (curClass) classSelect.value = curClass;
 
-  // — Populate section dropdown —
+  // Populate section dropdown
   sectionSelect.innerHTML = [
     '<option disabled selected>-- Select Section --</option>',
     ...['A', 'B', 'C', 'D', 'E'].map(sec => `<option value="${sec}">Section ${sec}</option>`)
   ].join('');
   if (curSection) sectionSelect.value = curSection;
 
-  // — Display summary text —
+  // Display summary
   setupText.textContent = `${curSchool || 'School'} > ${curClass || 'Class'} > ${curSection || 'Section'}`;
 
-  // — Toggle form/display —
+  // Toggle UI
   if (curSchool && curClass && curSection) {
     classSelect.value   = curClass;
     sectionSelect.value = curSection;
@@ -499,15 +524,15 @@ async function loadSetup() {
     setupForm.classList.add('hidden');
     setupDisplay.classList.remove('hidden');
     renderStudents();
-    updateCounters();
-    resetViews();
+    updateCounters?.();
+    resetViews?.();
   } else {
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
   }
 }
 
-// — Save button: add new school or lock in selection —
+// --- Save Setup ---
 saveSetupBtn.onclick = async e => {
   e.preventDefault();
   const newSchool = schoolInput.value.trim();
@@ -538,16 +563,16 @@ saveSetupBtn.onclick = async e => {
   await loadSetup();
 };
 
-// — Edit button: reopen the form —
+// --- Edit Setup ---
 editSetupBtn.onclick = e => {
   e.preventDefault();
   setupForm.classList.remove('hidden');
   setupDisplay.classList.add('hidden');
 };
 
-// — Initialize on page load —
+// --- Initialize on load ---
 await loadSetup();
-  
+
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
