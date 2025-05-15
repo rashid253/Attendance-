@@ -2,40 +2,35 @@
 
 // —————————— START Firebase SETUP ——————————
 
-// ——— Replace your imports with CDN module imports ———
-
+// ——— Firebase via CDN Modules ———
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { getAuth }      from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
 
-// ——— Your Firebase config ———
+// ——— Firebase Config ———
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
   projectId: "attandace-management",
-  storageBucket: "attandace-management.firebasestorage.app",
+  storageBucket: "attandace-management.appspot.com",
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
   measurementId: "G-V2MY85R73B"
 };
 
 // ——— Initialize Firebase ———
-const app       = initializeApp(firebaseConfig);
-const db        = getFirestore(app);
-const auth      = getAuth(app);
-const analytics = getAnalytics(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// ——— Your registerAttendance function ———
+// ——— Register Single Attendance Record ———
 async function registerAttendance(studentId) {
   try {
     await addDoc(collection(db, "attendance"), {
       studentId,
       timestamp: Date.now()
     });
-    console.log("✅ Attendance registered for", studentId);
-  } catch (e) {
-    console.error("❌ Error registering attendance:", e);
+    console.log("✅ Attendance synced for:", studentId);
+  } catch (err) {
+    console.error("❌ Firestore sync failed:", err);
   }
 }
 // 5) (اختیاری) فائر اسٹور میں ٹیسٹ ریکارڈ بھیجیں
@@ -64,7 +59,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- 1. IndexedDB helpers (idb-keyval) ---
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
 const { get, set } = window.idbKeyval;
-let save = (k, v) => set(k, v);
+const save = async (key, val) => {
+  await set(key, val);
+
+  // اگر students save ہو رہے ہیں تو Firebase میں sync بھی کریں
+  if (key === 'students') {
+    const synced = new Set((await get('syncedFirebase')) || []);
+    for (const s of val) {
+      if (!synced.has(s.adm)) {
+        await registerAttendance(s.adm);
+        synced.add(s.adm);
+      }
+    }
+    await set('syncedFirebase', Array.from(synced));
+  }
+};
 
 ;(async function enableAutoBackup() {
   const origSave = save;
