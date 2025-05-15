@@ -1,9 +1,9 @@
 // service-worker.js
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `attendance-app-${CACHE_VERSION}`;
-const PRECACHE_ASSETS = [
-  '/',                // root → index.html
+const PRECACHE = [
+  '/',               // serves index.html
   '/index.html',
   '/style.css',
   '/app.js',
@@ -13,87 +13,64 @@ const PRECACHE_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
-self.addEventListener('install', evt => {
-  console.log('[SW] Install');
-  evt.waitUntil(
+self.addEventListener('install', e => {
+  e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Caching assets');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
+      .then(cache => cache.addAll(PRECACHE))
       .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', evt => {
-  console.log('[SW] Activate');
-  evt.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(oldKey => {
-            console.log('[SW] Deleting old cache:', oldKey);
-            return caches.delete(oldKey);
-          })
-      ))
-      .then(() => self.clients.claim())
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME)
+            .map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', evt => {
-  const req = evt.request;
-  const accept = req.headers.get('accept') || '';
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  const url  = new URL(req.url);
 
-  // 1) HTML navigations: try network → fallback to offline.html
-  if (req.mode === 'navigate' || accept.includes('text/html')) {
-    evt.respondWith(
+  // 1) Handle HTML navigations (user typing URL, link clicks, pull-to-refresh)
+  if (req.mode === 'navigate' ||
+      (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
+    e.respondWith(
       fetch(req)
         .then(res => {
-          // update cache for next time
+          // update cached shell for next offline
           const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-          console.log('[SW] Fetched & cached HTML:', req.url);
+          caches.open(CACHE_NAME).then(c => c.put(req, copy));
           return res;
         })
-        .catch(err => {
-          console.log('[SW] Network failed for navigation, serving offline page');
-          return caches.match('/offline.html');
-        })
+        .catch(() => caches.match('/offline.html'))
     );
     return;
   }
 
-  // 2) Other GET requests: cache-first → network → offline.html
-  if (req.method === 'GET') {
-    evt.respondWith(
+  // 2) For same-origin static assets: cache-first, then network, then offline.html
+  if (req.method === 'GET' && url.origin === location.origin) {
+    e.respondWith(
       caches.match(req).then(cached => {
-        if (cached) {
-          console.log('[SW] Cache hit:', req.url);
-          return cached;
-        }
-        console.log('[SW] Cache miss, fetching:', req.url);
+        if (cached) return cached;
         return fetch(req)
           .then(res => {
-            if (!res || !res.ok) throw new Error('Network response not OK');
+            if (!res.ok) throw new Error('Network error');
             const copy = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
-            console.log('[SW] Fetched & cached asset:', req.url);
+            caches.open(CACHE_NAME).then(c => c.put(req, copy));
             return res;
           })
-          .catch(err => {
-            console.log('[SW] Fetch failed, serving offline page for:', req.url);
-            return caches.match('/offline.html');
-          });
+          .catch(() => caches.match('/offline.html'));
       })
     );
   }
 });
 
-// Optional: allow forcing activation of new SW
-self.addEventListener('message', evt => {
-  if (evt.data?.type === 'SKIP_WAITING') {
-    console.log('[SW] Skip waiting requested');
-    self.skipWaiting();
-  }
+// Optional: skipWaiting via postMessage
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
