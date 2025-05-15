@@ -1,8 +1,3 @@
-// Updated service-worker.js
-// - Added versioning
-// - Ensured offline.html fallback for navigations and other requests
-// - Included activation cleanup
-
 const CACHE_NAME = 'attendance-app-v2';
 const ASSETS = [
   '/',
@@ -10,12 +5,12 @@ const ASSETS = [
   '/style.css',
   '/app.js',
   '/manifest.json',
-  '/offline.html',
+  '/offline.html',               // optional: only used for non-navigation failover
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
 
-// Install: Cache essential assets
+// Install: cache core assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -24,54 +19,60 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: Remove old caches
+// Activate: delete old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch: Serve from cache, fallback to network, offline.html on failure
+// Fetch: App Shell for navigations, cache-first for others
 self.addEventListener('fetch', event => {
-  // For navigation requests, try network first, then cache, then offline
+  // 1) Navigation requests → app shell
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Update cache for navigations
+          // Update the cache in the background
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match('/index.html')
-          .then(cached => cached || caches.match('/offline.html'))
+        .catch(() =>
+          // Always serve the cached index.html for navigations
+          caches.match('/index.html')
         )
     );
     return;
   }
 
-  // For non-navigation, try cache, then network, then offline
+  // 2) Other requests → cache-first, then network, then offline.html
   event.respondWith(
     caches.match(event.request)
-      .then(cached => cached ||
-        fetch(event.request)
+      .then(cached => {
+        if (cached) return cached;
+        return fetch(event.request)
           .then(networkResp => {
-            // Cache new resource
+            // Cache the new resource
             const respCopy = networkResp.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, respCopy));
             return networkResp;
-          })
+          });
+      })
+      .catch(() =>
+        // Optional: show a generic offline page for images/API calls
+        caches.match('/offline.html')
       )
-      .catch(() => caches.match('/offline.html'))
   );
 });
 
-// Listen for skipWaiting message to update immediately
+// Optional: listen for skipWaiting message to activate new SW immediately
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
