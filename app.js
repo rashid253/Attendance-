@@ -57,23 +57,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.body.appendChild(erudaScript);
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
-  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
 const { get, set } = window.idbKeyval;
-const save = async (key, val) => {
-  await set(key, val);
-
-  // اگر students save ہو رہے ہیں تو Firebase میں sync بھی کریں
-  if (key === 'students') {
-    const synced = new Set((await get('syncedFirebase')) || []);
-    for (const s of val) {
-      if (!synced.has(s.adm)) {
-        await registerAttendance(s.adm);
-        synced.add(s.adm);
-      }
-    }
-    await set('syncedFirebase', Array.from(synced));
-  }
-};
+let save = (k, v) => set(k, v);
 
 ;(async function enableAutoBackup() {
   const origSave = save;
