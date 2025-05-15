@@ -999,15 +999,8 @@ shareAttendanceBtn.onclick = () => {
     bindRegisterActions();
   })();
 
-// ... all your other app.js code up here …
-document.addEventListener('DOMContentLoaded', () => {
-  // … your app initialization code …
-
-  // Service Worker
+  // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-      .then(reg => console.log('SW registered:', reg))
-      .catch(err => console.error('SW registration failed:', err));
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
-
-}); // ← closes the DOMContentLoaded callback
+});
