@@ -1,82 +1,62 @@
-// service-worker.js
-
-const CACHE_VERSION = 'v1';
-const CACHE_NAME = `attendance-app-${CACHE_VERSION}`;
-
-// List of resources to precache
-const ASSETS = [
-  '/',                // serve index.html
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-];
-
-// Install: cache shell & offline page
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
-  );
-});
-
-// Activate: remove old caches
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
-});
-
-// Fetch: navigation → cached index.html, others → cache-first
-self.addEventListener('fetch', event => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // 1) Handle page navigations (refresh, address bar, pull-to-refresh)
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html')
-        .then(cachedShell => {
-          return cachedShell || fetch(request);
-        })
-        .catch(() => caches.match('/offline.html'))
-    );
-    return;
+(() => {
+  // --- 1) Service Worker registration (runs as soon as this file loads) ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/service-worker.js', { scope: '/' })
+      .then(reg => console.log('SW registered:', reg))
+      .catch(err => console.error('SW registration failed:', err));
   }
 
-  // 2) Other GET requests (assets) — cache-first, then network, then offline.html
-  if (request.method === 'GET' && url.origin === location.origin) {
-    event.respondWith(
-      caches.match(request)
-        .then(cached => {
-          if (cached) return cached;
-          return fetch(request)
-            .then(networkResponse => {
-              if (networkResponse.ok) {
-                const copy = networkResponse.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-              }
-              return networkResponse;
-            })
-            .catch(() => caches.match('/offline.html'));
-        })
-    );
+  // --- 2) Universal PDF share helper (must come first) ---
+  async function sharePdf(blob, fileName, title) {
+    if (
+      navigator.canShare &&
+      navigator.canShare({
+        files: [new File([blob], fileName, { type: 'application/pdf' })]
+      })
+    ) {
+      try {
+        await navigator.share({
+          title,
+          files: [new File([blob], fileName, { type: 'application/pdf' })]
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Share failed', err);
+      }
+    }
   }
-});
 
-// Optional: force waiting SW to activate immediately
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
+  // --- 3) DOMContentLoaded → wire up your UI ---
+  window.addEventListener('DOMContentLoaded', () => {
+    // **All** your setup code goes here.
+    // e.g. grab elements, call bindRegisterActions(), set up onclicks, etc.
+
+    // Example from your snippet:
+    const changeBtn = document.getElementById('changeBtn');
+    const tableWrapper = document.getElementById('registerTableWrapper');
+    const downloadBtn = document.getElementById('downloadRegister');
+    const shareBtn = document.getElementById('shareRegister');
+    const saveBtn = document.getElementById('saveRegister');
+    const headerRow = document.getElementById('registerHeader');
+    const bodyTbody = document.getElementById('registerBody');
+    const loadBtn = document.getElementById('loadRegister');
+
+    changeBtn.onclick = () => {
+      // your hide/show logic
+      tableWrapper.classList.add('hidden');
+      changeBtn.classList.add('hidden');
+      downloadBtn.classList.add('hidden');
+      shareBtn.classList.add('hidden');
+      saveBtn.classList.add('hidden');
+      headerRow.innerHTML = '';
+      bodyTbody.innerHTML = '';
+      loadBtn.classList.remove('hidden');
+    };
+
+    bindRegisterActions();  // make sure this function is defined elsewhere
+
+    // ...and all your other initialization code...
+  });
+
+  // No extra closing braces or parentheses beyond this
+})();
