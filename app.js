@@ -999,6 +999,8 @@ shareAttendanceBtn.onclick = () => {
     bindRegisterActions();
   })();
 
+// ... all your other app.js code up here …
+
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
