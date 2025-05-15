@@ -1000,7 +1000,6 @@ shareAttendanceBtn.onclick = () => {
   })();
 
   // --- 12. Service Worker ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+ navigator.serviceWorker.register('/sw.js').catch(console.error);
   }
 });
