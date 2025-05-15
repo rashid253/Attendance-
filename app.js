@@ -1,10 +1,15 @@
 // app.js
 
+// —————————— START Firebase SETUP ——————————
+
+// 1) SDK امپورٹ کریں
 import { initializeApp } from "firebase/app";
 import { getFirestore }   from "firebase/firestore";
 import { getAuth }        from "firebase/auth";
 import { getAnalytics }   from "firebase/analytics";
+import { collection, addDoc } from "firebase/firestore";
 
+// 2) اپنا کنفیگ پیسٹ کریں
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -15,10 +20,30 @@ const firebaseConfig = {
   measurementId: "G-V2MY85R73B"
 };
 
+// 3) انیشیئلائز کریں
 const app       = initializeApp(firebaseConfig);
 const db        = getFirestore(app);
 const auth      = getAuth(app);
 const analytics = getAnalytics(app);
+
+// 4) Attendance ریجسٹر کرنے والا فنکشن
+async function registerAttendance(studentId) {
+  try {
+    await addDoc(collection(db, "attendance"), {
+      studentId,
+      timestamp: Date.now()
+    });
+    console.log("✅ Attendance registered for", studentId);
+  } catch (e) {
+    console.error("❌ Error registering attendance:", e);
+  }
+}
+
+// 5) (اختیاری) فائر اسٹور میں ٹیسٹ ریکارڈ بھیجیں
+// ایک بار کنسول میں چیک کرنے کے بعد اس لائن کو ہٹا یا کومنٹ کر دیں
+registerAttendance("TEST123");
+
+// —————————— END Firebase SETUP ——————————
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
@@ -41,6 +66,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
   const { get, set } = window.idbKeyval;
   const save = (k, v) => set(k, v);
+  ;(function enableAutoBackup() {
+  const origSave = save;
+  const synced = new Set((await get('students') || []).map(s => s.adm));
+
+  save = async (key, val) => {
+    await origSave(key, val);
+    if (key === 'students') {
+      for (const s of val) {
+        if (!synced.has(s.adm)) {
+          await registerAttendance(s.adm);
+          synced.add(s.adm);
+        }
+      }
+    }
+  };
+})();
 
   // --- 2. State & Defaults ---
   let students       = await get('students')        || [];
