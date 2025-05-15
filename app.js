@@ -1009,4 +1009,4 @@ shareAttendanceBtn.onclick = () => {
       }
     })
     .catch(err => console.error('SW registration failed:', err));
-}
+})();
