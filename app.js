@@ -1,24 +1,4 @@
-//app.js
-
-// (1) firebaseConfig.js سے امپورٹ کریں
-import { db, auth } from "./firebaseConfig.js";
-
-// (2) اپنا موجودہ کوڈ مثلاً Firestore یا Auth کالز یہاں لے آئیں
-import { collection, addDoc } from "firebase/firestore";
-
-async function registerAttendance(studentId) {
-  try {
-    await addDoc(collection(db, "attendance"), {
-      studentId,
-      timestamp: Date.now()
-    });
-    console.log("Attendance registered!");
-  } catch (e) {
-    console.error("Error adding document: ", e);
-  }
-}
-
-registerAttendance("S12345");
+// app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
