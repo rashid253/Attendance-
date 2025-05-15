@@ -999,11 +999,9 @@ shareAttendanceBtn.onclick = () => {
     bindRegisterActions();
   })();
 
-  // --- 12. Service Worker ---
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('/service-worker.js', { scope: '/' })
-      .then(reg => console.log('SW registered:', reg))
-      .catch(err => console.error('SW registration failed:', err));
-  }
-});
+  navigator.serviceWorker
+    .register('/Attendance-/service-worker.js', { scope: '/Attendance-/' })
+    .then(() => console.log('SW registered!'))
+    .catch(console.error);
+}
