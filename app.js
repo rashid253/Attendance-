@@ -16,7 +16,19 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
+// Attendance Save Function
+async function saveAttendance(name, status) {
+  try {
+    const docRef = await addDoc(collection(db, "attendance"), {
+      name: name,
+      status: status,
+      timestamp: new Date()
+    });
+    console.log("✅ Attendance saved with ID: ", docRef.id);
+  } catch (e) {
+    console.error("❌ Error adding document: ", e);
+  }
+}
 
 // app.js
 
