@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
@@ -16,7 +15,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-// Attendance Save Function
+
+// ✅ Single, complete function
 async function saveAttendance(name, status) {
   try {
     const docRef = await addDoc(collection(db, "attendance"), {
@@ -29,6 +29,14 @@ async function saveAttendance(name, status) {
     console.error("❌ Error adding document: ", e);
   }
 }
+
+// ✅ Make it available to HTML button
+window.saveAttendance = saveAttendance;
+
+// Your UI logic
+window.addEventListener('DOMContentLoaded', async () => {
+  // other UI or form logic
+});
 
 // app.js
 
