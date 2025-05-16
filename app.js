@@ -1,36 +1,5 @@
 // app.js
 
-// —————————— START Firebase SETUP ——————————
-
-// ——— Firebase via CDN Modules ———
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com", // ← صحیح والا
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-async function registerAttendance(studentId) {
-  try {
-    await addDoc(collection(db, "attendance"), {
-      studentId,
-      timestamp: Date.now()
-    });
-    console.log("✅ Synced:", studentId);
-  } catch (e) {
-    console.error("❌ Firebase sync error:", e);
-  }
-}
-// —————————— END Firebase SETUP ——————————
 window.addEventListener('DOMContentLoaded', async () => {
   // --- Universal PDF share helper (must come first) ---
   async function sharePdf(blob, fileName, title) {
@@ -50,27 +19,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.body.appendChild(erudaScript);
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
-if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
-const { get, set } = window.idbKeyval;
+  if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
+  const { get, set } = window.idbKeyval;
+  const save = (k, v) => set(k, v);
 
-let save = (k, v) => set(k, v);
-
-;(async function enableAutoBackup() {
-  const origSave = save;
-  const synced = new Set((await get('students') || []).map(s => s.adm));
-
-  save = async (key, val) => {
-    await origSave(key, val);
-    if (key === 'students') {
-      for (const s of val) {
-        if (!synced.has(s.adm)) {
-          await registerAttendance(s.adm);
-          synced.add(s.adm);
-        }
-      }
-    }
-  };
-})();
   // --- 2. State & Defaults ---
   let students       = await get('students')        || [];
   let attendanceData = await get('attendanceData')  || {};
@@ -392,187 +344,137 @@ resetBtn.addEventListener('click', async () => {
   };
 
   // --- Setup: Manage Schools, Classes & Sections ---
-const setupForm     = $('setupForm');
-const setupDisplay  = $('setupDisplay');
-const schoolInput   = $('schoolInput');
-const schoolSelect  = $('schoolSelect');
-const classSelect   = $('teacherClassSelect');
-const sectionSelect = $('teacherSectionSelect');
-const setupText     = $('setupText');
-const saveSetupBtn  = $('saveSetup');
-const editSetupBtn  = $('editSetup');
+  const setupForm     = $('setupForm');
+  const setupDisplay  = $('setupDisplay');
+  const schoolInput   = $('schoolInput');
+  const schoolSelect  = $('schoolSelect');
+  const classSelect   = $('teacherClassSelect');
+  const sectionSelect = $('teacherSectionSelect');
+  const setupText     = $('setupText');
+  const saveSetupBtn  = $('saveSetup');
+  const editSetupBtn  = $('editSetup');
 
-let schools = [];   // globally accessible
-let classes = [];   // optional if you want to make class list dynamic later
-let sections = [];  // optional if you want to make section list dynamic
-let students = [];  // will hold current student list
+  // Render schools with Edit/Delete buttons
+  function renderSchoolList() {
+    const listContainer = $('schoolList');
+    listContainer.innerHTML = '';
+    schools.forEach((school, idx) => {
+      const row = document.createElement('div');
+      row.className = 'row-inline';
+      row.innerHTML = `
+        <span>${school}</span>
+        <div>
+          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
+      listContainer.appendChild(row);
+    });
 
-// --- Render School List ---
-function renderSchoolList() {
-  const listContainer = $('schoolList');
-  listContainer.innerHTML = '';
-  schools.forEach((school, idx) => {
-    const row = document.createElement('div');
-    row.className = 'row-inline';
-    row.innerHTML = `
-      <span>${school}</span>
-      <div>
-        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-      </div>
-    `;
-    listContainer.appendChild(row);
-  });
+    // Edit handler
+    document.querySelectorAll('.edit-school').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = +btn.dataset.idx;
+        const newName = prompt('Edit School Name:', schools[idx]);
+        if (newName && newName.trim()) {
+          schools[idx] = newName.trim();
+          await save('schools', schools);
+          await loadSetup();
+        }
+      };
+    });
 
-  // Edit
-  document.querySelectorAll('.edit-school').forEach(btn => {
-    btn.onclick = async () => {
-      const idx = +btn.dataset.idx;
-      const newName = prompt('Edit School Name:', schools[idx]);
-      if (newName && newName.trim()) {
-        schools[idx] = newName.trim();
+    // Delete handler
+    document.querySelectorAll('.delete-school').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = +btn.dataset.idx;
+        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
+        const removed = schools.splice(idx, 1);
         await save('schools', schools);
+        // If deleted current, clear selection
+        const cur = await get('currentSchool');
+        if (cur === removed[0]) {
+          await save('currentSchool', null);
+          await save('teacherClass', null);
+          await save('teacherSection', null);
+        }
         await loadSetup();
+      };
+    });
+  }
+
+  // Load & display setup UI
+  async function loadSetup() {
+    schools = (await get('schools')) || [];
+    const [curSchool, curClass, curSection] = await Promise.all([
+      get('currentSchool'),
+      get('teacherClass'),
+      get('teacherSection')
+    ]);
+
+    // Populate dropdown
+    schoolSelect.innerHTML = [
+      '<option disabled selected>-- Select School --</option>',
+      ...schools.map(s => `<option value="${s}">${s}</option>`)
+    ].join('');
+    if (curSchool) schoolSelect.value = curSchool;
+
+    // Render management list
+    renderSchoolList();
+
+    // Toggle form/display
+    if (curSchool && curClass && curSection) {
+      classSelect.value   = curClass;
+      sectionSelect.value = curSection;
+      setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
+      setupForm.classList.add('hidden');
+      setupDisplay.classList.remove('hidden');
+      renderStudents();
+      updateCounters();
+      resetViews();
+    } else {
+      setupForm.classList.remove('hidden');
+      setupDisplay.classList.add('hidden');
+    }
+  }
+
+  // Save button: add new school or lock in selection
+  saveSetupBtn.onclick = async e => {
+    e.preventDefault();
+    const newSchool = schoolInput.value.trim();
+    if (newSchool) {
+      if (!schools.includes(newSchool)) {
+        schools.push(newSchool);
+        await save('schools', schools);
       }
-    };
-  });
+      schoolInput.value = '';
+      return loadSetup();
+    }
+    const selSchool  = schoolSelect.value;
+    const selClass   = classSelect.value;
+    const selSection = sectionSelect.value;
+    if (!selSchool || !selClass || !selSection) {
+      alert('Please select a school, class, and section.');
+      return;
+    }
+    await Promise.all([
+      save('currentSchool',  selSchool),
+      save('teacherClass',   selClass),
+      save('teacherSection', selSection)
+    ]);
+    await loadSetup();
+  };
 
-  // Delete
-  document.querySelectorAll('.delete-school').forEach(btn => {
-    btn.onclick = async () => {
-      const idx = +btn.dataset.idx;
-      if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-      const removed = schools.splice(idx, 1);
-      await save('schools', schools);
-      const cur = await get('currentSchool');
-      if (cur === removed[0]) {
-        await save('currentSchool', null);
-        await save('teacherClass', null);
-        await save('teacherSection', null);
-      }
-      await loadSetup();
-    };
-  });
-}
-
-// --- Render Class List (for future extension) ---
-function renderClassList() {
-  // Future: Dynamic class list from DB
-}
-
-// --- Render Section List (for future extension) ---
-function renderSectionList() {
-  // Future: Dynamic section list from DB
-}
-
-// --- Render Students List (basic) ---
-function renderStudents() {
-  const studentList = $('studentList');
-  studentList.innerHTML = '';
-  students.forEach(std => {
-    const div = document.createElement('div');
-    div.className = 'student-row';
-    div.textContent = `${std.adm} - ${std.name}`;
-    studentList.appendChild(div);
-  });
-}
-
-// --- Load & Display Setup UI ---
-async function loadSetup() {
-  schools = (await get('schools')) || [];
-  students = (await get('students')) || [];
-
-  const [curSchool, curClass, curSection] = await Promise.all([
-    get('currentSchool'),
-    get('teacherClass'),
-    get('teacherSection')
-  ]);
-
-  renderSchoolList();
-  renderClassList();
-  renderSectionList();
-
-  // Populate school dropdown
-  schoolSelect.innerHTML = [
-    '<option disabled selected>-- Select School --</option>',
-    ...schools.map(s => `<option value="${s}">${s}</option>`)
-  ].join('');
-  if (curSchool) schoolSelect.value = curSchool;
-
-  // Populate class dropdown
-  classSelect.innerHTML = [
-    '<option disabled selected>-- Select Class --</option>',
-    ...Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">Class ${i + 1}</option>`)
-  ].join('');
-  if (curClass) classSelect.value = curClass;
-
-  // Populate section dropdown
-  sectionSelect.innerHTML = [
-    '<option disabled selected>-- Select Section --</option>',
-    ...['A', 'B', 'C', 'D', 'E'].map(sec => `<option value="${sec}">Section ${sec}</option>`)
-  ].join('');
-  if (curSection) sectionSelect.value = curSection;
-
-  // Display summary
-  setupText.textContent = `${curSchool || 'School'} > ${curClass || 'Class'} > ${curSection || 'Section'}`;
-
-  // Toggle UI
-  if (curSchool && curClass && curSection) {
-    classSelect.value   = curClass;
-    sectionSelect.value = curSection;
-    setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
-    setupForm.classList.add('hidden');
-    setupDisplay.classList.remove('hidden');
-    renderStudents();
-    updateCounters?.();
-    resetViews?.();
-  } else {
+  // Edit button: reopen the form
+  editSetupBtn.onclick = e => {
+    e.preventDefault();
     setupForm.classList.remove('hidden');
     setupDisplay.classList.add('hidden');
-  }
-}
+  };
 
-// --- Save Setup ---
-saveSetupBtn.onclick = async e => {
-  e.preventDefault();
-  const newSchool = schoolInput.value.trim();
-  if (newSchool) {
-    if (!schools.includes(newSchool)) {
-      schools.push(newSchool);
-      await save('schools', schools);
-    }
-    schoolInput.value = '';
-    return loadSetup();
-  }
-
-  const selSchool  = schoolSelect.value;
-  const selClass   = classSelect.value;
-  const selSection = sectionSelect.value;
-
-  if (!selSchool || !selClass || !selSection) {
-    alert('Please select a school, class, and section.');
-    return;
-  }
-
-  await Promise.all([
-    save('currentSchool',  selSchool),
-    save('teacherClass',   selClass),
-    save('teacherSection', selSection)
-  ]);
-
+  // Initialize on load
   await loadSetup();
-};
-
-// --- Edit Setup ---
-editSetupBtn.onclick = e => {
-  e.preventDefault();
-  setupForm.classList.remove('hidden');
-  setupDisplay.classList.add('hidden');
-};
-
-// --- Initialize on load ---
-await loadSetup();
-
+  
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
