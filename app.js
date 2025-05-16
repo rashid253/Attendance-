@@ -1,23 +1,3 @@
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.firebasestorage.app",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1024,19 +1004,3 @@ shareAttendanceBtn.onclick = () => {
     navigator.serviceWorker.register('service-worker.js').catch(console.error);
   }
 });
-
-
-
-// Save attendance to Firestore
-async function saveAttendance(name, status) {
-  try {
-    const docRef = await addDoc(collection(db, "attendance"), {
-      name: name,
-      status: status,
-      timestamp: new Date()
-    });
-    console.log("Attendance saved with ID: ", docRef.id);
-  } catch (e) {
-    console.error("Error adding document: ", e);
-  }
-}
