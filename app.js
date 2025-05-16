@@ -383,138 +383,156 @@ resetBtn.addEventListener('click', async () => {
     show(formDiv, saveSettings, ...inputs);
   };
 
-  // --- Setup: Manage Schools, Classes & Sections ---
-  const setupForm     = $('setupForm');
-  const setupDisplay  = $('setupDisplay');
-  const schoolInput   = $('schoolInput');
-  const schoolSelect  = $('schoolSelect');
-  const classSelect   = $('teacherClassSelect');
-  const sectionSelect = $('teacherSectionSelect');
-  const setupText     = $('setupText');
-  const saveSetupBtn  = $('saveSetup');
-  const editSetupBtn  = $('editSetup');
-
-  // Render schools with Edit/Delete buttons
-  function renderSchoolList() {
-    const listContainer = $('schoolList');
-    listContainer.innerHTML = '';
-    schools.forEach((school, idx) => {
-      const row = document.createElement('div');
-      row.className = 'row-inline';
-      row.innerHTML = `
-        <span>${school}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>
-      `;
-      listContainer.appendChild(row);
-    });
-
-    // Edit handler
-    document.querySelectorAll('.edit-school').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt('Edit School Name:', schools[idx]);
-        if (newName && newName.trim()) {
-          schools[idx] = newName.trim();
-          await save('schools', schools);
-          await loadSetup();
-        }
-      };
-    });
-
-    // Delete handler
-    document.querySelectorAll('.delete-school').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1);
-        await save('schools', schools);
-        // If deleted current, clear selection
-        const cur = await get('currentSchool');
-        if (cur === removed[0]) {
-          await save('currentSchool', null);
-          await save('teacherClass', null);
-          await save('teacherSection', null);
-        }
-        await loadSetup();
-      };
-    });
-  }
-
-  // Load & display setup UI
-  async function loadSetup() {
-    schools = (await get('schools')) || [];
-    const [curSchool, curClass, curSection] = await Promise.all([
-      get('currentSchool'),
-      get('teacherClass'),
-      get('teacherSection')
-    ]);
-
-    // Populate dropdown
-    schoolSelect.innerHTML = [
-      '<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>`)
-    ].join('');
-    if (curSchool) schoolSelect.value = curSchool;
-
-    // Render management list
-    renderSchoolList();
-
-    // Toggle form/display
-    if (curSchool && curClass && curSection) {
-      classSelect.value   = curClass;
-      sectionSelect.value = curSection;
-      setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
-      setupForm.classList.add('hidden');
-      setupDisplay.classList.remove('hidden');
-      renderStudents();
-      updateCounters();
-      resetViews();
-    } else {
-      setupForm.classList.remove('hidden');
-      setupDisplay.classList.add('hidden');
-    }
-  }
-
-  // Save button: add new school or lock in selection
-  saveSetupBtn.onclick = async e => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await save('schools', schools);
-      }
-      schoolInput.value = '';
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert('Please select a school, class, and section.');
-      return;
-    }
-    await Promise.all([
-      save('currentSchool',  selSchool),
-      save('teacherClass',   selClass),
-      save('teacherSection', selSection)
-    ]);
-    await loadSetup();
-  };
-
-  // Edit button: reopen the form
-  editSetupBtn.onclick = e => {
-    e.preventDefault();
-    setupForm.classList.remove('hidden');
-    setupDisplay.classList.add('hidden');
-  };
-
-  // Initialize on load
-  await loadSetup();
   
+  // ——— Setup: Manage Schools, Classes & Sections ———
+import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+// Firestore doc to hold setup
+const setupRef = doc(db, "setup", "config");
+
+// DOM elements
+const setupForm     = $('setupForm');
+const setupDisplay  = $('setupDisplay');
+const schoolInput   = $('schoolInput');
+const schoolSelect  = $('schoolSelect');
+const classSelect   = $('teacherClassSelect');
+const sectionSelect = $('teacherSectionSelect');
+const setupText     = $('setupText');
+const saveSetupBtn  = $('saveSetup');
+const editSetupBtn  = $('editSetup');
+
+let setupData = {
+  schools: [],
+  currentSchool: null,
+  teacherClass: null,
+  teacherSection: null
+};
+
+async function loadSetupData() {
+  try {
+    // Try Firestore first
+    const snap = await getDoc(setupRef);
+    if (snap.exists()) {
+      setupData = snap.data();
+      console.log("✔️ Loaded setup from Firestore", setupData);
+    }
+  } catch (e) {
+    console.warn("⚠️ Firestore load failed, using local IndexedDB", e);
+    const local = (await get('setup')) || {};
+    setupData = { ...setupData, ...local };
+  }
+}
+
+async function saveSetupData() {
+  try {
+    // Save to Firestore
+    await setDoc(setupRef, setupData);
+    console.log("✔️ Setup saved to Firestore");
+  } catch (e) {
+    console.warn("⚠️ Firestore save failed, storing locally", e);
+    await save("setup", setupData);
+  }
+}
+
+function renderSchoolList() {
+  const list = $('schoolList');
+  list.innerHTML = "";
+  setupData.schools.forEach((name, idx) => {
+    const row = document.createElement("div");
+    row.className = "row-inline";
+    row.innerHTML = `
+      <span>${name}</span>
+      <button data-idx="${idx}" class="edit-school no-print">✎</button>
+      <button data-idx="${idx}" class="delete-school no-print">🗑</button>
+    `;
+    list.appendChild(row);
+  });
+
+  // Delegated handlers
+  list.querySelectorAll(".edit-school").forEach(btn => {
+    btn.onclick = async () => {
+      const i = +btn.dataset.idx;
+      const n = prompt("Edit School Name:", setupData.schools[i]);
+      if (!n?.trim()) return;
+      setupData.schools[i] = n.trim();
+      await saveSetupData();
+      await loadSetup();
+    };
+  });
+  list.querySelectorAll(".delete-school").forEach(btn => {
+    btn.onclick = async () => {
+      const i = +btn.dataset.idx;
+      if (!confirm(`Delete school "${setupData.schools[i]}"?`)) return;
+      const [removed] = setupData.schools.splice(i, 1);
+      if (setupData.currentSchool === removed) {
+        setupData.currentSchool = setupData.teacherClass = setupData.teacherSection = null;
+      }
+      await saveSetupData();
+      await loadSetup();
+    };
+  });
+}
+
+async function loadSetup() {
+  await loadSetupData();
+  // Populate school dropdown
+  schoolSelect.innerHTML = [
+    `<option disabled selected>-- Select School --</option>`,
+    ...setupData.schools.map(s => `<option value="${s}">${s}</option>`)
+  ].join("");
+  if (setupData.currentSchool) schoolSelect.value = setupData.currentSchool;
+
+  renderSchoolList();
+
+  if (setupData.currentSchool && setupData.teacherClass && setupData.teacherSection) {
+    classSelect.value   = setupData.teacherClass;
+    sectionSelect.value = setupData.teacherSection;
+    setupText.textContent =
+      `${setupData.currentSchool} 🏫 | Class: ${setupData.teacherClass} | Section: ${setupData.teacherSection}`;
+    setupForm.classList.add("hidden");
+    setupDisplay.classList.remove("hidden");
+    renderStudents();
+    updateCounters();
+    resetViews();
+  } else {
+    setupForm.classList.remove("hidden");
+    setupDisplay.classList.add("hidden");
+  }
+}
+
+saveSetupBtn.onclick = async e => {
+  e.preventDefault();
+  const newSchool = schoolInput.value.trim();
+  if (newSchool) {
+    if (!setupData.schools.includes(newSchool)) {
+      setupData.schools.push(newSchool);
+    }
+    schoolInput.value = "";
+    await saveSetupData();
+    return loadSetup();
+  }
+  // Lock in selection
+  const s = schoolSelect.value;
+  const c = classSelect.value;
+  const h = sectionSelect.value;
+  if (!s || !c || !h) {
+    return alert("Please select a school, class, and section.");
+  }
+  setupData.currentSchool  = s;
+  setupData.teacherClass   = c;
+  setupData.teacherSection = h;
+  await saveSetupData();
+  await loadSetup();
+};
+
+editSetupBtn.onclick = e => {
+  e.preventDefault();
+  setupForm.classList.remove("hidden");
+  setupDisplay.classList.add("hidden");
+};
+
+// Kick it off
+await loadSetup();
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
