@@ -23,6 +23,18 @@ async function writeBackupToFirebase(data) {
   await set(ref(database, `attendanceBackups/${ts}`), data);
   console.log(`✅ Backup saved at ${new Date(ts).toISOString()}`);
 }
+// --- Restore backup from Firebase ---
+async function restoreBackupFromFirebase() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not logged in');
+
+  const backupRef = ref(database, `attendanceBackups/${user.uid}`);
+  const snapshot = await get(backupRef);
+
+  if (!snapshot.exists()) return null;
+
+  return snapshot.val();
+}
 
 // Replace your old writeBackupFile(...) calls:
 //   writeBackupFile(attendanceData);
