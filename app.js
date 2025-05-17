@@ -46,6 +46,8 @@ if (!window.idbKeyval) console.error('idb-keyval missing');
 const { get, set, clear } = window.idbKeyval;
 const save = (k, v) => set(k, v);
 
+// 🔧 Load persisted schools list (IndexedDB)
+let schools = (await get('schools')) || [];
 // ——— 5. State & Defaults ———
 let students       = await get('students')        || [];
 let attendanceData = await get('attendanceData')  || {};
