@@ -1,3 +1,33 @@
+// Import only the bits you need
+import { initializeApp }    from "firebase/app";
+import { getDatabase, ref, set } from "firebase/database";
+
+// ←– Copy your Firebase config from the console
+const firebaseConfig = {
+  apiKey: "AIzaSyBsx…EpICEzA",
+  authDomain: "attandace-management.firebaseapp.com",
+  projectId: "attandace-management",
+  storageBucket: "attandace-management.firebasestorage.app",
+  messagingSenderId: "222685278846",
+  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+  measurementId: "G-V2MY85R73B"
+};
+
+// Initialize Firebase
+const app       = initializeApp(firebaseConfig);
+const database  = getDatabase(app);
+
+// Backup function
+async function writeBackupToFirebase(data) {
+  const ts = Date.now();
+  await set(ref(database, `attendanceBackups/${ts}`), data);
+  console.log(`✅ Backup saved at ${new Date(ts).toISOString()}`);
+}
+
+// Replace your old writeBackupFile(...) calls:
+//   writeBackupFile(attendanceData);
+// with:
+//   writeBackupToFirebase(attendanceData);
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
