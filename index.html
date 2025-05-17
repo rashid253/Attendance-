@@ -11,20 +11,20 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome -->
+  <!-- Font Awesome (HTTPS) -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   />
 
-  <!-- idb-keyval -->
+  <!-- idb-keyval (IIFE) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- jsPDF + AutoTable -->
+  <!-- jsPDF + AutoTable (IIFE) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Chart.js -->
+  <!-- Chart.js (IIFE) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Main CSS -->
@@ -46,30 +46,30 @@
 </head>
 <body>
   
-<header class="app-header">
-  <h1>
-    <i class="fas fa-school"></i>
-    Attendance Management
-  </h1>
-  <div class="header-buttons">
-    <button id="chooseBackupFolder" class="btn">
-      <i class="fas fa-folder-open"></i>
-      Select Backup Folder
-    </button>
+  <header class="app-header">
+    <h1>
+      <i class="fas fa-school"></i>
+      Attendance Management
+    </h1>
+    <div class="header-buttons">
+      <button id="chooseBackupFolder" class="btn">
+        <i class="fas fa-folder-open"></i>
+        Select Backup Folder
+      </button>
 
-    <button id="restoreData" class="btn">
-      <i class="fas fa-upload"></i>
-      Restore Backup
-    </button>
-    <!-- hidden file input for restore -->
-    <input type="file" id="restoreFile" accept=".json" hidden />
+      <button id="restoreData" class="btn">
+        <i class="fas fa-upload"></i>
+        Restore Backup
+      </button>
+      <!-- hidden file input for restore -->
+      <input type="file" id="restoreFile" accept=".json" hidden />
 
-    <button id="resetData" class="btn btn-danger">
-      <i class="fas fa-trash-alt"></i>
-      Factory Reset
-    </button>
-  </div>
-</header>
+      <button id="resetData" class="btn btn-danger">
+        <i class="fas fa-trash-alt"></i>
+        Factory Reset
+      </button>
+    </div>
+  </header>
 
   <!-- 1. SETUP -->
   <section id="teacher-setup">
@@ -290,5 +290,17 @@
 
   <!-- Load your main script as an ES module -->
   <script type="module" src="app.js"></script>
+
+  <!-- Register service worker as a module -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('service-worker.js', { type: 'module' })
+          .then(reg => console.log('Service Worker registered as module:', reg))
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
