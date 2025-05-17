@@ -70,7 +70,42 @@ let schools        = await get('schools')         || [];
     await save('lastAdmissionNo', lastAdmNo);
     return String(lastAdmNo).padStart(4, '0');
   }
+  
+// --- 2.1. Auto-restore from Firebase if local data is missing ---
+if (!students?.length || !Object.keys(attendanceData).length) {
+  try {
+    const restored = await restoreBackupFromFirebase();
 
+    if (restored) {
+      students        = restored.students        || [];
+      attendanceData  = restored.attendanceData  || {};
+      paymentsData    = restored.paymentsData    || {};
+      fineRates       = restored.fineRates       || { A:50, Lt:20, L:10, HD:30 };
+      eligibilityPct  = restored.eligibilityPct  || 75;
+      lastAdmNo       = restored.lastAdmNo       || 0;
+      schools         = restored.schools         || [];
+      const currentSchool  = restored.currentSchool;
+      const teacherClass   = restored.teacherClass;
+      const teacherSection = restored.teacherSection;
+
+      // Save to IndexedDB for next time
+      await set('students', students);
+      await set('attendanceData', attendanceData);
+      await set('paymentsData', paymentsData);
+      await set('fineRates', fineRates);
+      await set('eligibilityPct', eligibilityPct);
+      await set('lastAdmissionNo', lastAdmNo);
+      await set('schools', schools);
+      await set('currentSchool', currentSchool);
+      await set('teacherClass', teacherClass);
+      await set('teacherSection', teacherSection);
+
+      console.log('✅ Restored from Firebase backup');
+    }
+  } catch (e) {
+    console.error('⚠️ Restore from Firebase failed:', e);
+  }
+}
   // --- 3. DOM Helpers ---
   const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove('hidden'));
