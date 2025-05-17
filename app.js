@@ -11,6 +11,8 @@ import {
   getFirestore, collection, addDoc,
   doc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+// 🔧 DOM-selector helper
+const $ = id => document.getElementById(id);
 
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
