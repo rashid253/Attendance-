@@ -548,7 +548,7 @@ setInterval(async () => {
     console.error('⚠️ Scheduled Firebase backup failed:', err);
   }
 }, 5 * 60 * 1000);
-  });
+  
   
    // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
