@@ -1,24 +1,17 @@
 name: Deploy to Firebase Hosting on merge
- on:
-   push:
-     branches:
-       - main
- jobs:
-   build_and_deploy:
-     runs-on: ubuntu-latest
-     steps:
-       - uses: actions/checkout@v4
--      - uses: FirebaseExtended/action-hosting-deploy@v0
--        with:
--          repoToken: ${{ secrets.GITHUB_TOKEN }}
--          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATTANDACE_MANAGEMENT }}
--          channelId: live
--          projectId: attandace-management
-+      - uses: FirebaseExtended/action-hosting-deploy@v0
-+        with:
-+          repoToken: ${{ secrets.GITHUB_TOKEN }}
-+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATTANDACE_MANAGEMENT }}
-+          channelId: live
-+          projectId: attandace-management
-+          # Add this line to deploy both hosting AND database rules
-+          args: --only hosting,database
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATTANDACE_MANAGEMENT }}
+          channelId: live
+          projectId: attandace-management
+          args: --only hosting,database
