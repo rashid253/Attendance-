@@ -1,7 +1,14 @@
 // Import only the bits you need
 import { initializeApp }         from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+// ←– Your Firebase config (add your keys here)
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -14,20 +21,95 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app       = initializeApp(firebaseConfig);
-const database  = getDatabase(app);
+const app      = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const auth     = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// Backup function
+// Backup function (unchanged)
 async function writeBackupToFirebase(data) {
   const ts = Date.now();
   await set(ref(database, `attendanceBackups/${ts}`), data);
   console.log(`✅ Backup saved at ${new Date(ts).toISOString()}`);
 }
 
-// Replace your old writeBackupFile(...) calls:
-//   writeBackupFile(attendanceData);
-// with:
-//   writeBackupToFirebase(attendanceData);
+// --- AUTH UI ELEMENTS ---
+const loginBtn  = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// Login with Google
+loginBtn.onclick = () => {
+  signInWithPopup(auth, provider)
+    .then(result => {
+      console.log('Signed in as', result.user.uid);
+      applyRoleBasedUI(result.user.uid);
+    })
+    .catch(console.error);
+};
+
+// Logout
+logoutBtn.onclick = () => {
+  signOut(auth)
+    .then(() => {
+      console.log('Signed out');
+      showPublicUI();
+    })
+    .catch(console.error);
+};
+
+// React on Auth state changes
+auth.onAuthStateChanged(user => {
+  if (user) {
+    applyRoleBasedUI(user.uid);
+  } else {
+    showPublicUI();
+  }
+});
+
+// Role-based UI functions
+function applyRoleBasedUI(uid) {
+  loginBtn.classList.add('hidden');
+  logoutBtn.classList.remove('hidden');
+  const setupSection = document.getElementById('setupSection');
+
+  // Example hard-coded roles; replace with your logic or DB lookup
+  const roles = {
+    'UID_OF_DEV':       'developer',
+    'UID_OF_PRINCIPAL': 'principal',
+    'UID_OF_TEACHER':   'teacher'
+  };
+  const role = roles[uid] || 'guest';
+
+  if (role === 'developer') {
+    setupSection.classList.remove('hidden');
+    enableAllSetupControls();
+  } else if (role === 'principal') {
+    setupSection.classList.remove('hidden');
+    limitToCurrentSchool();
+  } else if (role === 'teacher') {
+    setupSection.classList.remove('hidden');
+    limitToTeacherClassSection(uid);
+  } else {
+    setupSection.classList.add('hidden');
+  }
+}
+
+function showPublicUI() {
+  loginBtn.classList.remove('hidden');
+  logoutBtn.classList.add('hidden');
+  document.getElementById('setupSection').classList.add('hidden');
+}
+
+// Stub functions for role-based restrictions:
+function enableAllSetupControls() {
+  // Developer: leave everything enabled
+}
+function limitToCurrentSchool() {
+  // Principal: hide or disable school selector
+}
+function limitToTeacherClassSection(uid) {
+  // Teacher: restrict to their class/section
+}
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
