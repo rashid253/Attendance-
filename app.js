@@ -1,7 +1,6 @@
 // Import only the bits you need
-import { initializeApp }    from "firebase/app";
-import { getDatabase, ref, set } from "firebase/database";
-
+import { initializeApp }         from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 // ←– Copy your Firebase config from the console
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
