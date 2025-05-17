@@ -53,12 +53,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const save = (k, v) => set(k, v);
 
   // --- 2. State & Defaults ---
-  let students       = await get('students')        || [];
-  let attendanceData = await get('attendanceData')  || {};
-  let paymentsData   = await get('paymentsData')    || {};
-  let lastAdmNo      = await get('lastAdmissionNo') || 0;
-  let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
-  let eligibilityPct = await get('eligibilityPct')  || 75;
+let students       = await get('students')        || [];
+let attendanceData = await get('attendanceData')  || {};
+let paymentsData   = await get('paymentsData')    || {};
+let lastAdmNo      = await get('lastAdmissionNo') || 0;
+let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
+let eligibilityPct = await get('eligibilityPct')  || 75;
+// ← Add this line:
+let schools        = await get('schools')         || [];
   let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
   let lastAnalyticsStats = [], lastAnalyticsRange = { from: null, to: null }, lastAnalyticsShare = '';
 
