@@ -536,6 +536,47 @@ setInterval(async () => {
 
   // Initialize on load
   await loadSetup();
+  // --- 5. FIREBASE AUTO-BACKUP EVERY 5 MINUTES ---
+(async () => {
+  try {
+    await writeBackupToFirebase({
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: await get('currentSchool'),
+      teacherClass:   await get('teacherClass'),
+      teacherSection: await get('teacherSection')
+    });
+    console.log('✅ Initial Firebase backup successful');
+  } catch (err) {
+    console.error('⚠️ Initial Firebase backup failed:', err);
+  }
+})();
+
+// Then schedule it every 5 minutes:
+setInterval(async () => {
+  try {
+    await writeBackupToFirebase({
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: await get('currentSchool'),
+      teacherClass:   await get('teacherClass'),
+      teacherSection: await get('teacherSection')
+    });
+    console.log('✅ Scheduled Firebase backup successful');
+  } catch (err) {
+    console.error('⚠️ Scheduled Firebase backup failed:', err);
+  }
+}, 5 * 60 * 1000);
   
   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
