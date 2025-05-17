@@ -1,15 +1,16 @@
-// Import only the bits you need
+// firebase configuration 
 import { initializeApp }         from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-// ←– Copy your Firebase config from the console
+
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
   projectId: "attandace-management",
-  storageBucket: "attandace-management.firebasestorage.app",
+  storageBucket: "attandace-management.appspot.com",
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B"
+  measurementId: "G-V2MY85R73B",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
 };
 
 // Initialize Firebase
@@ -505,8 +506,51 @@ resetBtn.addEventListener('click', async () => {
 
   // Initialize on load
   await loadSetup();
+
+  // --- 5. FIREBASE AUTO-BACKUP EVERY 5 MINUTES ---
+(async () => {
+  try {
+    await writeBackupToFirebase({
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: await get('currentSchool'),
+      teacherClass:   await get('teacherClass'),
+      teacherSection: await get('teacherSection')
+    });
+    console.log('✅ Initial Firebase backup successful');
+  } catch (err) {
+    console.error('⚠️ Initial Firebase backup failed:', err);
+  }
+})();
+
+// Then schedule it every 5 minutes:
+setInterval(async () => {
+  try {
+    await writeBackupToFirebase({
+      students,
+      attendanceData,
+      paymentsData,
+      fineRates,
+      eligibilityPct,
+      lastAdmNo,
+      schools,
+      currentSchool: await get('currentSchool'),
+      teacherClass:   await get('teacherClass'),
+      teacherSection: await get('teacherSection')
+    });
+    console.log('✅ Scheduled Firebase backup successful');
+  } catch (err) {
+    console.error('⚠️ Scheduled Firebase backup failed:', err);
+  }
+}, 5 * 60 * 1000);
+  });
   
-  // --- 6. COUNTERS & UTILS ---
+   // --- 6. COUNTERS & UTILS ---
   function animateCounters() {
     document.querySelectorAll('.number').forEach(span => {
       const target = +span.dataset.target; let count = 0; const step = Math.max(1, target/100);
