@@ -1,3 +1,35 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  authDomain: "attandace-management.firebaseapp.com",
+  projectId: "attandace-management",
+  storageBucket: "attandace-management.firebasestorage.app",
+  messagingSenderId: "222685278846",
+  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+  measurementId: "G-V2MY85R73B"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Firestore save function
+async function saveAttendanceToFirestore(adm, status, date) {
+  try {
+    await addDoc(collection(db, "attendance"), {
+      adm: adm,
+      status: status,
+      date: date,
+      timestamp: new Date()
+    });
+  } catch (e) {
+    console.error("Firestore save error:", e);
+  }
+}
+
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
@@ -40,7 +72,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // --- 1. IndexedDB helpers (idb-keyval) ---
   if (!window.idbKeyval) { console.error('idb-keyval not found'); return; }
-  const { get, set } = window.idbKeyval;
+  const { get, set, clear } = window.idbKeyval;
+  const save = (k, v) => set(k, v);
   const save = (k, v) => set(k, v);
 
   // --- 2. State & Defaults ---
@@ -51,6 +84,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   let fineRates      = await get('fineRates')       || { A:50, Lt:20, L:10, HD:30 };
   let eligibilityPct = await get('eligibilityPct')  || 75;
   let analyticsFilterOptions = ['all'], analyticsDownloadMode = 'combined';
+  let schools = await get('schools') || [];
   let lastAnalyticsStats = [], lastAnalyticsRange = { from: null, to: null }, lastAnalyticsShare = '';
 
   async function genAdmNo() {
@@ -109,7 +143,7 @@ $('downloadAnalytics').onclick = async () => {
     return;
   }
 
-  const setupHeader = $('setupText').textContent; // e.g.: "My School 🏫 | Class: 5 | Section: A"
+  const setupHeader = $('setupText').textContent; // e.g.: "My School ðŸ« | Class: 5 | Section: A"
 
   if (analyticsDownloadMode === 'combined') {
     const doc = new jspdf.jsPDF();
@@ -122,8 +156,8 @@ $('downloadAnalytics').onclick = async () => {
     doc.setFontSize(12);
     doc.text(setupHeader, 14, 24);
     doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-    const fineLine = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
-    const eligLine = `Eligibility: ≥ ${eligibilityPct}%`;
+    const fineLine = `Fines â€“ Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
+    const eligLine = `Eligibility: â‰¥ ${eligibilityPct}%`;
     doc.text(fineLine, 14, 40);
     doc.text(eligLine, 14, 46);
 
@@ -150,8 +184,8 @@ $('downloadAnalytics').onclick = async () => {
       doc.setFontSize(12);
       doc.text(setupHeader, 14, 24);
       doc.text(`Period: ${lastAnalyticsRange.from} to ${lastAnalyticsRange.to}`, 14, 32);
-      const fineLineInd = `Fines – Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
-      const eligLineInd = `Eligibility: ≥ ${eligibilityPct}%`;
+      const fineLineInd = `Fines â€“ Absent: PKR ${fineRates.A}, Late: PKR ${fineRates.Lt}, Leave: PKR ${fineRates.L}, Half-Day: PKR ${fineRates.HD}`;
+      const eligLineInd = `Eligibility: â‰¥ ${eligibilityPct}%`;
       doc.text(fineLineInd, 14, 40);
       doc.text(eligLineInd, 14, 46);
 
@@ -186,7 +220,7 @@ $('shareAnalytics').onclick = () => {
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, '_blank');
 };
-  // --- 1) File System Access–based Backup & Auto-Save ---
+  // --- 1) File System Accessâ€“based Backup & Auto-Save ---
 
 const chooseBackupFolderBtn = document.getElementById('chooseBackupFolder');
 let backupParentHandle = null;
@@ -222,7 +256,7 @@ async function writeBackupFile() {
     await writable.write(JSON.stringify(data, null, 2));
     await writable.close();
 
-    console.log('✅ Backup written to "Attendance Backup/attendance-backup.json"');
+    console.log('âœ… Backup written to "Attendance Backup/attendance-backup.json"');
   } catch (err) {
     console.error('Backup write failed:', err);
   }
@@ -250,14 +284,14 @@ chooseBackupFolderBtn.addEventListener('click', async () => {
     if (backupParentHandle) {
       const change = confirm('A backup folder is already selected. Do you want to choose a different one?');
       if (!change) return;
-      // clear existing interval so we don’t double-schedule
+      // clear existing interval so we donâ€™t double-schedule
       clearInterval(backupIntervalId);
     }
 
     alert('Please select a folder to store your Attendance backups.');
     backupParentHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
     await set('backupParentHandle', backupParentHandle);
-    alert('✅ Backup folder selected! Automatic backups will now run every 5 minutes.');
+    alert('âœ… Backup folder selected! Automatic backups will now run every 5 minutes.');
 
     // run one immediately
     await writeBackupFile();
@@ -266,7 +300,7 @@ chooseBackupFolderBtn.addEventListener('click', async () => {
 
   } catch (err) {
     console.error('Backup setup failed:', err);
-    alert('❌ Could not set up automatic backup—see console for details.');
+    alert('âŒ Could not set up automatic backupâ€”see console for details.');
   }
 });
 
@@ -301,7 +335,7 @@ fileInput.addEventListener('change', async e => {
       save('teacherSection',  obj.teacherSection || null)
     ]);
 
-    alert('Data restored successfully. Reloading the page to apply settings…');
+    alert('Data restored successfully. Reloading the page to apply settingsâ€¦');
     location.reload();
   } catch {
     alert('Invalid backup file!');
@@ -315,7 +349,7 @@ resetBtn.addEventListener('click', async () => {
   if (!confirm('Are you sure you want to DELETE all data? This cannot be undone.')) return;
   try {
     await clear();
-    alert('All data cleared. Reloading page…');
+    alert('All data cleared. Reloading pageâ€¦');
     location.reload();
   } catch (err) {
     console.error('Reset failed', err);
@@ -348,11 +382,11 @@ resetBtn.addEventListener('click', async () => {
     await Promise.all([ save('fineRates', fineRates), save('eligibilityPct', eligibilityPct) ]);
     settingsCard.innerHTML = `
       <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+        <p><strong>Fine â€“ Absent:</strong> PKR ${fineRates.A}</p>
+        <p><strong>Fine â€“ Late:</strong> PKR ${fineRates.Lt}</p>
+        <p><strong>Fine â€“ Leave:</strong> PKR ${fineRates.L}</p>
+        <p><strong>Fine â€“ Half-Day:</strong> PKR ${fineRates.HD}</p>
+        <p><strong>Eligibility % (â‰¥):</strong> ${eligibilityPct}%</p>
       </div>`;
     hide(formDiv, saveSettings, ...inputs);
     show(settingsCard, editSettings);
@@ -446,7 +480,7 @@ resetBtn.addEventListener('click', async () => {
     if (curSchool && curClass && curSection) {
       classSelect.value   = curClass;
       sectionSelect.value = curSection;
-      setupText.textContent = `${curSchool} 🏫 | Class: ${curClass} | Section: ${curSection}`;
+      setupText.textContent = `${curSchool} ðŸ« | Class: ${curClass} | Section: ${curSection}`;
       setupForm.classList.add('hidden');
       setupDisplay.classList.remove('hidden');
       renderStudents();
@@ -563,7 +597,7 @@ resetBtn.addEventListener('click', async () => {
           c=$('parentContact').value.trim(),o=$('parentOccupation').value.trim(),
           a=$('parentAddress').value.trim(),cl=$('teacherClassSelect').value,sec=$('teacherSectionSelect').value;
     if(!n||!p||!c||!o||!a){alert('All fields required');return;}
-    if(!/^\d{7,15}$/.test(c)){alert('Contact 7–15 digits');return;}
+    if(!/^\d{7,15}$/.test(c)){alert('Contact 7â€“15 digits');return;}
     const adm=await genAdmNo();
     students.push({name:n,adm,parent:p,contact:c,occupation:o,address:a,cls:cl,sec});
     await save('students',students); renderStudents(); updateCounters(); resetViews();
