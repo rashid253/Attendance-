@@ -23,23 +23,31 @@ async function writeBackupToFirebase(data) {
   await set(ref(database, `attendanceBackups/${ts}`), data);
   console.log(`✅ Backup saved at ${new Date(ts).toISOString()}`);
 }
+
 // --- Restore backup from Firebase ---
 async function restoreBackupFromFirebase() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('User not logged in');
+  // Ensure Firebase Auth is initialized:
+  // const auth = getAuth(app);
 
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('User not logged in');
+  }
+
+  // Point to the user’s backup node
   const backupRef = ref(database, `attendanceBackups/${user.uid}`);
+
+  // Fetch the snapshot
   const snapshot = await get(backupRef);
 
-  if (!snapshot.exists()) return null;
+  // If no backup exists, return null
+  if (!snapshot.exists()) {
+    return null;
+  }
 
+  // Otherwise return the stored data object
   return snapshot.val();
 }
-
-// Replace your old writeBackupFile(...) calls:
-//   writeBackupFile(attendanceData);
-// with:
-//   writeBackupToFirebase(attendanceData);
 // app.js
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -83,23 +91,35 @@ let schools        = await get('schools')         || [];
     return String(lastAdmNo).padStart(4, '0');
   }
   
-// --- 2.1. Auto-restore from Firebase if local data is missing ---
-if (!students?.length || !Object.keys(attendanceData).length) {
+  // --- 2.1. Auto-restore from Firebase if local data is missing ---
+if (!students.length || !Object.keys(attendanceData).length) {
   try {
     const restored = await restoreBackupFromFirebase();
-
     if (restored) {
-      students        = restored.students        || [];
-      attendanceData  = restored.attendanceData  || {};
-      paymentsData    = restored.paymentsData    || {};
-      fineRates       = restored.fineRates       || { A:50, Lt:20, L:10, HD:30 };
-      eligibilityPct  = restored.eligibilityPct  || 75;
-      lastAdmNo       = restored.lastAdmNo       || 0;
-      schools         = restored.schools         || [];
-      const currentSchool  = restored.currentSchool;
-      const teacherClass   = restored.teacherClass;
-      const teacherSection = restored.teacherSection;
+      // Overwrite local state with restored values (or defaults)
+      students       = restored.students       || [];
+      attendanceData = restored.attendanceData || {};
+      paymentsData   = restored.paymentsData   || {};
+      fineRates      = restored.fineRates      || { A:50, Lt:20, L:10, HD:30 };
+      eligibilityPct = restored.eligibilityPct || 75;
+      lastAdmNo      = restored.lastAdmNo      || 0;
+      schools        = restored.schools        || [];
 
+      // Persist restored data back into IndexedDB
+      await set('students',        students);
+      await set('attendanceData',  attendanceData);
+      await set('paymentsData',    paymentsData);
+      await set('fineRates',       fineRates);
+      await set('eligibilityPct',  eligibilityPct);
+      await set('lastAdmissionNo', lastAdmNo);
+      await set('schools',         schools);
+
+      console.log('✅ Restored data from Firebase backup');
+    }
+  } catch (err) {
+    console.error('⚠️ Restore from Firebase failed:', err);
+  }
+}
       // Save to IndexedDB for next time
       await set('students', students);
       await set('attendanceData', attendanceData);
