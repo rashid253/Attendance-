@@ -494,6 +494,37 @@ resetBtn.addEventListener('click', async () => {
       save('teacherSection', selSection)
     ]);
     await loadSetup();
+    // --- 5. FIREBASE AUTO-BACKUP EVERY 5 MINUTES ---
+// Send one backup now:
+writeBackupToFirebase({
+  students,
+  attendanceData,
+  paymentsData,
+  fineRates,
+  eligibilityPct,
+  lastAdmNo,
+  schools,
+  currentSchool: await get('currentSchool'),
+  teacherClass:   await get('teacherClass'),
+  teacherSection: await get('teacherSection')
+});
+
+// Then schedule it every 5 minutes:
+setInterval(async () => {
+  const data = {
+    students,
+    attendanceData,
+    paymentsData,
+    fineRates,
+    eligibilityPct,
+    lastAdmNo,
+    schools,
+    currentSchool: await get('currentSchool'),
+    teacherClass:   await get('teacherClass'),
+    teacherSection: await get('teacherSection')
+  };
+  await writeBackupToFirebase(data);
+}, 5 * 60 * 1000);
   };
 
   // Edit button: reopen the form
