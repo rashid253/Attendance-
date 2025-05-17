@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "attendanceBackups": {
+      "$backupId": {
+        ".read":  "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
