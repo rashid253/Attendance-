@@ -1,4 +1,4 @@
-// app.js (fixed ordering of DOM elements so “studentsBody” is defined before use)
+// app.js (analyticsStatusColors added; ensures charts/buttons appear below the table)
 // ------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -12,7 +12,7 @@ import {
 // IndexedDB helpers (idb-keyval is loaded via IIFE in HTML)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase config & init (your actual config here)
+// Firebase config & init (replace with your actual config)
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -27,7 +27,7 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
-// Local state (will be populated from IndexedDB or defaults)
+// Local state (will be loaded from IndexedDB or defaults)
 let students       = [];
 let attendanceData = {};
 let paymentsData   = {};
@@ -39,7 +39,7 @@ let currentSchool  = null;
 let teacherClass   = null;
 let teacherSection = null;
 
-// Load from IndexedDB if present
+// Initialize from IndexedDB if present
 async function initLocalState() {
   students       = (await idbGet("students"))       || [];
   attendanceData = (await idbGet("attendanceData")) || {};
@@ -79,7 +79,7 @@ async function syncToFirebase() {
 let loadSetup;
 
 window.addEventListener("DOMContentLoaded", async () => {
-  // Shorthand to get element by ID
+  // Shorthand selector and show/hide helpers
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
@@ -87,8 +87,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Load initial state from IndexedDB
   await initLocalState();
 
-  // Cache all DOM elements *before* defining renderStudents/loadSetup
-  // — so that variables like studentsBody exist by the time functions use them.
+  // Cache DOM elements BEFORE defining functions that use them
   const schoolInput            = $("schoolInput");
   const schoolSelect           = $("schoolSelect");
   const classSelect            = $("teacherClassSelect");
@@ -328,14 +327,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   await loadSetup();
 
   // ===== 2. FINANCIAL SETTINGS =====
-  // Initially populate inputs
   fineAbsentInput.value     = fineRates.A;
   fineLateInput.value       = fineRates.Lt;
   fineLeaveInput.value      = fineRates.L;
   fineHalfDayInput.value    = fineRates.HD;
   eligibilityPctInput.value = eligibilityPct;
 
-  // Create “settingsCard” to display saved settings
   const settingsCard = document.createElement("div");
   settingsCard.id = "settingsCard";
   settingsCard.className = "card hidden";
@@ -653,7 +650,23 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ===== 7. ANALYTICS =====
+
+  // Define status names & colors for analytics charts
+  const analyticsStatusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
+  const analyticsStatusColors = {
+    P: getComputedStyle(document.documentElement).getPropertyValue("--success").trim(),
+    A: getComputedStyle(document.documentElement).getPropertyValue("--danger").trim(),
+    Lt: getComputedStyle(document.documentElement).getPropertyValue("--warning").trim(),
+    HD: "#FF9800",
+    L: getComputedStyle(document.documentElement).getPropertyValue("--info").trim(),
+  };
+
   let barChart, pieChart;
+  let analyticsFilterOptions = ["all"];
+  let analyticsDownloadMode  = "combined";
+  let lastAnalyticsStats     = [];
+  let lastAnalyticsRange     = { from: null, to: null };
+  let lastAnalyticsShare     = "";
 
   analyticsFilterBtn.onclick = () => show(analyticsFilterModal);
   analyticsFilterClose.onclick = () => hide(analyticsFilterModal);
@@ -690,12 +703,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     [analyticsDateInput, analyticsMonthInput, semesterStartInput, semesterEndInput, yearStartInput, instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn].forEach(x => x.classList.add("hidden"));
     resetAnalyticsBtn.classList.add("hidden");
   };
-
-  let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode  = "combined"; 
-  let lastAnalyticsStats     = [];
-  let lastAnalyticsRange     = { from: null, to: null };
-  let lastAnalyticsShare     = "";
 
   loadAnalyticsBtn.onclick = () => {
     if (analyticsTargetSelect.value === "student" && !analyticsSearchInput.value.trim()) {
