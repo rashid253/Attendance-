@@ -1,4 +1,4 @@
-// app.js (with resetViews defined)
+// app.js (updated with more backup logging and individual‐PDF analytics download)
 // ----------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -69,6 +69,7 @@ async function syncToFirebase() {
   };
   try {
     await dbSet(appDataRef, payload);
+    console.log("✅ Synced data to Firebase");
   } catch (err) {
     console.error("Firebase sync failed:", err);
   }
@@ -604,7 +605,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     HD: "#FF9800",
     L: getComputedStyle(document.documentElement).getPropertyValue("--info").trim(),
   };
-  let analyticsFilterOptions = ["all"], analyticsDownloadMode = "combined";
+  let analyticsFilterOptions = ["all"];
+  let analyticsDownloadMode = "combined"; // can be "combined" or "individual"
   let lastAnalyticsStats = [], lastAnalyticsRange = { from:null, to:null }, lastAnalyticsShare = "";
 
   $("analyticsFilterBtn").onclick = () => show($("analyticsFilterModal"));
@@ -764,23 +766,60 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Download & Share Analytics
   $("downloadAnalytics").onclick = async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
-    const doc = new jspdf.jsPDF(), w = doc.internal.pageSize.getWidth();
-    const { from, to } = lastAnalyticsRange;
-    doc.setFontSize(18); doc.text("Attendance Analytics",14,16);
-    doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w-14, 16, { align:"right" });
-    doc.setFontSize(12); doc.text($("setupText").textContent,14,24);
-    const table = document.createElement("table");
-    table.innerHTML = `
-      <tr><th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th><th>Outstanding</th><th>Status</th></tr>
-      ${lastAnalyticsStats.map((st,i)=>`<tr>
-        <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td>
-        <td>${st.total}</td><td>${st.total?((st.P/st.total)*100).toFixed(1):"0.0"}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>
-      </tr>`).join("")}`;
-    doc.autoTable({ startY:30, html: table });
-    const fileName = `analytics_${from}_to_${to}.pdf`, blob = doc.output("blob");
-    doc.save(fileName);
-    await sharePdf(blob, fileName, "Attendance Analytics");
+
+    if (analyticsDownloadMode === "combined") {
+      // Combined PDF logic
+      const doc = new jspdf.jsPDF(), w = doc.internal.pageSize.getWidth();
+      const { from, to } = lastAnalyticsRange;
+      doc.setFontSize(18); doc.text("Attendance Analytics",14,16);
+      doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w-14, 16, { align:"right" });
+      doc.setFontSize(12); doc.text($("setupText").textContent,14,24);
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <tr><th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th><th>Outstanding</th><th>Status</th></tr>
+        ${lastAnalyticsStats.map((st,i)=>`<tr>
+          <td>${i+1}</td><td>${st.adm}</td><td>${st.name}</td><td>${st.P}</td><td>${st.A}</td><td>${st.Lt}</td><td>${st.HD}</td><td>${st.L}</td>
+          <td>${st.total}</td><td>${st.total?((st.P/st.total)*100).toFixed(1):"0.0"}%</td><td>PKR ${st.outstanding}</td><td>${st.status}</td>
+        </tr>`).join("")}`;
+      doc.autoTable({ startY:30, html: table });
+      const fileName = `analytics_${from}_to_${to}.pdf`, blob = doc.output("blob");
+      doc.save(fileName);
+      await sharePdf(blob, fileName, "Attendance Analytics");
+
+    } else {
+      // Individual PDF per student
+      const { from, to } = lastAnalyticsRange;
+      for (let i = 0; i < lastAnalyticsStats.length; i++) {
+        const st = lastAnalyticsStats[i];
+        const doc = new jspdf.jsPDF();
+        const w = doc.internal.pageSize.getWidth();
+        doc.setFontSize(18);
+        doc.text("Attendance Analytics (Individual)", 14, 16);
+        doc.setFontSize(10);
+        doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
+        doc.setFontSize(12);
+        doc.text($("setupText").textContent, 14, 24);
+        doc.setFontSize(14);
+        doc.text(`Student: ${st.name} (Adm#: ${st.adm})`, 14, 36);
+        doc.setFontSize(12);
+        doc.text(`Present: ${st.P}`, 14, 50);
+        doc.text(`Absent: ${st.A}`, 60, 50);
+        doc.text(`Late: ${st.Lt}`, 14, 64);
+        doc.text(`Half-Day: ${st.HD}`, 60, 64);
+        doc.text(`Leave: ${st.L}`, 14, 78);
+        doc.text(`Total Days Marked: ${st.total}`, 14, 92);
+        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
+        doc.text(`Attendance %: ${pct}%`, 14, 106);
+        doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 120);
+        doc.text(`Status: ${st.status}`, 14, 134);
+        const fileName = `analytics_${st.adm}_${from}_to_${to}.pdf`;
+        const blob = doc.output("blob");
+        doc.save(fileName);
+        await sharePdf(blob, fileName, `Analytics – ${st.name}`);
+      }
+    }
   };
+
   $("shareAnalytics").onclick = () => {
     if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
@@ -978,7 +1017,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const writer = await fileHandle.createWritable();
       await writer.write(JSON.stringify(backupData,null,2));
       await writer.close();
-      console.log("Backup written:", fileName);
+      console.log("🗄️ Backup written to folder:", fileName);
     } catch (err) {
       console.error("Backup failed:", err);
     }
