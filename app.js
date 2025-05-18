@@ -646,6 +646,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   let analyticsFilterOptions = ["all"];
   let analyticsDownloadMode = "combined"; // can be "combined" or "individual"
   let lastAnalyticsStats = [], lastAnalyticsRange = { from:null, to:null }, lastAnalyticsShare = "";
+  let barChart = null, pieChart = null;
 
   $("analyticsFilterBtn").onclick = () => show($("analyticsFilterModal"));
   $("analyticsFilterClose").onclick = () => hide($("analyticsFilterModal"));
@@ -772,7 +773,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // Bar chart
     const barCtx = barChartCanvas.getContext("2d");
-    barChart?.destroy();
+    if (barChart && typeof barChart.destroy === "function") barChart.destroy();
     barChart = new Chart(barCtx, {
       type: "bar",
       data: {
@@ -789,7 +790,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       return acc;
     }, { P:0, A:0, Lt:0, HD:0, L:0 });
     const pieCtx = pieChartCanvas.getContext("2d");
-    pieChart?.destroy();
+    if (pieChart && typeof pieChart.destroy === "function") pieChart.destroy();
     pieChart = new Chart(pieCtx, {
       type: "pie",
       data: {
@@ -1082,7 +1083,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         teacherSection,
       };
       const now = new Date();
-      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
+      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"00")}-${String(now.getMinutes()).padStart(2,"00")}.json`;
       const fileHandle = await backupHandle.getFileHandle(fileName,{ create:true });
       const writer = await fileHandle.createWritable();
       await writer.write(JSON.stringify(backupData,null,2));
