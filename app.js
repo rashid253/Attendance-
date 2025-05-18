@@ -1,5 +1,5 @@
-// app.js (analyticsStatusColors added; ensures charts/buttons appear below the table)
-// ------------------------------------------------------------------------------
+// app.js (updated to correctly show graphs and download/share buttons in Analytics section)
+// -------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
@@ -160,6 +160,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const pieChartCanvas         = $("pieChart");
   const downloadAnalyticsBtn   = $("downloadAnalytics");
   const shareAnalyticsBtn      = $("shareAnalytics");
+  const graphsDiv              = $("graphs");            // parent container for canvases
+  const analyticsActionsDiv    = $("analyticsActions");  // parent container for buttons
 
   const registerMonthInput     = $("registerMonth");
   const loadRegisterBtn        = $("loadRegister");
@@ -209,7 +211,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     hide(
       attendanceBodyDiv, saveAttendanceBtn, resetAttendanceBtn,
       attendanceSummaryDiv, downloadAttendanceBtn, shareAttendanceBtn,
-      instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn,
+      instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv,
       registerTableWrapper, changeRegisterBtn, saveRegisterBtn, downloadRegisterBtn, shareRegisterBtn
     );
     show(loadRegisterBtn);
@@ -680,14 +682,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   analyticsTargetSelect.onchange = () => {
     analyticsTypeSelect.disabled = false;
     [analyticsSectionSelect, analyticsSearchInput].forEach(x => x.classList.add("hidden"));
-    [instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn].forEach(x => x.classList.add("hidden"));
+    [instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv].forEach(x => x.classList.add("hidden"));
     if (analyticsTargetSelect.value === "section") analyticsSectionSelect.classList.remove("hidden");
     if (analyticsTargetSelect.value === "student") analyticsSearchInput.classList.remove("hidden");
   };
 
   analyticsTypeSelect.onchange = () => {
     [analyticsDateInput, analyticsMonthInput, semesterStartInput, semesterEndInput, yearStartInput].forEach(x => x.classList.add("hidden"));
-    [instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn].forEach(x => x.classList.add("hidden"));
+    [instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv].forEach(x => x.classList.add("hidden"));
     resetAnalyticsBtn.classList.remove("hidden");
     switch (analyticsTypeSelect.value) {
       case "date": analyticsDateInput.classList.remove("hidden"); break;
@@ -700,7 +702,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   resetAnalyticsBtn.onclick = (e) => {
     e.preventDefault();
     analyticsTypeSelect.value = "";
-    [analyticsDateInput, analyticsMonthInput, semesterStartInput, semesterEndInput, yearStartInput, instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn].forEach(x => x.classList.add("hidden"));
+    [analyticsDateInput, analyticsMonthInput, semesterStartInput, semesterEndInput, yearStartInput, instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv].forEach(x => x.classList.add("hidden"));
     resetAnalyticsBtn.classList.add("hidden");
   };
 
@@ -808,7 +810,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
 
     instructionsDiv.textContent = `Period: ${from} to ${to}`;
-    show(instructionsDiv, analyticsContainer, barChartCanvas, pieChartCanvas, downloadAnalyticsBtn, shareAnalyticsBtn);
+    // Show parent containers (not just canvases/buttons)
+    show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
 
     barChart?.destroy();
     barChart = new Chart(barChartCanvas.getContext("2d"), {
@@ -907,7 +910,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   shareAnalyticsBtn.onclick = () => {
     if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
   };
 
   // ===== 8. ATTENDANCE REGISTER =====
@@ -929,7 +932,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const rows = Array.from(registerBodyTbody.children).map(tr =>
         Array.from(tr.children).map(td => td.querySelector(".status-text")?.textContent || td.textContent).join(" ")
       );
-      window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank");
+      window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank`);
     };
   }
 
