@@ -1,4 +1,4 @@
-// app.js (fully integrated, with Firebase sync on attendance save and combined “individual” analytics PDF)
+// app.js (fully integrated, with Firebase sync on attendance save and analytics charts fixed)
 // ----------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -75,8 +75,11 @@ async function syncToFirebase() {
   }
 }
 
-// Placeholder for loadSetup (defined inside DOMContentLoaded)
-let loadSetup;
+let loadSetup;  // will be defined inside DOMContentLoaded
+
+// Declare chart variables so they exist before use
+let barChart = null;
+let pieChart = null;
 
 window.addEventListener("DOMContentLoaded", async () => {
   // Simplified selectors and show/hide helpers
@@ -508,12 +511,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!doneEditing.classList.contains("hidden")) { alert("Finish editing"); return; }
     await idbSet("students", students);
     await syncToFirebase();
-    hide(document.querySelector("#student-registration .row-inline"), editSelected, deleteSelected, selectAllStudents, saveRegistration);
+    hide(document.querySelector("#student-registration .row INLINE"), editSelected, deleteSelected, selectAllStudents, saveRegistration);
     show(editRegistration, shareRegistration, downloadRegistration);
     renderStudents(); updateCounters();
   };
   editRegistration.onclick = () => {
-    show(document.querySelector("#student-registration .row-inline"), selectAllStudents, editSelected, deleteSelected, saveRegistration);
+    show(document.querySelector("#student-registration .row INLINE"), selectAllStudents, editSelected, deleteSelected, saveRegistration);
     hide(editRegistration, shareRegistration, downloadRegistration);
     renderStudents(); updateCounters();
   };
@@ -575,8 +578,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       attendanceData[date][s.adm] = selBtn ? selBtn.textContent : "A";
     });
     await idbSet("attendanceData", attendanceData);
-
-    // **Ensure immediate Firebase sync**
+    // Ensure immediate Firebase sync
     await syncToFirebase();
     console.log("✅ Attendance data synced to Firebase");
 
@@ -728,31 +730,38 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderAnalytics(stats, from, to);
   };
 
+  // Replace renderAnalytics with fixed version:
   function renderAnalytics(stats, from, to) {
+    // 1) Filter according to any checkboxes…
     let filtered = stats;
     if (!analyticsFilterOptions.includes("all")) {
-      filtered = stats.filter(st=> analyticsFilterOptions.some(opt=>{
-        switch(opt){
-          case "registered": return true;
-          case "attendance": return st.total>0;
-          case "fine": return st.A>0||st.Lt>0||st.L>0||st.HD>0;
-          case "cleared": return st.outstanding===0;
-          case "debarred": return st.status==="Debarred";
-          case "eligible": return st.status==="Eligible";
-        }
-      }));
+      filtered = stats.filter(st => 
+        analyticsFilterOptions.some(opt => {
+          switch (opt) {
+            case "registered": return true;
+            case "attendance": return st.total > 0;
+            case "fine":       return st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0;
+            case "cleared":    return st.outstanding === 0;
+            case "debarred":   return st.status === "Debarred";
+            case "eligible":   return st.status === "Eligible";
+          }
+        })
+      );
     }
 
-    const thead = $("analyticsTable").querySelector("thead tr");
-    thead.innerHTML = ["#","Adm#","Name","P","A","Lt","HD","L","Total","%","Outstanding","Status"]
-      .map(h=>`<th>${h}</th>`).join("");
-    const tbody = $("analyticsBody");
+    // 2) Rebuild the HTML table’s header and body…
+    const theadRow = document.querySelector("#analyticsTable thead tr");
+    theadRow.innerHTML = [
+      "#", "Adm#", "Name", "P", "A", "Lt", "HD", "L", "Total", "%", "Outstanding", "Status"
+    ].map(h => `<th>${h}</th>`).join("");
+
+    const tbody = document.getElementById("analyticsBody");
     tbody.innerHTML = "";
-    filtered.forEach((st,i)=>{
-      const pct = st.total ? ((st.P/st.total)*100).toFixed(1) : "0.0";
+    filtered.forEach((st, i) => {
+      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${i+1}</td>
+        <td>${i + 1}</td>
         <td>${st.adm}</td>
         <td>${st.name}</td>
         <td>${st.P}</td>
@@ -763,49 +772,74 @@ window.addEventListener("DOMContentLoaded", async () => {
         <td>${st.total}</td>
         <td>${pct}%</td>
         <td>PKR ${st.outstanding}</td>
-        <td>${st.status}</td>`;
+        <td>${st.status}</td>
+      `;
       tbody.appendChild(tr);
     });
 
+    // 3) Show the analytics section (including the graphs div)
     instructionsDiv.textContent = `Period: ${from} to ${to}`;
     show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
 
-    // Bar chart
+    // 4) Bar chart: destroy any existing instance, then recreate
     const barCtx = barChartCanvas.getContext("2d");
-    barChart?.destroy();
+    if (barChart && typeof barChart.destroy === "function") {
+      barChart.destroy();
+    }
     barChart = new Chart(barCtx, {
       type: "bar",
       data: {
-        labels: filtered.map(st=>st.name),
-        datasets: [{ label:"% Present", data: filtered.map(st=>st.total? (st.P/st.total)*100 : 0),
-          backgroundColor: filtered.map(()=>analyticsStatusColors.P) }],
+        labels: filtered.map(st => st.name),
+        datasets: [{
+          label: "% Present",
+          data: filtered.map(st => st.total ? (st.P / st.total) * 100 : 0),
+          backgroundColor: filtered.map(() => analyticsStatusColors.P)
+        }]
       },
-      options: { scales: { y: { beginAtZero:true, max:100 } } },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100
+          }
+        }
+      }
     });
 
-    // Pie chart
-    const totals = filtered.reduce((acc,st)=> {
-      acc.P += st.P; acc.A += st.A; acc.Lt += st.Lt; acc.HD += st.HD; acc.L += st.L;
+    // 5) Pie chart: destroy old then recreate
+    const totals = filtered.reduce((acc, st) => {
+      acc.P  += st.P;
+      acc.A  += st.A;
+      acc.Lt += st.Lt;
+      acc.HD += st.HD;
+      acc.L  += st.L;
       return acc;
-    }, { P:0, A:0, Lt:0, HD:0, L:0 });
+    }, { P: 0, A: 0, Lt: 0, HD: 0, L: 0 });
+
     const pieCtx = pieChartCanvas.getContext("2d");
-    pieChart?.destroy();
+    if (pieChart && typeof pieChart.destroy === "function") {
+      pieChart.destroy();
+    }
     pieChart = new Chart(pieCtx, {
       type: "pie",
       data: {
-        labels: Object.values(analyticsStatusNames),
+        labels: Object.values(analyticsStatusNames), // ["Present","Absent","Late","Half-Day","Leave"]
         datasets: [{
-          data: Object.keys(analyticsStatusNames).map(code=>totals[code]),
-          backgroundColor: Object.keys(analyticsStatusNames).map(code=>analyticsStatusColors[code]),
-        }],
-      },
+          data: Object.keys(analyticsStatusNames).map(code => totals[code]),
+          backgroundColor: Object.keys(analyticsStatusNames).map(code => analyticsStatusColors[code])
+        }]
+      }
     });
 
-    lastAnalyticsShare = `Attendance Analytics (${from} to ${to})\n` +
-      filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${st.total? (st.P/st.total*100).toFixed(1):"0.0"}% / PKR ${st.outstanding}`).join("\n");
+    // 6) Prepare the share‐via‐WhatsApp text
+    lastAnalyticsShare = 
+      `Attendance Analytics (${from} to ${to})\n` +
+      filtered.map((st, i) => {
+        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
+        return `${i + 1}. ${st.adm} ${st.name}: ${pct}% / PKR ${st.outstanding}`;
+      }).join("\n");
   }
 
-  // Download & Share Analytics
   $("downloadAnalytics").onclick = async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
 
@@ -829,12 +863,11 @@ window.addEventListener("DOMContentLoaded", async () => {
       await sharePdf(blob, fileName, "Attendance Analytics");
 
     } else {
-      // === Individual Mode: ہر صفحے پر ایک student کی Receipt، جس میں Fine Rates, Eligibility اور HOD Signature ہو ===
+      // Individual receipts PDF
       const doc = new jspdf.jsPDF();
       const w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
 
-      // Fine Rates اور Eligibility کا text تیار کریں
       const fineRatesText =
         `Fine Rates:\n` +
         `  Absent  (PKR): ${fineRates.A}\n` +
@@ -844,21 +877,15 @@ window.addEventListener("DOMContentLoaded", async () => {
         `Eligibility ≥ ${eligibilityPct}%\n`;
 
       lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage(); // اگر پہلے صفحے کے بعد ہو تو نئی page
-
+        if (i > 0) doc.addPage();
         doc.setFontSize(18);
         doc.text("Attendance Analytics (Individual Receipt)", 14, 16);
-
         doc.setFontSize(10);
         doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
-
         doc.setFontSize(12);
         doc.text(setupText.textContent, 14, 28);
-        // مثال: “Alpha School | Class: 3 | Section: A”
-
         doc.setFontSize(14);
         doc.text(`Student: ${st.name}  (Adm#: ${st.adm})`, 14, 44);
-
         doc.setFontSize(12);
         doc.text(`Present   : ${st.P}`, 14, 60);
         doc.text(`Absent    : ${st.A}`, 80, 60);
@@ -866,13 +893,10 @@ window.addEventListener("DOMContentLoaded", async () => {
         doc.text(`Half-Day  : ${st.HD}`, 80, 74);
         doc.text(`Leave     : ${st.L}`, 14, 88);
         doc.text(`Total Days Marked: ${st.total}`, 14, 102);
-
         const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
         doc.text(`Attendance %: ${pct}%`, 14, 116);
-
         doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 130);
 
-        // ==== Fine Rates & Eligibility block شروع کریں ====
         const blockStartY = 148;
         doc.setFontSize(11);
         const lines = fineRatesText.split("\n");
@@ -880,13 +904,11 @@ window.addEventListener("DOMContentLoaded", async () => {
           doc.text(14, blockStartY + idx * 6, ln);
         });
 
-        // ==== HOD Signature کے لیے لائن ====
         const signY = blockStartY + lines.length * 6 + 10;
         doc.setFontSize(12);
         doc.text("_______________________________", 14, signY);
         doc.text("     HOD Signature", 14, signY + 8);
 
-        // ==== Receipt footer ====
         const footerY = signY + 30;
         doc.setFontSize(10);
         doc.text("Receipt generated by Attendance Mgmt App", w - 14, footerY, { align: "right" });
@@ -1082,7 +1104,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         teacherSection,
       };
       const now = new Date();
-      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
+      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"00")}-${String(now.getMinutes()).padStart(2,"00")}.json`;
       const fileHandle = await backupHandle.getFileHandle(fileName,{ create:true });
       const writer = await fileHandle.createWritable();
       await writer.write(JSON.stringify(backupData,null,2));
@@ -1098,7 +1120,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     navigator.serviceWorker.register("service-worker.js").catch(console.error);
   }
 
-  // ===== 11. Firebase onValue listener (after loadSetup is defined) =====
+  // ===== 11. Firebase onValue listener =====
   onValue(appDataRef, async (snapshot) => {
     if (!snapshot.exists()) {
       console.warn("⚠️ /appData missing in Firebase—restoring default structure...");
@@ -1114,11 +1136,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         teacherClass: null,
         teacherSection: null
       };
-      // Firebase میں دوبارہ default write کریں:
+      // Restore on Firebase
       await dbSet(appDataRef, defaultPayload);
       console.log("✅ Restored /appData with default structure.");
 
-      // لوکل ویریبلز اور IndexedDB کو بھی reset کریں:
+      // Also reset local state and IndexedDB
       students       = [];
       attendanceData = {};
       paymentsData   = {};
@@ -1140,14 +1162,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         idbSet("schools", schools),
         idbSet("currentSchool", currentSchool),
         idbSet("teacherClass", teacherClass),
-        idbSet("teacherSection", teacherSection)
+        idbSet("teacherSection", teacherSection),
       ]);
 
-      // پھر setup دوبارہ load کریں:
       return loadSetup();
     }
 
-    // اگر data موجود ہے تو باقی والا کوڈ ایسے ہی رہے:
     const data = snapshot.val();
     students       = data.students       || [];
     attendanceData = data.attendanceData || {};
@@ -1176,6 +1196,104 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log("✅ Loaded data from Firebase into IndexedDB and UI");
   });
 
-  // Initial call to loadSetup after all variables are defined
+  // Final: define loadSetup
+  loadSetup = async () => {
+    schools        = (await idbGet("schools")) || [];
+    currentSchool  = await idbGet("currentSchool");
+    teacherClass   = await idbGet("teacherClass");
+    teacherSection = await idbGet("teacherSection");
+
+    // Populate school dropdown
+    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>', ...schools.map(s => `<option value="${s}">${s}</option>`)].join("");
+    if (currentSchool) schoolSelect.value = currentSchool;
+
+    renderSchoolList();
+
+    if (currentSchool && teacherClass && teacherSection) {
+      classSelect.value = teacherClass;
+      sectionSelect.value = teacherSection;
+      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+      hide(setupForm);
+      show(setupDisplay);
+
+      setTimeout(() => {
+        renderStudents();
+        updateCounters();
+        resetViews();
+      }, 0);
+
+    } else {
+      show(setupForm);
+      hide(setupDisplay);
+    }
+  };
+
+  // SETUP event handlers
+  saveSetupBtn.onclick = async (e) => {
+    e.preventDefault();
+    const newSchool = schoolInput.value.trim();
+    if (newSchool) {
+      if (!schools.includes(newSchool)) {
+        schools.push(newSchool);
+        await idbSet("schools", schools);
+        await syncToFirebase();
+      }
+      schoolInput.value = "";
+      return loadSetup();
+    }
+    const selSchool  = schoolSelect.value;
+    const selClass   = classSelect.value;
+    const selSection = sectionSelect.value;
+    if (!selSchool || !selClass || !selSection) {
+      alert("Please select a school, class, and section.");
+      return;
+    }
+    currentSchool  = selSchool;
+    teacherClass   = selClass;
+    teacherSection = selSection;
+    await idbSet("currentSchool", currentSchool);
+    await idbSet("teacherClass", teacherClass);
+    await idbSet("teacherSection", teacherSection);
+    await syncToFirebase();
+    await loadSetup();
+  };
+
+  editSetupBtn.onclick = (e) => {
+    e.preventDefault();
+    show(setupForm);
+    hide(setupDisplay);
+  };
+
+  // Save/edit fine settings
+  saveSettings.onclick = async () => {
+    fineRates = {
+      A: Number(fineAbsentInput.value) || 0,
+      Lt: Number(fineLateInput.value) || 0,
+      L: Number(fineLeaveInput.value) || 0,
+      HD: Number(fineHalfDayInput.value) || 0,
+    };
+    eligibilityPct = Number(eligibilityPctInput.value) || 0;
+    await idbSet("fineRates", fineRates);
+    await idbSet("eligibilityPct", eligibilityPct);
+    await syncToFirebase();
+
+    settingsCard.innerHTML = `
+      <div class="card-content">
+        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
+        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
+        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
+        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
+        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+      </div>`;
+    hide(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
+    show(settingsCard, editSettings);
+  };
+
+  editSettings.onclick = () => {
+    hide(settingsCard, editSettings);
+    show(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
+  };
+
+  // Initial call
   await loadSetup();
 });
