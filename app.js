@@ -1,5 +1,5 @@
-// app.js (updated with more backup logging and individual‐PDF analytics download)
-// ----------------------------------------------
+// app.js (fully integrated, with Firebase sync on attendance save and combined “individual” analytics PDF)
+// ----------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
@@ -27,7 +27,7 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
-// Local state (defaults, will be overwritten by initLocalState)
+// Local state (defaults; will be overwritten by initLocalState)
 let students       = [];
 let attendanceData = {};
 let paymentsData   = {};
@@ -75,11 +75,11 @@ async function syncToFirebase() {
   }
 }
 
-// Placeholder for loadSetup (will be defined after DOMContentLoaded)
+// Placeholder for loadSetup (defined inside DOMContentLoaded)
 let loadSetup;
 
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simple selectors and show/hide
+  // Simple selectors and show/hide helpers
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
@@ -522,7 +522,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       attendanceData[date][s.adm] = selBtn ? selBtn.textContent : "A";
     });
     await idbSet("attendanceData", attendanceData);
+
+    // **Ensure immediate Firebase sync**
     await syncToFirebase();
+    console.log("✅ Attendance data synced to Firebase");
 
     attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
     const tbl = document.createElement("table"); tbl.id="attendanceSummaryTable";
@@ -612,7 +615,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("analyticsFilterBtn").onclick = () => show($("analyticsFilterModal"));
   $("analyticsFilterClose").onclick = () => hide($("analyticsFilterModal"));
   $("applyAnalyticsFilter").onclick = () => {
-    analyticsFilterOptions = Array.from(document.querySelectorAll("#analyticsFilterForm input[type='checkbox']:checked")).map(cb=>cb.value)||["all"];
+    analyticsFilterOptions = Array.from(document.querySelectorAll("#analyticsFilterForm input[type='checkbox']:checked")).map(cb=>cb.value) || ["all"];
     analyticsDownloadMode = document.querySelector("#analyticsFilterForm input[name='downloadMode']:checked").value;
     hide($("analyticsFilterModal"));
     if (lastAnalyticsStats.length) renderAnalytics(lastAnalyticsStats, lastAnalyticsRange.from, lastAnalyticsRange.to);
@@ -768,7 +771,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
 
     if (analyticsDownloadMode === "combined") {
-      // Combined PDF logic
+      // Combined PDF
       const doc = new jspdf.jsPDF(), w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
       doc.setFontSize(18); doc.text("Attendance Analytics",14,16);
@@ -787,12 +790,15 @@ window.addEventListener("DOMContentLoaded", async () => {
       await sharePdf(blob, fileName, "Attendance Analytics");
 
     } else {
-      // Individual PDF per student
+      // Individual: one PDF with a page per student
+      const doc = new jspdf.jsPDF();
+      const w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
+
       for (let i = 0; i < lastAnalyticsStats.length; i++) {
         const st = lastAnalyticsStats[i];
-        const doc = new jspdf.jsPDF();
-        const w = doc.internal.pageSize.getWidth();
+        if (i > 0) doc.addPage();
+
         doc.setFontSize(18);
         doc.text("Attendance Analytics (Individual)", 14, 16);
         doc.setFontSize(10);
@@ -812,11 +818,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         doc.text(`Attendance %: ${pct}%`, 14, 106);
         doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 120);
         doc.text(`Status: ${st.status}`, 14, 134);
-        const fileName = `analytics_${st.adm}_${from}_to_${to}.pdf`;
-        const blob = doc.output("blob");
-        doc.save(fileName);
-        await sharePdf(blob, fileName, `Analytics – ${st.name}`);
       }
+
+      const individualFileName = `analytics_individual_${from}_to_${to}.pdf`;
+      const individualBlob = doc.output("blob");
+      doc.save(individualFileName);
+      await sharePdf(individualBlob, individualFileName, "Attendance Analytics (Book)");
     }
   };
 
