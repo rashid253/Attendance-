@@ -1,4 +1,4 @@
-// app.js (fully integrated and with loadSetup defined before use)
+// app.js (with resetViews defined)
 // ----------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -27,7 +27,7 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
-// Local state (initialize from IndexedDB or defaults)
+// Local state (defaults, will be overwritten by initLocalState)
 let students       = [];
 let attendanceData = {};
 let paymentsData   = {};
@@ -39,7 +39,7 @@ let currentSchool  = null;
 let teacherClass   = null;
 let teacherSection = null;
 
-// Assign from IndexedDB if present
+// Initialize from IndexedDB if present
 async function initLocalState() {
   students       = (await idbGet("students"))       || [];
   attendanceData = (await idbGet("attendanceData")) || {};
@@ -53,35 +53,50 @@ async function initLocalState() {
   teacherSection = (await idbGet("teacherSection")) || null;
 }
 
-// Sync to Firebase
+// Sync local state to Firebase
 async function syncToFirebase() {
   const payload = {
-    students, attendanceData, paymentsData,
-    lastAdmNo, fineRates, eligibilityPct,
-    schools, currentSchool, teacherClass, teacherSection,
+    students,
+    attendanceData,
+    paymentsData,
+    lastAdmNo,
+    fineRates,
+    eligibilityPct,
+    schools,
+    currentSchool,
+    teacherClass,
+    teacherSection,
   };
-  try { await dbSet(appDataRef, payload); }
-  catch (err) { console.error("Firebase sync failed:", err); }
+  try {
+    await dbSet(appDataRef, payload);
+  } catch (err) {
+    console.error("Firebase sync failed:", err);
+  }
 }
 
-// Placeholder for loadSetup to be assigned later
+// Placeholder for loadSetup (will be defined after DOMContentLoaded)
 let loadSetup;
 
-// Wait for DOM, then define loadSetup and attach onValue
 window.addEventListener("DOMContentLoaded", async () => {
-  // Helpers
+  // Simple selectors and show/hide
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
-  // Assign initial local state
+  // Load initial IndexedDB state
   await initLocalState();
 
   // PDF share helper
   async function sharePdf(blob, fileName, title) {
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })) {
-      try { await navigator.share({ title, files: [new File([blob], fileName, { type: "application/pdf" })] }); }
-      catch (err) { if (err.name !== "AbortError") console.error("Share failed", err); }
+    if (
+      navigator.canShare &&
+      navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })
+    ) {
+      try {
+        await navigator.share({ title, files: [new File([blob], fileName, { type: "application/pdf" })] });
+      } catch (err) {
+        if (err.name !== "AbortError") console.error("Share failed", err);
+      }
     }
   }
 
@@ -91,12 +106,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   erudaScript.onload = () => eruda.init();
   document.body.appendChild(erudaScript);
 
-  // genAdmNo
+  // Generate admission number
   async function genAdmNo() {
     lastAdmNo++;
     await idbSet("lastAdmissionNo", lastAdmNo);
     await syncToFirebase();
     return String(lastAdmNo).padStart(4, "0");
+  }
+
+  // ===== resetViews =====
+  function resetViews() {
+    hide(
+      $("attendanceBody"), $("saveAttendance"), $("resetAttendance"),
+      $("attendanceSummary"), $("downloadAttendancePDF"), $("shareAttendanceSummary"),
+      $("instructions"), $("analyticsContainer"), $("graphs"), $("analyticsActions"),
+      $("registerTableWrapper"), $("changeRegister"),
+      $("saveRegister"), $("downloadRegister"), $("shareRegister")
+    );
+    show($("loadRegister"));
   }
 
   // ===== 1. SETUP =====
@@ -143,7 +170,9 @@ window.addEventListener("DOMContentLoaded", async () => {
         const removed = schools.splice(idx, 1)[0];
         await idbSet("schools", schools);
         if (currentSchool === removed) {
-          currentSchool = null; teacherClass = null; teacherSection = null;
+          currentSchool = null;
+          teacherClass = null;
+          teacherSection = null;
           await idbSet("currentSchool", null);
           await idbSet("teacherClass", null);
           await idbSet("teacherSection", null);
@@ -160,7 +189,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     teacherClass   = await idbGet("teacherClass");
     teacherSection = await idbGet("teacherSection");
 
-    // Populate dropdown
+    // Populate school dropdown
     schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>', ...schools.map(s => `<option value="${s}">${s}</option>`)].join("");
     if (currentSchool) schoolSelect.value = currentSchool;
 
@@ -740,7 +769,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     doc.setFontSize(18); doc.text("Attendance Analytics",14,16);
     doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w-14, 16, { align:"right" });
     doc.setFontSize(12); doc.text($("setupText").textContent,14,24);
-    // Build HTML table in DOM
     const table = document.createElement("table");
     table.innerHTML = `
       <tr><th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th><th>Outstanding</th><th>Status</th></tr>
@@ -928,14 +956,21 @@ window.addEventListener("DOMContentLoaded", async () => {
     alert("Factory reset completed.");
   };
 
-  // Periodic backup to selected folder (optional, if handle granted)
+  // Periodic backup to selected folder
   setInterval(async () => {
     if (!backupHandle) return;
     try {
       const backupData = {
-        students, attendanceData, paymentsData,
-        lastAdmNo, fineRates, eligibilityPct,
-        schools, currentSchool, teacherClass, teacherSection,
+        students,
+        attendanceData,
+        paymentsData,
+        lastAdmNo,
+        fineRates,
+        eligibilityPct,
+        schools,
+        currentSchool,
+        teacherClass,
+        teacherSection,
       };
       const now = new Date();
       const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
