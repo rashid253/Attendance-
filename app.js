@@ -75,19 +75,18 @@ async function syncToFirebase() {
   }
 }
 
-// Placeholder for loadSetup (defined inside DOMContentLoaded)
-let loadSetup;
+let loadSetup;  // will be defined inside DOMContentLoaded
 
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selectors and show/hide helpers
+  // Utility selectors and show/hide
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
-  // Load initial IndexedDB state
+  // 1. Load initial IndexedDB state
   await initLocalState();
 
-  // PDF share helper
+  // 2. PDF share helper
   async function sharePdf(blob, fileName, title) {
     if (
       navigator.canShare &&
@@ -101,13 +100,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Eruda debug console
+  // 3. Eruda debug console
   const erudaScript = document.createElement("script");
   erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
   erudaScript.onload = () => eruda.init();
   document.body.appendChild(erudaScript);
 
-  // Generate admission number
+  // 4. Generate admission number
   async function genAdmNo() {
     lastAdmNo++;
     await idbSet("lastAdmissionNo", lastAdmNo);
@@ -115,7 +114,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     return String(lastAdmNo).padStart(4, "0");
   }
 
-  // ===== gather DOM references =====
+  // 5. Gather all DOM references up front
   const setupForm             = $("setupForm"),
         setupDisplay          = $("setupDisplay"),
         schoolInput           = $("schoolInput"),
@@ -197,7 +196,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         restoreFileInput       = $("restoreFile"),
         resetDataBtn           = $("resetData");
 
-  // ===== resetViews =====
+  // 6. resetViews helper
   function resetViews() {
     hide(
       attendanceBodyDiv, saveAttendanceBtn, resetAttendanceBtn,
@@ -209,187 +208,21 @@ window.addEventListener("DOMContentLoaded", async () => {
     show(loadRegisterBtn);
   }
 
-  // ===== 1. SETUP =====
-  function renderSchoolList() {
-    schoolList.innerHTML = "";
-    schools.forEach((school, idx) => {
-      const row = document.createElement("div");
-      row.className = "row-inline";
-      row.innerHTML = `
-        <span>${school}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>`;
-      schoolList.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt("Edit School Name:", schools[idx]);
-        if (newName?.trim()) {
-          schools[idx] = newName.trim();
-          await idbSet("schools", schools);
-          await syncToFirebase();
-          await loadSetup();
-        }
-      };
-    });
-    document.querySelectorAll(".delete-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1)[0];
-        await idbSet("schools", schools);
-        if (currentSchool === removed) {
-          currentSchool = null;
-          teacherClass = null;
-          teacherSection = null;
-          await idbSet("currentSchool", null);
-          await idbSet("teacherClass", null);
-          await idbSet("teacherSection", null);
-        }
-        await syncToFirebase();
-        await loadSetup();
-      };
-    });
+  // 7. STUDENT REGISTRATION: render and toggle buttons
+  function toggleButtons() {
+    const any = !!document.querySelector(".sel:checked");
+    editSelected.disabled = !any;
+    deleteSelected.disabled = !any;
   }
 
-  loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>', ...schools.map(s => `<option value="${s}">${s}</option>`)].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      hide(setupForm);
-      show(setupDisplay);
-
-      // Defer rendering until after DOM elements are ready
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-        resetViews();
-      }, 0);
-
-    } else {
-      show(setupForm);
-      hide(setupDisplay);
-    }
+  studentsBody.addEventListener("change", e => {
+    if (e.target.classList.contains("sel")) toggleButtons();
+  });
+  selectAllStudents.onclick = () => {
+    document.querySelectorAll(".sel").forEach(c => c.checked = selectAllStudents.checked);
+    toggleButtons();
   };
 
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await idbSet("schools", schools);
-        await syncToFirebase();
-      }
-      schoolInput.value = "";
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
-      return;
-    }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
-
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
-    show(setupForm);
-    hide(setupDisplay);
-  };
-
-  // ===== 2. FINANCIAL SETTINGS =====
-  const settingsCard = document.createElement("div");
-  const editSettings = document.createElement("button");
-  settingsCard.id = "settingsCard";
-  settingsCard.className = "card hidden";
-  editSettings.id = "editSettings";
-  editSettings.className = "btn no-print hidden";
-  editSettings.textContent = "Edit Settings";
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
-
-  fineAbsentInput.value     = fineRates.A;
-  fineLateInput.value       = fineRates.Lt;
-  fineLeaveInput.value      = fineRates.L;
-  fineHalfDayInput.value    = fineRates.HD;
-  eligibilityPctInput.value = eligibilityPct;
-
-  saveSettings.onclick = async () => {
-    fineRates = {
-      A: Number(fineAbsentInput.value) || 0,
-      Lt: Number(fineLateInput.value) || 0,
-      L: Number(fineLeaveInput.value) || 0,
-      HD: Number(fineHalfDayInput.value) || 0,
-    };
-    eligibilityPct = Number(eligibilityPctInput.value) || 0;
-    await idbSet("fineRates", fineRates);
-    await idbSet("eligibilityPct", eligibilityPct);
-    await syncToFirebase();
-
-    settingsCard.innerHTML = `
-      <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
-      </div>`;
-    hide(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
-    show(settingsCard, editSettings);
-  };
-
-  editSettings.onclick = () => {
-    hide(settingsCard, editSettings);
-    show(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
-  };
-
-  // ===== 3. COUNTERS =====
-  function animateCounters() {
-    document.querySelectorAll(".number").forEach(span => {
-      const target = +span.dataset.target;
-      let count = 0;
-      const step = Math.max(1, target / 100);
-      (function upd() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(upd);
-      })();
-    });
-  }
-  function updateCounters() {
-    const cl = classSelect.value, sec = sectionSelect.value;
-    sectionCountSpan.dataset.target = students.filter(s => s.cls === cl && s.sec === sec).length;
-    classCountSpan.dataset.target   = students.filter(s => s.cls === cl).length;
-    schoolCountSpan.dataset.target  = students.length;
-    animateCounters();
-  }
-
-  // ===== 4. STUDENT REGISTRATION =====
   function renderStudents() {
     const cl = classSelect.value, sec = sectionSelect.value;
     studentsBody.innerHTML = "";
@@ -429,96 +262,28 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function toggleButtons() {
-    const any = !!document.querySelector(".sel:checked");
-    editSelected.disabled = !any;
-    deleteSelected.disabled = !any;
+  // 8. Counters
+  function animateCounters() {
+    document.querySelectorAll(".number").forEach(span => {
+      const target = +span.dataset.target;
+      let count = 0;
+      const step = Math.max(1, target / 100);
+      (function upd() {
+        count += step;
+        span.textContent = count < target ? Math.ceil(count) : target;
+        if (count < target) requestAnimationFrame(upd);
+      })();
+    });
   }
-  studentsBody.addEventListener("change", e => {
-    if (e.target.classList.contains("sel")) toggleButtons();
-  });
-  selectAllStudents.onclick = () => {
-    document.querySelectorAll(".sel").forEach(c => c.checked = selectAllStudents.checked);
-    toggleButtons();
-  };
+  function updateCounters() {
+    const cl = classSelect.value, sec = sectionSelect.value;
+    sectionCountSpan.dataset.target = students.filter(s => s.cls === cl && s.sec === sec).length;
+    classCountSpan.dataset.target   = students.filter(s => s.cls === cl).length;
+    schoolCountSpan.dataset.target  = students.length;
+    animateCounters();
+  }
 
-  $("addStudent").onclick = async e => {
-    e.preventDefault();
-    const n = $("studentName").value.trim(),
-          p = $("parentName").value.trim(),
-          c = $("parentContact").value.trim(),
-          o = $("parentOccupation").value.trim(),
-          a = $("parentAddress").value.trim(),
-          cl= classSelect.value,
-          sec=sectionSelect.value;
-    if (!n||!p||!c||!o||!a) { alert("All fields required"); return; }
-    if (!/^\d{7,15}$/.test(c)) { alert("Contact 7–15 digits"); return; }
-    const adm = await genAdmNo();
-    students.push({ name:n, adm, parent:p, contact:c, occupation:o, address:a, cls:cl, sec });
-    await idbSet("students", students);
-    await syncToFirebase();
-    renderStudents(); updateCounters(); resetViews();
-    ["studentName","parentName","parentContact","parentOccupation","parentAddress"].forEach(id => $(id).value="");
-  };
-
-  editSelected.onclick = () => {
-    document.querySelectorAll(".sel:checked").forEach(cb => {
-      const tr = cb.closest("tr"), i = +tr.dataset.index, s = students[i];
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel" checked></td>
-        <td>${tr.children[1].textContent}</td>
-        <td><input value="${s.name}"></td>
-        <td>${s.adm}</td>
-        <td><input value="${s.parent}"></td>
-        <td><input value="${s.contact}"></td>
-        <td><input value="${s.occupation}"></td>
-        <td><input value="${s.address}"></td>
-        <td colspan="3"></td>
-      `;
-    });
-    hide(editSelected);
-    show(doneEditing);
-  };
-  doneEditing.onclick = async () => {
-    document.querySelectorAll("#studentsBody tr").forEach(tr => {
-      const inps = [...tr.querySelectorAll("input:not(.sel)")];
-      if (inps.length === 5) {
-        const [n,p,c,o,a] = inps.map(i=>i.value.trim()), adm = tr.children[3].textContent;
-        const idx = students.findIndex(x=>x.adm===adm);
-        if (idx>-1) students[idx] = { ...students[idx], name:n, parent:p, contact:c, occupation:o, address:a };
-      }
-    });
-    await idbSet("students", students);
-    await syncToFirebase();
-    hide(doneEditing);
-    show(editSelected, deleteSelected, saveRegistration);
-    renderStudents(); updateCounters();
-  };
-
-  deleteSelected.onclick = async () => {
-    if (!confirm("Delete?")) return;
-    const toDel = [...document.querySelectorAll(".sel:checked")].map(cb=>+cb.closest("tr").dataset.index);
-    students = students.filter((_,i)=>!toDel.includes(i));
-    await idbSet("students", students);
-    await syncToFirebase();
-    renderStudents(); updateCounters(); resetViews();
-  };
-
-  saveRegistration.onclick = async () => {
-    if (!doneEditing.classList.contains("hidden")) { alert("Finish editing"); return; }
-    await idbSet("students", students);
-    await syncToFirebase();
-    hide(document.querySelector("#student-registration .row-inline"), editSelected, deleteSelected, selectAllStudents, saveRegistration);
-    show(editRegistration, shareRegistration, downloadRegistration);
-    renderStudents(); updateCounters();
-  };
-  editRegistration.onclick = () => {
-    show(document.querySelector("#student-registration .row-inline"), selectAllStudents, editSelected, deleteSelected, saveRegistration);
-    hide(editRegistration, shareRegistration, downloadRegistration);
-    renderStudents(); updateCounters();
-  };
-
-  // ===== 5. PAYMENT MODAL =====
+  // 9. PAYMENT MODAL
   function openPaymentModal(adm) {
     payAdmSpan.textContent = adm;
     paymentAmountInput.value = "";
@@ -536,7 +301,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
   cancelPaymentBtn.onclick = () => hide(paymentModal);
 
-  // ===== 6. MARK ATTENDANCE =====
+  // 10. ATTENDANCE MARKING
   const statusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
   const statusColors = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" };
 
@@ -575,8 +340,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       attendanceData[date][s.adm] = selBtn ? selBtn.textContent : "A";
     });
     await idbSet("attendanceData", attendanceData);
-
-    // **Ensure immediate Firebase sync**
     await syncToFirebase();
     console.log("✅ Attendance data synced to Firebase");
 
@@ -634,7 +397,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header+"\n\n"+lines.join("\n"))}`, "_blank");
   };
 
-  // ===== 7. ANALYTICS =====
+  // 11. ANALYTICS
   const analyticsStatusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
   const analyticsStatusColors = {
     P: getComputedStyle(document.documentElement).getPropertyValue("--success").trim(),
@@ -644,7 +407,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     L: getComputedStyle(document.documentElement).getPropertyValue("--info").trim(),
   };
   let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode = "combined"; // can be "combined" or "individual"
+  let analyticsDownloadMode = "combined";
   let lastAnalyticsStats = [], lastAnalyticsRange = { from:null, to:null }, lastAnalyticsShare = "";
   let barChart = null, pieChart = null;
 
@@ -806,12 +569,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       filtered.map((st,i)=>`${i+1}. ${st.adm} ${st.name}: ${st.total? (st.P/st.total*100).toFixed(1):"0.0"}% / PKR ${st.outstanding}`).join("\n");
   }
 
-  // Download & Share Analytics
   $("downloadAnalytics").onclick = async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
 
     if (analyticsDownloadMode === "combined") {
-      // Combined PDF
       const doc = new jspdf.jsPDF(), w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
       doc.setFontSize(18); doc.text("Attendance Analytics",14,16);
@@ -830,12 +591,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       await sharePdf(blob, fileName, "Attendance Analytics");
 
     } else {
-      // === Individual Mode: ہر صفحے پر ایک student کی Receipt، جس میں Fine Rates, Eligibility اور HOD Signature ہو ===
       const doc = new jspdf.jsPDF();
       const w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
 
-      // Fine Rates اور Eligibility کا text تیار کریں
       const fineRatesText =
         `Fine Rates:\n` +
         `  Absent  (PKR): ${fineRates.A}\n` +
@@ -845,21 +604,15 @@ window.addEventListener("DOMContentLoaded", async () => {
         `Eligibility ≥ ${eligibilityPct}%\n`;
 
       lastAnalyticsStats.forEach((st, i) => {
-        if (i > 0) doc.addPage(); // اگر پہلے صفحے کے بعد ہو تو نئی page
-
+        if (i > 0) doc.addPage();
         doc.setFontSize(18);
         doc.text("Attendance Analytics (Individual Receipt)", 14, 16);
-
         doc.setFontSize(10);
         doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
-
         doc.setFontSize(12);
         doc.text(setupText.textContent, 14, 28);
-        // مثال: “Alpha School | Class: 3 | Section: A”
-
         doc.setFontSize(14);
         doc.text(`Student: ${st.name}  (Adm#: ${st.adm})`, 14, 44);
-
         doc.setFontSize(12);
         doc.text(`Present   : ${st.P}`, 14, 60);
         doc.text(`Absent    : ${st.A}`, 80, 60);
@@ -867,13 +620,10 @@ window.addEventListener("DOMContentLoaded", async () => {
         doc.text(`Half-Day  : ${st.HD}`, 80, 74);
         doc.text(`Leave     : ${st.L}`, 14, 88);
         doc.text(`Total Days Marked: ${st.total}`, 14, 102);
-
         const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
         doc.text(`Attendance %: ${pct}%`, 14, 116);
-
         doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 130);
 
-        // ==== Fine Rates & Eligibility block شروع کریں ====
         const blockStartY = 148;
         doc.setFontSize(11);
         const lines = fineRatesText.split("\n");
@@ -881,13 +631,11 @@ window.addEventListener("DOMContentLoaded", async () => {
           doc.text(14, blockStartY + idx * 6, ln);
         });
 
-        // ==== HOD Signature کے لیے لائن ====
         const signY = blockStartY + lines.length * 6 + 10;
         doc.setFontSize(12);
         doc.text("_______________________________", 14, signY);
         doc.text("     HOD Signature", 14, signY + 8);
 
-        // ==== Receipt footer ====
         const footerY = signY + 30;
         doc.setFontSize(10);
         doc.text("Receipt generated by Attendance Mgmt App", w - 14, footerY, { align: "right" });
@@ -905,7 +653,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
   };
 
-  // ===== 8. ATTENDANCE REGISTER =====
+  // 12. ATTENDANCE REGISTER
   function bindRegisterActions() {
     downloadRegisterBtn.onclick = async () => {
       const doc = new jspdf.jsPDF({ orientation:"landscape", unit:"pt", format:"a4" });
@@ -997,7 +745,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   bindRegisterActions();
 
-  // ===== 9. BACKUP & RESTORE & RESET =====
+  // 13. BACKUP & RESTORE & RESET
   let backupHandle = null;
 
   chooseBackupFolderBtn.onclick = async () => {
@@ -1094,12 +842,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }, 5 * 60 * 1000); // every 5 minutes
 
-  // ===== 10. SERVICE WORKER =====
+  // 14. SERVICE WORKER
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(console.error);
   }
 
-  // ===== 11. Firebase onValue listener (after loadSetup is defined) =====
+  // 15. Firebase onValue listener
   onValue(appDataRef, async (snapshot) => {
     if (!snapshot.exists()) {
       console.warn("⚠️ /appData missing in Firebase—restoring default structure...");
@@ -1115,11 +863,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         teacherClass: null,
         teacherSection: null
       };
-      // Firebase میں دوبارہ default write کریں:
+      // Restore on Firebase
       await dbSet(appDataRef, defaultPayload);
       console.log("✅ Restored /appData with default structure.");
 
-      // لوکل ویریبلز اور IndexedDB کو بھی reset کریں:
+      // Also reset local state and IndexedDB
       students       = [];
       attendanceData = {};
       paymentsData   = {};
@@ -1141,14 +889,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         idbSet("schools", schools),
         idbSet("currentSchool", currentSchool),
         idbSet("teacherClass", teacherClass),
-        idbSet("teacherSection", teacherSection)
+        idbSet("teacherSection", teacherSection),
       ]);
 
-      // پھر setup دوبارہ load کریں:
       return loadSetup();
     }
 
-    // اگر data موجود ہے تو باقی والا کوڈ ایسے ہی رہے:
     const data = snapshot.val();
     students       = data.students       || [];
     attendanceData = data.attendanceData || {};
@@ -1177,6 +923,104 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.log("✅ Loaded data from Firebase into IndexedDB and UI");
   });
 
-  // Initial call to loadSetup after all variables are defined
+  // Final: define loadSetup
+  loadSetup = async () => {
+    schools        = (await idbGet("schools")) || [];
+    currentSchool  = await idbGet("currentSchool");
+    teacherClass   = await idbGet("teacherClass");
+    teacherSection = await idbGet("teacherSection");
+
+    // Populate school dropdown
+    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>', ...schools.map(s => `<option value="${s}">${s}</option>`)].join("");
+    if (currentSchool) schoolSelect.value = currentSchool;
+
+    renderSchoolList();
+
+    if (currentSchool && teacherClass && teacherSection) {
+      classSelect.value = teacherClass;
+      sectionSelect.value = teacherSection;
+      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+      hide(setupForm);
+      show(setupDisplay);
+
+      setTimeout(() => {
+        renderStudents();
+        updateCounters();
+        resetViews();
+      }, 0);
+
+    } else {
+      show(setupForm);
+      hide(setupDisplay);
+    }
+  };
+
+  // SETUP event handlers
+  saveSetupBtn.onclick = async (e) => {
+    e.preventDefault();
+    const newSchool = schoolInput.value.trim();
+    if (newSchool) {
+      if (!schools.includes(newSchool)) {
+        schools.push(newSchool);
+        await idbSet("schools", schools);
+        await syncToFirebase();
+      }
+      schoolInput.value = "";
+      return loadSetup();
+    }
+    const selSchool  = schoolSelect.value;
+    const selClass   = classSelect.value;
+    const selSection = sectionSelect.value;
+    if (!selSchool || !selClass || !selSection) {
+      alert("Please select a school, class, and section.");
+      return;
+    }
+    currentSchool  = selSchool;
+    teacherClass   = selClass;
+    teacherSection = selSection;
+    await idbSet("currentSchool", currentSchool);
+    await idbSet("teacherClass", teacherClass);
+    await idbSet("teacherSection", teacherSection);
+    await syncToFirebase();
+    await loadSetup();
+  };
+
+  editSetupBtn.onclick = (e) => {
+    e.preventDefault();
+    show(setupForm);
+    hide(setupDisplay);
+  };
+
+  // Save/edit fine settings
+  saveSettings.onclick = async () => {
+    fineRates = {
+      A: Number(fineAbsentInput.value) || 0,
+      Lt: Number(fineLateInput.value) || 0,
+      L: Number(fineLeaveInput.value) || 0,
+      HD: Number(fineHalfDayInput.value) || 0,
+    };
+    eligibilityPct = Number(eligibilityPctInput.value) || 0;
+    await idbSet("fineRates", fineRates);
+    await idbSet("eligibilityPct", eligibilityPct);
+    await syncToFirebase();
+
+    settingsCard.innerHTML = `
+      <div class="card-content">
+        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
+        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
+        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
+        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
+        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
+      </div>`;
+    hide(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
+    show(settingsCard, editSettings);
+  };
+
+  editSettings.onclick = () => {
+    hide(settingsCard, editSettings);
+    show(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
+  };
+
+  // Initial call
   await loadSetup();
 });
