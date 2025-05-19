@@ -30,23 +30,23 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-// ----------------------
+// ------------------------------------------------------
 // 1) FIREBASE INITIALIZATION
-// ----------------------
+// ------------------------------------------------------
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_APIKEY",
-  authDomain: "YOUR_FIREBASE_AUTHDOMAIN",
-  projectId: "YOUR_FIREBASE_PROJECTID",
-  storageBucket: "YOUR_FIREBASE_STORAGEBUCKET",
-  messagingSenderId: "YOUR_FIREBASE_MSGSENDERID",
-  appId: "YOUR_FIREBASE_APPID",
-  measurementId: "YOUR_FIREBASE_MEASUREMENTID"
+  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  authDomain: "attandace-management.firebaseapp.com",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  projectId: "attandace-management",
+  storageBucket: "attandace-management.firebasestorage.app",
+  messagingSenderId: "222685278846",
+  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+  measurementId: "G-V2MY85R73B"
 };
 
 const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
-
 // ----------------------
 // 2) APP STATE (to be used by app.js)
 // ----------------------
