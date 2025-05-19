@@ -10,7 +10,7 @@
   --dark: #333;
 }
 
-/* Global resets and typography */
+/* Global resets */
 * {
   box-sizing: border-box;
   outline: none;
@@ -41,96 +41,35 @@ section {
   border-radius: 4px;
 }
 
-.row-inline > * {
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-input, select, button {
-  font-size: 1rem;
-  padding: 0.5em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
-  table-layout: auto !important;
-  width: auto !important;
-  border-collapse: collapse;
-  margin-top: 1em;
-}
-
-th, td {
-  padding: 2mm;
-  border: 1px solid #ddd;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.no-print {
-  /* hide in print context if needed */
-}
-
-.hidden {
-  display: none !important;
-}
-
-.card {
-  border: 1px solid #ccc;
-  padding: 1em;
-  margin-top: 1em;
-  border-radius: 4px;
-}
-
-.btn {
-  margin-top: 0.5em;
-}
-
-#analyticsFilterBtn {
-  float: right;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2em;
-  color: #555;
-}
-
-/* COUNTER GRID and CARDS */
+/* Counter row: horizontal scroll */
 .counter-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 1em;
+  overflow-x: auto;
+  padding: 0 0.5em;
   margin: 0 -0.5em;
 }
 
+.counter-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.counter-grid::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+
 .counter-card {
-  flex: 1 1 150px;
-  min-width: 150px;
+  flex: 0 0 auto;
+  width: 200px;
   text-align: center;
   padding: 1em;
   background: #fff;
-  border-radius: 4px;
   border: 1px solid #ddd;
+  border-radius: 4px;
   cursor: pointer;
-  transition: box-shadow .2s ease;
+  transition: box-shadow .2s;
 }
 
 .counter-card .number {
@@ -142,34 +81,55 @@ th, td {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* DETAIL PANE */
-#counterDetails {
-  position: relative;
-  margin-top: 1em;
-  padding: 1em;
+/* Modal dialog for details */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
   background: #fff;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  max-height: 60vh;
-  overflow: auto;
+  padding: 1.5em;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
 }
 
-#counterDetails h3 {
-  margin-top: 0;
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
 }
 
+/* Detail table inside modal */
 .detail-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0.5em;
+  margin-top: 1em;
 }
 
 .detail-table th,
 .detail-table td {
   border: 1px solid #ddd;
   padding: 0.5em;
-  white-space: nowrap;
   text-align: left;
+  white-space: nowrap;
 }
 
 .detail-table th {
@@ -177,91 +137,26 @@ th, td {
   font-weight: 600;
 }
 
-/* Modal fallback styling */
-.modal-content {
-  max-height: 80vh;
-  overflow-y: auto;
+/* Utility classes */
+.hidden {
+  display: none !important;
 }
 
-/* Attendance List Styling */
-.attendance-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-.attendance-row .attendance-buttons {
-  display: flex;
-  gap: 0.5em;
-}
-
-.attendance-row .attendance-buttons button {
-  flex: 1 1 auto;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.5em;
-  font-size: 0.9rem;
-  border-radius: 4px;
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
-  border: 1px solid rgba(3,169,244,0.5);
-  min-width: 2.5em;
-}
-
-.attendance-header {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 0.5em;
-}
-
-#attendanceBody {
-  max-height: 400px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
-  background: #fff;
-}
-
-/* Attendance Summary Table */
+/* Scrollable containers for other sections */
+.table-wrapper,
 #attendanceSummary {
   overflow-x: auto;
-  padding-bottom: 0.5em;
 }
 
-#attendanceSummary table {
-  min-width: 600px;
-}
-
-/* School List Styling */
+#attendanceBody,
 #schoolList {
-  display: flex;
-  flex-direction: column;
-  max-height: 150px;
+  max-height: 400px;
   overflow-y: auto;
-  gap: 0.5em;
-  border: 1px solid #ccc;
-  padding: 0.5em;
-  background: #fafafa;
-  border-radius: 4px;
-  margin-top: 0.5em;
 }
 
-#schoolList .row-inline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#schoolList .row-inline button {
-  margin-left: 0.25em;
-  flex-shrink: 0;
-}
-
-/* Responsive tweaks */
+/* Responsive tweak */
 @media (max-width: 600px) {
   .counter-card {
-    flex: 1 1 100%;
+    width: 150px;
   }
 }
