@@ -1,5 +1,17 @@
-// app.js (with resetViews, and disabling of all sections until setup is done)
-// -------------------------------------------------------------------------------------------------
+// app.js
+// ------------------------------------------------------
+// Core Application Logic (all sections):
+//  1) Setup (School, Class, Section)
+//  2) Financial Settings (Fines & Eligibility)
+//  3) Counters (School, Class, Section, Attendance, Eligible, Debarred, Outstanding/Fine)
+//  4) Student Registration (Add/Edit/Delete, Payments)
+//  5) Mark Attendance (Load, Save, Reset, Download, Share)
+//  6) Analytics (Date/Month/Semester/Year Reports, Download, Share)
+//  7) Attendance Register (Load by Month, Edit, Download, Share)
+//  8) Backup / Restore / Factory Reset (IndexedDB ⇄ Firebase Realtime Database)
+//  9) Service Worker Registration
+// 10) Sync from Firebase → IndexedDB / UI
+// ------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
@@ -101,7 +113,7 @@ async function sharePdf(blob, fileName, title) {
 // DOMContentLoaded: Main Initialization
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selector
+  // Simplified selector and show/hide helpers
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
@@ -113,7 +125,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Reset Views: Hide/Show all sections based on whether setup is complete
   // ----------------------
   function resetViews() {
-    // If setup is incomplete (i.e. currentSchool/class/section is null), hide everything except #teacher-setup section.
+    // If setup is incomplete (i.e. currentSchool/class/section is null),
+    // hide everything except the #teacher-setup section.
     const setupDone = currentSchool && teacherClass && teacherSection;
     const allSections = [
       $("financial-settings"),
@@ -1136,7 +1149,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // 4) Bar chart: % Present for each student
     const barCtx = barChartCanvas.getContext("2d");
-    if (window.barChartInstance) barChartInstance.destroy();
+    if (window.barChartInstance) window.barChartInstance.destroy();
     window.barChartInstance = new Chart(barCtx, {
       type: "bar",
       data: {
@@ -1163,7 +1176,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }, { P:0, A:0, Lt:0, HD:0, L:0 });
 
     const pieCtx = pieChartCanvas.getContext("2d");
-    if (window.pieChartInstance) pieChartInstance.destroy();
+    if (window.pieChartInstance) window.pieChartInstance.destroy();
     window.pieChartInstance = new Chart(pieCtx, {
       type: "pie",
       data: {
@@ -1332,7 +1345,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const sec = sectionSelect.value;
     students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
       let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      dateKeys.forEach(key => {
+      dateKeys.forEach((key, idx) => {
         const c = attendanceData[key][s.adm] || "";
         const color = c === "P" ? "var(--success)" : c === "Lt" ? "var(--warning)" : c === "HD" ? "#FF9800" : c === "L" ? "var(--info)" : "var(--danger)";
         const style = c ? `style="background:${color};color:#fff"` : "";
@@ -1581,7 +1594,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ----------------------
-  // Final call to load setup on page load
+  // 12. Final call to load setup on page load
   // ----------------------
   await loadSetup();
 
@@ -1593,3 +1606,4 @@ window.addEventListener("DOMContentLoaded", async () => {
     container.style.whiteSpace = "nowrap";
   }
 });
+
