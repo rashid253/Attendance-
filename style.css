@@ -1,102 +1,94 @@
-/* style.css */
-
-:root {
-  --primary: #2196F3;
-  --success: #4caf50;
-  --danger: #f44336;
-  --warning: #ffeb3b;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
-
-/* Global resets */
-* {
-  box-sizing: border-box;
-  outline: none;
-}
-body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--light);
-  color: var(--dark);
-}
-
-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 1em;
-  text-align: center;
-}
-
-h1, h2, h3 { margin: 0 0 10px; }
-section { background: #fff; padding: 1em; margin: 0 0 20px; border-radius: 4px; }
-
-/* Counter row: horizontal scroll */
+/* COUNTER GRID: wrap and responsive */
 .counter-grid {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;      /* allow cards to wrap to new lines */
   gap: 1em;
-  overflow-x: auto;
-  padding: 0 0.5em;
-  margin: 0 -0.5em;
+  margin: 0 -0.5em;     /* compensate for card margins */
 }
-.counter-grid::-webkit-scrollbar { height: 8px; }
-.counter-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
 .counter-card {
-  flex: 0 0 auto;
-  width: 200px;
+  flex: 1 1 150px;      /* grow, shrink, with a 150px base */
+  min-width: 150px;     /* never get narrower than this */
+  max-width: 1fr;
   text-align: center;
   padding: 1em;
   background: #fff;
-  border: 1px solid #ddd;
   border-radius: 4px;
-  cursor: pointer;
-  transition: box-shadow .2s;
+  border: 1px solid #ddd;
+  cursor: pointer;      /* indicate clickability */
+  transition: box-shadow .2s ease;
 }
-.counter-card .number { font-size: 2rem; display: block; }
-.counter-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.counter-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 
-/* Modal dialog for details */
-.modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: none;
-  justify-content: center;
-  align-items: center;
-}
-.modal.active { display: flex; }
-.modal-content {
+/* DETAIL PANE */
+#counterDetails {
+  position: relative;
+  margin-top: 1em;
+  padding: 1em;
   background: #fff;
-  padding: 1.5em;
-  border-radius: 6px;
-  width: 90%; max-width: 500px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  max-height: 60vh;
+  overflow: auto;        /* scroll if too tall */
+}
+#counterDetails h3 {
+  margin-top: 0;
+}
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5em;
+}
+.detail-table th,
+.detail-table td {
+  border: 1px solid #ddd;
+  padding: 0.5em;
+  white-space: nowrap;
+  text-align: left;
+}
+.detail-table th {
+  background: var(--light);
+  font-weight: 600;
+}
+
+/* MODAL FALLBACK (if you decide to use a modal) */
+.modal-content {
   max-height: 80vh;
   overflow-y: auto;
-  position: relative;
-}
-.modal-close {
-  position: absolute;
-  top: 10px; right: 12px;
-  cursor: pointer;
-  font-size: 1.2rem;
 }
 
-/* Detail table inside modal */
-.detail-table { width: 100%; border-collapse: collapse; margin-top: 1em; }
-.detail-table th, .detail-table td { border: 1px solid #ddd; padding: 0.5em; text-align: left; white-space: nowrap; }
-.detail-table th { background: var(--light); font-weight: 600; }
+/* GENERAL IMPROVEMENTS */
+.hidden {
+  display: none !important;
+}
+/* Prevent tables from forcing page wider */
+.table-wrapper, 
+#attendanceSummary {
+  overflow-x: auto;
+}
 
-/* Utility classes */
-.hidden { display: none !important; }
+/* Keep attendance buttons from overflowing */
+.attendance-row .attendance-buttons button {
+  min-width: 2.5em;
+  flex: 1 1 auto;
+}
 
-/* Scrollable containers for other sections */
-.table-wrapper, #attendanceSummary { overflow-x: auto; }
-#attendanceBody, #schoolList { max-height: 400px; overflow-y: auto; }
+/* Ensure school list wraps and scrolls */
+#schoolList {
+  display: flex;
+  flex-direction: column;
+  max-height: 150px;
+  overflow-y: auto;
+  gap: 0.5em;
+}
+#schoolList .row-inline {
+  justify-content: space-between;
+}
 
-/* Responsive tweak */
+/* Small screens tweak */
 @media (max-width: 600px) {
-  .counter-card { width: 150px; }
+  .counter-card {
+    flex: 1 1 100%;
+  }
 }
