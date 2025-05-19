@@ -372,26 +372,116 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ===== 3. COUNTERS =====
-  function animateCounters() {
-    document.querySelectorAll(".number").forEach(span => {
-      const target = +span.dataset.target;
-      let count = 0;
-      const step = Math.max(1, target / 100);
-      (function upd() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(upd);
-      })();
-    });
-  }
-  function updateCounters() {
-    const cl = classSelect.value, sec = sectionSelect.value;
-    sectionCountSpan.dataset.target = students.filter(s => s.cls === cl && s.sec === sec).length;
-    classCountSpan.dataset.target   = students.filter(s => s.cls === cl).length;
-    schoolCountSpan.dataset.target  = students.length;
-    animateCounters();
-  }
+  // === 3️⃣ COUNTERS – UPDATED COMPLETE SECTION ===
 
+function animateCounters() {
+  document.querySelectorAll(".number").forEach(span => {
+    const target = +span.dataset.target;
+    let count = 0;
+    const step = Math.max(1, target / 100);
+    (function upd() {
+      count += step;
+      span.textContent = count < target ? Math.ceil(count) : target;
+      if (count < target) requestAnimationFrame(upd);
+    })();
+  });
+}
+
+function updateCounters() {
+  const cl  = classSelect.value;
+  const sec = sectionSelect.value;
+  // pool = students in this class+section
+  const pool = students.filter(s => s.cls === cl && s.sec === sec);
+
+  let debCount    = 0;
+  let totalFine   = 0;
+  let totalAttend = 0;
+
+  pool.forEach(s => {
+    // tally attendance
+    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+    Object.values(attendanceData).forEach(rec => {
+      if (rec[s.adm]) stats[rec[s.adm]]++;
+    });
+    const totalDays = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+    const pctPresent = totalDays ? (stats.P / totalDays) * 100 : 0;
+
+    // calculate fine and outstanding
+    const fine = stats.A * fineRates.A
+               + stats.Lt * fineRates.Lt
+               + stats.L  * fineRates.L
+               + stats.HD * fineRates.HD;
+    const paid = (paymentsData[s.adm] || [])
+                   .reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = fine - paid;
+
+    // accumulate
+    if (outstanding > 0 || pctPresent < eligibilityPct) debCount++;
+    totalFine   += Math.max(0, outstanding);
+    totalAttend += stats.P;
+  });
+
+  const eligCount = pool.length - debCount;
+
+  // set data-target on each counter span
+  sectionCountSpan.dataset.target = pool.length;
+  classCountSpan.dataset.target   = students.filter(s => s.cls === cl).length;
+  schoolCountSpan.dataset.target  = students.length;
+
+  document.getElementById('debarredCount').dataset.target = debCount;
+  document.getElementById('eligibleCount').dataset.target = eligCount;
+  document.getElementById('fineCount').dataset.target     = totalFine;
+  document.getElementById('attCount').dataset.target      = totalAttend;
+
+  // animate all counters
+  animateCounters();
+}
+
+// Make sure you still call updateCounters() whenever your data/filter changes,
+// e.g. at end of renderStudents() or right after fetching/updating attendance:
+updateCounters();
+
+// === Click-to-view details (keep this below updateCounters) ===
+['section','class','school','debarred','eligible','fine','att'].forEach(key => {
+  document.getElementById(`card-${key}`)
+    .addEventListener('click', () => showCounterDetails(key));
+});
+
+function showCounterDetails(key) {
+  // re-compute latest values
+  const cl  = classSelect.value;
+  const sec = sectionSelect.value;
+  const pool = students.filter(s => s.cls === cl && s.sec === sec);
+  // reuse updateCounters logic to get numbers
+  updateCounters();
+  const details = {
+    section: sectionCountSpan.textContent,
+    class:   classCountSpan.textContent,
+    school:  schoolCountSpan.textContent,
+    debarred:  +document.getElementById('debarredCount').textContent,
+    eligible:  +document.getElementById('eligibleCount').textContent,
+    fine:      +document.getElementById('fineCount').textContent,
+    att:       +document.getElementById('attCount').textContent
+  };
+
+  const titles = {
+    section: 'Section Students',
+    class:   'Class Students',
+    school:  'School Students',
+    debarred:'Debarred Students',
+    eligible:'Eligible Students',
+    fine:    'Total Fine Outstanding (PKR)',
+    att:     'Total Present Marks'
+  };
+
+  document.getElementById('detailTitle').textContent   = titles[key];
+  document.getElementById('detailContent').textContent = details[key];
+  document.getElementById('counterDetails').classList.remove('hidden');
+}
+
+document.getElementById('closeDetails').onclick = () => {
+  document.getElementById('counterDetails').classList.add('hidden');
+};
   // ===== 4. STUDENT REGISTRATION =====
   function renderStudents() {
     const cl = classSelect.value, sec = sectionSelect.value;
