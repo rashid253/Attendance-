@@ -10,6 +10,7 @@
   --dark: #333;
 }
 
+/* Global resets and typography */
 * {
   box-sizing: border-box;
   outline: none;
@@ -85,7 +86,7 @@ th, td {
 }
 
 .no-print {
-  /* hide in print */
+  /* hide in print context if needed */
 }
 
 .hidden {
@@ -103,24 +104,6 @@ th, td {
   margin-top: 0.5em;
 }
 
-.counter-grid {
-  display: flex;
-  gap: 1em;
-}
-
-.counter-card {
-  flex: 1;
-  text-align: center;
-  padding: 1em;
-  background: #fff;
-  border-radius: 4px;
-}
-
-.counter-card .number {
-  font-size: 2rem;
-  display: block;
-}
-
 #analyticsFilterBtn {
   float: right;
   background: none;
@@ -130,34 +113,74 @@ th, td {
   color: #555;
 }
 
-/* Modal */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
+/* COUNTER GRID and CARDS */
+.counter-grid {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 1em;
+  margin: 0 -0.5em;
 }
 
-.modal-content {
+.counter-card {
+  flex: 1 1 150px;
+  min-width: 150px;
+  text-align: center;
+  padding: 1em;
   background: #fff;
-  padding: 1.5em;
-  border-radius: 6px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: box-shadow .2s ease;
 }
 
-.modal-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  cursor: pointer;
-  font-size: 1.2em;
+.counter-card .number {
+  font-size: 2rem;
+  display: block;
+}
+
+.counter-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* DETAIL PANE */
+#counterDetails {
+  position: relative;
+  margin-top: 1em;
+  padding: 1em;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+#counterDetails h3 {
+  margin-top: 0;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5em;
+}
+
+.detail-table th,
+.detail-table td {
+  border: 1px solid #ddd;
+  padding: 0.5em;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.detail-table th {
+  background: var(--light);
+  font-weight: 600;
+}
+
+/* Modal fallback styling */
+.modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 /* Attendance List Styling */
@@ -173,7 +196,7 @@ th, td {
 }
 
 .attendance-row .attendance-buttons button {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -183,16 +206,15 @@ th, td {
   background-color: rgba(3,169,244,0.2);
   color: var(--info);
   border: 1px solid rgba(3,169,244,0.5);
+  min-width: 2.5em;
 }
 
-/* Updated styling for attendance row header */
 .attendance-header {
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 0.5em;
 }
 
-/* Make the Mark Attendance list scrollable */
 #attendanceBody {
   max-height: 400px;
   overflow-y: auto;
@@ -202,19 +224,23 @@ th, td {
   background: #fff;
 }
 
-/* Make the Attendance Report table scrollable horizontally */
+/* Attendance Summary Table */
 #attendanceSummary {
   overflow-x: auto;
   padding-bottom: 0.5em;
 }
+
 #attendanceSummary table {
   min-width: 600px;
 }
 
-/* Make school list scrollable with fixed height */
+/* School List Styling */
 #schoolList {
+  display: flex;
+  flex-direction: column;
   max-height: 150px;
   overflow-y: auto;
+  gap: 0.5em;
   border: 1px solid #ccc;
   padding: 0.5em;
   background: #fafafa;
@@ -222,12 +248,10 @@ th, td {
   margin-top: 0.5em;
 }
 
-/* Style each school row with full width and spaced buttons */
 #schoolList .row-inline {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5em;
 }
 
 #schoolList .row-inline button {
@@ -235,3 +259,9 @@ th, td {
   flex-shrink: 0;
 }
 
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .counter-card {
+    flex: 1 1 100%;
+  }
+}
