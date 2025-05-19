@@ -12,6 +12,65 @@
 //  9) Service Worker Registration
 // 10) Sync from Firebase → IndexedDB / UI
 // ------------------------------------------------------
+// ===== INSERT AT THE VERY TOP OF app.js =====
+
+// 0) Import Auth helpers (from auth.js) and any Firestore/Firestore‐Auth calls:
+import {
+  auth,                    // the Firebase Auth instance
+  currentProfile,          // user’s Firestore profile data
+  currentSchoolData,       // school’s Firestore data
+  onAuthStateChanged,      // our wrapper around firebase.auth().onAuthStateChanged
+  signOut                  // to let both Owner and Teacher log out
+} from "./auth.js";
+
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { doc, collection, getDocs }     from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+// 1) Before anything else, register the Auth‐state listener.
+//    The callback will run immediately if the user is already signed in,
+//    or will run after signInWithEmailAndPassword() succeeds.
+onAuthStateChanged((user, profile, schoolData) => {
+  if (user) {
+    // A user is signed in. Decide which dashboard to show.
+    if (profile.role === "owner" || profile.role === "admin") {
+      renderOwnerDashboard(profile.name);
+      showView(document.getElementById("ownerDashboard"));
+    } else {
+      renderTeacherDashboard(profile.name);
+      showView(document.getElementById("teacherDashboard"));
+    }
+  } else {
+    // No user is signed in → show the login screen.
+    showView(document.getElementById("loginContainer"));
+  }
+});
+
+// 2) Handle the login form submission. This must call SignIn and call `preventDefault()`.
+const loginForm       = document.getElementById("loginForm");
+const loginEmailInput = document.getElementById("loginEmail");
+const loginPwdInput   = document.getElementById("loginPassword");
+const loginErrorP     = document.getElementById("loginError");
+
+loginForm.addEventListener("submit", async (evt) => {
+  evt.preventDefault();            // Prevent page reload
+  loginErrorP.textContent = "";    // Clear old error
+
+  const email = loginEmailInput.value.trim();
+  const pwd   = loginPwdInput.value;
+  try {
+    // This triggers Firebase Auth. Once it succeeds, our onAuthStateChanged() callback will fire.
+    await signInWithEmailAndPassword(auth, email, pwd);
+    loginEmailInput.value = "";
+    loginPwdInput.value   = "";
+  } catch (err) {
+    console.error(err);
+    loginErrorP.textContent = "Invalid credentials.";
+  }
+});
+
+// ————————  END INSERT ————————
+
+// Now continue with your existing IndexedDB / Realtime DB / UI logic below…
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
