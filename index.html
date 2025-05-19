@@ -8,13 +8,6 @@
 
   <!-- Font Awesome for icons -->
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-
-  <!-- Firebase SDKs -->
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js"></script>
-  <!-- Add any other Firebase SDKs you need -->
 </head>
 <body>
   <div id="appRoot">
@@ -76,7 +69,7 @@
         <div class="step hidden" id="signupStep4">
           <p><strong>Step 4:</strong> Sections per Class</p>
           <div id="sectionsContainer">
-            <!-- JS populates one block per class -->
+            <!-- JS will populate one block per class -->
           </div>
           <button type="button" id="signupFinish">Finish &amp; Sign Up</button>
           <button type="button" id="backToStep3">← Back</button>
@@ -181,19 +174,19 @@
       <section id="ownerCounters">
         <h3>Overview Counters</h3>
         <div class="counters-row">
-          <div class="counter-card">
+          <div class="counter-card" id="card-branches">
             <p>Branches</p>
             <p><span id="ownerBranchCount">0</span></p>
           </div>
-          <div class="counter-card">
+          <div class="counter-card" id="card-classes">
             <p>Classes</p>
             <p><span id="ownerClassCount">0</span></p>
           </div>
-          <div class="counter-card">
+          <div class="counter-card" id="card-teachers">
             <p>Teachers</p>
             <p><span id="ownerTeacherCount">0</span></p>
           </div>
-          <div class="counter-card">
+          <div class="counter-card" id="card-students">
             <p>Students</p>
             <p><span id="ownerStudentCount">0</span></p>
           </div>
@@ -216,15 +209,15 @@
       <section id="teacherCounters">
         <h3>My Overview</h3>
         <div class="counters-row">
-          <div class="counter-card">
+          <div class="counter-card" id="card-teacher-students">
             <p>Students</p>
             <p><span id="teacherStudentCount">0</span></p>
           </div>
-          <div class="counter-card">
+          <div class="counter-card" id="card-attendance-records">
             <p>Attendance Records</p>
             <p><span id="teacherAttendanceCount">0</span></p>
           </div>
-          <div class="counter-card">
+          <div class="counter-card" id="card-fines-outstanding">
             <p>Fines Outstanding</p>
             <p><span id="teacherOutstandingCount">0</span></p>
           </div>
@@ -295,8 +288,11 @@
   </div>
 
   <!-- ================================
-       5) APPLICATION LOGIC (app.js)
+       5) LOAD AUTH & APP SCRIPTS
        ================================ -->
+  <!-- Load auth.js first (handles Firebase init, signup, login, onAuthStateChanged) -->
+  <script type="module" src="auth.js"></script>
+  <!-- Then load app.js (core functionality, relies on auth.js exports) -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
