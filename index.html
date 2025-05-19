@@ -6,8 +6,17 @@
   <title>Attendance Management App</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Font Awesome for icons -->
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <!-- Font Awesome (CDN version to avoid CORS issues) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    integrity="sha512-d7vFBZg7++zmounVZCMR3nNi+mkaW+QWmqvazRw2sbRjZyc3e2Xsr5IKabv8xKbJ3XSGNhkE9HdTn1flOlFJRQ=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
+  <!-- idb-keyval IIFE (for IndexedDB helpers) -->
+  <script src="https://unpkg.com/idb-keyval@6/dist/idb-keyval-iife.min.js"></script>
 </head>
 <body>
   <div id="appRoot">
