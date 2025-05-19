@@ -1,136 +1,150 @@
 /* style.css */
 
-:root {
-  --primary: #2196F3;
-  --success: #4caf50;
-  --danger: #f44336;
-  --warning: #ffeb3b;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
-
+/* --------------------------------------------------------
+   1. Base & Utility Styles
+   -------------------------------------------------------- */
 * {
   box-sizing: border-box;
-  outline: none;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--light);
-  color: var(--dark);
-}
-
-header {
-  background: var(--primary);
-  color: #fff;
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  background: #f9f9f9;
+  color: #333;
   padding: 1em;
-  text-align: center;
 }
 
 h1, h2, h3 {
-  margin: 0 0 10px;
-}
-
-section {
-  background: #fff;
-  padding: 1em;
-  margin: 0 0 20px;
-  border-radius: 4px;
-}
-
-.row-inline > * {
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 0.5em;
   margin-bottom: 0.5em;
-}
-
-input, select, button {
-  font-size: 1rem;
-  padding: 0.5em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  color: #2196F3;
 }
 
 button {
-  background: var(--primary);
+  background: #2196F3;
   color: #fff;
   border: none;
+  border-radius: 4px;
+  padding: 0.5em 0.75em;
   cursor: pointer;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  background: #1976D2;
 }
 
 button:disabled {
-  opacity: 0.6;
+  background: #bbb;
   cursor: not-allowed;
+}
+
+input, select {
+  padding: 0.4em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  margin-right: 1em;
+}
+
+header.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1em;
+}
+
+.header-buttons button {
+  margin-left: 0.5em;
+}
+
+/* --------------------------------------------------------
+   2. Form & Table Wrappers
+   -------------------------------------------------------- */
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .table-wrapper {
   overflow-x: auto;
+  margin-top: 1em;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
 }
 
 table {
-  table-layout: auto !important;
-  width: auto !important;
   border-collapse: collapse;
-  margin-top: 1em;
+  width: 100%;
 }
 
-th, td {
-  padding: 2mm;
-  border: 1px solid #ddd;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.no-print {
-  /* hide in print */
-}
-
-.hidden {
-  display: none !important;
-}
-
-.card {
+table th,
+table td {
+  padding: 0.5em;
   border: 1px solid #ccc;
-  padding: 1em;
-  margin-top: 1em;
-  border-radius: 4px;
+  text-align: left;
+  font-size: 0.9rem;
 }
 
-.btn {
+table th {
+  background: #f0f0f0;
+}
+
+.table-actions {
   margin-top: 0.5em;
 }
 
-.counter-grid {
+/* --------------------------------------------------------
+   3. Counters Section
+   -------------------------------------------------------- */
+.scroll-row {
   display: flex;
+  overflow-x: auto;
   gap: 1em;
+  padding-bottom: 0.5em;
+  margin-bottom: 1em;
 }
 
 .counter-card {
-  flex: 1;
+  min-width: 140px;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   text-align: center;
   padding: 1em;
-  background: #fff;
-  border-radius: 4px;
-}
-
-.counter-card .number {
-  font-size: 2rem;
-  display: block;
-}
-
-#analyticsFilterBtn {
-  float: right;
-  background: none;
-  border: none;
   cursor: pointer;
-  font-size: 1.2em;
+}
+
+.counter-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.counter-card .card-title {
+  font-weight: bold;
+  margin-bottom: 0.5em;
   color: #555;
 }
 
-/* Modal */
+.counter-card .card-number span {
+  font-size: 2.5rem;
+  color: #2196F3;
+}
+
+/* --------------------------------------------------------
+   4. Modals & Dialogs
+   -------------------------------------------------------- */
 .modal {
   position: fixed;
   top: 0;
@@ -141,6 +155,7 @@ th, td {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
 .modal-content {
@@ -150,6 +165,7 @@ th, td {
   width: 90%;
   max-width: 400px;
   position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .modal-close {
@@ -157,81 +173,118 @@ th, td {
   top: 8px;
   right: 12px;
   cursor: pointer;
-  font-size: 1.2em;
+  font-size: 1.2rem;
 }
 
-/* Attendance List Styling */
-.attendance-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--dark);
+.modal-actions {
+  margin-top: 1em;
+  text-align: right;
 }
 
-.attendance-row .attendance-buttons {
+/* --------------------------------------------------------
+   5. Attendance Rows & Buttons
+   -------------------------------------------------------- */
+.attendance-row {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5em;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.attendance-header {
+  flex: 1;
+  padding: 0.75em;
+  font-weight: bold;
+}
+
+.attendance-buttons {
   display: flex;
   gap: 0.5em;
+  padding: 0.75em;
 }
 
-.attendance-row .attendance-buttons button {
-  flex: 1 1 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.5em;
-  font-size: 0.9rem;
-  border-radius: 4px;
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
-  border: 1px solid rgba(3,169,244,0.5);
-}
-
-/* Updated styling for attendance row header */
-.attendance-header {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 0.5em;
-}
-
-/* Make the Mark Attendance list scrollable */
-#attendanceBody {
-  max-height: 400px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
-  background: #fff;
-}
-
-/* Make the Attendance Report table scrollable horizontally */
-#attendanceSummary {
-  overflow-x: auto;
-  padding-bottom: 0.5em;
-}
-#attendanceSummary table {
-  min-width: 600px;
-}
-
-/* Make school list scrollable with fixed height */
-#schoolList {
-  max-height: 150px;
-  overflow-y: auto;
+.att-btn {
+  padding: 0.5em 0.7em;
   border: 1px solid #ccc;
-  padding: 0.5em;
-  background: #fafafa;
   border-radius: 4px;
-  margin-top: 0.5em;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
-/* Style each school row with full width and spaced buttons */
-#schoolList .row-inline {
+.att-btn.selected {
+  color: #fff;
+}
+
+.summary-box {
+  margin-top: 1em;
+  padding: 1em;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* --------------------------------------------------------
+   6. Analytics Charts
+   -------------------------------------------------------- */
+#graphs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5em;
+  flex-wrap: wrap;
+  gap: 1em;
+  margin-top: 1em;
 }
 
-#schoolList .row-inline button {
-  margin-left: 0.25em;
-  flex-shrink: 0;
+#graphs canvas {
+  flex: 1 1 250px;
+  max-width: 45%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5em;
 }
 
+/* --------------------------------------------------------
+   7. Attendance Register Cells
+   -------------------------------------------------------- */
+.reg-cell {
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.status-text {
+  display: inline-block;
+  width: 100%;
+}
+
+/* --------------------------------------------------------
+   8. Hidden Utility & No-Print
+   -------------------------------------------------------- */
+.hidden {
+  display: none !important;
+}
+
+.no-print {
+  display: inline-block;
+}
+
+/* --------------------------------------------------------
+   9. Responsive & Misc
+   -------------------------------------------------------- */
+@media (max-width: 600px) {
+  .row-inline {
+    flex-direction: column;
+  }
+  .row-inline label,
+  .row-inline input,
+  .row-inline select,
+  .row-inline button {
+    width: 100%;
+    margin-bottom: 0.5em;
+  }
+  #graphs {
+    flex-direction: column;
+  }
+}
