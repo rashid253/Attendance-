@@ -441,43 +441,123 @@ function updateCounters() {
 // e.g. at end of renderStudents() or right after fetching/updating attendance:
 updateCounters();
 
-// === Click-to-view details (keep this below updateCounters) ===
-['section','class','school','debarred','eligible','fine','att'].forEach(key => {
-  document.getElementById(`card-${key}`)
-    .addEventListener('click', () => showCounterDetails(key));
-});
+// === CLICK-TO-VIEW DETAILS WITH FULL TABLE OUTPUT ===
+
+// Helper to build HTML tables
+function buildTable(headers, rows) {
+  let thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+  let tbody = rows.map(r =>
+    `<tr>${r.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+  ).join('');
+  return `<table class="detail-table">${thead}${tbody}</table>`;
+}
 
 function showCounterDetails(key) {
-  // re-compute latest values
   const cl  = classSelect.value;
   const sec = sectionSelect.value;
   const pool = students.filter(s => s.cls === cl && s.sec === sec);
-  // reuse updateCounters logic to get numbers
-  updateCounters();
-  const details = {
-    section: sectionCountSpan.textContent,
-    class:   classCountSpan.textContent,
-    school:  schoolCountSpan.textContent,
-    debarred:  +document.getElementById('debarredCount').textContent,
-    eligible:  +document.getElementById('eligibleCount').textContent,
-    fine:      +document.getElementById('fineCount').textContent,
-    att:       +document.getElementById('attCount').textContent
-  };
 
-  const titles = {
-    section: 'Section Students',
-    class:   'Class Students',
-    school:  'School Students',
-    debarred:'Debarred Students',
-    eligible:'Eligible Students',
-    fine:    'Total Fine Outstanding (PKR)',
-    att:     'Total Present Marks'
-  };
+  let title, html;
 
-  document.getElementById('detailTitle').textContent   = titles[key];
-  document.getElementById('detailContent').textContent = details[key];
+  if (key === 'debarred') {
+    title = 'Debarred Students';
+    const rows = pool
+      .map(s => {
+        // calculate this student’s stats
+        const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+        Object.values(attendanceData).forEach(rec => {
+          if (rec[s.adm]) stats[rec[s.adm]]++;
+        });
+        const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+        const pct   = total ? ((stats.P/total)*100).toFixed(1) : '0.0';
+        const fine  = stats.A*fineRates.A
+                    + stats.Lt*fineRates.Lt
+                    + stats.L *fineRates.L
+                    + stats.HD*fineRates.HD;
+        const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+        const out   = fine - paid;
+        return { adm: s.adm, name: s.name, pct, out };
+      })
+      .filter(s => s.out>0 || s.pct < eligibilityPct)
+      .map(s => [s.adm, s.name, `${s.pct}%`, `₨${s.out}`]);
+    html = buildTable(['Adm#','Name','% Present','Fine Due'], rows);
+
+  } else if (key === 'eligible') {
+    title = 'Eligible Students';
+    const debarredSet = new Set(
+      pool.filter(s => {
+        const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+        Object.values(attendanceData).forEach(rec => {
+          if (rec[s.adm]) stats[rec[s.adm]]++;
+        });
+        const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+        const pct   = total ? (stats.P/total)*100 : 0;
+        const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt
+                    + stats.L*fineRates.L + stats.HD*fineRates.HD;
+        const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+        return fine - paid > 0 || pct < eligibilityPct;
+      }).map(s => s.adm)
+    );
+    const rows = pool
+      .filter(s => !debarredSet.has(s.adm))
+      .map(s => [s.adm, s.name]);
+    html = buildTable(['Adm#','Name'], rows);
+
+  } else if (key === 'fine') {
+    title = 'Fine Outstanding';
+    const rows = pool.map(s => {
+      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      Object.values(attendanceData).forEach(rec => {
+        if (rec[s.adm]) stats[rec[s.adm]]++;
+      });
+      const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt
+                  + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount,0);
+      const out   = fine - paid;
+      return [s.adm, s.name, `₨${out}`];
+    })
+    .filter(r => parseInt(r[2].slice(1)) > 0);
+    html = buildTable(['Adm#','Name','Due Amount'], rows);
+
+  } else if (key === 'att') {
+    title = 'Attendance Records';
+    const rows = pool.map(s => {
+      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      Object.values(attendanceData).forEach(rec => {
+        if (rec[s.adm]) stats[rec[s.adm]]++;
+      });
+      const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+      return [
+        s.adm, s.name,
+        stats.P, stats.A, stats.Lt, stats.HD, stats.L,
+        total
+      ];
+    });
+    html = buildTable(
+      ['Adm#','Name','P','A','Lt','HD','L','Total Days'],
+      rows
+    );
+
+  } else {
+    // section, class, school just show count and list names
+    const label = { section:'Section', class:'Class', school:'School' }[key];
+    title = `${label} Students`;
+    const rows = (key === 'school' ? students : pool)
+      .map(s => [s.adm, s.name]);
+    html = buildTable(['Adm#','Name'], rows);
+  }
+
+  document.getElementById('detailTitle').textContent   = title;
+  document.getElementById('detailContent').innerHTML  = html;
   document.getElementById('counterDetails').classList.remove('hidden');
 }
+
+// wire up the handlers (keep this after updateCounters())
+['section','class','school','debarred','eligible','fine','att']
+  .forEach(key => {
+    document.getElementById(`card-${key}`)
+      .addEventListener('click', () => showCounterDetails(key));
+  });
 
 document.getElementById('closeDetails').onclick = () => {
   document.getElementById('counterDetails').classList.add('hidden');
