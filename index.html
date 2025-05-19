@@ -114,20 +114,46 @@
   </section>
 
   <!-- 3. COUNTERS -->
-  <section id="animatedCounters" class="counter-grid">
-    <div class="counter-card">
-      <span id="sectionCount" class="number" data-target="0">0</span>
-      <div>Section Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="classCount" class="number" data-target="0">0</span>
-      <div>Class Students</div>
-    </div>
-    <div class="counter-card">
-      <span id="schoolCount" class="number" data-target="0">0</span>
-      <div>School Students</div>
-    </div>
-  </section>
+<section id="animatedCounters" class="counter-grid">
+  <!-- EXISTING cards (Section, Class, School) -->
+  <div id="card-section" class="counter-card clickable">
+    <span id="sectionCount" class="number" data-target="0">0</span>
+    <div>Section Students</div>
+  </div>
+  <div id="card-class" class="counter-card clickable">
+    <span id="classCount" class="number" data-target="0">0</span>
+    <div>Class Students</div>
+  </div>
+  <div id="card-school" class="counter-card clickable">
+    <span id="schoolCount" class="number" data-target="0">0</span>
+    <div>School Students</div>
+  </div>
+
+  <!-- NEW cards -->
+  <div id="card-debarred" class="counter-card clickable">
+    <span id="debarredCount" class="number" data-target="0">0</span>
+    <div>Debarred</div>
+  </div>
+  <div id="card-eligible" class="counter-card clickable">
+    <span id="eligibleCount" class="number" data-target="0">0</span>
+    <div>Eligible</div>
+  </div>
+  <div id="card-fine" class="counter-card clickable">
+    <span id="fineCount" class="number" data-target="0">0</span>
+    <div>Fine Outstanding</div>
+  </div>
+  <div id="card-attendance" class="counter-card clickable">
+    <span id="attCount" class="number" data-target="0">0</span>
+    <div>Total Attendance</div>
+  </div>
+</section>
+
+<!-- DETAIL DISPLAY AREA (put this immediately after the counters section) -->
+<section id="counterDetails" class="hidden">
+  <h3 id="detailTitle"></h3>
+  <div id="detailContent"></div>
+  <button id="closeDetails">Close</button>
+</section>
 
   <!-- 4. STUDENT REGISTRATION -->
   <section id="student-registration">
