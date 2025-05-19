@@ -1,4 +1,3 @@
-Below is an updated app.js with the following changes:
 // app.js (with resetViews, and disabling of all sections until setup is done)
 // -------------------------------------------------------------------------------------------------
 
