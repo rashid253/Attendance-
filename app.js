@@ -1,4 +1,4 @@
-// app.js (fully comprehensive, with fixes for form‐clear and undefined spans)
+// app.js (fixed version)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -318,15 +318,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Container in HTML: <div id="countersContainer" class="scroll-row"></div>
   const countersContainer = $("countersContainer");
 
-  // We must grab these spans so updateCounters() can reference them without error:
-  const sectionCountSpan    = $("sectionCount");
-  const classCountSpan      = $("classCount");
-  const schoolCountSpan     = $("schoolCount");
-  const attendanceCountSpan = $("attendanceCount");
-  const eligibleCountSpan   = $("eligibleCount");
-  const debarredCountSpan   = $("debarredCount");
-  const outstandingCountSpan= $("outstandingCount");
-
   function createCounterCard(id, title, spanId) {
     const card = document.createElement("div");
     card.className = "counter-card";
@@ -340,7 +331,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     return card;
   }
 
-  // Create all seven cards
+  // Create all seven cards **first**, so that their spans exist in the DOM
   const sectionCard     = createCounterCard("card-section",     "Section",        "sectionCount");
   const classCard       = createCounterCard("card-class",       "Class",          "classCount");
   const schoolCard      = createCounterCard("card-school",      "School",         "schoolCount");
@@ -348,6 +339,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   const eligibleCard    = createCounterCard("card-eligible",    "Eligible",       "eligibleCount");
   const debarredCard    = createCounterCard("card-debarred",    "Debarred",       "debarredCount");
   const outstandingCard = createCounterCard("card-outstanding", "Outstanding/Fine","outstandingCount");
+
+  // Now that the spans are in the DOM, grab them:
+  const sectionCountSpan     = $("sectionCount");
+  const classCountSpan       = $("classCount");
+  const schoolCountSpan      = $("schoolCount");
+  const attendanceCountSpan  = $("attendanceCount");
+  const eligibleCountSpan    = $("eligibleCount");
+  const debarredCountSpan    = $("debarredCount");
+  const outstandingCountSpan = $("outstandingCount");
 
   function animateCounters() {
     document.querySelectorAll(".card-number span").forEach(span => {
@@ -363,7 +363,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function updateCounters() {
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
 
     // Section: number of students in this class+section
@@ -424,8 +424,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       else debarredCount++;
       if (outstanding > 0) outstandingCount++;
     });
-    eligibleCountSpan.dataset.target   = eligibleCount;
-    debarredCountSpan.dataset.target   = debarredCount;
+    eligibleCountSpan.dataset.target    = eligibleCount;
+    debarredCountSpan.dataset.target    = debarredCount;
     outstandingCountSpan.dataset.target = outstandingCount;
 
     animateCounters();
@@ -433,7 +433,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Dialog handlers for each card
   sectionCard.onclick = () => {
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     const list = students
       .filter(s => s.cls === cl && s.sec === sec)
@@ -466,7 +466,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   attendanceCard.onclick = () => {
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
     Object.entries(attendanceData).forEach(([date, rec]) => {
@@ -604,24 +604,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 4. STUDENT REGISTRATION SECTION
   // ----------------------
-  const studentsBody         = $("studentsBody");
-  const selectAllStudents    = $("selectAllStudents");
-  const editSelectedBtn      = $("editSelected");
-  const doneEditingBtn       = $("doneEditing");
-  const deleteSelectedBtn    = $("deleteSelected");
-  const saveRegistrationBtn  = $("saveRegistration");
-  const editRegistrationBtn  = $("editRegistration");
-  const shareRegistrationBtn = $("shareRegistration");
+  const studentsBody            = $("studentsBody");
+  const selectAllStudents       = $("selectAllStudents");
+  const editSelectedBtn         = $("editSelected");
+  const doneEditingBtn          = $("doneEditing");
+  const deleteSelectedBtn       = $("deleteSelected");
+  const saveRegistrationBtn     = $("saveRegistration");
+  const editRegistrationBtn     = $("editRegistration");
+  const shareRegistrationBtn    = $("shareRegistration");
   const downloadRegistrationBtn = $("downloadRegistrationPDF");
 
   $("addStudent").onclick = async (e) => {
     e.preventDefault();
-    const n = $("studentName").value.trim();
-    const p = $("parentName").value.trim();
-    const c = $("parentContact").value.trim();
-    const o = $("parentOccupation").value.trim();
-    const a = $("parentAddress").value.trim();
-    const cl = classSelect.value;
+    const n   = $("studentName").value.trim();
+    const p   = $("parentName").value.trim();
+    const c   = $("parentContact").value.trim();
+    const o   = $("parentOccupation").value.trim();
+    const a   = $("parentAddress").value.trim();
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     if (!n || !p || !c || !o || !a) { alert("All fields required"); return; }
     if (!/^\d{7,15}$/.test(c)) { alert("Contact must be 7–15 digits"); return; }
@@ -632,16 +632,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderStudents();
     updateCounters();
     resetViews();
-    // <-- CLEAR FORM INPUTS HERE:
-    $("studentName").value = "";
-    $("parentName").value = "";
-    $("parentContact").value = "";
+
+    // ----- CLEAR FORM INPUTS HERE -----
+    $("studentName").value      = "";
+    $("parentName").value       = "";
+    $("parentContact").value    = "";
     $("parentOccupation").value = "";
-    $("parentAddress").value = "";
+    $("parentAddress").value    = "";
   };
 
   function renderStudents() {
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     studentsBody.innerHTML = "";
     let idx = 0;
@@ -652,10 +653,10 @@ window.addEventListener("DOMContentLoaded", async () => {
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
       Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
       const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-      const fine = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount, 0);
-      const out = fine - paid;
-      const pct = total ? (stats.P/total)*100 : 0;
+      const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
+      const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount, 0);
+      const out   = fine - paid;
+      const pct   = total ? (stats.P/total)*100 : 0;
       const status = (out > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
 
       const tr = document.createElement("tr");
@@ -811,16 +812,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   loadAttendanceBtn.onclick = () => {
     attendanceBodyDiv.innerHTML = "";
     attendanceSummaryDiv.innerHTML = "";
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     attendanceBodyDiv.style.overflowX = "auto";
     students.filter(stu => stu.cls === cl && stu.sec === sec).forEach((stu, i) => {
       const row = document.createElement("div");
       const headerDiv = document.createElement("div");
-      const btnsDiv = document.createElement("div");
-      row.className = "attendance-row";
+      const btnsDiv   = document.createElement("div");
+      row.className       = "attendance-row";
       headerDiv.className = "attendance-header";
-      btnsDiv.className = "attendance-buttons";
+      btnsDiv.className   = "attendance-buttons";
       headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
       Object.keys(statusNames).forEach(code => {
         const btn = document.createElement("button");
@@ -845,7 +846,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const date = dateInput.value;
     if (!date) { alert("Pick date"); return; }
     attendanceData[date] = {};
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
       const selBtn = attendanceBodyDiv.children[i].querySelector(".att-btn.selected");
@@ -908,34 +909,35 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   shareAttendanceBtn.onclick = () => {
-    const cl = classSelect.value;
-    const sec = sectionSelect.value;
+    const cl   = classSelect.value;
+    const sec  = sectionSelect.value;
     const date = dateInput.value;
     const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
-    const lines = students.filter(s => s.cls === cl && s.sec === sec).map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
+    const lines = students.filter(s => s.cls === cl && s.sec === sec)
+      .map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
     window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`, "_blank");
   };
 
   // ----------------------
   // 7. ANALYTICS SECTION
   // ----------------------
-  const atg                 = $("analyticsTarget");           // select: section/student
-  const asel                = $("analyticsSectionSelect");    // section dropdown
-  const atype               = $("analyticsType");             // type: date/month/semester/year
-  const adateInput          = $("analyticsDate");             // input type="date"
-  const amonthInput         = $("analyticsMonth");            // input type="month"
-  const semsInput           = $("semesterStart");             // input type="month"
-  const semeInput           = $("semesterEnd");               // input type="month"
-  const ayearInput          = $("yearStart");                 // input type="number" min=2000 max=2100
-  const asearchInput        = $("analyticsSearch");           // input to search admission or name
-  const loadAnalyticsBtn    = $("loadAnalytics");
-  const resetAnalyticsBtn   = $("resetAnalytics");
-  const instructionsDiv     = $("instructions");
-  const analyticsContainer  = $("analyticsContainer");
-  const graphsDiv           = $("graphs");
-  const analyticsActionsDiv = $("analyticsActions");
-  const barChartCanvas      = $("barChart");
-  const pieChartCanvas      = $("pieChart");
+  const atg                  = $("analyticsTarget");           // select: section/student
+  const asel                 = $("analyticsSectionSelect");    // section dropdown
+  const atype                = $("analyticsType");             // type: date/month/semester/year
+  const adateInput           = $("analyticsDate");             // input type="date"
+  const amonthInput          = $("analyticsMonth");            // input type="month"
+  const semsInput            = $("semesterStart");             // input type="month"
+  const semeInput            = $("semesterEnd");               // input type="month"
+  const ayearInput           = $("yearStart");                 // input type="number" min=2000 max=2100
+  const asearchInput         = $("analyticsSearch");           // input to search admission or name
+  const loadAnalyticsBtn     = $("loadAnalytics");
+  const resetAnalyticsBtn    = $("resetAnalytics");
+  const instructionsDiv      = $("instructions");
+  const analyticsContainer   = $("analyticsContainer");
+  const graphsDiv            = $("graphs");
+  const analyticsActionsDiv  = $("analyticsActions");
+  const barChartCanvas       = $("barChart");
+  const pieChartCanvas       = $("pieChart");
   const downloadAnalyticsBtn = $("downloadAnalytics");
   const shareAnalyticsBtn    = $("shareAnalytics");
 
@@ -1294,7 +1296,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     registerHeaderRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` + dateKeys.map(k => `<th>${k.split("-")[2]}</th>`).join("");
     registerBodyTbody.innerHTML = "";
 
-    const cl = classSelect.value;
+    const cl  = classSelect.value;
     const sec = sectionSelect.value;
     students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
       let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
