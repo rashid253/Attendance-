@@ -155,137 +155,168 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ----------------------
-  // 1. SETUP SECTION
-  // ----------------------
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
+// 1. SETUP SECTION (Namespaced per School)
+// ----------------------
+const setupForm      = $("setupForm");
+const setupDisplay   = $("setupDisplay");
+const schoolInput    = $("schoolInput");
+const schoolSelect   = $("schoolSelect");
+const classSelect    = $("teacherClassSelect");
+const sectionSelect  = $("teacherSectionSelect");
+const setupText      = $("setupText");
+const saveSetupBtn   = $("saveSetup");
+const editSetupBtn   = $("editSetup");
+const schoolListDiv  = $("schoolList");
 
-  function renderSchoolList() {
-    schoolListDiv.innerHTML = "";
-    schools.forEach((sch, idx) => {
-      const row = document.createElement("div");
-      row.className = "row-inline";
-      row.innerHTML = `
-        <span>${sch}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>`;
-      schoolListDiv.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt("Edit School Name:", schools[idx]);
-        if (newName?.trim()) {
-          schools[idx] = newName.trim();
-          await idbSet("schools", schools);
-          await syncToFirebase();
-          await loadSetup();
-        }
-      };
-    });
-    document.querySelectorAll(".delete-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1)[0];
+// State variables
+let schools = [];
+let currentSchool = null;
+let teacherClass = null;
+let teacherSection = null;
+
+// Helper to build namespaced key
+const nsKey = (key) => currentSchool ? `${currentSchool}_${key}` : key;
+
+async function renderSchoolList() {
+  schoolListDiv.innerHTML = "";
+  schools.forEach((sch, idx) => {
+    const row = document.createElement("div");
+    row.className = "row-inline";
+    row.innerHTML = `
+      <span>${sch}</span>
+      <div>
+        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+      </div>`;
+    schoolListDiv.appendChild(row);
+  });
+
+  document.querySelectorAll(".edit-school").forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      const newName = prompt("Edit School Name:", schools[idx]);
+      if (newName?.trim()) {
+        const oldName = schools[idx];
+        schools[idx] = newName.trim();
         await idbSet("schools", schools);
-        if (currentSchool === removed) {
-          currentSchool = null;
-          teacherClass = null;
-          teacherSection = null;
-          await idbSet("currentSchool", null);
-          await idbSet("teacherClass", null);
-          await idbSet("teacherSection", null);
+        // Migrate existing data
+        const keys = await idbKeys();
+        for (let key of keys) {
+          if (key.startsWith(oldName + '_')) {
+            const val = await idbGet(key);
+            await idbSet(key.replace(oldName + '_', newName.trim() + '_'), val);
+            await idbDelete(key);
+          }
         }
         await syncToFirebase();
         await loadSetup();
-      };
-    });
-  }
-
-  let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
-    ].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      hide(setupForm);
-      show(setupDisplay);
-
-      // Now that setup is done, show all other sections
-      resetViews();
-
-      // After setup completes, render students and counters
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-      }, 0);
-
-    } else {
-      // Setup is not complete, hide other sections
-      show(setupForm);
-      hide(setupDisplay);
-      resetViews();
-    }
-  };
-
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await idbSet("schools", schools);
-        await syncToFirebase();
       }
-      schoolInput.value = "";
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
-      return;
-    }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
+    };
+  });
 
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
+  document.querySelectorAll(".delete-school").forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      if (!confirm(`Delete school "${schools[idx]}" and all its data?`)) return;
+      const removed = schools.splice(idx, 1)[0];
+      await idbSet("schools", schools);
+      // Delete all namespaced data
+      const keys = await idbKeys();
+      for (let key of keys) {
+        if (key.startsWith(removed + '_')) {
+          await idbDelete(key);
+        }
+      }
+      if (currentSchool === removed) {
+        currentSchool = null;
+        teacherClass = null;
+        teacherSection = null;
+        await idbSet("currentSchool", null);
+        await idbSet("teacherClass", null);
+        await idbSet("teacherSection", null);
+      }
+      await syncToFirebase();
+      await loadSetup();
+    };
+  });
+}
+
+let loadSetup = async () => {
+  schools        = (await idbGet("schools")) || [];
+  currentSchool  = await idbGet("currentSchool");
+  teacherClass   = await idbGet("teacherClass");
+  teacherSection = await idbGet("teacherSection");
+
+  // Build dropdown
+  schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
+    ...schools.map(s => `<option value="${s}">${s}</option>` )
+  ].join("");
+  if (currentSchool) schoolSelect.value = currentSchool;
+
+  renderSchoolList();
+
+  if (currentSchool && teacherClass && teacherSection) {
+    classSelect.value = teacherClass;
+    sectionSelect.value = teacherSection;
+    setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+    hide(setupForm);
+    show(setupDisplay);
+
+    // Now that setup is done, show all other sections
+    resetViews();
+
+    // After setup completes, load namespaced data
+    setTimeout(async () => {
+      const students = (await idbGet(nsKey("students"))) || [];
+      const attendance = (await idbGet(nsKey("attendance"))) || {};
+      // Pass these into your render functions
+      renderStudents(students);
+      updateCounters(attendance);
+    }, 0);
+
+  } else {
     show(setupForm);
     hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
-  };
+    resetViews();
+  }
+};
+
+saveSetupBtn.onclick = async (e) => {
+  e.preventDefault();
+  const newSchool = schoolInput.value.trim();
+  if (newSchool) {
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await idbSet("schools", schools);
+      await syncToFirebase();
+    }
+    schoolInput.value = "";
+    return loadSetup();
+  }
+  const selSchool  = schoolSelect.value;
+  const selClass   = classSelect.value;
+  const selSection = sectionSelect.value;
+  if (!selSchool || !selClass || !selSection) {
+    alert("Please select a school, class, and section.");
+    return;
+  }
+  currentSchool  = selSchool;
+  teacherClass   = selClass;
+  teacherSection = selSection;
+  await idbSet("currentSchool", currentSchool);
+  await idbSet("teacherClass", teacherClass);
+  await idbSet("teacherSection", teacherSection);
+  await syncToFirebase();
+  await loadSetup();
+};
+
+editSetupBtn.onclick = (e) => {
+  e.preventDefault();
+  show(setupForm);
+  hide(setupDisplay);
+  resetViews();
+};
+
 
   // ----------------------
   // 2. FINANCIAL SETTINGS SECTION
