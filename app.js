@@ -1,7 +1,78 @@
-// app.js (with resetViews, and disabling of all sections until setup is done)
-// -------------------------------------------------------------------------------------------------
+// app.js
+// ------------------------------------------------------
+// Core Application Logic (all sections), with Auth integration:
+//  0) Import Auth helpers (auth.js) + Firestore/Auth
+//  1) Register onAuthStateChanged listener (switch views)
+//  2) Handle login form submission
+//  3) showView(...) helper
+//  4) IndexedDB & Firebase Realtime DB initialization & syncing
+//  5) Setup, Counters, Registration, Attendance, Analytics, Register, Backup/Restore, etc.
+// ------------------------------------------------------
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+// 0) Import Auth helpers (from auth.js) and any Firestore/Auth calls:
+import {
+  auth,                    // Firebase Auth instance
+  currentProfile,          // user’s Firestore profile data
+  currentSchoolData,       // school’s Firestore data
+  onAuthStateChanged,      // wrapper around firebase.auth().onAuthStateChanged
+  signOut                  // to let both Owner and Teacher log out
+} from "./auth.js";
+
+import { signInWithEmailAndPassword } 
+  from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { doc, collection, getDocs }     
+  from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+// 1) showView(...) helper (must be defined before any calls)
+function showView(viewEl) {
+  document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
+  viewEl.classList.remove("hidden");
+}
+
+// 2) Before anything else, register the Auth‐state listener.
+//    The callback runs immediately if the user is already signed in,
+//    or after signInWithEmailAndPassword() succeeds.
+onAuthStateChanged((user, profile, schoolData) => {
+  if (user) {
+    // A user is signed in. Decide which dashboard to show.
+    if (profile.role === "owner" || profile.role === "admin") {
+      renderOwnerDashboard(profile.name);
+      showView(document.getElementById("ownerDashboard"));
+    } else {
+      renderTeacherDashboard(profile.name);
+      showView(document.getElementById("teacherDashboard"));
+    }
+  } else {
+    // No user is signed in → show the login screen.
+    showView(document.getElementById("loginContainer"));
+  }
+});
+
+// 3) Handle the login form submission
+const loginForm       = document.getElementById("loginForm");
+const loginEmailInput = document.getElementById("loginEmail");
+const loginPwdInput   = document.getElementById("loginPassword");
+const loginErrorP     = document.getElementById("loginError");
+
+loginForm.addEventListener("submit", async (evt) => {
+  evt.preventDefault();            // prevent page reload
+  loginErrorP.textContent = "";    // clear previous error
+  const email = loginEmailInput.value.trim();
+  const pwd   = loginPwdInput.value;
+  try {
+    // Trigger Firebase Auth sign-in; on success, onAuthStateChanged fires.
+    await signInWithEmailAndPassword(auth, email, pwd);
+    loginEmailInput.value = "";
+    loginPwdInput.value   = "";
+  } catch (err) {
+    console.error(err);
+    loginErrorP.textContent = "Invalid credentials.";
+  }
+});
+
+// 4) IndexedDB & Firebase Realtime DB initialization
+import { initializeApp } 
+  from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
   ref as dbRef,
@@ -9,12 +80,12 @@ import {
   onValue,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
+// IndexedDB helpers (idb-keyval IIFE must be loaded in HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase configuration (replace with your actual config)
+// Firebase configuration (must match auth.js config)
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
+  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
   projectId: "attandace-management",
   storageBucket: "attandace-management.appspot.com",
@@ -30,19 +101,19 @@ const appDataRef = dbRef(database, "appData");
 // ----------------------
 // Local application state
 // ----------------------
-let students       = [];    // Array of { name, adm, parent, contact, occupation, address, cls, sec }
+let students       = [];    // { name, adm, parent, contact, occupation, address, cls, sec }
 let attendanceData = {};    // { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/"HD"/"L", ... } }
 let paymentsData   = {};    // { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] }
-let lastAdmNo      = 0;     // numeric, incrementing for new admission numbers
+let lastAdmNo      = 0;     // incremental admission number
 let fineRates      = { A:50, Lt:20, L:10, HD:30 };
-let eligibilityPct = 75;    // percentage threshold
-let schools        = [];    // array of school names (strings)
+let eligibilityPct = 75;    // eligibility percentage threshold
+let schools        = [];    // array of school names
 let currentSchool  = null;  // selected school name
-let teacherClass   = null;  // selected class (e.g. "10")
-let teacherSection = null;  // selected section (e.g. "A")
+let teacherClass   = null;  // selected class (string)
+let teacherSection = null;  // selected section (string)
 
 // ----------------------
-// Initialize state from IndexedDB
+// Initialize local state from IndexedDB
 // ----------------------
 async function initLocalState() {
   students       = (await idbGet("students"))       || [];
@@ -58,7 +129,7 @@ async function initLocalState() {
 }
 
 // ----------------------
-// Sync local state to Firebase
+// Sync local state to Firebase Realtime DB
 // ----------------------
 async function syncToFirebase() {
   const payload = {
@@ -82,7 +153,7 @@ async function syncToFirebase() {
 }
 
 // ----------------------
-// Utility: Share PDF via Web Share API
+// Utility: share PDF via Web Share API
 // ----------------------
 async function sharePdf(blob, fileName, title) {
   if (
@@ -101,61 +172,14 @@ async function sharePdf(blob, fileName, title) {
 // DOMContentLoaded: Main Initialization
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selector
+  // Simplified selectors
   const $ = (id) => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
-  const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
-  // Load local state from IndexedDB
+  // Initialize local state from IndexedDB
   await initLocalState();
 
   // ----------------------
-  // Reset Views: Hide/Show all sections based on whether setup is complete
-  // ----------------------
-  function resetViews() {
-    // If setup is incomplete (i.e. currentSchool/class/section is null), hide everything except #teacher-setup section.
-    const setupDone = currentSchool && teacherClass && teacherSection;
-    const allSections = [
-      $("financial-settings"),
-      $("animatedCounters"),
-      $("student-registration"),
-      $("attendance-section"),
-      $("analytics-section"),
-      $("register-section"),
-      $("chooseBackupFolder"),
-      $("restoreData"),
-      $("resetData"),
-    ];
-    if (!setupDone) {
-      allSections.forEach(sec => sec && hide(sec));
-    } else {
-      allSections.forEach(sec => sec && show(sec));
-    }
-  }
-
-  // Immediately run resetViews() so that on first load, only Setup is visible if not done
-  resetViews();
-
-  // ----------------------
-  // Eruda for debugging (optional)
-  // ----------------------
-  const erudaScript = document.createElement("script");
-  erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
-
-  // ----------------------
-  // Generate new admission number
-  // ----------------------
-  async function genAdmNo() {
-    lastAdmNo++;
-    await idbSet("lastAdmNo", lastAdmNo);
-    await syncToFirebase();
-    return String(lastAdmNo).padStart(4, "0");
-  }
-
-  // ----------------------
-  // 1. SETUP SECTION
+  // 1) SETUP SECTION
   // ----------------------
   const setupForm      = $("setupForm");
   const setupDisplay   = $("setupDisplay");
@@ -213,7 +237,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  let loadSetup = async () => {
+  async function loadSetup() {
     schools        = (await idbGet("schools")) || [];
     currentSchool  = await idbGet("currentSchool");
     teacherClass   = await idbGet("teacherClass");
@@ -233,23 +257,19 @@ window.addEventListener("DOMContentLoaded", async () => {
       setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
       hide(setupForm);
       show(setupDisplay);
-
-      // Now that setup is done, show all other sections
+      // Show other sections
       resetViews();
-
-      // After setup completes, render students and counters
       setTimeout(() => {
         renderStudents();
         updateCounters();
       }, 0);
-
     } else {
-      // Setup is not complete, hide other sections
+      // Setup incomplete: hide other sections
       show(setupForm);
       hide(setupDisplay);
       resetViews();
     }
-  };
+  }
 
   saveSetupBtn.onclick = async (e) => {
     e.preventDefault();
@@ -284,11 +304,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     show(setupForm);
     hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
+    resetViews();
   };
 
   // ----------------------
-  // 2. FINANCIAL SETTINGS SECTION
+  // 2) FINANCIAL SETTINGS SECTION
   // ----------------------
   const formDiv             = $("financialForm");
   const saveSettings        = $("saveSettings");
@@ -308,7 +328,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   formDiv.parentNode.appendChild(settingsCard);
   formDiv.parentNode.appendChild(editSettings);
 
-  // Initialize inputs with existing values
   fineAbsentInput.value     = fineRates.A;
   fineLateInput.value       = fineRates.Lt;
   fineLeaveInput.value      = fineRates.L;
@@ -345,9 +364,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ----------------------
-  // 3. COUNTERS SECTION
+  // 3) COUNTERS SECTION
   // ----------------------
-  // Container in HTML: <div id="countersContainer" class="scroll-row"></div>
   const countersContainer = $("countersContainer");
 
   function createCounterCard(id, title, spanId) {
@@ -363,7 +381,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     return card;
   }
 
-  // Create all seven cards first so their <span> IDs exist in the DOM
   const sectionCard     = createCounterCard("card-section",     "Section",        "sectionCount");
   const classCard       = createCounterCard("card-class",       "Class",          "classCount");
   const schoolCard      = createCounterCard("card-school",      "School",         "schoolCount");
@@ -372,7 +389,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const debarredCard    = createCounterCard("card-debarred",    "Debarred",       "debarredCount");
   const outstandingCard = createCounterCard("card-outstanding", "Outstanding/Fine","outstandingCount");
 
-  // Now that those <span> elements exist, grab them:
   const sectionCountSpan     = $("sectionCount");
   const classCountSpan       = $("classCount");
   const schoolCountSpan      = $("schoolCount");
@@ -406,12 +422,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     const classStudents = students.filter(s => s.cls === cl);
     classCountSpan.dataset.target = classStudents.length;
 
-    // School: total students (in the current school)
-    // NOTE: We do NOT store a "school" field on students, but they all belong to currentSchool
-    // so "students.length" is the count for that school.
+    // School: total students
     schoolCountSpan.dataset.target = students.length;
 
-    // Attendance for this class+section across all dates
+    // Attendance count (# of attendance entries for this class/section)
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
     Object.entries(attendanceData).forEach(([date, rec]) => {
       sectionStudents.forEach(s => {
@@ -465,7 +479,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     animateCounters();
   }
 
-  // Dialog handlers for each card
   sectionCard.onclick = () => {
     const cl  = classSelect.value;
     const sec = sectionSelect.value;
@@ -636,7 +649,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ----------------------
-  // 4. STUDENT REGISTRATION SECTION
+  // 4) STUDENT REGISTRATION SECTION
   // ----------------------
   const studentsBody            = $("studentsBody");
   const selectAllStudents       = $("selectAllStudents");
@@ -659,14 +672,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     const sec = sectionSelect.value;
     if (!n || !p || !c || !o || !a) { alert("All fields required"); return; }
     if (!/^\d{7,15}$/.test(c)) { alert("Contact must be 7–15 digits"); return; }
-    const adm = await genAdmNo();
+    lastAdmNo++;
+    await idbSet("lastAdmNo", lastAdmNo);
+    const adm = String(lastAdmNo).padStart(4, "0");
+    await syncToFirebase();
+
     students.push({ name: n, adm, parent: p, contact: c, occupation: o, address: a, cls: cl, sec });
     await idbSet("students", students);
     await syncToFirebase();
     renderStudents();
     updateCounters();
 
-    // ----- CLEAR FORM INPUTS HERE -----
     $("studentName").value      = "";
     $("parentName").value       = "";
     $("parentContact").value    = "";
@@ -682,7 +698,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     students.forEach((s, i) => {
       if (s.cls !== cl || s.sec !== sec) return;
       idx++;
-      // Compute stats
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
       Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
       const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
@@ -798,7 +813,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ----------------------
-  // 5. PAYMENT MODAL SECTION
+  // 5) PAYMENT MODAL SECTION
   // ----------------------
   const paymentModal         = $("paymentModal");
   const payAdmSpan           = $("payAdm");
@@ -827,7 +842,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   cancelPaymentBtn.onclick = () => hide(paymentModal);
 
   // ----------------------
-  // 6. MARK ATTENDANCE SECTION
+  // 6) MARK ATTENDANCE SECTION
   // ----------------------
   const dateInput             = $("dateInput");
   const loadAttendanceBtn     = $("loadAttendance");
@@ -951,7 +966,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ----------------------
-  // 7. ANALYTICS SECTION
+  // 7) ANALYTICS SECTION
   // ----------------------
   const atg                  = $("analyticsTarget");           // select: section/student
   const asel                 = $("analyticsSectionSelect");    // section dropdown
@@ -960,8 +975,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   const amonthInput          = $("analyticsMonth");            // input type="month"
   const semsInput            = $("semesterStart");             // input type="month"
   const semeInput            = $("semesterEnd");               // input type="month"
-  const ayearInput           = $("yearStart");                 // input type="number" min=2000 max=2100
-  const asearchInput         = $("analyticsSearch");           // input to search admission or name
+  const ayearInput           = $("yearStart");                 // input type="number"
+  const asearchInput         = $("analyticsSearch");           // student search
   const loadAnalyticsBtn     = $("loadAnalytics");
   const resetAnalyticsBtn    = $("resetAnalytics");
   const instructionsDiv      = $("instructions");
@@ -983,7 +998,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode  = "combined"; // or "individual"
+  let analyticsDownloadMode  = "combined";
   let lastAnalyticsStats     = [];
   let lastAnalyticsRange     = { from: null, to: null };
   let lastAnalyticsShare     = "";
@@ -1087,7 +1102,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   function renderAnalytics(stats, from, to) {
-    // 1) Filter stats according to filter options
+    // Filter stats
     let filtered = stats;
     if (!analyticsFilterOptions.includes("all")) {
       filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
@@ -1102,7 +1117,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }));
     }
 
-    // 2) Build HTML table
+    // Build HTML table
     const theadRow = document.querySelector("#analyticsTable thead tr");
     theadRow.innerHTML = [
       "#", "Adm#", "Name", "P", "A", "Lt", "HD", "L", "Total", "%", "Outstanding", "Status"
@@ -1130,13 +1145,16 @@ window.addEventListener("DOMContentLoaded", async () => {
       tbody.appendChild(tr);
     });
 
-    // 3) Show analytics section
+    // Show analytics section
     $("instructions").textContent = `Period: ${from} to ${to}`;
-    show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
+    showView(instructionsDiv);
+    showView(analyticsContainer);
+    showView(graphsDiv);
+    showView(analyticsActionsDiv);
 
-    // 4) Bar chart: % Present for each student
+    // Bar chart: % Present
     const barCtx = barChartCanvas.getContext("2d");
-    if (window.barChartInstance) barChartInstance.destroy();
+    if (window.barChartInstance) window.barChartInstance.destroy();
     window.barChartInstance = new Chart(barCtx, {
       type: "bar",
       data: {
@@ -1152,7 +1170,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    // 5) Pie chart: distribution of statuses across all filtered students
+    // Pie chart: distribution of statuses
     const totals = filtered.reduce((acc, st) => {
       acc.P  += st.P;
       acc.A  += st.A;
@@ -1163,7 +1181,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }, { P:0, A:0, Lt:0, HD:0, L:0 });
 
     const pieCtx = pieChartCanvas.getContext("2d");
-    if (window.pieChartInstance) pieChartInstance.destroy();
+    if (window.pieChartInstance) window.pieChartInstance.destroy();
     window.pieChartInstance = new Chart(pieCtx, {
       type: "pie",
       data: {
@@ -1175,7 +1193,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    // 6) Prepare WhatsApp share text
+    // Prepare share text
     lastAnalyticsShare =
       `Attendance Analytics (${from} to ${to})\n` +
       filtered.map((st, i) => {
@@ -1195,7 +1213,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
       doc.setFontSize(12); doc.text(setupText.textContent, 14, 24);
 
-      // Build a temporary table
       const tempTable = document.createElement("table");
       tempTable.innerHTML = `
         <tr>
@@ -1227,7 +1244,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       await sharePdf(blob, fileName, "Attendance Analytics");
 
     } else {
-      // Individual receipts
       const doc = new jspdf.jsPDF();
       const w = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
@@ -1277,7 +1293,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       doc.save(individualFileName);
       await sharePdf(individualBlob, individualFileName, "Attendance Analytics (Receipt)");
     }
-  };
+  }; 
 
   shareAnalyticsBtn.onclick = () => {
     if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
@@ -1285,7 +1301,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ----------------------
-  // 8. ATTENDANCE REGISTER SECTION
+  // 8) ATTENDANCE REGISTER SECTION
   // ----------------------
   const loadRegisterBtn      = $("loadRegister");
   const saveRegisterBtn      = $("saveRegister");
@@ -1332,7 +1348,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const sec = sectionSelect.value;
     students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
       let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      dateKeys.forEach(key => {
+      dateKeys.forEach((key, idx) => {
         const c = attendanceData[key][s.adm] || "";
         const color = c === "P" ? "var(--success)" : c === "Lt" ? "var(--warning)" : c === "HD" ? "#FF9800" : c === "L" ? "var(--info)" : "var(--danger)";
         const style = c ? `style="background:${color};color:#fff"` : "";
@@ -1398,7 +1414,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   bindRegisterActions();
 
   // ----------------------
-  // 9. BACKUP, RESTORE & RESET SECTION
+  // 9) BACKUP, RESTORE & RESET SECTION
   // ----------------------
   const chooseBackupFolderBtn = $("chooseBackupFolder");
   const restoreDataBtn        = $("restoreData");
@@ -1502,14 +1518,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   }, 5 * 60 * 1000); // every 5 minutes
 
   // ----------------------
-  // 10. SERVICE WORKER REGISTRATION
+  // 10) SERVICE WORKER REGISTRATION
   // ----------------------
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(console.error);
   }
 
   // ----------------------
-  // 11. Firebase onValue Listener (Sync from Firebase to IndexedDB/UI)
+  // 11) Firebase onValue Listener (Sync from Firebase to IndexedDB/UI)
   // ----------------------
   onValue(appDataRef, async (snapshot) => {
     if (!snapshot.exists()) {
@@ -1581,7 +1597,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ----------------------
-  // Final call to load setup on page load
+  // 12) Final call to load setup on page load
   // ----------------------
   await loadSetup();
 
@@ -1593,3 +1609,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     container.style.whiteSpace = "nowrap";
   }
 });
+
+// ----------------------
+// 13) Utility to hide/show multiple elements
+// ----------------------
+function hide(...els) { els.forEach(e => e && e.classList.add("hidden")); }
+function show(...els) { els.forEach(e => e && e.classList.remove("hidden")); }
+
