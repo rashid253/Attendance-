@@ -40,9 +40,8 @@
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
     .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
     .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .table-wrapper { overflow-x: auto; margin-top: 1em; }
-    .table-actions { margin-top: 0.5em; }
-    .counter-card .card-number { font-size: 2rem; color: #2196F3; }
+    .counter-grid { display: flex; gap: 1em; margin-bottom: 1em; }
+    .counter-card { flex: 1; text-align: center; padding: 1em; border: 1px solid #ddd; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -114,9 +113,20 @@
     </div>
   </section>
 
-  <!-- 3. COUNTERS (dynamic via JS) -->
-  <section id="animatedCounters">
-    <div id="countersContainer" class="scroll-row"></div>
+  <!-- 3. COUNTERS -->
+  <section id="animatedCounters" class="counter-grid">
+    <div class="counter-card">
+      <span id="sectionCount" class="number" data-target="0">0</span>
+      <div>Section Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="classCount" class="number" data-target="0">0</span>
+      <div>Class Students</div>
+    </div>
+    <div class="counter-card">
+      <span id="schoolCount" class="number" data-target="0">0</span>
+      <div>School Students</div>
+    </div>
   </section>
 
   <!-- 4. STUDENT REGISTRATION -->
