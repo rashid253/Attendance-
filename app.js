@@ -1,4 +1,4 @@
-// app.js (Cleaned & corrected: guard backup API and ensure fine/eligibility edit button remains)
+// app.js (Complete, with functional counters section)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -391,8 +391,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     show(fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput, saveSettings);
     hide(editSettings);
   };
-        
-                // 3. COUNTERS SECTION
+
+  // ----------------------
+  // 3. COUNTERS SECTION
   // ----------------------
   // Container in HTML: <div id="countersContainer" class="scroll-row"></div>
   const countersContainer = $("countersContainer");
@@ -410,16 +411,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     return card;
   }
 
-  // Create all seven cards first so their <span> IDs exist in the DOM
-  const sectionCard     = createCounterCard("card-section",     "Section",        "sectionCount");
-  const classCard       = createCounterCard("card-class",       "Class",          "classCount");
-  const schoolCard      = createCounterCard("card-school",      "School",         "schoolCount");
-  const attendanceCard  = createCounterCard("card-attendance",  "Attendance",     "attendanceCount");
-  const eligibleCard    = createCounterCard("card-eligible",    "Eligible",       "eligibleCount");
-  const debarredCard    = createCounterCard("card-debarred",    "Debarred",       "debarredCount");
+  // Create all seven cards so their <span> IDs exist in the DOM:
+  const sectionCard     = createCounterCard("card-section",     "Section",         "sectionCount");
+  const classCard       = createCounterCard("card-class",       "Class",           "classCount");
+  const schoolCard      = createCounterCard("card-school",      "School",          "schoolCount");
+  const attendanceCard  = createCounterCard("card-attendance",  "Attendance",      "attendanceCount");
+  const eligibleCard    = createCounterCard("card-eligible",    "Eligible",        "eligibleCount");
+  const debarredCard    = createCounterCard("card-debarred",    "Debarred",        "debarredCount");
   const outstandingCard = createCounterCard("card-outstanding", "Outstanding/Fine","outstandingCount");
 
-  // Now that those <span> elements exist, grab them:
+  // Grab those <span> elements:
   const sectionCountSpan     = $("sectionCount");
   const classCountSpan       = $("classCount");
   const schoolCountSpan      = $("schoolCount");
@@ -442,36 +443,41 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function updateCounters() {
+    if (!currentSchool) return;
+
+    // Fetch current-school-specific arrays/objects:
+    const students      = (studentsBySchool[currentSchool]       || []);
+    const attendanceData = (attendanceDataBySchool[currentSchool] || {});
+    const paymentsData   = (paymentsDataBySchool[currentSchool]   || {});
+
     const cl  = classSelect.value;
     const sec = sectionSelect.value;
 
-    // Section: number of students in this class+section
+    // Section: students in this class+section
     const sectionStudents = students.filter(s => s.cls === cl && s.sec === sec);
     sectionCountSpan.dataset.target = sectionStudents.length;
 
-    // Class: number of students in this class (all sections)
+    // Class: all students in this class (any section)
     const classStudents = students.filter(s => s.cls === cl);
     classCountSpan.dataset.target = classStudents.length;
 
-    // School: total students (in the current school)
-    // NOTE: We do NOT store a "school" field on students, but they all belong to currentSchool
-    // so "students.length" is the count for that school.
+    // School: total students in currentSchool
     schoolCountSpan.dataset.target = students.length;
 
-    // Attendance for this class+section across all dates
+    // Attendance totals across all dates for this class+section
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
-    Object.entries(attendanceData).forEach(([date, rec]) => {
+    Object.values(attendanceData).forEach(rec => {
       sectionStudents.forEach(s => {
         const code = rec[s.adm];
         if (!code) {
           totalA++;
         } else {
           switch (code) {
-            case "P": totalP++; break;
-            case "A": totalA++; break;
+            case "P":  totalP++;  break;
+            case "A":  totalA++;  break;
             case "Lt": totalLt++; break;
             case "HD": totalHD++; break;
-            case "L": totalL++; break;
+            case "L":  totalL++;  break;
           }
         }
       });
@@ -479,28 +485,28 @@ window.addEventListener("DOMContentLoaded", async () => {
     const attendanceTotal = totalP + totalA + totalLt + totalHD + totalL;
     attendanceCountSpan.dataset.target = attendanceTotal;
 
-    // Eligible, Debarred, Outstanding
+    // Compute Eligible / Debarred / Outstanding counts
     let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
-    students.forEach(s => {
-      if (s.cls !== cl || s.sec !== sec) return;
-      let p=0, a=0, lt=0, hd=0, l=0, totalDays=0;
+    sectionStudents.forEach(s => {
+      let p = 0, a = 0, lt = 0, hd = 0, l = 0, totalDays = 0;
       Object.values(attendanceData).forEach(rec => {
         if (rec[s.adm]) {
           totalDays++;
           switch (rec[s.adm]) {
-            case "P": p++; break;
-            case "A": a++; break;
-            case "Lt": lt++; break;
-            case "HD": hd++; break;
-            case "L": l++; break;
+            case "P":  p++;   break;
+            case "A":  a++;   break;
+            case "Lt": lt++;  break;
+            case "HD": hd++;  break;
+            case "L":  l++;   break;
           }
         }
       });
       const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-      const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
+      const paid       = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
       const outstanding = fineTotal - paid;
-      const pct = totalDays ? (p / totalDays) * 100 : 0;
-      const status = (outstanding > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
+      const pct        = totalDays ? (p / totalDays) * 100 : 0;
+      const status     = (outstanding > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
+
       if (status === "Eligible") eligibleCount++;
       else debarredCount++;
       if (outstanding > 0) outstandingCount++;
@@ -512,10 +518,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     animateCounters();
   }
 
-  // Dialog handlers for each card
+  // Initial call after DOM/content load
+  updateCounters();
+
+  // Dialog handlers for each card:
   sectionCard.onclick = () => {
+    if (!currentSchool) return;
     const cl  = classSelect.value;
     const sec = sectionSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
     const list = students
       .filter(s => s.cls === cl && s.sec === sec)
       .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
@@ -524,7 +535,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   classCard.onclick = () => {
+    if (!currentSchool) return;
     const cl = classSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
     const list = students
       .filter(s => s.cls === cl)
       .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
@@ -533,7 +546,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   schoolCard.onclick = () => {
-    const classes = [...new Set(students.map(s => s.cls))].sort();
+    if (!currentSchool) return;
+    const students = (studentsBySchool[currentSchool] || []);
+    const classes = Array.from(new Set(students.map(s => s.cls))).sort();
     let details = "";
     classes.forEach(cl => {
       const classStudents = students.filter(s => s.cls === cl);
@@ -547,21 +562,25 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   attendanceCard.onclick = () => {
+    if (!currentSchool) return;
     const cl  = classSelect.value;
     const sec = sectionSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
+    const attendanceData = (attendanceDataBySchool[currentSchool] || {});
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
-    Object.entries(attendanceData).forEach(([date, rec]) => {
+
+    Object.values(attendanceData).forEach(rec => {
       students.filter(s => s.cls === cl && s.sec === sec).forEach(s => {
         const code = rec[s.adm];
         if (!code) {
           totalA++;
         } else {
           switch (code) {
-            case "P": totalP++; break;
-            case "A": totalA++; break;
+            case "P":  totalP++;  break;
+            case "A":  totalA++;  break;
             case "Lt": totalLt++; break;
             case "HD": totalHD++; break;
-            case "L": totalL++; break;
+            case "L":  totalL++;  break;
           }
         }
       });
@@ -577,10 +596,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   eligibleCard.onclick = () => {
+    if (!currentSchool) return;
+    const cl  = classSelect.value;
+    const sec = sectionSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
+    const attendanceData = (attendanceDataBySchool[currentSchool] || {});
+    const paymentsData = (paymentsDataBySchool[currentSchool] || {});
+
     const list = students
       .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let p=0, totalDays=0;
+        if (s.cls !== cl || s.sec !== sec) return false;
+        let p = 0, totalDays = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             totalDays++;
@@ -588,14 +614,14 @@ window.addEventListener("DOMContentLoaded", async () => {
           }
         });
         const pct = totalDays ? (p / totalDays) * 100 : 0;
-        let a=0, lt=0, l=0, hd=0;
+        let a = 0, lt = 0, l = 0, hd = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             switch (rec[s.adm]) {
-              case "A": a++; break;
+              case "A": a++;   break;
               case "Lt": lt++; break;
               case "HD": hd++; break;
-              case "L": l++; break;
+              case "L": l++;   break;
             }
           }
         });
@@ -606,14 +632,22 @@ window.addEventListener("DOMContentLoaded", async () => {
       })
       .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
       .join("\n");
+
     alert(`Eligible Students:\n\n${list || "No eligible students."}`);
   };
 
   debarredCard.onclick = () => {
+    if (!currentSchool) return;
+    const cl  = classSelect.value;
+    const sec = sectionSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
+    const attendanceData = (attendanceDataBySchool[currentSchool] || {});
+    const paymentsData = (paymentsDataBySchool[currentSchool] || {});
+
     const list = students
       .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let p=0, totalDays=0;
+        if (s.cls !== cl || s.sec !== sec) return false;
+        let p = 0, totalDays = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             totalDays++;
@@ -621,14 +655,14 @@ window.addEventListener("DOMContentLoaded", async () => {
           }
         });
         const pct = totalDays ? (p / totalDays) * 100 : 0;
-        let a=0, lt=0, l=0, hd=0;
+        let a = 0, lt = 0, l = 0, hd = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             switch (rec[s.adm]) {
-              case "A": a++; break;
+              case "A": a++;   break;
               case "Lt": lt++; break;
               case "HD": hd++; break;
-              case "L": l++; break;
+              case "L": l++;   break;
             }
           }
         });
@@ -639,21 +673,29 @@ window.addEventListener("DOMContentLoaded", async () => {
       })
       .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
       .join("\n");
+
     alert(`Debarred Students:\n\n${list || "No debarred students."}`);
   };
 
   outstandingCard.onclick = () => {
+    if (!currentSchool) return;
+    const cl  = classSelect.value;
+    const sec = sectionSelect.value;
+    const students = (studentsBySchool[currentSchool] || []);
+    const attendanceData = (attendanceDataBySchool[currentSchool] || {});
+    const paymentsData = (paymentsDataBySchool[currentSchool] || {});
+
     const list = students
       .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let a=0, lt=0, l=0, hd=0;
+        if (s.cls !== cl || s.sec !== sec) return false;
+        let a = 0, lt = 0, l = 0, hd = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             switch (rec[s.adm]) {
-              case "A": a++; break;
+              case "A": a++;   break;
               case "Lt": lt++; break;
               case "HD": hd++; break;
-              case "L": l++; break;
+              case "L": l++;   break;
             }
           }
         });
@@ -662,14 +704,14 @@ window.addEventListener("DOMContentLoaded", async () => {
         return fineTotal - paid > 0;
       })
       .map((s, i) => {
-        let a=0, lt=0, l=0, hd=0;
+        let a = 0, lt = 0, l = 0, hd = 0;
         Object.values(attendanceData).forEach(rec => {
           if (rec[s.adm]) {
             switch (rec[s.adm]) {
-              case "A": a++; break;
+              case "A": a++;   break;
               case "Lt": lt++; break;
               case "HD": hd++; break;
-              case "L": l++; break;
+              case "L": l++;   break;
             }
           }
         });
@@ -679,10 +721,9 @@ window.addEventListener("DOMContentLoaded", async () => {
         return `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Outstanding: PKR ${outstanding}`;
       })
       .join("\n");
+
     alert(`Students with Outstanding Fines:\n\n${list || "No outstanding fines."}`);
   };
-
-  }
 
   // ----------------------
   // 4. STUDENT REGISTRATION SECTION
