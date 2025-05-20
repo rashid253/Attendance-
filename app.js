@@ -1,4 +1,4 @@
-// app.js (Updated: Added per-school data isolation)
+// app.js (Updated: Per-School Data Isolation Integrated into Original Code)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -84,7 +84,6 @@ async function initLocalState() {
   teacherSection = (await idbGet("teacherSection")) || null;
 }
 
-// Listen for Firebase changes and update local IndexedDB + UI
 onValue(dbRef(db, "attendanceAppData"), async (snapshot) => {
   const data = snapshot.val();
   if (!data) return;
@@ -134,7 +133,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Reset Views: Hide/Show all sections based on whether setup is complete
   // -------------------------------------------------------------------------------------------------
   function resetViews() {
-    // If setup is incomplete (i.e. currentSchool/class/section is null), hide everything except #teacher-setup section.
     const setupDone = currentSchool && teacherClass && teacherSection;
     const allSections = [
       $("financial-settings"),
@@ -148,11 +146,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     ];
     const setupSection = $("teacher-setup");
     if (!setupDone) {
-      // Hide all except setup
       hide(...allSections);
       show(setupSection);
     } else {
-      // Show all, hide setup form
       show(...allSections);
       hide(setupSection);
     }
@@ -172,7 +168,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const editSetupBtn   = $("editSetup");
   const schoolListDiv  = $("schoolList");
 
-  // Render list of existing schools (for edit/delete)
   function renderSchoolList() {
     schoolListDiv.innerHTML = "";
     schools.forEach((sch, idx) => {
@@ -186,7 +181,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         </div>`;
       schoolListDiv.appendChild(row);
     });
-    // Attach edit/delete handlers
     document.querySelectorAll(".edit-school").forEach(btn => {
       btn.onclick = async () => {
         const idx = btn.dataset.idx;
@@ -194,9 +188,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         if (newName && newName.trim()) {
           const oldName = schools[idx];
           schools[idx] = newName.trim();
-          // Update any students with oldName
           students = students.map(s => s.school === oldName ? { ...s, school: newName.trim() } : s);
-          // If currentSchool was oldName, update to newName
           if (currentSchool === oldName) currentSchool = newName.trim();
           await Promise.all([
             idbSet("schools", schools),
@@ -212,30 +204,19 @@ window.addEventListener("DOMContentLoaded", async () => {
       btn.onclick = async () => {
         const idx = btn.dataset.idx;
         const toDelete = schools[idx];
-        if (
-          confirm(`Are you sure you want to delete school "${toDelete}"? This will remove all associated students, attendance, and payments.`)
-        ) {
-          // Remove school from list
+        if (confirm(`Delete school "${toDelete}" and all its data?`)) {
           schools.splice(idx, 1);
-          // Remove students of that school
           students = students.filter(s => s.school !== toDelete);
-          // Remove attendance entries for those students
+          Object.keys(paymentsData).forEach(adm => {
+            const st = students.find(s => s.adm === adm);
+            if (!st || st.school === toDelete) delete paymentsData[adm];
+          });
           Object.keys(attendanceData).forEach(date => {
             Object.keys(attendanceData[date]).forEach(adm => {
               const st = students.find(s => s.adm === adm);
-              if (!st || st.school !== currentSchool) {
-                delete attendanceData[date][adm];
-              }
+              if (!st || st.school === toDelete) delete attendanceData[date][adm];
             });
           });
-          // Remove payments entries for those students
-          Object.keys(paymentsData).forEach(adm => {
-            const st = students.find(s => s.adm === adm);
-            if (!st || st.school === toDelete) {
-              delete paymentsData[adm];
-            }
-          });
-          // If deleted school was current, reset setup
           if (currentSchool === toDelete) {
             currentSchool = null;
             teacherClass = null;
@@ -249,8 +230,8 @@ window.addEventListener("DOMContentLoaded", async () => {
           await Promise.all([
             idbSet("schools", schools),
             idbSet("students", students),
-            idbSet("attendanceData", attendanceData),
-            idbSet("paymentsData", paymentsData)
+            idbSet("paymentsData", paymentsData),
+            idbSet("attendanceData", attendanceData)
           ]);
           await syncToFirebase();
           await loadSetup();
@@ -259,20 +240,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Load setup (populate dropdowns, show/hide sections accordingly)
   async function loadSetup() {
-    // Refresh local from IDB (Firebase listener also calls loadSetup)
     schools        = (await idbGet("schools")) || [];
     currentSchool  = await idbGet("currentSchool");
     teacherClass   = await idbGet("teacherClass");
     teacherSection = await idbGet("teacherSection");
 
-    // Populate school dropdown
     schoolSelect.innerHTML = [
       `<option disabled selected>-- Select School --</option>`,
       ...schools.map(s => `<option value="${s}">${s}</option>`)
     ].join("");
-
     if (currentSchool) schoolSelect.value = currentSchool;
 
     renderSchoolList();
@@ -287,35 +264,28 @@ window.addEventListener("DOMContentLoaded", async () => {
       renderStudents();
       updateCounters();
     } else {
-      // Show setup form
       show(setupForm);
       hide(setupDisplay);
       resetViews();
     }
   }
 
-  // Save setup (school, class, section)
   saveSetupBtn.onclick = async (e) => {
     e.preventDefault();
     const selectedSchool = schoolInput.value.trim() || schoolSelect.value.trim();
     const selectedClass  = classSelect.value.trim();
     const selectedSect   = sectionSelect.value.trim();
-
     if (!selectedSchool || !selectedClass || !selectedSect) {
       alert("Please fill School, Class, and Section.");
       return;
     }
-
     currentSchool = selectedSchool;
     teacherClass  = selectedClass;
     teacherSection= selectedSect;
-
-    // Add to schools list if new
     if (!schools.includes(currentSchool)) {
       schools.push(currentSchool);
       await idbSet("schools", schools);
     }
-
     await Promise.all([
       idbSet("currentSchool", currentSchool),
       idbSet("teacherClass", teacherClass),
@@ -349,12 +319,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   settingsCard.className = "card hidden";
   editSettingsBtn.id = "editSettings";
   editSettingsBtn.className = "btn no-print hidden";
-
-  // Insert settingsCard & editSettingsBtn into DOM
   $("financial-settings").appendChild(settingsCard);
   $("financial-settings").appendChild(editSettingsBtn);
 
-  // Populate form with existing values
   function renderSettings() {
     fineAbsentInput.value     = fineRates.A;
     fineLateInput.value       = fineRates.Lt;
@@ -386,7 +353,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderSettings();
     hide(formDiv, saveSettingsBtn, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
     show(settingsCard, editSettingsBtn);
-    // Update counters if needed
     renderStudents();
     updateCounters();
   };
@@ -396,7 +362,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     show(formDiv, saveSettingsBtn, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
   };
 
-  // Initial render of settings
   renderSettings();
 
   // -------------------------------------------------------------------------------------------------
@@ -416,7 +381,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     return card;
   }
 
-  // Create and append cards
   createCounterCard("card-section",     "Section",         "sectionCount");
   createCounterCard("card-class",       "Class",           "classCount");
   createCounterCard("card-school",      "School",          "schoolCount");
@@ -454,12 +418,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   const editSelectedBtn         = $("editSelected");
   const doneEditingBtn          = $("doneEditing");
   const deleteSelectedBtn       = $("deleteSelected");
-  const saveRegistrationBtn     = $("saveRegistration");
-  const editRegistrationBtn     = $("editRegistration");
   const shareRegistrationBtn    = $("shareRegistration");
   const downloadRegistrationBtn = $("downloadRegistrationPDF");
 
-  // Render students table (filtered by school, class, section)
   function renderStudents() {
     const cl  = teacherClass;
     const sec = teacherSection;
@@ -471,7 +432,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       if (s.school !== sch || s.cls !== cl || s.sec !== sec) return;
       idx++;
 
-      // Compute attendance stats for this student
       const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
       Object.values(attendanceData).forEach(rec => {
         if (rec[s.adm]) stats[rec[s.adm]]++;
@@ -500,7 +460,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       `;
       studentsBody.appendChild(tr);
 
-      // Add Payment button handler
       tr.querySelector(".add-payment-btn").onclick = () => {
         openPaymentModal(s.adm);
       };
@@ -510,25 +469,20 @@ window.addEventListener("DOMContentLoaded", async () => {
     toggleButtons();
   }
 
-  // Update counters (filtered by school, class, section)
   function updateCounters() {
     const cl  = teacherClass;
     const sec = teacherSection;
     const sch = currentSchool;
 
-    // Section count
     const sectionStudents = students.filter(s => s.school === sch && s.cls === cl && s.sec === sec);
     sectionCountSpan.dataset.target = sectionStudents.length;
 
-    // Class count (all sections)
     const classStudents = students.filter(s => s.school === sch && s.cls === cl);
     classCountSpan.dataset.target = classStudents.length;
 
-    // School count
     const schoolStudents = students.filter(s => s.school === sch);
     schoolCountSpan.dataset.target = schoolStudents.length;
 
-    // Attendance count for section
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
     Object.entries(attendanceData).forEach(([date, rec]) => {
       sectionStudents.forEach(s => {
@@ -548,7 +502,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     const attendanceTotal = totalP + totalA + totalLt + totalHD + totalL;
     attendanceCountSpan.dataset.target = attendanceTotal;
 
-    // Eligible / Debarred / Outstanding for section
     let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
     sectionStudents.forEach(s => {
       let p=0, a=0, lt=0, hd=0, l=0, recordedDays=0;
@@ -580,14 +533,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     animateCounters();
   }
 
-  // Toggle bulk action buttons based on selection
   function toggleButtons() {
     const anyChecked = document.querySelectorAll(".sel:checked").length > 0;
     if (deleteSelectedBtn) deleteSelectedBtn.disabled = !anyChecked;
     if (editSelectedBtn) editSelectedBtn.disabled = !anyChecked;
   }
 
-  // Add Student
   $("addStudent").onclick = async (e) => {
     e.preventDefault();
     const n   = $("studentName").value.trim();
@@ -605,8 +556,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([ idbSet("students", students), syncToFirebase() ]);
     renderStudents();
     updateCounters();
-
-    // Clear form
     $("studentName").value       = "";
     $("parentName").value        = "";
     $("parentContact").value     = "";
@@ -614,7 +563,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     $("parentAddress").value     = "";
   };
 
-  // Edit Selected
   editSelectedBtn.onclick = () => {
     document.querySelectorAll("#studentsBody tr").forEach(tr => {
       if (!tr.querySelector(".sel").checked) return;
@@ -649,14 +597,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateCounters();
   };
 
-  // Delete Selected
   deleteSelectedBtn.onclick = async () => {
-    if (!confirm("Are you sure you want to delete selected students?")) return;
+    if (!confirm("Delete selected students?")) return;
     document.querySelectorAll("#studentsBody tr").forEach(tr => {
       const checkbox = tr.querySelector(".sel");
       if (checkbox.checked) {
         const adm = tr.children[3].textContent;
-        // Remove student, attendance, payments
         students = students.filter(s => !(s.adm === adm && s.school === currentSchool));
         delete paymentsData[adm];
         Object.keys(attendanceData).forEach(date => {
@@ -674,7 +620,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateCounters();
   };
 
-  // Bulk Delete Select All
   selectAllStudents && (selectAllStudents.onclick = () => {
     const checked = selectAllStudents.checked;
     document.querySelectorAll(".sel").forEach(cb => cb.checked = checked);
@@ -684,17 +629,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (e.target.classList.contains("sel")) toggleButtons();
   });
 
-  // Share Registration via WhatsApp
   shareRegistrationBtn.onclick = () => {
     const list = students
       .filter(s => s.school === currentSchool && s.cls === teacherClass && s.sec === teacherSection)
       .map((s, i) => `${i+1}. ${s.name} (Adm#: ${s.adm})`)
       .join("\n");
     const header = `Student List\n${currentSchool} | Class ${teacherClass} Sec ${teacherSection}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + (list || "No students."))}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + (list || "No students."))}`, "_blank`);
   };
 
-  // Download Registration as PDF
   downloadRegistrationBtn.onclick = async () => {
     const doc = new jspdf.jsPDF();
     const w = doc.internal.pageSize.getWidth();
@@ -758,15 +701,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const dateInput            = $("attendanceDate");
   const shareAttendanceBtn   = $("shareAttendance");
   const downloadAttendanceBtn= $("downloadAttendancePDF");
-  const registerTableWrapper = $("registerTableWrapper");
-  const registerBodyTbody    = $("registerBodyTbody");
-  const registerHeaderRow    = $("registerHeaderRow");
-  const changeRegisterBtn    = $("changeRegister");
-  const loadRegisterBtn      = $("loadRegister");
-  const saveRegisterBtn      = $("saveRegister");
-  const downloadRegisterBtn  = $("downloadRegister");
-  const shareRegisterBtn     = $("shareRegister");
-  const registerMonthInput   = $("registerMonth");
 
   const statusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
   const statusColors = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" };
@@ -779,7 +713,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     const sch = currentSchool;
     attendanceBodyDiv.style.overflowX = "auto";
 
-    // Build attendance input rows
     students
       .filter(stu => stu.school === sch && stu.cls === cl && stu.sec === sec)
       .forEach((stu, i) => {
@@ -815,7 +748,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     const sec = teacherSection;
     const sch = currentSchool;
     if (!attendanceData[date]) attendanceData[date] = {};
-    // Save each student's selected status
     students
       .filter(stu => stu.school === sch && stu.cls === cl && stu.sec === sec)
       .forEach((stu, i) => {
@@ -829,7 +761,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
     await Promise.all([ idbSet("attendanceData", attendanceData), syncToFirebase() ]);
     alert("Attendance saved.");
-    // Render summary now
     attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
     const tbl = document.createElement("table");
     tbl.id = "attendanceSummaryTable";
@@ -852,7 +783,6 @@ window.addEventListener("DOMContentLoaded", async () => {
           </tr>`;
       });
     attendanceSummaryDiv.appendChild(tbl);
-    // Attach share handlers
     attendanceSummaryDiv.querySelectorAll(".share-individual").forEach(ic => {
       ic.onclick = () => {
         const adm = ic.dataset.adm;
@@ -866,7 +796,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateCounters();
   };
 
-  // Share Attendance summary to WhatsApp
   shareAttendanceBtn.onclick = () => {
     const cl   = teacherClass;
     const sec  = teacherSection;
@@ -883,7 +812,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + (lines || "No data."))}`, "_blank");
   };
 
-  // Download Attendance PDF
   downloadAttendanceBtn.onclick = async () => {
     const date = dateInput.value;
     if (!date) { alert("Load attendance first."); return; }
@@ -894,7 +822,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     doc.setFontSize(18); doc.text("Attendance Report", 14, 16);
     doc.setFontSize(10); doc.text(`${currentSchool} | Class ${cl} Sec ${sec}`, w-14, 16, { align: "right" });
     doc.setFontSize(12); doc.text(`Date: ${date}`, 14, 24);
-    // Build table
     const tempTbl = document.createElement("table");
     tempTbl.innerHTML = `
       <tr>
@@ -920,15 +847,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   // -------------------------------------------------------------------------------------------------
   // 7. ANALYTICS SECTION
   // -------------------------------------------------------------------------------------------------
-  const atg                  = $("analyticsTarget");        // select: section/student
-  const asel                 = $("analyticsSectionSelect"); // section dropdown for analytics
-  const atype                = $("analyticsType");          // type: date/month/semester/year
-  const adateInput           = $("analyticsDate");          // input type="date"
-  const amonthInput          = $("analyticsMonth");         // input type="month"
-  const semsInput            = $("semesterStart");          // input type="month"
-  const semeInput            = $("semesterEnd");            // input type="month"
-  const ayearInput           = $("yearStart");              // input type="number"
-  const asearchInput         = $("analyticsSearch");        // input to search admission or name
+  const atg                  = $("analyticsTarget");
+  const asel                 = $("analyticsSectionSelect");
+  const atype                = $("analyticsType");
+  const adateInput           = $("analyticsDate");
+  const amonthInput          = $("analyticsMonth");
+  const semsInput            = $("semesterStart");
+  const semeInput            = $("semesterEnd");
+  const ayearInput           = $("yearStart");
+  const asearchInput         = $("analyticsSearch");
   const loadAnalyticsBtn     = $("loadAnalytics");
   const resetAnalyticsBtn    = $("resetAnalytics");
   const instructionsDiv      = $("instructions");
@@ -950,7 +877,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode  = "combined"; // or "individual"
+  let analyticsDownloadMode  = "combined";
   let lastAnalyticsStats     = [];
   let lastAnalyticsRange     = { from: null, to: null };
   let lastAnalyticsShare     = "";
@@ -1036,7 +963,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
 
   function renderAnalytics(stats, from, to) {
-    // 1) Filter stats according to filter options
     let filtered = stats;
     if (!analyticsFilterOptions.includes("all")) {
       filtered = stats.filter(st => {
@@ -1050,7 +976,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    // 2) Populate analytics table
     const tbody = $("analyticsTableBody");
     tbody.innerHTML = "";
     filtered.forEach((st, i) => {
@@ -1073,11 +998,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       tbody.appendChild(tr);
     });
 
-    // 3) Show analytics section
     $("instructions").textContent = `Period: ${from} to ${to}`;
     show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
 
-    // 4) Bar chart: % Present for each student
     const barCtx = barChartCanvas.getContext("2d");
     if (window.barChartInstance) window.barChartInstance.destroy();
     window.barChartInstance = new Chart(barCtx, {
@@ -1093,7 +1016,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       options: { scales: { y: { beginAtZero: true, max: 100 } } }
     });
 
-    // 5) Pie chart: of statuses in this pool
     const totals = { P:0, A:0, Lt:0, HD:0, L:0 };
     filtered.forEach(st => {
       totals.P += st.P;
@@ -1115,7 +1037,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    // 6) Prepare WhatsApp share text
     lastAnalyticsShare =
       `Attendance Analytics (${from} to ${to})\n` +
       filtered.map((st, i) => {
@@ -1133,9 +1054,8 @@ window.addEventListener("DOMContentLoaded", async () => {
       const { from, to } = lastAnalyticsRange;
       doc.setFontSize(18); doc.text("Attendance Analytics", 14, 16);
       doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
-      doc.setFontSize(12); doc.text(setupText.textContent, 14, 24);
+      doc.setFontSize(12); doc.text(`${currentSchool} | Class ${teacherClass} Sec ${teacherSection}`, 14, 24);
 
-      // Build a temporary table
       const tempTable = document.createElement("table");
       tempTable.innerHTML = `
         <tr>
@@ -1164,11 +1084,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       const blob = doc.output("blob");
       doc.save(fileName);
       await sharePdf(blob, fileName, "Attendance Analytics");
-
     } else {
-      // Individual receipts
       const doc = new jspdf.jsPDF();
-      const w = doc.internal.pageSize.getWidth();
+      const w  = doc.internal.pageSize.getWidth();
       const { from, to } = lastAnalyticsRange;
       lastAnalyticsStats.forEach((st, i) => {
         if (i > 0) doc.addPage();
@@ -1177,7 +1095,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         doc.setFontSize(10);
         doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
         doc.setFontSize(12);
-        doc.text(setupText.textContent, 14, 28);
+        doc.text(`${currentSchool} | Class ${teacherClass} Sec ${teacherSection}`, 14, 28);
         doc.setFontSize(14);
         doc.text(`Student: ${st.name}  (Adm#: ${st.adm})`, 14, 44);
         doc.setFontSize(12);
@@ -1190,8 +1108,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
         doc.text(`Percentage Present: ${pct}%`, 14, 116);
         doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 130);
-
-        // Fine Rates text
         const fineRatesText = `
 Fine Rates:
   Absent: PKR ${fineRates.A}
@@ -1228,10 +1144,15 @@ Eligibility: ≥ ${eligibilityPct}%
   // -------------------------------------------------------------------------------------------------
   // 8. ATTENDANCE REGISTER SECTION
   // -------------------------------------------------------------------------------------------------
-  const saveRegisterBtn      = $("saveRegister");
+  const registerTableWrapper = $("registerTableWrapper");
+  const registerBodyTbody    = $("registerBodyTbody");
+  const registerHeaderRow    = $("registerHeaderRow");
   const changeRegisterBtn    = $("changeRegister");
+  const loadRegisterBtn      = $("loadRegister");
+  const saveRegisterBtn      = $("saveRegister");
   const downloadRegisterBtn  = $("downloadRegister");
   const shareRegisterBtn     = $("shareRegister");
+  const registerMonthInput   = $("registerMonth");
 
   changeRegisterBtn.onclick = () => {
     show(loadRegisterBtn);
@@ -1249,12 +1170,10 @@ Eligibility: ≥ ${eligibilityPct}%
     const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + "-")).sort();
     if (!dateKeys.length) { alert("No attendance marked this month."); return; }
 
-    // Header row
     registerHeaderRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
       dateKeys.map(k => `<th>${k.split("-")[2]}</th>`).join("");
     registerBodyTbody.innerHTML = "";
 
-    // Body rows
     students.filter(s => s.school === sch && s.cls === cls && s.sec === sec).forEach((s, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${i+1}</td><td>${s.adm}</td><td>${s.name}</td>` +
@@ -1268,7 +1187,7 @@ Eligibility: ≥ ${eligibilityPct}%
         }).join("");
       registerBodyTbody.appendChild(tr);
     });
-    show($("registerTableWrapper"), saveRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
+    show(registerTableWrapper, saveRegisterBtn, downloadRegisterBtn, shareRegisterBtn);
     hide(loadRegisterBtn);
   };
 
@@ -1304,12 +1223,10 @@ Eligibility: ≥ ${eligibilityPct}%
 
     const doc = new jspdf.jsPDF("l", "pt", "a4");
     const w = doc.internal.pageSize.getWidth();
-    const h = doc.internal.pageSize.getHeight();
     doc.setFontSize(18); doc.text("Attendance Register", 14, 20);
     doc.setFontSize(10); doc.text(`Date: ${m}`, w - 14, 20, { align: "right" });
-    doc.setFontSize(12); doc.text(setupText.textContent, 14, 36);
+    doc.setFontSize(12); doc.text(`${currentSchool} | Class ${cls} Sec ${sec}`, 14, 36);
 
-    // Build a temporary table
     const tempTbl = document.createElement("table");
     tempTbl.innerHTML = `<tr><th>#</th><th>Adm#</th><th>Name</th>` +
       dateKeys.map(d => `<th>${d.split("-")[2]}</th>`).join("") + `</tr>`;
@@ -1336,7 +1253,7 @@ Eligibility: ≥ ${eligibilityPct}%
     const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + "-")).sort();
     if (!dateKeys.length) { alert("No attendance marked this month."); return; }
 
-    const header = `Attendance Register\n${setupText.textContent}`;
+    const header = `Attendance Register\n${currentSchool} | Class ${cls} Sec ${sec}`;
     const rows = Array.from(registerBodyTbody.children).map(tr =>
       Array.from(tr.children).map(td => td.querySelector(".status-text")?.textContent || td.textContent).join(" ")
     );
@@ -1346,7 +1263,6 @@ Eligibility: ≥ ${eligibilityPct}%
   // -------------------------------------------------------------------------------------------------
   // 9. BACKUP / RESTORE SECTION
   // -------------------------------------------------------------------------------------------------
-  const backupHandle     = null;
   const chooseBackupFolderBtn = $("chooseBackupFolder");
   const restoreDataBtn       = $("restoreData");
   const restoreFileInput     = $("restoreFileInput");
@@ -1405,8 +1321,7 @@ Eligibility: ≥ ${eligibilityPct}%
   };
 
   factoryResetBtn.onclick = async () => {
-    if (!confirm("Are you sure you want to factory reset? This will delete all data.")) return;
-    // Clear Firebase
+    if (!confirm("Factory reset will delete all data. Continue?")) return;
     const defaultPayload = {
       students: [],
       attendanceData: {},
@@ -1420,7 +1335,6 @@ Eligibility: ≥ ${eligibilityPct}%
       teacherSection: null
     };
     await dbSet(dbRef(db, "attendanceAppData"), defaultPayload);
-    // Local state will be updated by Firebase listener
     alert("Factory reset completed.");
   };
 
