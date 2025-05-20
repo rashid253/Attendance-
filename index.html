@@ -11,20 +11,17 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome (HTTPS) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- idb-keyval (IIFE) -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- jsPDF + AutoTable (IIFE) -->
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Chart.js (IIFE) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Main CSS -->
@@ -46,31 +43,51 @@
   </style>
 </head>
 <body>
-  
+
   <header class="app-header">
-    <h1>
-      <i class="fas fa-school"></i>
-      Attendance Management
-    </h1>
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
     <div class="header-buttons">
-      <button id="chooseBackupFolder" class="btn">
-        <i class="fas fa-folder-open"></i>
-        Select Backup Folder
-      </button>
-
-      <button id="restoreData" class="btn">
-        <i class="fas fa-upload"></i>
-        Restore Backup
-      </button>
-      <!-- hidden file input for restore -->
+      <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
+      <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
       <input type="file" id="restoreFile" accept=".json" hidden />
-
-      <button id="resetData" class="btn btn-danger">
-        <i class="fas fa-trash-alt"></i>
-        Factory Reset
-      </button>
+      <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
     </div>
   </header>
+
+  <!-- AUTHENTICATION UI -->
+  <section id="authContainer">
+    <div id="loginSection" class="card">
+      <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
+      <form id="loginForm">
+        <input type="text" id="loginUserId" name="userId" placeholder="User ID" required />
+        <input type="password" id="loginKey" name="key" placeholder="Key" required />
+        <button type="submit" class="btn no-print"><i class="fas fa-sign-in-alt"></i> Login</button>
+      </form>
+    </div>
+    <div id="signupSection" class="card">
+      <h2><i class="fas fa-user-plus"></i> Sign Up</h2>
+      <form id="signupForm">
+        <input type="text" id="signupName" name="name" placeholder="Name" required />
+        <select id="signupRole" name="role" required>
+          <option disabled selected>-- Select Role --</option>
+          <option>Teacher</option>
+          <option>Principal</option>
+        </select>
+        <input type="text" id="signupSchool" name="school" placeholder="School" required />
+        <input type="text" id="signupUserId" name="userId" placeholder="User ID" required />
+        <input type="password" id="signupKey" name="key" placeholder="Key" required />
+        <div id="classSectionFields" class="hidden">
+          <input type="text" id="signupCls" name="cls" placeholder="Class" />
+          <input type="text" id="signupSec" name="sec" placeholder="Section" />
+        </div>
+        <button type="submit" class="btn no-print"><i class="fas fa-paper-plane"></i> Submit</button>
+      </form>
+    </div>
+    <div id="pendingApprovals" class="card hidden">
+      <h2><i class="fas fa-user-check"></i> Pending Approvals</h2>
+      <ul id="pendingList"></ul>
+    </div>
+  </section>
 
   <!-- 1. SETUP -->
   <section id="teacher-setup">
@@ -110,11 +127,11 @@
       <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
       <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
       <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
-      <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="saveSettings" class="btn no-print"><i class="fas fa-save"></i> Save</button>
     </div>
   </section>
 
-  <!-- 3. COUNTERS (dynamic via JS) -->
+  <!-- 3. COUNTERS -->
   <section id="animatedCounters">
     <div id="countersContainer" class="scroll-row"></div>
   </section>
@@ -128,7 +145,7 @@
       <input id="parentContact" placeholder="Contact" />
       <input id="parentOccupation" placeholder="Occupation" />
       <input id="parentAddress" placeholder="Address" />
-      <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
+      <button id="addStudent" class="btn no-print"><i class="fas fa-plus-circle"></i> Add</button>
     </div>
     <div class="table-wrapper">
       <table id="studentsTable">
@@ -144,13 +161,13 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="doneEditing" class="hidden no-print"><i class="fas fa-check"></i> Done</button>
-      <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
-      <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="editSelected" disabled class="btn no-print"><i class="fas fa-edit"></i> Edit</button>
+      <button id="doneEditing" class="btn hidden no-print"><i class="fas fa-check"></i> Done</button>
+      <button id="deleteSelected" disabled class="btn no-print"><i class="fas fa-trash"></i> Delete</button>
+      <button id="saveRegistration" class="btn no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="editRegistration" class="btn hidden no-print"><i class="fas fa-undo"></i> Restore</button>
+      <button id="shareRegistration" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadRegistrationPDF" class="btn hidden no-print"><i class="fas fa-download"></i> Download</button>
     </div>
   </section>
 
@@ -159,15 +176,15 @@
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
       <input type="date" id="dateInput" />
-      <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
+      <button id="loadAttendance" class="btn no-print"><i class="fas fa-calendar-check"></i> Load</button>
     </div>
     <div id="attendanceBody"></div>
     <div id="attendanceSummary" class="hidden summary-box"></div>
     <div class="table-actions">
-      <button id="saveAttendance" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="resetAttendance" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="downloadAttendancePDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAttendanceSummary" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="saveAttendance" class="btn hidden no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="resetAttendance" class="btn hidden no-print"><i class="fas fa-undo"></i> Reset</button>
+      <button id="downloadAttendancePDF" class="btn hidden no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="shareAttendanceSummary" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
     </div>
   </section>
 
@@ -201,8 +218,8 @@
       <input type="month" id="semesterEnd" class="hidden"/>
       <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
       <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
-      <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
-      <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
+      <button id="loadAnalytics" class="btn no-print"><i class="fas fa-chart-bar"></i> Load</button>
+      <button id="resetAnalytics" class="btn hidden no-print"><i class="fas fa-undo"></i> Change</button>
     </div>
     <div id="instructions" class="hidden"></div>
     <div id="analyticsContainer" class="table-wrapper hidden">
@@ -216,8 +233,8 @@
       <canvas id="pieChart"></canvas>
     </div>
     <div class="table-actions hidden" id="analyticsActions">
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="downloadAnalytics" class="btn no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="shareAnalytics" class="btn no-print"><i class="fas fa-share-alt"></i> Share</button>
     </div>
   </section>
 
@@ -226,7 +243,7 @@
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
       <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
+      <button id="loadRegister" class="btn no-print"><i class="fas fa-calendar-alt"></i> Load</button>
     </div>
     <div id="registerTableWrapper" class="hidden table-wrapper">
       <table id="registerTable">
@@ -235,10 +252,10 @@
       </table>
     </div>
     <div class="table-actions">
-      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="saveRegister" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareRegister" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
+      <button id="changeRegister" class="btn hidden no-print"><i class="fas fa-undo"></i> Reset</button>
+      <button id="saveRegister" class="btn hidden no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegister" class="btn no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="shareRegister" class="btn hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
     </div>
   </section>
 
@@ -249,8 +266,8 @@
       <h3>Payment for Adm# <span id="payAdm"></span></h3>
       <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
       <div class="modal-actions">
-        <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+        <button id="savePayment" class="btn no-print"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment" class="btn no-print"><i class="fas fa-times"></i> Cancel</button>
       </div>
     </div>
   </div>
@@ -278,16 +295,16 @@
     </div>
   </div>
 
-  <!-- Load your main script as an ES module -->
+  <!-- Scripts -->
+  <script type="module" src="auth.js"></script>
   <script type="module" src="app.js"></script>
 
-  <!-- Register service worker as a module -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('service-worker.js', { type: 'module' })
-          .then(reg => console.log('Service Worker registered as module:', reg))
+          .then(reg => console.log('Service Worker registered:', reg))
           .catch(err => console.error('SW registration failed:', err));
       });
     }
