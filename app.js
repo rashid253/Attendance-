@@ -1,4 +1,4 @@
-// app.js (Updated: Ensure all sections function correctly—prevent null references)
+// app.js (Cleaned & corrected: ensure no unexpected tokens and all sections functional)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -21,7 +21,7 @@ const firebaseConfig = {
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
   measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
 };
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
@@ -30,31 +30,31 @@ const appDataRef = dbRef(database, "appData");
 // ----------------------
 // Local application state (multi-school)
 // ----------------------
-let studentsBySchool        = {}; // { [schoolName]: [ { name, adm, parent, contact, occupation, address, cls, sec } ] }
-let attendanceDataBySchool  = {}; // { [schoolName]: { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/"HD"/"L", ... } } }
-let paymentsDataBySchool    = {}; // { [schoolName]: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
-let lastAdmNoBySchool       = {}; // { [schoolName]: numeric }
-let fineRates               = { A:50, Lt:20, L:10, HD:30 };
-let eligibilityPct          = 75; 
-let schools                 = []; // array of school names (strings)
-let currentSchool           = null; // selected school name
-let teacherClass            = null; // selected class (e.g. "10")
-let teacherSection          = null; // selected section (e.g. "A")
+let studentsBySchool = {};       // { [schoolName]: [ { name, adm, parent, contact, occupation, address, cls, sec } ] }
+let attendanceDataBySchool = {}; // { [schoolName]: { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/"HD"/"L", ... } } }
+let paymentsDataBySchool = {};   // { [schoolName]: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
+let lastAdmNoBySchool = {};      // { [schoolName]: numeric }
+let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+let eligibilityPct = 75;
+let schools = [];                // array of school names
+let currentSchool = null;        // selected school name
+let teacherClass = null;         // selected class (e.g. "10")
+let teacherSection = null;       // selected section (e.g. "A")
 
 // ----------------------
 // Initialize state from IndexedDB
 // ----------------------
 async function initLocalState() {
-  studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
+  studentsBySchool = (await idbGet("studentsBySchool")) || {};
   attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
-  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || {};
-  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || {};
-  fineRates              = (await idbGet("fineRates"))              || fineRates;
-  eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
-  schools                = (await idbGet("schools"))                || [];
-  currentSchool          = (await idbGet("currentSchool"))          || null;
-  teacherClass           = (await idbGet("teacherClass"))           || null;
-  teacherSection         = (await idbGet("teacherSection"))         || null;
+  paymentsDataBySchool = (await idbGet("paymentsDataBySchool")) || {};
+  lastAdmNoBySchool = (await idbGet("lastAdmNoBySchool")) || {};
+  fineRates = (await idbGet("fineRates")) || fineRates;
+  eligibilityPct = (await idbGet("eligibilityPct")) || eligibilityPct;
+  schools = (await idbGet("schools")) || [];
+  currentSchool = (await idbGet("currentSchool")) || null;
+  teacherClass = (await idbGet("teacherClass")) || null;
+  teacherSection = (await idbGet("teacherSection")) || null;
 }
 
 // ----------------------
@@ -71,7 +71,7 @@ async function syncToFirebase() {
     schools,
     currentSchool,
     teacherClass,
-    teacherSection,
+    teacherSection
   };
   try {
     await dbSet(appDataRef, payload);
@@ -101,16 +101,15 @@ async function sharePdf(blob, fileName, title) {
 // DOMContentLoaded: Main Initialization
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selector
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => { if (e) e.classList.remove("hidden"); });
   const hide = (...els) => els.forEach(e => { if (e) e.classList.add("hidden"); });
 
-  // Load local state from IndexedDB
+  // Load local state
   await initLocalState();
 
   // ----------------------
-  // Reset Views: Hide/Show all sections based on whether setup is complete
+  // Reset Views: Hide/Show sections based on setup completion
   // ----------------------
   function resetViews() {
     const setupDone = currentSchool && teacherClass && teacherSection;
@@ -123,7 +122,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       $("register-section"),
       $("chooseBackupFolder"),
       $("restoreData"),
-      $("resetData"),
+      $("resetData")
     ];
     if (!setupDone) {
       allSections.forEach(sec => sec && hide(sec));
@@ -131,8 +130,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       allSections.forEach(sec => sec && show(sec));
     }
   }
-
-  // Immediately run resetViews on load
   resetViews();
 
   // ----------------------
@@ -157,16 +154,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 1. SETUP SECTION
   // ----------------------
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
+  const setupForm = $("setupForm");
+  const setupDisplay = $("setupDisplay");
+  const schoolInput = $("schoolInput");
+  const schoolSelect = $("schoolSelect");
+  const classSelect = $("teacherClassSelect");
+  const sectionSelect = $("teacherSectionSelect");
+  const setupText = $("setupText");
+  const saveSetupBtn = $("saveSetup");
+  const editSetupBtn = $("editSetup");
+  const schoolListDiv = $("schoolList");
 
   function renderSchoolList() {
     schoolListDiv.innerHTML = "";
@@ -188,7 +185,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         if (newName?.trim()) {
           const oldName = schools[idx];
           const updatedName = newName.trim();
-          // Rename keys in all scoped data objects
           schools[idx] = updatedName;
           if (studentsBySchool[oldName]) {
             studentsBySchool[updatedName] = studentsBySchool[oldName];
@@ -213,7 +209,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             idbSet("attendanceDataBySchool", attendanceDataBySchool),
             idbSet("paymentsDataBySchool", paymentsDataBySchool),
             idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
-            idbSet("currentSchool", currentSchool),
+            idbSet("currentSchool", currentSchool)
           ]);
           await syncToFirebase();
           await loadSetup();
@@ -243,7 +239,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           idbSet("studentsBySchool", studentsBySchool),
           idbSet("attendanceDataBySchool", attendanceDataBySchool),
           idbSet("paymentsDataBySchool", paymentsDataBySchool),
-          idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
+          idbSet("lastAdmNoBySchool", lastAdmNoBySchool)
         ]);
         await syncToFirebase();
         await loadSetup();
@@ -252,18 +248,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
+    schools = (await idbGet("schools")) || [];
+    studentsBySchool = (await idbGet("studentsBySchool")) || {};
     attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
-    paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || {};
-    lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || {};
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
+    paymentsDataBySchool = (await idbGet("paymentsDataBySchool")) || {};
+    lastAdmNoBySchool = (await idbGet("lastAdmNoBySchool")) || {};
+    currentSchool = (await idbGet("currentSchool")) || null;
+    teacherClass = (await idbGet("teacherClass")) || null;
+    teacherSection = (await idbGet("teacherSection")) || null;
 
     // Populate school dropdown
     schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
+      ...schools.map(s => `<option value="${s}">${s}</option>`)
     ].join("");
     if (currentSchool) schoolSelect.value = currentSchool;
 
@@ -275,18 +271,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
       hide(setupForm);
       show(setupDisplay);
-
-      // Now that setup is done, show all other sections
       resetViews();
-
-      // After setup completes, render students and counters
       setTimeout(() => {
         renderStudents();
         updateCounters();
+        bindCounterDialogs();
       }, 0);
-
     } else {
-      // Setup is not complete, hide other sections
       show(setupForm);
       hide(setupDisplay);
       resetViews();
@@ -299,7 +290,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (newSchool) {
       if (!schools.includes(newSchool)) {
         schools.push(newSchool);
-        // Initialize empty structures for new school
         studentsBySchool[newSchool] = [];
         attendanceDataBySchool[newSchool] = {};
         paymentsDataBySchool[newSchool] = {};
@@ -309,27 +299,27 @@ window.addEventListener("DOMContentLoaded", async () => {
           idbSet("studentsBySchool", studentsBySchool),
           idbSet("attendanceDataBySchool", attendanceDataBySchool),
           idbSet("paymentsDataBySchool", paymentsDataBySchool),
-          idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
+          idbSet("lastAdmNoBySchool", lastAdmNoBySchool)
         ]);
         await syncToFirebase();
       }
       schoolInput.value = "";
       return loadSetup();
     }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
+    const selSchool = schoolSelect.value;
+    const selClass = classSelect.value;
     const selSection = sectionSelect.value;
     if (!selSchool || !selClass || !selSection) {
       alert("Please select a school, class, and section.");
       return;
     }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
+    currentSchool = selSchool;
+    teacherClass = selClass;
     teacherSection = selSection;
     await Promise.all([
       idbSet("currentSchool", currentSchool),
       idbSet("teacherClass", teacherClass),
-      idbSet("teacherSection", teacherSection),
+      idbSet("teacherSection", teacherSection)
     ]);
     await syncToFirebase();
     await loadSetup();
@@ -339,18 +329,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     show(setupForm);
     hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
+    resetViews();
   };
 
   // ----------------------
   // 2. FINANCIAL SETTINGS SECTION
   // ----------------------
-  const formDiv             = $("financialForm");
-  const saveSettings        = $("saveSettings");
-  const fineAbsentInput     = $("fineAbsent");
-  const fineLateInput       = $("fineLate");
-  const fineLeaveInput      = $("fineLeave");
-  const fineHalfDayInput    = $("fineHalfDay");
+  const formDiv = $("financialForm");
+  const saveSettings = $("saveSettings");
+  const fineAbsentInput = $("fineAbsent");
+  const fineLateInput = $("fineLate");
+  const fineLeaveInput = $("fineLeave");
+  const fineHalfDayInput = $("fineHalfDay");
   const eligibilityPctInput = $("eligibilityPct");
 
   const settingsCard = document.createElement("div");
@@ -363,11 +353,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   formDiv.parentNode.appendChild(settingsCard);
   formDiv.parentNode.appendChild(editSettings);
 
-  // Initialize inputs with existing values
-  fineAbsentInput.value     = fineRates.A;
-  fineLateInput.value       = fineRates.Lt;
-  fineLeaveInput.value      = fineRates.L;
-  fineHalfDayInput.value    = fineRates.HD;
+  fineAbsentInput.value = fineRates.A;
+  fineLateInput.value = fineRates.Lt;
+  fineLeaveInput.value = fineRates.L;
+  fineHalfDayInput.value = fineRates.HD;
   eligibilityPctInput.value = eligibilityPct;
 
   saveSettings.onclick = async () => {
@@ -375,12 +364,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       A: Number(fineAbsentInput.value) || 0,
       Lt: Number(fineLateInput.value) || 0,
       L: Number(fineLeaveInput.value) || 0,
-      HD: Number(fineHalfDayInput.value) || 0,
+      HD: Number(fineHalfDayInput.value) || 0
     };
     eligibilityPct = Number(eligibilityPctInput.value) || 0;
     await Promise.all([
       idbSet("fineRates", fineRates),
-      idbSet("eligibilityPct", eligibilityPct),
+      idbSet("eligibilityPct", eligibilityPct)
     ]);
     await syncToFirebase();
 
@@ -404,7 +393,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 3. COUNTERS SECTION
   // ----------------------
-  // Container in HTML: <div id="countersContainer" class="scroll-row"></div>
   function createCounterCard(id, title, spanId) {
     const container = $("countersContainer");
     if (!container) return null;
@@ -421,18 +409,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function setupCounters() {
-    // First, clear any existing cards
     const container = $("countersContainer");
     if (!container) return;
     container.innerHTML = "";
-    // Create all seven cards
-    createCounterCard("card-section",     "Section",        "sectionCount");
-    createCounterCard("card-class",       "Class",          "classCount");
-    createCounterCard("card-school",      "School",         "schoolCount");
-    createCounterCard("card-attendance",  "Attendance",     "attendanceCount");
-    createCounterCard("card-eligible",    "Eligible",       "eligibleCount");
-    createCounterCard("card-debarred",    "Debarred",       "debarredCount");
-    createCounterCard("card-outstanding", "Outstanding/Fine","outstandingCount");
+    createCounterCard("card-section", "Section", "sectionCount");
+    createCounterCard("card-class", "Class", "classCount");
+    createCounterCard("card-school", "School", "schoolCount");
+    createCounterCard("card-attendance", "Attendance", "attendanceCount");
+    createCounterCard("card-eligible", "Eligible", "eligibleCount");
+    createCounterCard("card-debarred", "Debarred", "debarredCount");
+    createCounterCard("card-outstanding", "Outstanding/Fine", "outstandingCount");
   }
 
   function animateCounters() {
@@ -450,34 +436,29 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function updateCounters() {
     if (!currentSchool) return;
-    // Ensure spans exist
-    const sectionCountSpan     = $("sectionCount");
-    const classCountSpan       = $("classCount");
-    const schoolCountSpan      = $("schoolCount");
-    const attendanceCountSpan  = $("attendanceCount");
-    const eligibleCountSpan    = $("eligibleCount");
-    const debarredCountSpan    = $("debarredCount");
+    const sectionCountSpan = $("sectionCount");
+    const classCountSpan = $("classCount");
+    const schoolCountSpan = $("schoolCount");
+    const attendanceCountSpan = $("attendanceCount");
+    const eligibleCountSpan = $("eligibleCount");
+    const debarredCountSpan = $("debarredCount");
     const outstandingCountSpan = $("outstandingCount");
     if (!sectionCountSpan || !classCountSpan || !schoolCountSpan || !attendanceCountSpan || !eligibleCountSpan || !debarredCountSpan || !outstandingCountSpan) {
       return;
     }
 
-    const cl  = classSelect.value;
+    const cl = classSelect.value;
     const sec = sectionSelect.value;
     const allStudents = studentsBySchool[currentSchool] || [];
 
-    // Section: number of students in this class+section
     const sectionStudents = allStudents.filter(s => s.cls === cl && s.sec === sec);
     sectionCountSpan.dataset.target = sectionStudents.length;
 
-    // Class: number of students in this class (all sections)
     const classStudents = allStudents.filter(s => s.cls === cl);
     classCountSpan.dataset.target = classStudents.length;
 
-    // School: total students (in the current school)
     schoolCountSpan.dataset.target = allStudents.length;
 
-    // Attendance for this class+section across all dates
     const attendanceData = attendanceDataBySchool[currentSchool] || {};
     let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
     Object.entries(attendanceData).forEach(([date, rec]) => {
@@ -499,10 +480,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     const attendanceTotal = totalP + totalA + totalLt + totalHD + totalL;
     attendanceCountSpan.dataset.target = attendanceTotal;
 
-    // Eligible, Debarred, Outstanding
     let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
     sectionStudents.forEach(s => {
-      let p=0, a=0, lt=0, hd=0, l=0, totalDays=0;
+      let p = 0, a = 0, lt = 0, hd = 0, l = 0, totalDays = 0;
       Object.values(attendanceData).forEach(rec => {
         if (rec[s.adm]) {
           totalDays++;
@@ -524,30 +504,29 @@ window.addEventListener("DOMContentLoaded", async () => {
       else debarredCount++;
       if (outstanding > 0) outstandingCount++;
     });
-    eligibleCountSpan.dataset.target    = eligibleCount;
-    debarredCountSpan.dataset.target    = debarredCount;
+    eligibleCountSpan.dataset.target = eligibleCount;
+    debarredCountSpan.dataset.target = debarredCount;
     outstandingCountSpan.dataset.target = outstandingCount;
 
     animateCounters();
   }
 
-  // Initialize counters once on load
   setupCounters();
 
   // Dialog handlers for each card
   function bindCounterDialogs() {
-    const sectionCard     = $("card-section");
-    const classCard       = $("card-class");
-    const schoolCard      = $("card-school");
-    const attendanceCard  = $("card-attendance");
-    const eligibleCard    = $("card-eligible");
-    const debarredCard    = $("card-debarred");
+    const sectionCard = $("card-section");
+    const classCard = $("card-class");
+    const schoolCard = $("card-school");
+    const attendanceCard = $("card-attendance");
+    const eligibleCard = $("card-eligible");
+    const debarredCard = $("card-debarred");
     const outstandingCard = $("card-outstanding");
     if (!currentSchool) return;
 
     sectionCard && (sectionCard.onclick = () => {
       if (!currentSchool) return;
-      const cl  = classSelect.value;
+      const cl = classSelect.value;
       const sec = sectionSelect.value;
       const allStudents = studentsBySchool[currentSchool] || [];
       const list = allStudents
@@ -571,7 +550,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     schoolCard && (schoolCard.onclick = () => {
       if (!currentSchool) return;
       const allStudents = studentsBySchool[currentSchool] || [];
-      const classes = [...new Set(allStudents.map(s => s.cls))].sort();
+      const classesSet = new Set(allStudents.map(s => s.cls));
+      const classes = Array.from(classesSet).sort();
       let details = "";
       classes.forEach(cl => {
         const classStudents = allStudents.filter(s => s.cls === cl);
@@ -586,7 +566,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     attendanceCard && (attendanceCard.onclick = () => {
       if (!currentSchool) return;
-      const cl  = classSelect.value;
+      const cl = classSelect.value;
       const sec = sectionSelect.value;
       const allStudents = studentsBySchool[currentSchool] || [];
       const sectionStudents = allStudents.filter(s => s.cls === cl && s.sec === sec);
@@ -627,7 +607,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const list = allStudents
         .filter(s => {
           if (s.cls !== cl || s.sec !== sec) return false;
-          let p=0, totalDays=0, a=0, lt=0, l=0, hd=0;
+          let p = 0, a = 0, lt = 0, hd = 0, l = 0, totalDays = 0;
           Object.values(attendanceData).forEach(rec => {
             if (rec[s.adm]) {
               totalDays++;
@@ -660,7 +640,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const list = allStudents
         .filter(s => {
           if (s.cls !== cl || s.sec !== sec) return false;
-          let p=0, totalDays=0, a=0, lt=0, l=0, hd=0;
+          let p = 0, a = 0, lt = 0, hd = 0, l = 0, totalDays = 0;
           Object.values(attendanceData).forEach(rec => {
             if (rec[s.adm]) {
               totalDays++;
@@ -693,7 +673,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const list = allStudents
         .filter(s => {
           if (s.cls !== cl || s.sec !== sec) return false;
-          let a=0, lt=0, l=0, hd=0;
+          let a = 0, lt = 0, l = 0, hd = 0;
           Object.values(attendanceData).forEach(rec => {
             if (rec[s.adm]) {
               switch (rec[s.adm]) {
@@ -709,7 +689,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           return fineTotal - paid > 0;
         })
         .map((s, i) => {
-          let a=0, lt=0, l=0, hd=0;
+          let a = 0, lt = 0, l = 0, hd = 0;
           Object.values(attendanceData).forEach(rec => {
             if (rec[s.adm]) {
               switch (rec[s.adm]) {
@@ -737,7 +717,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const studentsBody = $("studentsBody");
     if (!studentsBody || !currentSchool) return;
 
-    const cl  = classSelect.value;
+    const cl = classSelect.value;
     const sec = sectionSelect.value;
     const allStudents = studentsBySchool[currentSchool] || [];
     studentsBody.innerHTML = "";
@@ -745,15 +725,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     allStudents.forEach((s, i) => {
       if (s.cls !== cl || s.sec !== sec) return;
       idx++;
-      // Compute stats
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
       const attendanceData = attendanceDataBySchool[currentSchool] || {};
-      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
+      Object.values(attendanceData).forEach(rec => {
+        if (rec[s.adm]) stats[rec[s.adm]]++;
+      });
       const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-      const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid  = (paymentsDataBySchool[currentSchool]?.[s.adm]||[]).reduce((a,p)=>a+p.amount, 0);
-      const out   = fine - paid;
-      const pct   = total ? (stats.P/total)*100 : 0;
+      const fine = stats.A * fineRates.A + stats.Lt * fineRates.Lt + stats.L * fineRates.L + stats.HD * fineRates.HD;
+      const paid = (paymentsDataBySchool[currentSchool]?.[s.adm] || []).reduce((a, p) => a + p.amount, 0);
+      const out = fine - paid;
+      const pct = total ? (stats.P / total) * 100 : 0;
       const status = (out > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
 
       const tr = document.createElement("tr");
@@ -784,28 +765,26 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   function toggleButtons() {
-    const editSelectedBtn   = $("editSelected");
+    const editSelectedBtn = $("editSelected");
     const deleteSelectedBtn = $("deleteSelected");
     const any = !!document.querySelector(".sel:checked");
-    if (editSelectedBtn)   editSelectedBtn.disabled   = !any;
+    if (editSelectedBtn) editSelectedBtn.disabled = !any;
     if (deleteSelectedBtn) deleteSelectedBtn.disabled = !any;
   }
 
-  // DOM listeners for table
   document.addEventListener("change", e => {
     if (e.target.classList && e.target.classList.contains("sel")) toggleButtons();
   });
 
-  // Registration buttons
   $("addStudent") && ($("addStudent").onclick = async (e) => {
     e.preventDefault();
     if (!currentSchool) { alert("Please complete setup first."); return; }
-    const n   = $("studentName").value.trim();
-    const p   = $("parentName").value.trim();
-    const c   = $("parentContact").value.trim();
-    const o   = $("parentOccupation").value.trim();
-    const a   = $("parentAddress").value.trim();
-    const cl  = classSelect.value;
+    const n = $("studentName").value.trim();
+    const p = $("parentName").value.trim();
+    const c = $("parentContact").value.trim();
+    const o = $("parentOccupation").value.trim();
+    const a = $("parentAddress").value.trim();
+    const cl = classSelect.value;
     const sec = sectionSelect.value;
     if (!n || !p || !c || !o || !a) { alert("All fields required"); return; }
     if (!/^\d{7,15}$/.test(c)) { alert("Contact must be 7–15 digits"); return; }
@@ -816,13 +795,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     await syncToFirebase();
     renderStudents();
     updateCounters();
-
-    // Clear inputs
-    $("studentName").value      = "";
-    $("parentName").value       = "";
-    $("parentContact").value    = "";
+    $("studentName").value = "";
+    $("parentName").value = "";
+    $("parentContact").value = "";
     $("parentOccupation").value = "";
-    $("parentAddress").value    = "";
+    $("parentAddress").value = "";
   });
 
   $("selectAllStudents") && ($("selectAllStudents").onclick = () => {
@@ -832,7 +809,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   $("editSelected") && ($("editSelected").onclick = () => {
     document.querySelectorAll(".sel:checked").forEach(cb => {
-      const tr = cb.closest("tr"), i = +tr.dataset.index;
+      const tr = cb.closest("tr");
+      const i = +tr.dataset.index;
       const s = (studentsBySchool[currentSchool] || [])[i];
       tr.innerHTML = `
         <td><input type="checkbox" class="sel" checked></td>
@@ -904,12 +882,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 5. PAYMENT MODAL SECTION
   // ----------------------
-  const paymentModal         = $("paymentModal");
-  const payAdmSpan           = $("payAdm");
-  const paymentAmountInput   = $("paymentAmount");
+  const paymentModal = $("paymentModal");
+  const payAdmSpan = $("payAdm");
+  const paymentAmountInput = $("paymentAmount");
   const paymentModalCloseBtn = $("paymentModalClose");
-  const savePaymentBtn       = $("savePayment");
-  const cancelPaymentBtn     = $("cancelPayment");
+  const savePaymentBtn = $("savePayment");
+  const cancelPaymentBtn = $("cancelPayment");
 
   function openPaymentModal(adm) {
     if (!paymentModal) return;
@@ -935,24 +913,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 6. MARK ATTENDANCE SECTION
   // ----------------------
-  const dateInput             = $("dateInput");
-  const loadAttendanceBtn     = $("loadAttendance");
-  const saveAttendanceBtn     = $("saveAttendance");
-  const resetAttendanceBtn    = $("resetAttendance");
+  const dateInput = $("dateInput");
+  const loadAttendanceBtn = $("loadAttendance");
+  const saveAttendanceBtn = $("saveAttendance");
+  const resetAttendanceBtn = $("resetAttendance");
   const downloadAttendanceBtn = $("downloadAttendancePDF");
-  const shareAttendanceBtn    = $("shareAttendanceSummary");
-  const attendanceBodyDiv     = $("attendanceBody");
-  const attendanceSummaryDiv  = $("attendanceSummary");
+  const shareAttendanceBtn = $("shareAttendanceSummary");
+  const attendanceBodyDiv = $("attendanceBody");
+  const attendanceSummaryDiv = $("attendanceSummary");
 
-  const statusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
-  const statusColors = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" };
+  const statusNames = { P: "Present", A: "Absent", Lt: "Late", HD: "Half-Day", L: "Leave" };
+  const statusColors = { P: "var(--success)", A: "var(--danger)", Lt: "var(--warning)", HD: "#FF9800", L: "var(--info)" };
 
   loadAttendanceBtn && (loadAttendanceBtn.onclick = () => {
     if (!currentSchool) { alert("Please complete setup first."); return; }
     if (!attendanceBodyDiv || !attendanceSummaryDiv) return;
     attendanceBodyDiv.innerHTML = "";
     attendanceSummaryDiv.innerHTML = "";
-    const cl  = classSelect.value;
+    const cl = classSelect.value;
     const sec = sectionSelect.value;
     const allStudents = studentsBySchool[currentSchool] || [];
     const filtered = allStudents.filter(stu => stu.cls === cl && stu.sec === sec);
@@ -960,17 +938,20 @@ window.addEventListener("DOMContentLoaded", async () => {
     filtered.forEach((stu, i) => {
       const row = document.createElement("div");
       const headerDiv = document.createElement("div");
-      const btnsDiv   = document.createElement("div");
-      row.className       = "attendance-row";
+      const btnsDiv = document.createElement("div");
+      row.className = "attendance-row";
       headerDiv.className = "attendance-header";
-      btnsDiv.className   = "attendance-buttons";
+      btnsDiv.className = "attendance-buttons";
       headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
       Object.keys(statusNames).forEach(code => {
         const btn = document.createElement("button");
         btn.className = "att-btn";
         btn.textContent = code;
         btn.onclick = () => {
-          btnsDiv.querySelectorAll(".att-btn").forEach(b => { b.classList.remove("selected"); b.style = ""; });
+          btnsDiv.querySelectorAll(".att-btn").forEach(b => {
+            b.classList.remove("selected");
+            b.style = "";
+          });
           btn.classList.add("selected");
           btn.style.background = statusColors[code];
           btn.style.color = "#fff";
@@ -990,7 +971,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!date) { alert("Pick date"); return; }
     if (!attendanceDataBySchool[currentSchool]) attendanceDataBySchool[currentSchool] = {};
     attendanceDataBySchool[currentSchool][date] = {};
-    const cl  = classSelect.value;
+    const cl = classSelect.value;
     const sec = sectionSelect.value;
     const allStudents = studentsBySchool[currentSchool] || [];
     const filtered = allStudents.filter(s => s.cls === cl && s.sec === sec);
@@ -1045,9 +1026,12 @@ window.addEventListener("DOMContentLoaded", async () => {
     const doc = new jspdf.jsPDF();
     const w = doc.internal.pageSize.getWidth();
     const today = new Date().toISOString().split("T")[0];
-    doc.setFontSize(18); doc.text("Attendance Report", 14, 16);
-    doc.setFontSize(10); doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
-    doc.setFontSize(12); doc.text(setupText.textContent, 14, 24);
+    doc.setFontSize(18);
+    doc.text("Attendance Report", 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
+    doc.setFontSize(12);
+    doc.text(setupText.textContent, 14, 24);
     doc.autoTable({ startY: 30, html: "#attendanceSummaryTable" });
     const fileName = `attendance_${currentSchool}_${dateInput.value}.pdf`;
     const blob = doc.output("blob");
@@ -1057,8 +1041,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   shareAttendanceBtn && (shareAttendanceBtn.onclick = () => {
     if (!currentSchool) { alert("Please complete setup first."); return; }
-    const cl   = classSelect.value;
-    const sec  = sectionSelect.value;
+    const cl = classSelect.value;
+    const sec = sectionSelect.value;
     const date = dateInput.value;
     const header = `*Attendance Report*\nSchool: ${currentSchool} | Class ${cl} Sec ${sec} - ${date}`;
     const allStudents = studentsBySchool[currentSchool] || [];
@@ -1070,40 +1054,40 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ----------------------
   // 7. ANALYTICS SECTION
   // ----------------------
-  const atg                  = $("analyticsTarget");           // select: section/student
-  const asel                 = $("analyticsSectionSelect");    // section dropdown
-  const atype                = $("analyticsType");             // type: date/month/semester/year
-  const adateInput           = $("analyticsDate");             // input type="date"
-  const amonthInput          = $("analyticsMonth");            // input type="month"
-  const semsInput            = $("semesterStart");             // input type="month"
-  const semeInput            = $("semesterEnd");               // input type="month"
-  const ayearInput           = $("yearStart");                 // input type="number" min=2000 max=2100
-  const asearchInput         = $("analyticsSearch");           // input to search admission or name
-  const loadAnalyticsBtn     = $("loadAnalytics");
-  const resetAnalyticsBtn    = $("resetAnalytics");
-  const instructionsDiv      = $("instructions");
-  const analyticsContainer   = $("analyticsContainer");
-  const graphsDiv            = $("graphs");
-  const analyticsActionsDiv  = $("analyticsActions");
-  const barChartCanvas       = $("barChart");
-  const pieChartCanvas       = $("pieChart");
+  const atg = $("analyticsTarget");
+  const asel = $("analyticsSectionSelect");
+  const atype = $("analyticsType");
+  const adateInput = $("analyticsDate");
+  const amonthInput = $("analyticsMonth");
+  const semsInput = $("semesterStart");
+  const semeInput = $("semesterEnd");
+  const ayearInput = $("yearStart");
+  const asearchInput = $("analyticsSearch");
+  const loadAnalyticsBtn = $("loadAnalytics");
+  const resetAnalyticsBtn = $("resetAnalytics");
+  const instructionsDiv = $("instructions");
+  const analyticsContainer = $("analyticsContainer");
+  const graphsDiv = $("graphs");
+  const analyticsActionsDiv = $("analyticsActions");
+  const barChartCanvas = $("barChart");
+  const pieChartCanvas = $("pieChart");
   const downloadAnalyticsBtn = $("downloadAnalytics");
-  const shareAnalyticsBtn    = $("shareAnalytics");
+  const shareAnalyticsBtn = $("shareAnalytics");
 
-  const analyticsStatusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
+  const analyticsStatusNames = { P: "Present", A: "Absent", Lt: "Late", HD: "Half-Day", L: "Leave" };
   const analyticsStatusColors = {
     P: getComputedStyle(document.documentElement).getPropertyValue("--success").trim(),
     A: getComputedStyle(document.documentElement).getPropertyValue("--danger").trim(),
     Lt: getComputedStyle(document.documentElement).getPropertyValue("--warning").trim(),
     HD: "#FF9800",
-    L: getComputedStyle(document.documentElement).getPropertyValue("--info").trim(),
+    L: getComputedStyle(document.documentElement).getPropertyValue("--info").trim()
   };
 
   let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode  = "combined"; // or "individual"
-  let lastAnalyticsStats     = [];
-  let lastAnalyticsRange     = { from: null, to: null };
-  let lastAnalyticsShare     = "";
+  let analyticsDownloadMode = "combined"; // or "individual"
+  let lastAnalyticsStats = [];
+  let lastAnalyticsRange = { from: null, to: null };
+  let lastAnalyticsShare = "";
 
   $("analyticsFilterBtn") && ($("analyticsFilterBtn").onclick = () => show($("analyticsFilterModal")));
   $("analyticsFilterClose") && ($("analyticsFilterClose").onclick = () => hide($("analyticsFilterModal")));
@@ -1186,7 +1170,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     const attendanceData = attendanceDataBySchool[currentSchool] || {};
-    const stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+    const stats = pool.map(s => ({ adm: s.adm, name: s.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0, total: 0 }));
     Object.entries(attendanceData).forEach(([d, rec]) => {
       if (d < from || d > to) return;
       stats.forEach(st => {
@@ -1208,7 +1192,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   function renderAnalytics(stats, from, to) {
     if (!currentSchool) return;
-    // 1) Filter stats according to filter options
     let filtered = stats;
     if (!analyticsFilterOptions.includes("all")) {
       filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
@@ -1223,7 +1206,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       }));
     }
 
-    // 2) Build HTML table
     const theadRow = document.querySelector("#analyticsTable thead tr");
     if (!theadRow) return;
     theadRow.innerHTML = [
@@ -1253,11 +1235,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       tbody.appendChild(tr);
     });
 
-    // 3) Show analytics section
     instructionsDiv && (instructionsDiv.textContent = `Period: ${from} to ${to} | School: ${currentSchool}`);
     show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
 
-    // 4) Bar chart: % Present for each student
     if (barChartCanvas) {
       const barCtx = barChartCanvas.getContext("2d");
       if (window.barChartInstance) window.barChartInstance.destroy();
@@ -1277,16 +1257,15 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    // 5) Pie chart: distribution of statuses across all filtered students
     if (pieChartCanvas) {
       const totals = filtered.reduce((acc, st) => {
-        acc.P  += st.P;
-        acc.A  += st.A;
+        acc.P += st.P;
+        acc.A += st.A;
         acc.Lt += st.Lt;
         acc.HD += st.HD;
-        acc.L  += st.L;
+        acc.L += st.L;
         return acc;
-      }, { P:0, A:0, Lt:0, HD:0, L:0 });
+      }, { P: 0, A: 0, Lt: 0, HD: 0, L: 0 });
 
       const pieCtx = pieChartCanvas.getContext("2d");
       if (window.pieChartInstance) window.pieChartInstance.destroy();
@@ -1302,7 +1281,6 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    // 6) Prepare WhatsApp share text
     lastAnalyticsShare =
       `Attendance Analytics (${from} to ${to}) | School: ${currentSchool}\n` +
       filtered.map((st, i) => {
@@ -1323,17 +1301,19 @@ window.addEventListener("DOMContentLoaded", async () => {
           const doc = new jspdf.jsPDF();
           const w = doc.internal.pageSize.getWidth();
           const { from, to } = lastAnalyticsRange;
-          doc.setFontSize(18); doc.text("Attendance Analytics", 14, 16);
-          doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
-          doc.setFontSize(12); doc.text(setupText.textContent, 14, 24);
+          doc.setFontSize(18);
+          doc.text("Attendance Analytics", 14, 16);
+          doc.setFontSize(10);
+          doc.text(`Period: ${from} to ${to}`, w - 14, 16, { align: "right" });
+          doc.setFontSize(12);
+          doc.text(setupText.textContent, 14, 24);
 
-          // Build a temporary table
           const tempTable = document.createElement("table");
           tempTable.innerHTML = `
             <tr>
               <th>#</th><th>Adm#</th><th>Name</th><th>P</th><th>A</th><th>Lt</th><th>HD</th><th>L</th><th>Total</th><th>%</th><th>Outstanding</th><th>Status</th>
             </tr>
-            ${lastAnalyticsStats.map((st,i) => {
+            ${lastAnalyticsStats.map((st, i) => {
               const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
               return `
                 <tr>
@@ -1357,9 +1337,7 @@ window.addEventListener("DOMContentLoaded", async () => {
           const blob = doc.output("blob");
           doc.save(fileName);
           await sharePdf(blob, fileName, "Attendance Analytics");
-
         } else {
-          // Individual receipts
           const doc = new jspdf.jsPDF();
           const w = doc.internal.pageSize.getWidth();
           const { from, to } = lastAnalyticsRange;
@@ -1416,7 +1394,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       shareAnalyticsBtn.onclick = () => {
         if (!currentSchool) { alert("Please complete setup first."); return; }
         if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
-        window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
+        window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
       };
     }
   }
@@ -1425,14 +1403,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   // 8. ATTENDANCE REGISTER SECTION
   // ----------------------
   function bindRegisterActions() {
-    const loadRegisterBtn      = $("loadRegister");
-    const saveRegisterBtn      = $("saveRegister");
-    const changeRegisterBtn    = $("changeRegister");
-    const downloadRegisterBtn  = $("downloadRegister");
-    const shareRegisterBtn     = $("shareRegister");
+    const loadRegisterBtn = $("loadRegister");
+    const saveRegisterBtn = $("saveRegister");
+    const changeRegisterBtn = $("changeRegister");
+    const downloadRegisterBtn = $("downloadRegister");
+    const shareRegisterBtn = $("shareRegister");
     const registerTableWrapper = $("registerTableWrapper");
-    const registerHeaderRow    = $("registerHeader");
-    const registerBodyTbody    = $("registerBody");
+    const registerHeaderRow = $("registerHeader");
+    const registerBodyTbody = $("registerBody");
 
     loadRegisterBtn && (loadRegisterBtn.onclick = () => {
       if (!currentSchool) { alert("Please complete setup first."); return; }
@@ -1447,14 +1425,18 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
       if (registerBodyTbody) registerBodyTbody.innerHTML = "";
 
-      const cl  = classSelect.value;
+      const cl = classSelect.value;
       const sec = sectionSelect.value;
       const allStudents = studentsBySchool[currentSchool] || [];
       allStudents.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
         let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
         dateKeys.forEach(key => {
           const c = attendanceData[key][s.adm] || "";
-          const color = c === "P" ? "var(--success)" : c === "Lt" ? "var(--warning)" : c === "HD" ? "#FF9800" : c === "L" ? "var(--info)" : "var(--danger)";
+          const color = c === "P" ? "var(--success)"
+                      : c === "Lt" ? "var(--warning)"
+                      : c === "HD" ? "#FF9800"
+                      : c === "L" ? "var(--info)"
+                      : "var(--danger)";
           const style = c ? `style="background:${color};color:#fff"` : "";
           row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
         });
@@ -1466,7 +1448,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       document.querySelectorAll(".reg-cell").forEach(cell => {
         cell.onclick = () => {
           const span = cell.querySelector(".status-text");
-          const codes = ["","P","Lt","HD","L","A"];
+          const codes = ["", "P", "Lt", "HD", "L", "A"];
           const idx = (codes.indexOf(span.textContent) + 1) % codes.length;
           const c = codes[idx];
           span.textContent = c;
@@ -1474,7 +1456,11 @@ window.addEventListener("DOMContentLoaded", async () => {
             cell.style.background = "";
             cell.style.color = "";
           } else {
-            const col = c === "P" ? "var(--success)" : c === "Lt" ? "var(--warning)" : c === "HD" ? "#FF9800" : c === "L" ? "var(--info)" : "var(--danger)";
+            const col = c === "P" ? "var(--success)"
+                      : c === "Lt" ? "var(--warning)"
+                      : c === "HD" ? "#FF9800"
+                      : c === "L" ? "var(--info)"
+                      : "var(--danger)";
             cell.style.background = col;
             cell.style.color = "#fff";
           }
@@ -1522,9 +1508,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       const doc = new jspdf.jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const today = new Date().toISOString().split("T")[0];
-      doc.setFontSize(18); doc.text("Attendance Register", 14, 20);
-      doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
-      doc.setFontSize(12); doc.text(setupText.textContent, 14, 36);
+      doc.setFontSize(18);
+      doc.text("Attendance Register", 14, 20);
+      doc.setFontSize(10);
+      doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
+      doc.setFontSize(12);
+      doc.text(setupText.textContent, 14, 36);
       doc.autoTable({ startY: 60, html: "#registerTable", tableWidth: "auto", styles: { fontSize: 10 } });
       const blob = doc.output("blob");
       doc.save(`attendance_register_${currentSchool}.pdf`);
@@ -1537,7 +1526,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       const rows = Array.from(registerBodyTbody.children).map(tr =>
         Array.from(tr.children).map(td => td.querySelector(".status-text")?.textContent || td.textContent).join(" ")
       );
-      window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank`);
+      window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank");
     });
   }
 
@@ -1547,9 +1536,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   // 9. BACKUP, RESTORE & RESET SECTION
   // ----------------------
   const chooseBackupFolderBtn = $("chooseBackupFolder");
-  const restoreDataBtn        = $("restoreData");
-  const restoreFileInput      = $("restoreFile");
-  const resetDataBtn          = $("resetData");
+  const restoreDataBtn = $("restoreData");
+  const restoreFileInput = $("restoreFile");
+  const resetDataBtn = $("resetData");
   let backupHandle = null;
 
   chooseBackupFolderBtn && (chooseBackupFolderBtn.onclick = async () => {
@@ -1569,16 +1558,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      studentsBySchool       = data.studentsBySchool       || {};
+      studentsBySchool = data.studentsBySchool || {};
       attendanceDataBySchool = data.attendanceDataBySchool || {};
-      paymentsDataBySchool   = data.paymentsDataBySchool   || {};
-      lastAdmNoBySchool      = data.lastAdmNoBySchool      || {};
-      fineRates              = data.fineRates              || { A:50, Lt:20, L:10, HD:30 };
-      eligibilityPct         = data.eligibilityPct         || 75;
-      schools                = data.schools                || [];
-      currentSchool          = data.currentSchool          || null;
-      teacherClass           = data.teacherClass           || null;
-      teacherSection         = data.teacherSection         || null;
+      paymentsDataBySchool = data.paymentsDataBySchool || {};
+      lastAdmNoBySchool = data.lastAdmNoBySchool || {};
+      fineRates = data.fineRates || { A: 50, Lt: 20, L: 10, HD: 30 };
+      eligibilityPct = data.eligibilityPct || 75;
+      schools = data.schools || [];
+      currentSchool = data.currentSchool || null;
+      teacherClass = data.teacherClass || null;
+      teacherSection = data.teacherSection || null;
 
       await Promise.all([
         idbSet("studentsBySchool", studentsBySchool),
@@ -1590,7 +1579,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         idbSet("schools", schools),
         idbSet("currentSchool", currentSchool),
         idbSet("teacherClass", teacherClass),
-        idbSet("teacherSection", teacherSection),
+        idbSet("teacherSection", teacherSection)
       ]);
       await syncToFirebase();
       await loadSetup();
@@ -1605,16 +1594,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   resetDataBtn && (resetDataBtn.onclick = async () => {
     if (!confirm("Factory reset will delete ALL data locally and in Firebase. Continue?")) return;
     await idbClear();
-    studentsBySchool       = {};
+    studentsBySchool = {};
     attendanceDataBySchool = {};
-    paymentsDataBySchool   = {};
-    lastAdmNoBySchool      = {};
-    fineRates              = { A:50, Lt:20, L:10, HD:30 };
-    eligibilityPct         = 75;
-    schools                = [];
-    currentSchool          = null;
-    teacherClass           = null;
-    teacherSection         = null;
+    paymentsDataBySchool = {};
+    lastAdmNoBySchool = {};
+    fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+    eligibilityPct = 75;
+    schools = [];
+    currentSchool = null;
+    teacherClass = null;
+    teacherSection = null;
     await syncToFirebase();
     await loadSetup();
     alert("Factory reset completed.");
@@ -1633,11 +1622,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         schools,
         currentSchool,
         teacherClass,
-        teacherSection,
+        teacherSection
       };
       const now = new Date();
-      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart("2","0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
-      const fileHandle = await backupHandle.getFileHandle(fileName,{ create:true });
+      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}.json`;
+      const fileHandle = await backupHandle.getFileHandle(fileName, { create: true });
       const writer = await fileHandle.createWritable();
       await writer.write(JSON.stringify(backupData, null, 2));
       await writer.close();
@@ -1645,7 +1634,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error("Backup failed:", err);
     }
-  }, 5 * 60 * 1000); // every 5 minutes
+  }, 5 * 60 * 1000);
 
   // ----------------------
   // 10. SERVICE WORKER REGISTRATION
@@ -1665,7 +1654,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         attendanceDataBySchool: {},
         paymentsDataBySchool: {},
         lastAdmNoBySchool: {},
-        fineRates: { A:50, Lt:20, L:10, HD:30 },
+        fineRates: { A: 50, Lt: 20, L: 10, HD: 30 },
         eligibilityPct: 75,
         schools: [],
         currentSchool: null,
@@ -1673,16 +1662,16 @@ window.addEventListener("DOMContentLoaded", async () => {
         teacherSection: null
       };
       await dbSet(appDataRef, defaultPayload);
-      studentsBySchool       = {};
+      studentsBySchool = {};
       attendanceDataBySchool = {};
-      paymentsDataBySchool   = {};
-      lastAdmNoBySchool      = {};
-      fineRates              = defaultPayload.fineRates;
-      eligibilityPct         = defaultPayload.eligibilityPct;
-      schools                = [];
-      currentSchool          = null;
-      teacherClass           = null;
-      teacherSection         = null;
+      paymentsDataBySchool = {};
+      lastAdmNoBySchool = {};
+      fineRates = defaultPayload.fineRates;
+      eligibilityPct = defaultPayload.eligibilityPct;
+      schools = [];
+      currentSchool = null;
+      teacherClass = null;
+      teacherSection = null;
       await Promise.all([
         idbSet("studentsBySchool", studentsBySchool),
         idbSet("attendanceDataBySchool", attendanceDataBySchool),
@@ -1693,22 +1682,22 @@ window.addEventListener("DOMContentLoaded", async () => {
         idbSet("schools", schools),
         idbSet("currentSchool", currentSchool),
         idbSet("teacherClass", teacherClass),
-        idbSet("teacherSection", teacherSection),
+        idbSet("teacherSection", teacherSection)
       ]);
       return loadSetup();
     }
 
     const data = snapshot.val();
-    studentsBySchool       = data.studentsBySchool       || {};
+    studentsBySchool = data.studentsBySchool || {};
     attendanceDataBySchool = data.attendanceDataBySchool || {};
-    paymentsDataBySchool   = data.paymentsDataBySchool   || {};
-    lastAdmNoBySchool      = data.lastAdmNoBySchool      || {};
-    fineRates              = data.fineRates              || { A:50, Lt:20, L:10, HD:30 };
-    eligibilityPct         = data.eligibilityPct         || 75;
-    schools                = data.schools                || [];
-    currentSchool          = data.currentSchool          || null;
-    teacherClass           = data.teacherClass           || null;
-    teacherSection         = data.teacherSection         || null;
+    paymentsDataBySchool = data.paymentsDataBySchool || {};
+    lastAdmNoBySchool = data.lastAdmNoBySchool || {};
+    fineRates = data.fineRates || { A: 50, Lt: 20, L: 10, HD: 30 };
+    eligibilityPct = data.eligibilityPct || 75;
+    schools = data.schools || [];
+    currentSchool = data.currentSchool || null;
+    teacherClass = data.teacherClass || null;
+    teacherSection = data.teacherSection || null;
 
     await Promise.all([
       idbSet("studentsBySchool", studentsBySchool),
@@ -1720,26 +1709,20 @@ window.addEventListener("DOMContentLoaded", async () => {
       idbSet("schools", schools),
       idbSet("currentSchool", currentSchool),
       idbSet("teacherClass", teacherClass),
-      idbSet("teacherSection", teacherSection),
+      idbSet("teacherSection", teacherSection)
     ]);
     await loadSetup();
     console.log("✅ Loaded data from Firebase into IndexedDB and UI");
   });
 
-  // ----------------------
-  // Final call to load setup on page load
-  // ----------------------
   await loadSetup();
 
-  // Ensure counters container is horizontally scrollable
   const container = $("countersContainer");
   if (container) {
     container.style.display = "flex";
     container.style.overflowX = "auto";
     container.style.whiteSpace = "nowrap";
   }
-
-  // Bind counter dialogs after setup
   bindCounterDialogs();
 });
 
