@@ -1,4 +1,5 @@
-// app.js (with per-school data segregation)
+
+    // app.js (with Login/Signup + Manual Approval + Offline Support)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -7,6 +8,9 @@ import {
   ref as dbRef,
   set as dbSet,
   onValue,
+  push as dbPush,
+  child as dbChild,
+  remove as dbRemove,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
@@ -25,55 +29,48 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const appDataRef = dbRef(database, "appData");
+
+// References
+const appDataRef        = dbRef(database, "appData");
+const usersRef          = dbRef(database, "users");
+const pendingUsersRef   = dbRef(database, "pendingUsers");   // For signup requests
+const keySettingsRef    = dbRef(database, "keySettings");    // For key management if needed
 
 // ----------------------
-// Local application state (per-school mappings)
+// Global State
 // ----------------------
-let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact, occupation, address, cls, sec } ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/... } } }
-let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
-let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
+let users           = {};        // { userId: { name, role, school, class?, section?, key, active } }
+let pendingUsers    = {};        // { reqId: { name, role, school, class?, section?, key } }
+let currentUser     = null;      // { userId, name, role, school, class, section }
+let sessionUser     = null;      // Stored in IndexedDB for offline
+let schoolAuth      = {};        // (Not used directly now—authentication via users node)
+let studentsBySchool       = {}; // Existing attendance management state (per-school)
+let attendanceDataBySchool = {};
+let paymentsDataBySchool   = {};
+let lastAdmNoBySchool      = {};
 let fineRates              = { A:50, Lt:20, L:10, HD:30 };
 let eligibilityPct         = 75;
 let schools                = [];    // array of school names (strings)
-let currentSchool          = null;  // selected school name
-let teacherClass           = null;  // selected class (e.g. "10")
-let teacherSection         = null;  // selected section (e.g. "A")
-
-// These variables hold the currently active school's data
-let students       = [];    // will reference studentsBySchool[currentSchool]
-let attendanceData = {};    // will reference attendanceDataBySchool[currentSchool]
-let paymentsData   = {};    // will reference paymentsDataBySchool[currentSchool]
-let lastAdmNo      = 0;     // will reference lastAdmNoBySchool[currentSchool]
+let currentSchool          = null;  // selected school name (from attendance app)
+let teacherClass           = null;  // selected class (e.g., "10")
+let teacherSection         = null;  // selected section (e.g., "A")
+let students       = [];
+let attendanceData = {};
+let paymentsData   = {};
+let lastAdmNo      = 0;
 
 // ----------------------
-// Ensure data structures exist for a given school
+// Utility: DOM Selectors
 // ----------------------
-async function ensureSchoolData(school) {
-  if (!school) return;
-  if (!studentsBySchool[school]) {
-    studentsBySchool[school] = [];
-    await idbSet("studentsBySchool", studentsBySchool);
-  }
-  if (!attendanceDataBySchool[school]) {
-    attendanceDataBySchool[school] = {};
-    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-  }
-  if (!paymentsDataBySchool[school]) {
-    paymentsDataBySchool[school] = {};
-    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-  }
-  if (lastAdmNoBySchool[school] === undefined) {
-    lastAdmNoBySchool[school] = 0;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-  }
-}
+const $ = (id) => document.getElementById(id);
+const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
+const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
 // ----------------------
 // Initialize state from IndexedDB
 // ----------------------
 async function initLocalState() {
+  // Attendance app state
   studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
   attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
   paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || {};
@@ -92,10 +89,13 @@ async function initLocalState() {
     paymentsData   = paymentsDataBySchool[currentSchool];
     lastAdmNo      = lastAdmNoBySchool[currentSchool];
   }
+
+  // Session user (for offline login)
+  sessionUser = await idbGet("sessionUser") || null;
 }
 
 // ----------------------
-// Sync local state (mappings) to Firebase
+// Sync attendance state to Firebase
 // ----------------------
 async function syncToFirebase() {
   const payload = {
@@ -112,152 +112,523 @@ async function syncToFirebase() {
   };
   try {
     await dbSet(appDataRef, payload);
-    console.log("✅ Synced data to Firebase");
+    console.log("✅ Synced attendance data to Firebase");
   } catch (err) {
-    console.error("Firebase sync failed:", err);
+    console.error("Sync to Firebase failed:", err);
   }
 }
 
 // ----------------------
-// Utility: Share PDF via Web Share API
+// Login / Signup / Approval Logic
 // ----------------------
-async function sharePdf(blob, fileName, title) {
-  if (
-    navigator.canShare &&
-    navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })
-  ) {
-    try {
-      await navigator.share({ title, files: [new File([blob], fileName, { type: "application/pdf" })] });
-    } catch (err) {
-      if (err.name !== "AbortError") console.error("Share failed", err);
+
+// Generate a random key (8 chars)
+function generateRandomKey() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let key = "";
+  for (let i = 0; i < 8; i++) {
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
+// Validate login credentials against users object
+function validateLogin(userId, enteredKey) {
+  if (!users[userId] || !users[userId].active) return false;
+  return users[userId].key === enteredKey;
+}
+
+// Perform login: save to IndexedDB, set currentUser
+async function performLogin(userId) {
+  const u = users[userId];
+  currentUser = {
+    userId,
+    name: u.name,
+    role: u.role,
+    school: u.school,
+    class: u.class || null,
+    section: u.section || null,
+  };
+  await idbSet("sessionUser", currentUser);
+}
+
+// Logout: clear session
+async function performLogout() {
+  currentUser = null;
+  await idbSet("sessionUser", null);
+}
+
+// ----------------------
+// Firebase Listeners for Users & Pending Users
+// ----------------------
+onValue(usersRef, async (snapshot) => {
+  users = snapshot.val() || {};
+  // If sessionUser exists offline, sync currentUser to fresh data
+  if (sessionUser) {
+    if (users[sessionUser.userId] && users[sessionUser.userId].active) {
+      currentUser = sessionUser; // remains logged in
+    } else {
+      // User was deactivated or deleted
+      await performLogout();
+      alert("Your account has been deactivated or removed.");
+      showLoginScreen();
     }
   }
-}
+  renderUIBasedOnSession();
+});
+
+onValue(pendingUsersRef, (snapshot) => {
+  pendingUsers = snapshot.val() || {};
+  renderPendingApprovals(); // update admin view
+});
 
 // ----------------------
 // DOMContentLoaded: Main Initialization
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selector
-  const $ = (id) => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
-  const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
-
-  // Load local state from IndexedDB
   await initLocalState();
 
+  if (sessionUser) {
+    currentUser = sessionUser;
+    hide($("#loginSection"), $("#signupSection"));
+    showMainApp();
+  } else {
+    showLoginScreen();
+  }
+
   // ----------------------
-  // Reset Views: Hide/Show all sections based on whether setup is complete
+  // LOGIN Section Handlers
   // ----------------------
-  function resetViews() {
-    // If setup is incomplete (i.e. currentSchool/class/section is null), hide everything except #teacher-setup section.
-    const setupDone = currentSchool && teacherClass && teacherSection;
-    const allSections = [
-      $("financial-settings"),
-      $("animatedCounters"),
-      $("student-registration"),
-      $("attendance-section"),
-      $("analytics-section"),
-      $("register-section"),
-      $("chooseBackupFolder"),
-      $("restoreData"),
-      $("resetData"),
-    ];
-    if (!setupDone) {
-      allSections.forEach(sec => sec && hide(sec));
+  $("#loginBtn").onclick = async () => {
+    const userId = $("#loginUserId").value.trim();
+    const key = $("#loginKey").value.trim();
+    if (!userId || !key) return alert("Enter User ID and Key.");
+
+    // If online, validate against Firebase
+    if (navigator.onLine) {
+      if (!validateLogin(userId, key)) {
+        return alert("❌ Invalid credentials or inactive account.");
+      }
+      await performLogin(userId);
+      hide($("#loginSection"), $("#signupSection"));
+      showMainApp();
     } else {
-      allSections.forEach(sec => sec && show(sec));
+      // Offline: check sessionUser only
+      alert("⚠️ Offline: cannot verify credentials. Please go online to login first time.");
+    }
+  };
+
+  $("#showSignupBtn").onclick = () => {
+    hide($("#loginSection"));
+    show($("#signupSection"));
+  };
+
+  // ----------------------
+  // SIGNUP Section Handlers
+  // ----------------------
+  $("#signupBtn").onclick = async () => {
+    const name = $("#signupName").value.trim();
+    const role = $("#signupRole").value;
+    const school = $("#signupSchool").value.trim();
+    const userId = $("#signupUserId").value.trim();
+    const key    = $("#signupKey").value.trim();
+    const cls    = $("#signupClass").value.trim();
+    const sec    = $("#signupSection").value.trim();
+
+    if (!name || !role || !school || !userId || !key) {
+      return alert("All fields are required.");
+    }
+    if (role === "teacher" && (!cls || !sec)) {
+      return alert("Class and Section required for teacher.");
+    }
+    if (users[userId]) {
+      return alert("User ID already exists. Choose another.");
+    }
+
+    // Create pending request
+    const reqObj = { name, role, school, key, active: true };
+    if (role === "teacher") {
+      reqObj.class = cls;
+      reqObj.section = sec;
+    }
+
+    try {
+      await dbPush(pendingUsersRef, reqObj);
+      alert("✅ Signup request submitted. Wait for admin approval.");
+      // Clear signup form
+      $("#signupName").value = "";
+      $("#signupUserId").value = "";
+      $("#signupKey").value = "";
+      $("#signupClass").value = "";
+      $("#signupSection").value = "";
+      $("#signupSchool").value = "";
+      $("#signupRole").value = "teacher";
+      hide($("#signupSection"));
+      show($("#loginSection"));
+    } catch (err) {
+      console.error("Error submitting signup request:", err);
+      alert("Signup failed. Try again.");
+    }
+  };
+
+  $("#cancelSignupBtn").onclick = () => {
+    hide($("#signupSection"));
+    show($("#loginSection"));
+  };
+
+  // ----------------------
+  // MAIN App UI Logic
+  // ----------------------
+  function showLoginScreen() {
+    hide($("#mainAppSection"), $("#pendingApprovalsSection"), $("#attendanceAppSection"));
+    show($("#loginSection"));
+  }
+  function showMainApp() {
+    hide($("#loginSection"), $("#signupSection"));
+    renderMainUI();
+    // Show pending approvals only for admins
+    if (currentUser.role === "admin") {
+      show($("#pendingApprovalsSection"));
+      show($("#attendanceAppSection"));
+    } else {
+      hide($("#pendingApprovalsSection"));
+      show($("#attendanceAppSection"));
     }
   }
 
-  // Immediately run resetViews() so that on first load, only Setup is visible if not done
-  resetViews();
+  function renderUIBasedOnSession() {
+    if (sessionUser) {
+      currentUser = sessionUser;
+      showMainApp();
+    } else {
+      showLoginScreen();
+    }
+  }
+
+  $("#logoutBtn").onclick = async () => {
+    await performLogout();
+    hide($("#mainAppSection"), $("#pendingApprovalsSection"), $("#attendanceAppSection"));
+    showLoginScreen();
+  };
 
   // ----------------------
-  // Eruda for debugging (optional)
+  // PENDING APPROVALS (Admin Only)
   // ----------------------
-  const erudaScript = document.createElement("script");
-  erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
+  function renderPendingApprovals() {
+    if (!currentUser || currentUser.role !== "admin") return;
+    const tbody = $("#pendingTableBody");
+    tbody.innerHTML = "";
+    Object.entries(pendingUsers).forEach(([reqId, req]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${reqId}</td>
+        <td>${req.name}</td>
+        <td>${req.role}</td>
+        <td>${req.school}</td>
+        <td>${req.class || ""}</td>
+        <td>${req.section || ""}</td>
+        <td>${req.key}</td>
+        <td>
+          <button class="approveBtn" data-id="${reqId}">Approve</button>
+          <button class="rejectBtn" data-id="${reqId}">Reject</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    document.querySelectorAll(".approveBtn").forEach(btn => {
+      btn.onclick = () => approveRequest(btn.dataset.id);
+    });
+    document.querySelectorAll(".rejectBtn").forEach(btn => {
+      btn.onclick = () => rejectRequest(btn.dataset.id);
+    });
+  }
 
-  // ----------------------
-  // Generate new admission number (per school)
-  // ----------------------
-  async function genAdmNo() {
-    lastAdmNo++;
-    lastAdmNoBySchool[currentSchool] = lastAdmNo;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-    await syncToFirebase();
-    return String(lastAdmNo).padStart(4, "0");
+  async function approveRequest(reqId) {
+    const req = pendingUsers[reqId];
+    if (!req) return alert("Request not found.");
+    const newUser = {
+      name: req.name,
+      role: req.role,
+      school: req.school,
+      key: req.key,
+      active: true
+    };
+    if (req.role === "teacher") {
+      newUser.class = req.class;
+      newUser.section = req.section;
+    }
+    try {
+      // Move from pendingUsers to users
+      await dbSet(dbRef(database, `users/${reqId}`), newUser);
+      // Remove pending request
+      await dbRemove(dbRef(database, `pendingUsers/${reqId}`));
+      alert("✅ User approved and added.");
+    } catch (err) {
+      console.error("Error approving request:", err);
+      alert("Approval failed.");
+    }
+  }
+
+  async function rejectRequest(reqId) {
+    if (!confirm("Are you sure you want to reject this signup?")) return;
+    try {
+      await dbRemove(dbRef(database, `pendingUsers/${reqId}`));
+      alert("✅ Request rejected.");
+      renderPendingApprovals();
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+      alert("Rejection failed.");
+    }
   }
 
   // ----------------------
-  // 1. SETUP SECTION
+  // ATTENDANCE MANAGEMENT (Only accessible after login and relevant role)
   // ----------------------
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
+
+  // Ensure only principal or teacher of the correct school can use
+  onValue(appDataRef, async (snapshot) => {
+    if (!snapshot.exists()) {
+      // Initialize default
+      const defaultPayload = {
+        studentsBySchool: {},
+        attendanceDataBySchool: {},
+        paymentsDataBySchool: {},
+        lastAdmNoBySchool: {},
+        fineRates: { A:50, Lt:20, L:10, HD:30 },
+        eligibilityPct: 75,
+        schools: [],
+        currentSchool: null,
+        teacherClass: null,
+        teacherSection: null
+      };
+      await dbSet(appDataRef, defaultPayload);
+      Object.assign(studentsBySchool, {});
+      Object.assign(attendanceDataBySchool, {});
+      Object.assign(paymentsDataBySchool, {});
+      Object.assign(lastAdmNoBySchool, {});
+      fineRates              = defaultPayload.fineRates;
+      eligibilityPct         = defaultPayload.eligibilityPct;
+      schools                = [];
+      currentSchool          = null;
+      teacherClass           = null;
+      teacherSection         = null;
+      await Promise.all([
+        idbSet("studentsBySchool", studentsBySchool),
+        idbSet("attendanceDataBySchool", attendanceDataBySchool),
+        idbSet("paymentsDataBySchool", paymentsDataBySchool),
+        idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
+        idbSet("fineRates", fineRates),
+        idbSet("eligibilityPct", eligibilityPct),
+        idbSet("schools", schools),
+        idbSet("currentSchool", currentSchool),
+        idbSet("teacherClass", teacherClass),
+        idbSet("teacherSection", teacherSection),
+      ]);
+      return loadSetup();
+    }
+    const data = snapshot.val();
+    Object.assign(studentsBySchool, data.studentsBySchool || {});
+    Object.assign(attendanceDataBySchool, data.attendanceDataBySchool || {});
+    Object.assign(paymentsDataBySchool, data.paymentsDataBySchool || {});
+    Object.assign(lastAdmNoBySchool, data.lastAdmNoBySchool || {});
+    fineRates      = data.fineRates || { A:50, Lt:20, L:10, HD:30 };
+    eligibilityPct = data.eligibilityPct || 75;
+    schools        = data.schools || [];
+    currentSchool  = data.currentSchool || null;
+    teacherClass   = data.teacherClass || null;
+    teacherSection = data.teacherSection || null;
+    await Promise.all([
+      idbSet("studentsBySchool", studentsBySchool),
+      idbSet("attendanceDataBySchool", attendanceDataBySchool),
+      idbSet("paymentsDataBySchool", paymentsDataBySchool),
+      idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
+      idbSet("fineRates", fineRates),
+      idbSet("eligibilityPct", eligibilityPct),
+      idbSet("schools", schools),
+      idbSet("currentSchool", currentSchool),
+      idbSet("teacherClass", teacherClass),
+      idbSet("teacherSection", teacherSection),
+    ]);
+    await loadSetup();
+    console.log("✅ Loaded attendance data from Firebase");
+  });
+
+  // ----------------------
+  // Attendance App Helper Functions
+  // ----------------------
+  async function ensureSchoolData(school) {
+    if (!school) return;
+    if (!studentsBySchool[school]) {
+      studentsBySchool[school] = [];
+      await idbSet("studentsBySchool", studentsBySchool);
+    }
+    if (!attendanceDataBySchool[school]) {
+      attendanceDataBySchool[school] = {};
+      await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+    }
+    if (!paymentsDataBySchool[school]) {
+      paymentsDataBySchool[school] = {};
+      await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+    }
+    if (lastAdmNoBySchool[school] === undefined) {
+      lastAdmNoBySchool[school] = 0;
+      await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+    }
+  }
+
+  async function loadSetup() {
+    schools        = (await idbGet("schools")) || [];
+    currentSchool  = await idbGet("currentSchool");
+    teacherClass   = await idbGet("teacherClass");
+    teacherSection = await idbGet("teacherSection");
+
+    // Populate school dropdown
+    $("#schoolSelect").innerHTML = ['<option disabled selected>-- Select School --</option>',
+      ...schools.map(s => `<option value="${s}">${s}</option>` )
+    ].join("");
+    if (currentSchool) $("#schoolSelect").value = currentSchool;
+
+    renderSchoolList();
+
+    const isPrincipalOrAdmin = currentUser && (currentUser.role === "admin" || currentUser.role === "principal");
+    const isTeacher = currentUser && currentUser.role === "teacher";
+
+    if (currentSchool && (isPrincipalOrAdmin || (isTeacher && teacherClass && teacherSection))) {
+      await ensureSchoolData(currentSchool);
+      students       = studentsBySchool[currentSchool];
+      attendanceData = attendanceDataBySchool[currentSchool];
+      paymentsData   = paymentsDataBySchool[currentSchool];
+      lastAdmNo      = lastAdmNoBySchool[currentSchool];
+
+      if (isPrincipalOrAdmin) {
+        $("#teacherClassSelect").value = teacherClass === "ALL" ? "" : teacherClass;
+        $("#teacherSectionSelect").value = teacherSection === "ALL" ? "" : teacherSection;
+        $("#setupText").textContent = `${currentSchool} 🏫 | Role: ${currentUser.role.toUpperCase()}`;
+      } else {
+        $("#teacherClassSelect").value = teacherClass;
+        $("#teacherSectionSelect").value = teacherSection;
+        $("#setupText").textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+      }
+
+      hide($("#setupForm"));
+      show($("#setupDisplay"));
+      resetViews();
+
+      setTimeout(() => {
+        renderStudents();
+        updateCounters();
+      }, 0);
+
+    } else {
+      show($("#setupForm"));
+      hide($("#setupDisplay"));
+      resetViews();
+    }
+  }
+
+  $("#schoolInput").value = "";
+
+  $("#saveSetup").onclick = async (e) => {
+    e.preventDefault();
+    const newSchool = $("#schoolInput").value.trim();
+    const selSchool = $("#schoolSelect").value;
+    const selClass = $("#teacherClassSelect").value;
+    const selSection = $("#teacherSectionSelect").value;
+    const isPrincipalOrAdmin = currentUser && (currentUser.role === "admin" || currentUser.role === "principal");
+    const isTeacher = currentUser && currentUser.role === "teacher";
+
+    // ===== A: New School (Admin only) =====
+    if (newSchool) {
+      if (!currentUser || currentUser.role !== "admin") {
+        return alert("❌ Only admins can add new schools.");
+      }
+      if (schools.includes(newSchool)) {
+        return alert("⚠️ School already exists.");
+      }
+      // Prompt admin to generate initial keys for attendance app
+      const proceed = confirm(`Create new school "${newSchool}"?`);
+      if (!proceed) return;
+
+      schools.push(newSchool);
+      // Initialize data structures for the new school:
+      studentsBySchool[newSchool] = [];
+      attendanceDataBySchool[newSchool] = {};
+      paymentsDataBySchool[newSchool] = {};
+      lastAdmNoBySchool[newSchool] = 0;
+      await Promise.all([
+        idbSet("studentsBySchool", studentsBySchool),
+        idbSet("attendanceDataBySchool", attendanceDataBySchool),
+        idbSet("paymentsDataBySchool", paymentsDataBySchool),
+        idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
+        idbSet("schools", schools)
+      ]);
+      await syncToFirebase();
+      $("#schoolInput").value = "";
+      alert(`✅ School "${newSchool}" created. You may now select it.`);
+      return loadSetup();
+    }
+
+    // ===== B: Select Existing School =====
+    if (!selSchool) return alert("Please select a school.");
+    // Role-based access: only admins/principals/teachers of this school get in
+    if (!currentUser) {
+      return alert("❌ You must be logged in to select a school.");
+    }
+    if (currentUser.school !== selSchool) {
+      return alert("❌ You are not authorized for this school.");
+    }
+    // For principal/admin: no class/section needed
+    if (isPrincipalOrAdmin) {
+      currentSchool = selSchool;
+      teacherClass = "ALL";
+      teacherSection = "ALL";
+      await idbSet("currentSchool", currentSchool);
+      await idbSet("teacherClass", teacherClass);
+      await idbSet("teacherSection", teacherSection);
+      await syncToFirebase();
+      return loadSetup();
+    }
+    // For teacher: class/section required
+    if (isTeacher) {
+      if (!selClass || !selSection) return alert("Please select class and section.");
+      currentSchool = selSchool;
+      teacherClass = selClass;
+      teacherSection = selSection;
+      await idbSet("currentSchool", currentSchool);
+      await idbSet("teacherClass", teacherClass);
+      await idbSet("teacherSection", teacherSection);
+      await syncToFirebase();
+      return loadSetup();
+    }
+    return alert("❌ Invalid role for school access.");
+  };
+
+  $("#editSetup").onclick = (e) => {
+    e.preventDefault();
+    show($("#setupForm"));
+    hide($("#setupDisplay"));
+    resetViews();
+  };
 
   function renderSchoolList() {
-    schoolListDiv.innerHTML = "";
+    const div = $("#schoolList");
+    div.innerHTML = "";
     schools.forEach((sch, idx) => {
       const row = document.createElement("div");
       row.className = "row-inline";
       row.innerHTML = `
         <span>${sch}</span>
         <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+          ${currentUser && currentUser.role === "admin" 
+            ? `<button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>` 
+            : ""}
         </div>`;
-      schoolListDiv.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt("Edit School Name:", schools[idx]);
-        if (newName?.trim()) {
-          const oldName = schools[idx];
-          schools[idx] = newName.trim();
-          await idbSet("schools", schools);
-
-          // Rename mappings if necessary
-          studentsBySchool[newName] = studentsBySchool[oldName] || [];
-          delete studentsBySchool[oldName];
-          await idbSet("studentsBySchool", studentsBySchool);
-
-          attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
-          delete attendanceDataBySchool[oldName];
-          await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-
-          paymentsDataBySchool[newName] = paymentsDataBySchool[oldName] || {};
-          delete paymentsDataBySchool[oldName];
-          await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-
-          lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName] || 0;
-          delete lastAdmNoBySchool[oldName];
-          await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-          await syncToFirebase();
-          await loadSetup();
-        }
-      };
+      div.appendChild(row);
     });
     document.querySelectorAll(".delete-school").forEach(btn => {
       btn.onclick = async () => {
         const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
         const removed = schools.splice(idx, 1)[0];
         await idbSet("schools", schools);
-
-        // Remove mappings for this school
         delete studentsBySchool[removed];
         await idbSet("studentsBySchool", studentsBySchool);
         delete attendanceDataBySchool[removed];
@@ -266,7 +637,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         await idbSet("paymentsDataBySchool", paymentsDataBySchool);
         delete lastAdmNoBySchool[removed];
         await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
         if (currentSchool === removed) {
           currentSchool = null;
           teacherClass = null;
@@ -281,144 +651,30 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
-    ].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      await ensureSchoolData(currentSchool);
-      // Load current school's data into working variables
-      students       = studentsBySchool[currentSchool];
-      attendanceData = attendanceDataBySchool[currentSchool];
-      paymentsData   = paymentsDataBySchool[currentSchool];
-      lastAdmNo      = lastAdmNoBySchool[currentSchool];
-
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      hide(setupForm);
-      show(setupDisplay);
-
-      // Now that setup is done, show all other sections
-      resetViews();
-
-      // After setup completes, render students and counters
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-      }, 0);
-
+  // ----------------------
+  // Reset Views in Attendance Section
+  // ----------------------
+  function resetViews() {
+    const setupDone = currentSchool && teacherClass && teacherSection;
+    const allSections = [
+      $("#financial-settings"),
+      $("#animatedCounters"),
+      $("#student-registration"),
+      $("#attendance-section"),
+      $("#analytics-section"),
+      $("#register-section"),
+      $("#chooseBackupFolder"),
+      $("#restoreData"),
+      $("#resetData")
+    ];
+    if (!setupDone) {
+      allSections.forEach(sec => sec && hide(sec));
     } else {
-      // Setup is not complete, hide other sections
-      show(setupForm);
-      hide(setupDisplay);
-      resetViews();
+      allSections.forEach(sec => sec && show(sec));
     }
-  };
-
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await idbSet("schools", schools);
-        await syncToFirebase();
-      }
-      schoolInput.value = "";
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
-      return;
-    }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
-
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
-    show(setupForm);
-    hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
-  };
-
-  // ----------------------
-  // 2. FINANCIAL SETTINGS SECTION
-  // ----------------------
-  const formDiv             = $("financialForm");
-  const saveSettings        = $("saveSettings");
-  const fineAbsentInput     = $("fineAbsent");
-  const fineLateInput       = $("fineLate");
-  const fineLeaveInput      = $("fineLeave");
-  const fineHalfDayInput    = $("fineHalfDay");
-  const eligibilityPctInput = $("eligibilityPct");
-
-  const settingsCard = document.createElement("div");
-  const editSettings = document.createElement("button");
-  settingsCard.id = "settingsCard";
-  settingsCard.className = "card hidden";
-  editSettings.id = "editSettings";
-  editSettings.className = "btn no-print hidden";
-  editSettings.textContent = "Edit Settings";
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
-
-  // Initialize inputs with existing values
-  fineAbsentInput.value     = fineRates.A;
-  fineLateInput.value       = fineRates.Lt;
-  fineLeaveInput.value      = fineRates.L;
-  fineHalfDayInput.value    = fineRates.HD;
-  eligibilityPctInput.value = eligibilityPct;
-
-  saveSettings.onclick = async () => {
-    fineRates = {
-      A: Number(fineAbsentInput.value) || 0,
-      Lt: Number(fineLateInput.value) || 0,
-      L: Number(fineLeaveInput.value) || 0,
-      HD: Number(fineHalfDayInput.value) || 0,
-    };
-    eligibilityPct = Number(eligibilityPctInput.value) || 0;
-    await idbSet("fineRates", fineRates);
-    await idbSet("eligibilityPct", eligibilityPct);
-    await syncToFirebase();
-
-    settingsCard.innerHTML = `
-      <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
-      </div>`;
-    hide(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
-    show(settingsCard, editSettings);
-  };
-
-  editSettings.onclick = () => {
-    hide(settingsCard, editSettings);
-    show(formDiv, saveSettings, fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput);
-  };
-
+  }
+  
+           
   // ----------------------
   // 3. COUNTERS SECTION
   // ----------------------
