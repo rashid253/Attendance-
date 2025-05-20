@@ -1,9 +1,9 @@
 // app.js
 // ------------------------------------------------------
 // Core Application Logic (all sections), with Auth integration:
-//  0) Import Auth helpers (auth.js) + Firestore/Auth
-//  1) Define showView(...) helper
-//  2) Wait for DOMContentLoaded, then register onAuthStateChanged listener (switch views)
+//  0) Import Auth helpers (auth.js) + Firebase Auth/Firestore
+//  1) Define showView(...) helper (only top‐level containers)
+//  2) Wait for DOMContentLoaded, then register onAuthStateChanged listener (switch views & dashboards)
 //  3) Handle login form submission & signup navigation
 //  4) IndexedDB & Firebase Realtime DB initialization & syncing
 //  5) Setup, Financial Settings, Counters, Student Registration, Attendance, Analytics, Register, Backup/Restore
@@ -21,11 +21,14 @@ import {
 import { signInWithEmailAndPassword } 
   from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// 1) showView(...) helper: hides all “.view” panels and #mainApp, then shows exactly one
+// 1) showView(...) helper: hides only top‐level “signupContainer, loginContainer, mainApp” panels, then shows exactly one
 function showView(viewEl) {
-  document.querySelectorAll(".view, #mainApp").forEach(el => {
-    if (el) el.classList.add("hidden");
-  });
+  const tops = [
+    document.getElementById("signupContainer"),
+    document.getElementById("loginContainer"),
+    document.getElementById("mainApp")
+  ];
+  tops.forEach(el => { if (el) el.classList.add("hidden"); });
   if (viewEl) viewEl.classList.remove("hidden");
 }
 
@@ -44,7 +47,7 @@ const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 // Firebase Realtime Database config (must match auth.js config)
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  apiKey: "AIzaSyBsx5pWhYGh1j9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
   projectId: "attandace-management",
   storageBucket: "attandace-management.appspot.com",
@@ -192,17 +195,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   // 2) Register the Auth‐state listener.
   onAuthStateChanged((user, profile, schoolData) => {
     if (user) {
-      // Show the main application UI
+      // Show the main application UI (wrapper)
       showView(document.getElementById("mainApp"));
 
-      // Display user’s name
+      // Then inside mainApp, show either ownerDashboard or teacherDashboard
+      const ownerDash   = document.getElementById("ownerDashboard");
+      const teacherDash = document.getElementById("teacherDashboard");
+
       if (profile.role === "owner") {
+        if (ownerDash)   ownerDash.classList.remove("hidden");
+        if (teacherDash) teacherDash.classList.add("hidden");
         document.getElementById("ownerDisplayName").textContent = profile.name;
       } else {
+        if (teacherDash) teacherDash.classList.remove("hidden");
+        if (ownerDash)   ownerDash.classList.add("hidden");
         document.getElementById("teacherDisplayName").textContent = profile.name;
       }
 
-      // Initialize application UI now that user is authenticated:
+      // Initialize application UI now that user is authenticated
       loadSetup().then(() => {
         updateFinancialCard();
         updateCounters();
