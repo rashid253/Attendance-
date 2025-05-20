@@ -1,143 +1,133 @@
 // auth.js
-// ------------------------------------------------------
-// Authentication & User‐Profile Logic (separate file):
-//  1) Firebase Initialization (Auth + Firestore)
-//  2) Signup Wizard (Owner/Admin creates school, branches, classes, sections) – handled in app.js
-//  3) Login (Owner/Teacher) & Auth‐State Listener
-//  4) Exported Objects for app.js:
-//       - auth, db
-//       - currentProfile (Firestore “users/{uid}” data)
-//       - currentSchoolData (Firestore “schools/{schoolId}” data)
-//       - onAuthStateChanged, signOut
-// ------------------------------------------------------
+// ----------------------
+// Authentication & Approval Layer for Attendance App
+// ----------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged as fbOnAuthStateChanged,
-  signOut as fbSignOut
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  getDatabase,
+  ref as dbRef,
+  push,
+  onValue,
+  remove,
+  update,
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+const { get: idbGet, set: idbSet } = window.idbKeyval;
 
-// ------------------------------------------------------
-// 1) FIREBASE INITIALIZATION
-// ------------------------------------------------------
+// Firebase config (same as in app.js)
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
   projectId: "attandace-management",
   storageBucket: "attandace-management.appspot.com",
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B"
+  measurementId: "G-V2MY85R73B",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
 };
-
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db   = getFirestore(app);
+const db = getDatabase(app);
+const usersRef       = dbRef(db, 'users');
+const pendingRef     = dbRef(db, 'pendingUsers');
 
-// ----------------------
-// 2) APP STATE (to be used by app.js)
-// ----------------------
-export let currentProfile     = null;    // Firestore “users/{uid}” doc data
-export let currentSchoolData  = null;    // Firestore “schools/{schoolId}” doc data
+// UI elements
+const loginForm      = document.getElementById('loginForm');
+const signupForm     = document.getElementById('signupForm');
+const pendingList    = document.getElementById('pendingList');
+const logoutBtn      = document.getElementById('logoutBtn');
 
-// ----------------------
-// 3) LOGIN FLOW & VIEW SWITCHES
-//    (Signup Wizard is in app.js)
-// ----------------------
+// --- SIGNUP FLOW ---
+signupForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const role    = signupForm.role.value;
+  const userId  = signupForm.userId.value.trim();
+  const key     = signupForm.key.value.trim();
+  const name    = signupForm.name.value.trim();
+  const school  = signupForm.school.value;
+  const cls     = role === 'Teacher' ? signupForm.cls.value : null;
+  const sec     = role === 'Teacher' ? signupForm.sec.value : null;
 
-// Grab login elements (id must match index.html)
-const loginForm       = document.getElementById("loginForm");
-const loginEmailInput = document.getElementById("loginEmail");
-const loginPwdInput   = document.getElementById("loginPassword");
-const loginErrorP     = document.getElementById("loginError");
-const showSignupBtn   = document.getElementById("showSignup");
+  if (!userId || !key || !name || !school) {
+    return alert('تمام فیلڈز بھریں۔');
+  }
+  // push to pendingUsers
+  await push(pendingRef, { userId, key, name, role, school, cls, sec, active: false });
+  alert('آپ کی درخواست جمع ہو گئی۔ ایڈمن کی منظوری کا انتظار کریں۔');
+  signupForm.reset();
+});
 
-// showView helper will be defined in app.js, so we only trigger events here
-if (loginForm) {
-  loginForm.addEventListener("submit", async (evt) => {
-    evt.preventDefault();
-    if (loginErrorP) loginErrorP.textContent = "";
-    const email = loginEmailInput.value.trim();
-    const pwd   = loginPwdInput.value;
-    try {
-      await signInWithEmailAndPassword(auth, email, pwd);
-      loginEmailInput.value = "";
-      loginPwdInput.value   = "";
-      // onAuthStateChanged (below) will do the view switching
-    } catch (err) {
-      console.error(err);
-      if (loginErrorP) loginErrorP.textContent = "Invalid credentials.";
-    }
-  });
-}
-
-if (showSignupBtn) {
-  showSignupBtn.addEventListener("click", () => {
-    // index.html has a #signupContainer view—app.js will call showView on it
-    document.getElementById("signupContainer")?.classList.remove("hidden");
-    document.getElementById("loginContainer")?.classList.add("hidden");
-    // Reset signup wizard to Step 1
-    const step1 = document.getElementById("signupStep1");
-    const steps = [ "signupStep1", "signupStep2", "signupStep3", "signupStep4" ];
-    steps.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add("hidden");
+// --- PENDING APPROVAL (Admin) ---
+function renderPending() {
+  pendingList.innerHTML = '';
+  onValue(pendingRef, snapshot => {
+    pendingList.innerHTML = '';
+    snapshot.forEach(child => {
+      const req = child.val();
+      const li = document.createElement('li');
+      li.textContent = `${req.name} (${req.role}) → ${req.school}` +
+        (req.role==='Teacher'? ` – Class ${req.cls} Sec ${req.sec}` : '');
+      const approveBtn = document.createElement('button');
+      const rejectBtn  = document.createElement('button');
+      approveBtn.textContent = 'Approve'; rejectBtn.textContent = 'Reject';
+      approveBtn.onclick = async () => {
+        const newUserRef = dbRef(db, `users/${req.userId}`);
+        await update(newUserRef, { ...req, active: true });
+        await remove(dbRef(db, `pendingUsers/${child.key}`));
+      };
+      rejectBtn.onclick = async () => {
+        await remove(dbRef(db, `pendingUsers/${child.key}`));
+      };
+      li.append(approveBtn, rejectBtn);
+      pendingList.append(li);
     });
-    if (step1) step1.classList.remove("hidden");
   });
 }
 
-// ----------------------
-// 4) AUTH STATE LISTENER
-// ----------------------
-export function onAuthStateChanged(callback) {
-  fbOnAuthStateChanged(auth, async (user) => {
-    if (user) {
-      // Fetch user profile from Firestore “users/{uid}”
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (!userDocSnap.exists()) {
-        await fbSignOut(auth);
-        callback(null, null, null);
-        return;
-      }
-      currentProfile = userDocSnap.data();
-
-      const { role, schoolId } = currentProfile;
-      // Fetch school data from Firestore “schools/{schoolId}”
-      const schoolDocRef  = doc(db, "schools", schoolId);
-      const schoolDocSnap = await getDoc(schoolDocRef);
-      if (!schoolDocSnap.exists()) {
-        await fbSignOut(auth);
-        callback(null, null, null);
-        return;
-      }
-      currentSchoolData = schoolDocSnap.data();
-      currentSchoolData.id = schoolId;
-
-      // Notify app.js
-      callback(user, currentProfile, currentSchoolData);
-    } else {
-      currentProfile    = null;
-      currentSchoolData = null;
-      callback(null, null, null);
+// --- LOGIN FLOW ---
+loginForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const userId = loginForm.userId.value.trim();
+  const key    = loginForm.key.value.trim();
+  if (!userId || !key) {
+    return alert('User ID اور Key درج کریں۔');
+  }
+  onValue(dbRef(db, `users/${userId}`), async snap => {
+    if (!snap.exists() || snap.val().key !== key || !snap.val().active) {
+      return alert('Invalid credentials یا اکاؤنٹ deactivated۔');
     }
-  });
-}
+    const user = snap.val();
+    // save session
+    await idbSet('session', { userId, role: user.role, school: user.school, cls: user.cls, sec: user.sec });
+    // redirect to setup/app
+    window.location.reload();
+  }, { onlyOnce: true });
+});
 
-// ----------------------
-// 5) SIGN OUT
-// ----------------------
-export function signOut() {
-  return fbSignOut(auth);
-}
+// --- AUTO-LOGIN OFFLINE SUPPORT ---
+(async function tryAutoLogin() {
+  const sess = await idbGet('session');
+  if (sess && sess.userId) {
+    // hide auth UI
+    document.getElementById('authContainer').classList.add('hidden');
+    // show teacher-setup (or full app if already setup)
+    document.getElementById('teacher-setup').classList.remove('hidden');
+    // prefill selects
+    if (sess.role === 'Teacher') {
+      document.getElementById('schoolSelect').value = sess.school;
+      document.getElementById('teacherClassSelect').value = sess.cls;
+      document.getElementById('teacherSectionSelect').value = sess.sec;
+    }
+    // If Admin/Principal, skip class/section
+  }
+})();
+
+// --- LOGOUT ---
+logoutBtn.addEventListener('click', async () => {
+  await idbSet('session', null);
+  window.location.href = './';  // or reload
+});
+
+// --- INITIALIZE ---
+document.addEventListener('DOMContentLoaded', () => {
+  renderPending();
+});
