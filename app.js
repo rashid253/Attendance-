@@ -1045,7 +1045,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       }).join("\n");
   }
 
-  downloadAnalyticsBtn.onclick = async () => {
+  $("downloadAnalytics").onclick = async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
 
     if (analyticsDownloadMode === "combined") {
@@ -1138,7 +1138,7 @@ Eligibility: ≥ ${eligibilityPct}%
 
   shareAnalyticsBtn.onclick = () => {
     if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
-    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
   };
 
   // -------------------------------------------------------------------------------------------------
