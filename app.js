@@ -1,4 +1,4 @@
-// app.js (Cleaned & corrected: ensure no unexpected tokens and all sections functional)
+// app.js (Cleaned & corrected: guard backup API and ensure fine/eligibility edit button remains)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -381,13 +381,15 @@ window.addEventListener("DOMContentLoaded", async () => {
         <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
         <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
       </div>`;
+    // Hide inputs and save button, but keep edit button visible
     hide(fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput, saveSettings);
     show(settingsCard, editSettings);
   };
 
   editSettings.onclick = () => {
-    hide(settingsCard, editSettings);
+    hide(settingsCard);
     show(fineAbsentInput, fineLateInput, fineLeaveInput, fineHalfDayInput, eligibilityPctInput, saveSettings);
+    hide(editSettings);
   };
 
   // ----------------------
@@ -1542,6 +1544,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   let backupHandle = null;
 
   chooseBackupFolderBtn && (chooseBackupFolderBtn.onclick = async () => {
+    if (!window.showDirectoryPicker) {
+      alert("Backup not supported in this browser.");
+      return;
+    }
     try {
       backupHandle = await window.showDirectoryPicker();
       alert("Backup folder selected.");
