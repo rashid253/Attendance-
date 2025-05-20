@@ -3,7 +3,7 @@
 // Core Application Logic (all sections), with Auth integration:
 //  0) Import Auth helpers (auth.js) + Firestore/Auth
 //  1) Define showView(...) helper
-//  2) Register onAuthStateChanged listener (switch views)
+//  2) Wait for DOMContentLoaded, then register onAuthStateChanged listener (switch views)
 //  3) Handle login form submission & signup navigation
 //  4) IndexedDB & Firebase Realtime DB initialization & syncing
 //  5) Setup, Financial Settings, Counters, Student Registration, Attendance, Analytics, Register, Backup/Restore
@@ -29,69 +29,6 @@ function showView(viewEl) {
   if (viewEl) viewEl.classList.remove("hidden");
 }
 
-// 2) Register the Auth‐state listener.
-//    If user is signed in, show mainApp; otherwise show login.
-onAuthStateChanged((user, profile, schoolData) => {
-  if (user) {
-    // Show the main application UI
-    showView(document.getElementById("mainApp"));
-
-    // Optionally display user’s name somewhere:
-    if (profile.role === "owner") {
-      const ownerNameSpan = document.getElementById("ownerDisplayName");
-      if (ownerNameSpan) ownerNameSpan.textContent = profile.name;
-    } else {
-      const teacherNameSpan = document.getElementById("teacherDisplayName");
-      if (teacherNameSpan) teacherNameSpan.textContent = profile.name;
-    }
-
-    // Initialize application UI now that user is authenticated:
-    initLocalState().then(() => {
-      loadSetup();
-      updateFinancialCard();
-      // etc. any initial rendering
-    });
-  } else {
-    // Not signed in → show login form
-    showView(document.getElementById("loginContainer"));
-  }
-});
-
-// 3) Handle login form submission & “Show Signup” button
-document.addEventListener("DOMContentLoaded", () => {
-  const loginForm       = document.getElementById("loginForm");
-  const loginEmailInput = document.getElementById("loginEmail");
-  const loginPwdInput   = document.getElementById("loginPassword");
-  const loginErrorP     = document.getElementById("loginError");
-  const showSignupBtn   = document.getElementById("showSignup");
-
-  if (showSignupBtn) {
-    showSignupBtn.addEventListener("click", () => {
-      showView(document.getElementById("signupContainer"));
-      // Reset signup steps to Step1
-      showSignupStep(signupSteps.step1);
-    });
-  }
-
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (evt) => {
-      evt.preventDefault();
-      if (loginErrorP) loginErrorP.textContent = "";
-      const email = loginEmailInput.value.trim();
-      const pwd   = loginPwdInput.value;
-      try {
-        await signInWithEmailAndPassword(auth, email, pwd);
-        loginEmailInput.value = "";
-        loginPwdInput.value   = "";
-        // onAuthStateChanged will fire automatically
-      } catch (err) {
-        console.error(err);
-        if (loginErrorP) loginErrorP.textContent = "Invalid credentials.";
-      }
-    });
-  }
-});
-
 // 4) IndexedDB & Firebase Realtime DB initialization and syncing
 import { initializeApp } 
   from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -116,8 +53,8 @@ const firebaseConfig = {
   measurementId: "G-V2MY85R73B",
   databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
 };
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const fbApp = initializeApp(firebaseConfig);
+const database = getDatabase(fbApp);
 const appDataRef = dbRef(database, "appData");
 
 // ----------------------
@@ -179,7 +116,7 @@ async function syncToFirebase() {
 // ----------------------
 onValue(appDataRef, async (snapshot) => {
   if (!snapshot.exists()) {
-    // If no data, initialize defaults and push them
+    // Initialize defaults in Firebase
     const defaultPayload = {
       students: [],
       attendanceData: {},
@@ -247,12 +184,66 @@ onValue(appDataRef, async (snapshot) => {
 });
 
 // ----------------------
-// 5) INITIAL LOAD: after DOMContentLoaded, call initLocalState + loadSetup
+// Wait for DOMContentLoaded before registering Auth listener & wiring UI
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
   await initLocalState();
-  // If already authenticated, onAuthStateChanged callback will run loadSetup()
-  // Otherwise, login view is shown.
+
+  // 2) Register the Auth‐state listener.
+  onAuthStateChanged((user, profile, schoolData) => {
+    if (user) {
+      // Show the main application UI
+      showView(document.getElementById("mainApp"));
+
+      // Display user’s name
+      if (profile.role === "owner") {
+        document.getElementById("ownerDisplayName").textContent = profile.name;
+      } else {
+        document.getElementById("teacherDisplayName").textContent = profile.name;
+      }
+
+      // Initialize application UI now that user is authenticated:
+      loadSetup().then(() => {
+        updateFinancialCard();
+        updateCounters();
+      });
+    } else {
+      // Not signed in → show login form
+      showView(document.getElementById("loginContainer"));
+    }
+  });
+
+  // 3) Handle login form submission & “Show Signup” button
+  const loginForm       = document.getElementById("loginForm");
+  const loginEmailInput = document.getElementById("loginEmail");
+  const loginPwdInput   = document.getElementById("loginPassword");
+  const loginErrorP     = document.getElementById("loginError");
+  const showSignupBtn   = document.getElementById("showSignup");
+
+  if (showSignupBtn) {
+    showSignupBtn.addEventListener("click", () => {
+      showView(document.getElementById("signupContainer"));
+      showSignupStep(signupSteps.step1);
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (evt) => {
+      evt.preventDefault();
+      if (loginErrorP) loginErrorP.textContent = "";
+      const email = loginEmailInput.value.trim();
+      const pwd   = loginPwdInput.value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pwd);
+        loginEmailInput.value = "";
+        loginPwdInput.value   = "";
+        // onAuthStateChanged will run
+      } catch (err) {
+        console.error(err);
+        if (loginErrorP) loginErrorP.textContent = "Invalid credentials.";
+      }
+    });
+  }
 });
 
 // ----------------------
@@ -336,12 +327,10 @@ async function loadSetup() {
     if (setupText) setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
     hide(setupForm);
     show(setupDisplay);
-    // Show main sections and update counters etc.
     renderStudents();
     updateFinancialCard();
     updateCounters();
   } else {
-    // Setup incomplete: hide main sections
     show(setupForm);
     hide(setupDisplay);
     resetViews();
@@ -397,16 +386,18 @@ const fineLeaveInput      = document.getElementById("fineLeave");
 const fineHalfDayInput    = document.getElementById("fineHalfDay");
 const eligibilityPctInput = document.getElementById("eligibilityPct");
 const saveSettings        = document.getElementById("saveSettings");
-const settingsCard        = document.createElement("div");
-const editSettings        = document.createElement("button");
+let settingsCard, editSettings;
 
 if (saveSettings) {
   // Prepare the card and edit button
+  settingsCard = document.createElement("div");
   settingsCard.id = "settingsCard";
   settingsCard.className = "card hidden";
+  editSettings = document.createElement("button");
   editSettings.id = "editSettings";
   editSettings.className = "btn no-print hidden";
   editSettings.textContent = "Edit Settings";
+
   saveSettings.parentNode.appendChild(settingsCard);
   saveSettings.parentNode.appendChild(editSettings);
 
@@ -447,7 +438,6 @@ if (saveSettings) {
   };
 }
 
-// Helper to update settings card if data already loaded
 function updateFinancialCard() {
   if (settingsCard && !settingsCard.classList.contains("hidden")) {
     settingsCard.innerHTML = `
@@ -1305,11 +1295,9 @@ function renderAnalytics(stats, from, to) {
   });
 
   // Show analytics section
-  document.getElementById("instructions").textContent = `Period: ${from} to ${to}`;
-  showView(instructionsDiv);
-  showView(analyticsContainer);
-  showView(graphsDiv);
-  showView(analyticsActionsDiv);
+  instructionsDiv.textContent = `Period: ${from} to ${to}`;
+  hide(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
+  show(instructionsDiv, analyticsContainer, graphsDiv, analyticsActionsDiv);
 
   // Bar chart: % Present
   const barCtx = barChartCanvas.getContext("2d");
@@ -1405,6 +1393,7 @@ if (downloadAnalyticsBtn) {
       await sharePdf(blob, fileName, "Attendance Analytics");
     } else {
       const stats = lastAnalyticsStats;
+      const doc = new jsPDF();
       for (let i = 0; i < stats.length; i++) {
         if (i > 0) doc.addPage();
         const st = stats[i];
@@ -1906,6 +1895,7 @@ if (signupFinishBtn) {
 
     try {
       // Create Auth user (owner)
+      const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js");
       const userCred = await createUserWithEmailAndPassword(
         auth,
         signupData.ownerEmail,
@@ -1914,7 +1904,8 @@ if (signupFinishBtn) {
       const uid = userCred.user.uid;
 
       // Create Firestore: schools/{uid}
-      const { setDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js");
+      const { getFirestore, setDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js");
+      const db = getFirestore();
       await setDoc(fsDoc(db, "schools", uid), {
         name: signupData.instituteName,
         branches: signupData.branches,
@@ -1978,5 +1969,6 @@ function resetViews() {
   // Hide all main sections (except setup) when reconfiguring
   const sections = document.querySelectorAll("#financial-settings, #animatedCounters, #student-registration, #attendance-section, #analytics-section, #register-section");
   sections.forEach(s => s.classList.add("hidden"));
-  hide(settingsCard, editSettings);
+  if (settingsCard) hide(settingsCard, editSettings);
 }
+
