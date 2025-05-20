@@ -1085,8 +1085,8 @@ if (downloadAttendanceBtn) {
     doc.setFontSize(12); doc.text(setupText.textContent, 14, 24);
     doc.autoTable({ startY: 30, html: "#attendanceSummaryTable" });
     const fileName = `attendance_${dateInput.value}.pdf`;
-    const blob = doc.output("blob");
     doc.save(fileName);
+    const blob = doc.output("blob");
     await sharePdf(blob, fileName, "Attendance Report");
   };
 }
@@ -1408,6 +1408,7 @@ if (downloadAnalyticsBtn) {
       for (let i = 0; i < stats.length; i++) {
         if (i > 0) doc.addPage();
         const st = stats[i];
+        const w = doc.internal.pageSize.getWidth();
         doc.setFontSize(18);
         doc.text("Attendance Analytics (Individual Receipt)", 14, 16);
         doc.setFontSize(10);
@@ -1979,4 +1980,3 @@ function resetViews() {
   sections.forEach(s => s.classList.add("hidden"));
   hide(settingsCard, editSettings);
 }
-
