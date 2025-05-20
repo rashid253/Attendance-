@@ -155,137 +155,197 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ----------------------
-  // 1. SETUP SECTION
-  // ----------------------
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
+// 1. SETUP SECTION (UPDATED FOR SCHOOL NAMESPACING)
+// ----------------------
+const setupForm      = $("setupForm");
+const setupDisplay   = $("setupDisplay");
+const schoolInput    = $("schoolInput");
+const schoolSelect   = $("schoolSelect");
+const classSelect    = $("teacherClassSelect");
+const sectionSelect  = $("teacherSectionSelect");
+const setupText      = $("setupText");
+const saveSetupBtn   = $("saveSetup");
+const editSetupBtn   = $("editSetup");
+const schoolListDiv  = $("schoolList");
 
-  function renderSchoolList() {
-    schoolListDiv.innerHTML = "";
-    schools.forEach((sch, idx) => {
-      const row = document.createElement("div");
-      row.className = "row-inline";
-      row.innerHTML = `
-        <span>${sch}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>`;
-      schoolListDiv.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt("Edit School Name:", schools[idx]);
-        if (newName?.trim()) {
-          schools[idx] = newName.trim();
-          await idbSet("schools", schools);
-          await syncToFirebase();
-          await loadSetup();
+let schools = [];
+let currentSchool = null;
+let teacherClass = null;
+let teacherSection = null;
+
+// Helper to build an IndexedDB key for a given school + data type
+const key = (school, type) => `${school}::${type}`;
+
+function renderSchoolList() {
+  schoolListDiv.innerHTML = "";
+  schools.forEach((sch, idx) => {
+    const row = document.createElement("div");
+    row.className = "row-inline";
+    row.innerHTML = `
+      <span>${sch}</span>
+      <div>
+        <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
+        <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
+      </div>`;
+    schoolListDiv.appendChild(row);
+  });
+
+  // Edit school name
+  document.querySelectorAll(".edit-school").forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      const oldName = schools[idx];
+      const newName = prompt("Edit School Name:", oldName)?.trim();
+      if (!newName || newName === oldName) return;
+
+      // 1) Rename in the list
+      schools[idx] = newName;
+      await idbSet("schools", schools);
+
+      // 2) If that was the active one, migrate its data
+      if (currentSchool === oldName) {
+        // copy all old keys to new keys
+        for (const type of ["students","attendance","classes","sections"]) {
+          const oldKey = key(oldName, type);
+          const newKey = key(newName, type);
+          const data = await idbGet(oldKey);
+          if (data != null) {
+            await idbSet(newKey, data);
+            await idbClear(oldKey);
+          }
         }
-      };
-    });
-    document.querySelectorAll(".delete-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1)[0];
-        await idbSet("schools", schools);
-        if (currentSchool === removed) {
-          currentSchool = null;
-          teacherClass = null;
-          teacherSection = null;
-          await idbSet("currentSchool", null);
-          await idbSet("teacherClass", null);
-          await idbSet("teacherSection", null);
-        }
-        await syncToFirebase();
-        await loadSetup();
-      };
-    });
-  }
-
-  let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
-    ].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      hide(setupForm);
-      show(setupDisplay);
-
-      // Now that setup is done, show all other sections
-      resetViews();
-
-      // After setup completes, render students and counters
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-      }, 0);
-
-    } else {
-      // Setup is not complete, hide other sections
-      show(setupForm);
-      hide(setupDisplay);
-      resetViews();
-    }
-  };
-
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await idbSet("schools", schools);
-        await syncToFirebase();
+        currentSchool = newName;
+        await idbSet("currentSchool", newName);
       }
-      schoolInput.value = "";
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
-      return;
-    }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
 
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
+      await syncToFirebase();
+      await loadSetup();
+    };
+  });
+
+  // Delete school
+  document.querySelectorAll(".delete-school").forEach(btn => {
+    btn.onclick = async () => {
+      const idx = +btn.dataset.idx;
+      const rem = schools[idx];
+      if (!confirm(`Delete school "${rem}"? ALL its data will be removed.`)) return;
+      schools.splice(idx,1);
+      await idbSet("schools", schools);
+
+      // clear all its namespaced data
+      for (const type of ["students","attendance","classes","sections"]) {
+        await idbClear(key(rem, type));
+      }
+
+      if (currentSchool === rem) {
+        currentSchool = teacherClass = teacherSection = null;
+        await idbSet("currentSchool", null);
+        await idbSet("teacherClass", null);
+        await idbSet("teacherSection", null);
+      }
+
+      await syncToFirebase();
+      await loadSetup();
+    };
+  });
+}
+
+const loadSetup = async () => {
+  // fetch master list of schools
+  schools        = (await idbGet("schools"))         || [];
+  currentSchool  = await idbGet("currentSchool")    || null;
+  teacherClass   = await idbGet("teacherClass")     || null;
+  teacherSection = await idbGet("teacherSection")   || null;
+
+  // populate dropdown
+  schoolSelect.innerHTML = [
+    `<option disabled selected>-- Select School --</option>`,
+    ...schools.map(s => `<option value="${s}">${s}</option>`)
+  ].join("");
+  if (currentSchool) schoolSelect.value = currentSchool;
+
+  renderSchoolList();
+
+  if (currentSchool && teacherClass && teacherSection) {
+    // show display
+    classSelect.value   = teacherClass;
+    sectionSelect.value = teacherSection;
+    setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+    hide(setupForm);
+    show(setupDisplay);
+
+    // reveal other app sections
+    resetViews();
+
+    // load that school's data
+    await loadSchoolData(currentSchool);
+    renderStudents();
+    updateCounters();
+
+  } else {
+    // still in setup
     show(setupForm);
     hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
-  };
+    resetViews();
+  }
+};
+
+saveSetupBtn.onclick = async (e) => {
+  e.preventDefault();
+  const newSchool = schoolInput.value.trim();
+  if (newSchool) {
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await idbSet("schools", schools);
+      await syncToFirebase();
+    }
+    schoolInput.value = "";
+    return loadSetup();
+  }
+
+  const selSchool  = schoolSelect.value;
+  const selClass   = classSelect.value;
+  const selSection = sectionSelect.value;
+  if (!selSchool || !selClass || !selSection) {
+    return alert("Please select a school, class, and section.");
+  }
+
+  currentSchool  = selSchool;
+  teacherClass   = selClass;
+  teacherSection = selSection;
+  await idbSet("currentSchool", currentSchool);
+  await idbSet("teacherClass",   teacherClass);
+  await idbSet("teacherSection", teacherSection);
+
+  // initialize empty namespaces if first time
+  for (const type of ["students","attendance","classes","sections"]) {
+    const nsKey = key(currentSchool,type);
+    if ((await idbGet(nsKey)) == null) {
+      await idbSet(nsKey, []);
+    }
+  }
+
+  await syncToFirebase();
+  await loadSetup();
+};
+
+editSetupBtn.onclick = (e) => {
+  e.preventDefault();
+  show(setupForm);
+  hide(setupDisplay);
+  resetViews();
+};
+
+// call only once
+await loadSetup();
+
+// --- Helper to load all namespaced data into your in-memory lists ---
+async function loadSchoolData(school) {
+  students      = await idbGet(key(school,"students"))    || [];
+  attendance    = await idbGet(key(school,"attendance"))  || [];
+  classesList   = await idbGet(key(school,"classes"))     || [];
+  sectionsList  = await idbGet(key(school,"sections"))    || [];
+}
 
   // ----------------------
   // 2. FINANCIAL SETTINGS SECTION
