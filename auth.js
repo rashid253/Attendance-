@@ -1,133 +1,135 @@
 // auth.js
-// ----------------------
-// Authentication & Approval Layer for Attendance App
-// ----------------------
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
   ref as dbRef,
-  push,
-  onValue,
-  remove,
-  update,
+  get,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 const { get: idbGet, set: idbSet } = window.idbKeyval;
 
-// Firebase config (same as in app.js)
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-};
+// ——— Firebase init ———
+const firebaseConfig = { /* your config here */ };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const usersRef       = dbRef(db, 'users');
-const pendingRef     = dbRef(db, 'pendingUsers');
+const usersRef = dbRef(db, 'users');
+const schoolsRef = dbRef(db, 'appData/schools');
 
-// UI elements
-const loginForm      = document.getElementById('loginForm');
-const signupForm     = document.getElementById('signupForm');
-const pendingList    = document.getElementById('pendingList');
-const logoutBtn      = document.getElementById('logoutBtn');
-
-// --- SIGNUP FLOW ---
-signupForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const role    = signupForm.role.value;
-  const userId  = signupForm.userId.value.trim();
-  const key     = signupForm.key.value.trim();
-  const name    = signupForm.name.value.trim();
-  const school  = signupForm.school.value;
-  const cls     = role === 'Teacher' ? signupForm.cls.value : null;
-  const sec     = role === 'Teacher' ? signupForm.sec.value : null;
-
-  if (!userId || !key || !name || !school) {
-    return alert('تمام فیلڈز بھریں۔');
-  }
-  // push to pendingUsers
-  await push(pendingRef, { userId, key, name, role, school, cls, sec, active: false });
-  alert('آپ کی درخواست جمع ہو گئی۔ ایڈمن کی منظوری کا انتظار کریں۔');
-  signupForm.reset();
-});
-
-// --- PENDING APPROVAL (Admin) ---
-function renderPending() {
-  pendingList.innerHTML = '';
-  onValue(pendingRef, snapshot => {
-    pendingList.innerHTML = '';
-    snapshot.forEach(child => {
-      const req = child.val();
-      const li = document.createElement('li');
-      li.textContent = `${req.name} (${req.role}) → ${req.school}` +
-        (req.role==='Teacher'? ` – Class ${req.cls} Sec ${req.sec}` : '');
-      const approveBtn = document.createElement('button');
-      const rejectBtn  = document.createElement('button');
-      approveBtn.textContent = 'Approve'; rejectBtn.textContent = 'Reject';
-      approveBtn.onclick = async () => {
-        const newUserRef = dbRef(db, `users/${req.userId}`);
-        await update(newUserRef, { ...req, active: true });
-        await remove(dbRef(db, `pendingUsers/${child.key}`));
-      };
-      rejectBtn.onclick = async () => {
-        await remove(dbRef(db, `pendingUsers/${child.key}`));
-      };
-      li.append(approveBtn, rejectBtn);
-      pendingList.append(li);
-    });
-  });
-}
-
-// --- LOGIN FLOW ---
-loginForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const userId = loginForm.userId.value.trim();
-  const key    = loginForm.key.value.trim();
-  if (!userId || !key) {
-    return alert('User ID اور Key درج کریں۔');
-  }
-  onValue(dbRef(db, `users/${userId}`), async snap => {
-    if (!snap.exists() || snap.val().key !== key || !snap.val().active) {
-      return alert('Invalid credentials یا اکاؤنٹ deactivated۔');
-    }
-    const user = snap.val();
-    // save session
-    await idbSet('session', { userId, role: user.role, school: user.school, cls: user.cls, sec: user.sec });
-    // redirect to setup/app
-    window.location.reload();
-  }, { onlyOnce: true });
-});
-
-// --- AUTO-LOGIN OFFLINE SUPPORT ---
+// ——— on load: try auto-login ———
 (async function tryAutoLogin() {
   const sess = await idbGet('session');
-  if (sess && sess.userId) {
-    // hide auth UI
-    document.getElementById('authContainer').classList.add('hidden');
-    // show teacher-setup (or full app if already setup)
-    document.getElementById('teacher-setup').classList.remove('hidden');
-    // prefill selects
-    if (sess.role === 'Teacher') {
-      document.getElementById('schoolSelect').value = sess.school;
-      document.getElementById('teacherClassSelect').value = sess.cls;
-      document.getElementById('teacherSectionSelect').value = sess.sec;
-    }
-    // If Admin/Principal, skip class/section
+  if (sess) {
+    showSetup(sess);
   }
 })();
 
-// --- LOGOUT ---
-logoutBtn.addEventListener('click', async () => {
-  await idbSet('session', null);
-  window.location.href = './';  // or reload
+// ——— LOGIN handler ———
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const userId = e.target.userId.value.trim();
+  const key    = e.target.key.value.trim();
+  if (!userId || !key) return alert('Enter both User ID & Key.');
+
+  const snap = await get(dbRef(db, `users/${userId}`));
+  if (!snap.exists() || snap.val().key !== key || !snap.val().active) {
+    return alert('Invalid credentials or not yet approved.');
+  }
+
+  const u = snap.val();
+  const sess = {
+    userId,
+    role:   u.role,
+    school: u.school,
+    cls:    u.cls,
+    sec:    u.sec
+  };
+  await idbSet('session', sess);
+  showSetup(sess);
 });
 
-// --- INITIALIZE ---
-document.addEventListener('DOMContentLoaded', () => {
-  renderPending();
+// ——— SHOW & CONFIGURE SETUP pane ———
+async function showSetup(sess) {
+  // hide auth forms
+  document.getElementById('loginSection').classList.add('hidden');
+  document.getElementById('signupSection').classList.add('hidden');
+
+  // show setup section
+  const setup = document.getElementById('teacher-setup');
+  setup.classList.remove('hidden');
+
+  // load schools dropdown
+  const snap = await get(schoolsRef);
+  const schools = snap.exists() ? Object.values(snap.val()) : [];
+  const schoolSelect = document.getElementById('schoolSelect');
+  schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+  schools.forEach(s => addOption(schoolSelect, s));
+
+  // role-based visibility
+  const inpNewSchool = document.getElementById('schoolInput');
+  const selClass     = document.getElementById('classSelect');
+  const selSection   = document.getElementById('sectionSelect');
+
+  if (sess.role === 'Admin') {
+    // Admin: full control
+    inpNewSchool.classList.remove('hidden');
+    selClass.classList.remove('hidden');
+    selSection.classList.remove('hidden');
+
+  } else if (sess.role === 'Principal') {
+    // Principal: no new-school, only own school & all its classes
+    inpNewSchool.classList.add('hidden');
+    disableSelect(schoolSelect, sess.school);
+
+    selClass.classList.remove('hidden');
+    selSection.classList.add('hidden');
+
+  } else {
+    // Teacher: only own class/section fixed
+    inpNewSchool.classList.add('hidden');
+    disableSelect(schoolSelect, sess.school);
+
+    // preload & lock class
+    selClass.innerHTML = '';
+    addOption(selClass, sess.cls);
+    selClass.value = sess.cls;
+    selClass.disabled = true;
+
+    // show & lock only own section
+    selSection.classList.remove('hidden');
+    selSection.innerHTML = '';
+    addOption(selSection, sess.sec);
+    selSection.value = sess.sec;
+    selSection.disabled = true;
+  }
+}
+
+// ——— SAVE setup & LAUNCH app ———
+document.getElementById('saveSetup').addEventListener('click', async () => {
+  const school = document.getElementById('schoolSelect').value;
+  const cls    = document.getElementById('classSelect').value;
+  const sec    = document.getElementById('sectionSelect').value || null;
+
+  if (!school || !cls || ( !sec && (await idbGet('session')).role === 'Teacher')) {
+    return alert('Please complete all required fields.');
+  }
+
+  await idbSet('setup', { school, cls, sec });
+
+  // reveal the real app
+  document.getElementById('teacher-setup').classList.add('hidden');
+  document.getElementById('appHeader').classList.remove('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+
+  // now your app.js can pick up setup from IndexedDB and proceed
 });
+
+// ——— Helpers ———
+function addOption(selectElem, text) {
+  const o = document.createElement('option');
+  o.value = o.text = text;
+  selectElem.append(o);
+}
+function disableSelect(selectElem, value) {
+  addOption(selectElem, value);
+  selectElem.value = value;
+  selectElem.disabled = true;
+}
