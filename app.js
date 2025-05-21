@@ -1,31 +1,23 @@
 // app.js (with per-school data segregation)
 // -------------------------------------------------------------------------------------------------
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+// app.js
+
+// Import shared Firebase configuration
+import "./firebase-config.js";
 import {
   getDatabase,
   ref as dbRef,
   set as dbSet,
-  onValue,
+  onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase configuration (replace with your actual config)
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-};
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-const appDataRef = dbRef(database, "appData");
+// Initialize database
+const db = getDatabase();
+const appDataRef = dbRef(db, "appData");
 
 // ----------------------
 // Local application state (per-school mappings)
@@ -34,7 +26,7 @@ let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact
 let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/... } } }
 let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
 let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
-let fineRates              = { A:50, Lt:20, L:10, HD:30 };
+let fineRates              = { A: 50, Lt: 20, L: 10, HD: 30 };
 let eligibilityPct         = 75;
 let schools                = [];    // array of school names (strings)
 let currentSchool          = null;  // selected school name
@@ -46,7 +38,6 @@ let students       = [];    // will reference studentsBySchool[currentSchool]
 let attendanceData = {};    // will reference attendanceDataBySchool[currentSchool]
 let paymentsData   = {};    // will reference paymentsDataBySchool[currentSchool]
 let lastAdmNo      = 0;     // will reference lastAdmNoBySchool[currentSchool]
-
 // ----------------------
 // Ensure data structures exist for a given school
 // ----------------------
