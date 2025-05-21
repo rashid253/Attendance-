@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,13 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
+  <!-- PWA & Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2196F3" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Attendance Mgmt" />
+
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- PWA & jsPDF & Chart.js, etc. -->
+  <!-- PWA & jsPDF & Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -21,24 +26,26 @@
     .hidden { display: none !important; }
     .card { border: 1px solid #ccc; padding: 1em; margin: 1em 0; border-radius: 4px; }
     .btn { margin: 0.5em 0; }
-    .row-inline > * { margin-right: 0.5em; }
+    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
+    .header-buttons button { margin-right: 0.5em; }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN & SIGNUP -->
+  <!-- AUTH CONTAINER -->
   <section id="authContainer">
+    <!-- LOGIN -->
     <div id="loginSection" class="card">
-      <h2>Login</h2>
+      <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
       <form id="loginForm">
         <input id="loginUserId" name="userId" placeholder="User ID" required />
         <input id="loginKey"    name="key"    placeholder="Key" type="password" required />
         <button type="submit" class="btn">Login</button>
       </form>
     </div>
-
+    <!-- SIGNUP -->
     <div id="signupSection" class="card">
-      <h2>Sign Up</h2>
+      <h2><i class="fas fa-user-plus"></i> Sign Up</h2>
       <form id="signupForm">
         <input id="signupName"   name="name"   placeholder="Name" required />
         <select id="signupRole"  name="role"   required>
@@ -54,7 +61,10 @@
           <select id="signupClass" name="cls">
             <option disabled selected>-- Class --</option>
             <option>Play Group</option><option>Nursery</option><option>KG</option>
-            <option>Class One</option><option>Class Two</option><!-- etc. -->
+            <option>Class One</option><option>Class Two</option><option>Class Three</option>
+            <option>Class Four</option><option>Class Five</option><option>Class Six</option>
+            <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
+            <option>Class Ten</option>
           </select>
           <select id="signupSection" name="sec">
             <option disabled selected>-- Section --</option>
@@ -67,7 +77,7 @@
 
     <!-- SETUP (after login) -->
     <section id="teacher-setup" class="card hidden">
-      <h2>Setup</h2>
+      <h2><i class="fas fa-cog"></i> Setup</h2>
       <div class="row-inline">
         <input id="schoolInput" placeholder="New School Name" class="hidden" />
         <select id="schoolSelect">
@@ -80,7 +90,7 @@
           <option disabled selected>-- Select Section --</option>
           <option>A</option><option>B</option><option>C</option>
         </select>
-        <button id="saveSetup" class="btn">Save</button>
+        <button id="saveSetup" class="btn"><i class="fas fa-save"></i> Save</button>
       </div>
     </section>
   </section>
@@ -88,153 +98,156 @@
   <!-- MAIN APP (hidden until setup) -->
   <div id="mainApp" class="hidden">
     <header id="appHeader" class="card">
-      <h1>Attendance Management</h1>
-      <!-- backup buttons, etc. -->
+      <h1><i class="fas fa-school"></i> Attendance Management</h1>
+      <div class="header-buttons">
+        <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
+        <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
+        <input type="file" id="restoreFile" accept=".json" hidden />
+        <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
+      </div>
     </header>
-    <!-- ... your existing sections (financial-settings, student-registration, attendance-section, analytics-section, register-section) ... -->
+
+    <!-- 1. SETUP DISPLAY -->
+    <section id="setupDisplay" class="card hidden">
+      <h3><i class="fas fa-school"></i> <span id="setupText"></span></h3>
+      <button id="editSetup" class="btn"><i class="fas fa-edit"></i> Edit Setup</button>
+    </section>
+
+    <!-- 2. FINANCIAL SETTINGS -->
+    <section id="financial-settings" class="card">
+      <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
+      <div id="financialForm" class="row-inline">
+        <label>Fine/Absent:<input id="fineAbsent" type="number"/></label>
+        <label>Fine/Late:<input id="fineLate" type="number"/></label>
+        <label>Fine/Leave:<input id="fineLeave" type="number"/></label>
+        <label>Fine/Half-Day:<input id="fineHalfDay" type="number"/></label>
+        <label>Eligib.%:<input id="eligibilityPct" type="number" min="0" max="100"/></label>
+        <button id="saveSettings" class="btn"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </section>
+
+    <!-- 3. COUNTERS -->
+    <section id="animatedCounters" class="card">
+      <div id="countersContainer" class="scroll-row"></div>
+    </section>
+
+    <!-- 4. STUDENT REGISTRATION -->
+    <section id="student-registration" class="card">
+      <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
+      <div class="row-inline">
+        <input id="studentName" placeholder="Name" />
+        <input id="parentName" placeholder="Parent Name" />
+        <input id="parentContact" placeholder="Contact" />
+        <input id="parentOccupation" placeholder="Occupation" />
+        <input id="parentAddress" placeholder="Address" />
+        <button id="addStudent" class="btn"><i class="fas fa-plus-circle"></i> Add</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="studentsTable">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllStudents"/></th>
+              <th>#</th><th>Name</th><th>Adm#</th><th>Parent</th>
+              <th>Contact</th><th>Occupation</th><th>Address</th>
+              <th>Fine</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody"></tbody>
+        </table>
+      </div>
+      <div class="table-actions">
+        <button id="editSelected" disabled class="btn"><i class="fas fa-edit"></i> Edit</button>
+        <button id="doneEditing" class="btn hidden"><i class="fas fa-check"></i> Done</button>
+        <button id="deleteSelected" disabled class="btn"><i class="fas fa-trash"></i> Delete</button>
+        <button id="saveRegistration" class="btn"><i class="fas fa-save"></i> Save</button>
+        <button id="editRegistration" class="btn hidden"><i class="fas fa-undo"></i> Restore</button>
+        <button id="shareRegistration" class="btn hidden"><i class="fas fa-share-alt"></i> Share</button>
+        <button id="downloadRegistrationPDF" class="btn hidden"><i class="fas fa-download"></i> Download</button>
+      </div>
+    </section>
+
+    <!-- 5. MARK ATTENDANCE -->
+    <section id="attendance-section" class="card">
+      <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
+      <div class="row-inline">
+        <input type="date" id="dateInput" />
+        <button id="loadAttendance" class="btn"><i class="fas fa-calendar-check"></i> Load</button>
+      </div>
+      <div id="attendanceBody"></div>
+      <div id="attendanceSummary" class="hidden summary-box"></div>
+      <div class="table-actions">
+        <button id="saveAttendance" class="btn hidden"><i class="fas fa-save"></i> Save</button>
+        <button id="resetAttendance" class="btn hidden"><i class="fas fa-undo"></i> Reset</button>
+        <button id="downloadAttendancePDF" class="btn hidden"><i class="fas fa-download"></i> Download</button>
+        <button id="shareAttendanceSummary" class="btn hidden"><i class="fas fa-share-alt"></i> Share</button>
+      </div>
+    </section>
+
+    <!-- 6. ANALYTICS -->
+    <section id="analytics-section" class="card">
+      <h2><i class="fas fa-chart-bar"></i> Analytics <button id="analyticsFilterBtn"><i class="fas fa-filter"></i></button></h2>
+      <div class="row-inline">
+        <select id="analyticsTarget">
+          <option disabled selected>-- Report For --</option>
+          <option value="class">Class</option>
+          <option value="section">Section</option>
+          <option value="student">Student</option>
+        </select>
+        <select id="analyticsSectionSelect" class="hidden">
+          <option disabled selected>-- Section --</option>
+          <option>A</option><option>B</option><option>C</option>
+        </select>
+        <select id="analyticsType" disabled>
+          <option disabled selected>-- Period --</option>
+          <option value="date">Date</option>
+          <option value="month">Month</option>
+          <option value="semester">Semester</option>
+          <option value="year">Year</option>
+        </select>
+        <input type="date"   id="analyticsDate" class="hidden"/>
+        <input type="month"  id="analyticsMonth" class="hidden"/>
+        <input type="month"  id="semesterStart" class="hidden"/>
+        <input type="month"  id="semesterEnd" class="hidden"/>
+        <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
+        <input type="text"   id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+        <button id="loadAnalytics" class="btn"><i class="fas fa-chart-bar"></i> Load</button>
+        <button id="resetAnalytics" class="btn hidden"><i class="fas fa-undo"></i> Change</button>
+      </div>
+      <div id="instructions" class="hidden"></div>
+      <div id="analyticsContainer" class="table-wrapper hidden">
+        <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
+      </div>
+      <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
+      <div id="analyticsActions" class="table-actions hidden">
+        <button id="downloadAnalytics" class="btn"><i class="fas fa-download"></i> Download</button>
+        <button id="shareAnalytics" class="btn"><i class="fas fa-share-alt"></i> Share</button>
+      </div>
+    </section>
+
+    <!-- 7. ATTENDANCE REGISTER -->
+    <section id="register-section" class="card">
+      <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+      <div class="row-inline">
+        <input type="month" id="registerMonth" />
+        <button id="loadRegister" class="btn"><i class="fas fa-calendar-alt"></i> Load</button>
+      </div>
+      <div id="registerTableWrapper" class="table-wrapper hidden">
+        <table id="registerTable"><thead><tr id="registerHeader"></tr></thead><tbody id="registerBody"></tbody></table>
+      </div>
+      <div class="table-actions">
+        <button id="changeRegister" class="btn hidden"><i class="fas fa-undo"></i> Reset</button>
+        <button id="saveRegister"   class="btn hidden"><i class="fas fa-save"></i> Save</button>
+        <button id="downloadRegister" class="btn"><i class="fas fa-download"></i> Download</button>
+        <button id="shareRegister"    class="btn hidden"><i class="fas fa-share-alt"></i> Share</button>
+      </div>
+    </section>
+
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import {
-      getDatabase,
-      ref as dbRef,
-      get,
-      push
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-    const { get: idbGet, set: idbSet } = window.idbKeyval;
-
-    // —— Your full config including databaseURL —— 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsx…EpICEzA",
-      authDomain: "attandace-management.firebaseapp.com",
-      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-      projectId: "attandace-management",
-      storageBucket: "attandace-management.appspot.com",
-      messagingSenderId: "222685278846",
-      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-      measurementId: "G-V2MY85R73B"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const usersRef   = dbRef(db, 'users');
-    const pendingRef = dbRef(db, 'pendingUsers');
-    const schoolsRef = dbRef(db, 'appData/schools');
-
-    // Elements
-    const loginForm   = document.getElementById('loginForm');
-    const signupForm  = document.getElementById('signupForm');
-    const signupRole  = document.getElementById('signupRole');
-    const classFields = document.getElementById('classSectionFields');
-
-    // Show/hide class-section for Teachers
-    signupRole.addEventListener('change', () =>
-      classFields.classList.toggle('hidden', signupRole.value !== 'Teacher')
-    );
-
-    // Sign Up
-    signupForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const name   = signupForm.name.value.trim();
-      const role   = signupRole.value;
-      const school = signupForm.school.value.trim();
-      const uid    = signupForm.userId.value.trim();
-      const key    = signupForm.key.value.trim();
-      const cls    = role==='Teacher' ? signupForm.cls.value : null;
-      const sec    = role==='Teacher' ? signupForm.sec.value : null;
-      if (!name||!role||!school||!uid||!key || (role==='Teacher' && (!cls||!sec))) {
-        return alert('تمام فیلڈز بھر دیں۔');
-      }
-      await push(pendingRef, { name, role, school, userId: uid, key, cls, sec, active: false });
-      alert('درخواست بھیج دی گئی۔ Admin کی منظوری کا انتظار کریں۔');
-      signupForm.reset();
-      classFields.classList.add('hidden');
-    });
-
-    // Login & showSetup
-    loginForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const userId = loginForm.userId.value.trim();
-      const key    = loginForm.key.value.trim();
-      if (!userId||!key) return alert('User ID اور Key دونوں داخل کریں۔');
-      const snap = await get(dbRef(db, `users/${userId}`));
-      if (!snap.exists() || snap.val().key!==key || !snap.val().active) {
-        return alert('Invalid credentials یا ابھی approve نہیں ہوئے۔');
-      }
-      const u = snap.val();
-      const sess = { userId, role: u.role, school: u.school, cls: u.cls, sec: u.sec };
-      await idbSet('session', sess);
-      showSetup(sess);
-    });
-
-    // Auto-login
-    (async()=>{
-      const sess = await idbGet('session');
-      if (sess) showSetup(sess);
-    })();
-
-    // showSetup implementation
-    async function showSetup(sess) {
-      document.getElementById('loginSection').classList.add('hidden');
-      document.getElementById('signupSection').classList.add('hidden');
-      const setup = document.getElementById('teacher-setup');
-      setup.classList.remove('hidden');
-
-      // populate schools
-      const snap = await get(schoolsRef);
-      const schools = snap.exists() ? Object.values(snap.val()) : [];
-      const ss = document.getElementById('schoolSelect');
-      ss.innerHTML = '<option disabled selected>-- Select School --</option>';
-      schools.forEach(s=> ss.append(new Option(s,s)));
-
-      // role-specific
-      const inpNewSchool = document.getElementById('schoolInput');
-      const selClass     = document.getElementById('classSelect');
-      const selSection   = document.getElementById('sectionSelect');
-
-      if (sess.role==='Admin') {
-        inpNewSchool.classList.remove('hidden');
-        selClass.classList.remove('hidden');
-        selSection.classList.remove('hidden');
-      } else if (sess.role==='Principal') {
-        inpNewSchool.classList.add('hidden');
-        disable(ss, sess.school);
-        selClass.classList.remove('hidden');
-        selSection.classList.add('hidden');
-      } else {
-        inpNewSchool.classList.add('hidden');
-        disable(ss, sess.school);
-        selClass.innerHTML = '';
-        disable(selClass, sess.cls);
-        selSection.classList.remove('hidden');
-        selSection.innerHTML = '';
-        disable(selSection, sess.sec);
-      }
-    }
-
-    document.getElementById('saveSetup').addEventListener('click', async ()=>{
-      const school = document.getElementById('schoolSelect').value;
-      const cls    = document.getElementById('classSelect').value;
-      const sec    = document.getElementById('sectionSelect').value || null;
-      if (!school||!cls||(await idbGet('session')).role==='Teacher'&&!sec) {
-        return alert('تمام ضروری فیلڈز مکمل کریں۔');
-      }
-      await idbSet('setup', { school, cls, sec });
-      document.getElementById('teacher-setup').classList.add('hidden');
-      document.getElementById('mainApp').classList.remove('hidden');
-      document.getElementById('appHeader').classList.remove('hidden');
-      // now app.js can run
-    });
-
-    function disable(el, val) {
-      el.append(new Option(val,val));
-      el.value = val;
-      el.disabled = true;
-    }
-  </script>
-
-  <!-- then load your app.js -->
+  <!-- Load configuration, auth and app scripts -->
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="auth.js"></script>
   <script type="module" src="app.js"></script>
+
 </body>
 </html>
