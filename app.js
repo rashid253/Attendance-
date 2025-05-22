@@ -1,6 +1,6 @@
 // app.js (with per-school data segregation)
 // -------------------------------------------------------------------------------------------------
-
+import { isAdmin, isPrincipal, isTeacher } from "./auth.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
@@ -138,6 +138,72 @@ async function sharePdf(blob, fileName, title) {
 // DOMContentLoaded: Main Initialization
 // ----------------------
 window.addEventListener("DOMContentLoaded", async () => {
+  // Inside app.js, locate this line (or add it if missing):
+
+  function adjustSetupForRole() {
+    const newSchoolInput = document.getElementById("schoolInput");
+    const schoolSelect   = document.getElementById("schoolSelect");
+    const classSelect    = document.getElementById("teacherClassSelect");
+    const sectionSelect  = document.getElementById("teacherSectionSelect");
+
+    if (isAdmin()) {
+      newSchoolInput.classList.remove("hidden");
+      schoolSelect.classList.remove("hidden");
+      classSelect.classList.remove("hidden");
+      sectionSelect.classList.remove("hidden");
+    } else if (isPrincipal()) {
+      newSchoolInput.classList.add("hidden");
+      schoolSelect.classList.remove("hidden");
+      classSelect.classList.remove("hidden");
+      sectionSelect.classList.remove("hidden");
+    } else if (isTeacher()) {
+      newSchoolInput.classList.add("hidden");
+      schoolSelect.classList.add("hidden");
+      classSelect.classList.add("hidden");
+      sectionSelect.classList.add("hidden");
+
+      const auth = window.firebaseAuthInstance;
+      const db   = window.firestoreInstance;
+      const uid  = auth.currentUser.uid;
+
+      db.collection("users")
+        .doc(uid)
+        .get()
+        .then((docSnap) => {
+          if (docSnap.exists) {
+            const data = docSnap.data();
+            const assignedSchool  = data.assignedSchool;
+            const assignedClass   = data.assignedClass;
+            const assignedSection = data.assignedSection;
+            if (assignedSchool && assignedClass && assignedSection) {
+              idbKeyval.set("currentSchool", assignedSchool);
+              idbKeyval.set("teacherClass", assignedClass);
+              idbKeyval.set("teacherSection", assignedSection);
+
+              document.getElementById("setupText").textContent =
+                `${assignedSchool} 🏫 | Class: ${assignedClass} | Section: ${assignedSection}`;
+              document.getElementById("setupForm").classList.add("hidden");
+              document.getElementById("setupDisplay").classList.remove("hidden");
+            } else {
+              alert("آپ کے اکاؤنٹ میں اسکول/کلاس/سیکشن کا ڈیٹا سیٹ نہیں ہے۔ براہِ کرم ایڈمن سے رابطہ کریں۔");
+            }
+          } else {
+            alert("یوزر پروفائل نہیں ملا۔ دوبارہ لاگ آؤٹ کر کے لاگ ان کریں۔");
+            auth.signOut();
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching teacher assignment:", err);
+          alert("ڈیٹا حاصل کرنے میں مسئلہ ہوا۔");
+        });
+    }
+  }
+
+  adjustSetupForRole();
+  // ──────────────── End of copy-paste block ────────────────
+
+  // … باقی آپ کا original app.js کا کوڈ یہاں رہے گا …
+});
   // Simplified selector
   const $ = (id) => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
