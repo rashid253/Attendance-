@@ -9,7 +9,7 @@ import {
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 const db = getDatabase();
-const USERS_PATH   = 'appData/users';    // ← correctly point here
+const USERS_PATH   = 'users';           // ← root-level users
 const PENDING_PATH = 'pendingUsers';
 const SCHOOLS_PATH = 'appData/schools';
 
@@ -47,7 +47,7 @@ signupForm.addEventListener('submit', async e => {
   classFields.classList.add('hidden');
 });
 
-// Login → fetch from appData/users/{userId}
+// Login → fetch from /users/{userId}
 loginForm.addEventListener('submit', async e => {
   e.preventDefault();
   const userId = loginForm.userId.value.trim();
@@ -101,7 +101,7 @@ async function showSetup(sess) {
   schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach(s => schoolSelect.append(new Option(s, s)));
 
-  // Role-based UI...
+  // Role-based form fields...
   const inpNew = document.getElementById('schoolInput');
   const selCls = document.getElementById('teacherClassSelect');
   const selSec = document.getElementById('teacherSectionSelect');
@@ -123,7 +123,7 @@ async function showSetup(sess) {
   }
 }
 
-// Save setup
+// Save setup button
 document.getElementById('saveSetup').addEventListener('click', async () => {
   const school = document.getElementById('schoolSelect').value;
   const cls    = document.getElementById('teacherClassSelect').value;
