@@ -121,7 +121,7 @@
   <!-- MAIN APP (After Setup) -->
   <div id="mainApp" class="hidden">
     <!-- HEADER WITH BACKUP / RESTORE / RESET -->
-    <header id="appHeader" class="card">
+    <header id="appHeader" class="card hidden">
       <h1><i class="fas fa-school"></i> Attendance Management</h1>
       <div class="header-buttons no-print">
         <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Backup Folder</button>
@@ -300,9 +300,7 @@
       <div id="instructions" class="hidden" style="margin-top: 1em;"></div>
       <div id="analyticsContainer" class="hidden">
         <table id="analyticsTable">
-          <thead>
-            <tr></tr>
-          </thead>
+          <thead><tr></tr></thead>
           <tbody id="analyticsBody"></tbody>
         </table>
       </div>
