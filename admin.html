@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel – Pending Users</title>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1em;
+      direction: rtl;
+      text-align: right;
+      background: #f0f0f0;
+    }
+    h1 {
+      margin-bottom: 0.5em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1em;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em;
+      text-align: center;
+    }
+    th {
+      background: #ececec;
+    }
+    button {
+      padding: 0.3em 0.6em;
+      margin: 0.2em;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .approve {
+      background: #4CAF50;
+    }
+    .reject {
+      background: #F44336;
+    }
+    .logout-btn {
+      background: #555;
+      margin-bottom: 1em;
+    }
+    .message {
+      margin-top: 1em;
+      padding: 0.5em;
+      background: #ffdddd;
+      border: 1px solid #ffaaaa;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1><i class="fas fa-user-shield"></i> Admin Panel – درخواستیں برائے منظوری</h1>
+  <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> لاگ آؤٹ</button>
+  <div class="message" id="msgBox"></div>
+  <table id="pendingTable">
+    <thead>
+      <tr>
+        <th>نمبر</th>
+        <th>نام</th>
+        <th>User ID</th>
+        <th>Role</th>
+        <th>School</th>
+        <th>Class</th>
+        <th>Section</th>
+        <th>عمل</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- یہ جگہ JS سے پر ہوگی -->
+    </tbody>
+  </table>
+
+  <script type="module">
+    import "./firebase-config.js"; 
+    import {
+      getDatabase,
+      ref as dbRef,
+      get,
+      child,
+      set,
+      remove
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    // IndexedDB کے لیے idb-keyval
+    const { get: idbGet, del: idbDel } = window.idbKeyval;
+
+    // Firebase ریفرنسز
+    const db = getDatabase();
+    const pendingRef = dbRef(db, 'pendingUsers');
+    const usersRef   = dbRef(db, 'users');
+
+    const pendingTableBody = document.querySelector('#pendingTable tbody');
+    const msgBox = document.getElementById('msgBox');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // صفحہ لوڈ ہوتے ہی چیک کریں کہ ایڈمن لاگ ان ہے یا نہیں
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const sess = await idbGet('session');
+        if (!sess || sess.role !== 'Admin') {
+          alert('آپ کے پاس ایڈمن کے حقوق نہیں ہیں۔');
+          window.location.href = 'index.html';
+          return;
+        }
+        // اگر ایڈمن ہے تو pending requests لائیں
+        fetchPendingUsers();
+      } catch (err) {
+        console.error(err);
+        alert('سیشن چیک میں مسئلہ ہوا۔ براہِ کرم دوبارہ لاگ ان کریں۔');
+        window.location.href = 'index.html';
+      }
+    });
+
+    // لاگ آؤٹ: session ڈیلیٹ کر کے انڈیکس پر ری ڈائریکٹ کریں
+    logoutBtn.addEventListener('click', async () => {
+      await idbDel('session');
+      window.location.href = 'index.html';
+    });
+
+    // pendingRequests کو Firebase سے حاصل کر کے ٹیبل میں رینڈر کرنا
+    async function fetchPendingUsers() {
+      try {
+        const snapshot = await get(pendingRef);
+        if (!snapshot.exists()) {
+          pendingTableBody.innerHTML = '<tr><td colspan="8">کوئی درخواست نہیں۔</td></tr>';
+          return;
+        }
+        const data = snapshot.val(); // object: { pushKey1: {...}, pushKey2: {...}, ... }
+        pendingTableBody.innerHTML = '';
+        let idx = 1;
+        Object.entries(data).forEach(([pushKey, userObj]) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${idx++}</td>
+            <td>${userObj.name}</td>
+            <td>${userObj.userId}</td>
+            <td>${userObj.role}</td>
+            <td>${userObj.school}</td>
+            <td>${userObj.cls || ''}</td>
+            <td>${userObj.sec || ''}</td>
+            <td>
+              <button class="approve" data-key="${pushKey}"><i class="fas fa-check"></i> منظور</button>
+              <button class="reject"  data-key="${pushKey}"><i class="fas fa-times"></i> مسترد</button>
+            </td>
+          `;
+          pendingTableBody.appendChild(tr);
+        });
+
+        // “منظور” بٹن کے لیے event listeners
+        document.querySelectorAll('.approve').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const key = btn.dataset.key;
+            await approveUser(key);
+          });
+        });
+
+        // “مسترد” بٹن کے لیے event listeners
+        document.querySelectorAll('.reject').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const key = btn.dataset.key;
+            await rejectUser(key);
+          });
+        });
+      } catch (error) {
+        console.error('Error fetching pending users:', error);
+        showMessage('درخواستیں لوڈ کرنے میں خرابی۔');
+      }
+    }
+
+    // درخواست منظور کرنا: pendingUsers سے اٹھا کر users/{userId} پر محفوظ کریں اور پھر pending سے ہٹا دیں
+    async function approveUser(pushKey) {
+      try {
+        const singleRef = child(pendingRef, pushKey);
+        const snap = await get(singleRef);
+        if (!snap.exists()) {
+          showMessage('درخواست دستیاب نہیں۔');
+          return;
+        }
+        const userObj = snap.val();
+        // users/{userId} شاخ میں active:true کے ساتھ سیٹ کریں
+        await set(child(usersRef, userObj.userId), {
+          name:   userObj.name,
+          role:   userObj.role,
+          school: userObj.school,
+          userId: userObj.userId,
+          key:    userObj.key,
+          cls:    userObj.cls || null,
+          sec:    userObj.sec || null,
+          active: true
+        });
+        // pending سے حذف کریں
+        await remove(singleRef);
+        showMessage(`User "${userObj.userId}" منظوری کے لیے قابل ہے۔`, 'success');
+        // ٹیبل ریفریش
+        fetchPendingUsers();
+      } catch (err) {
+        console.error('Error approving user:', err);
+        showMessage('درخواست منظور کرنے میں خرابی۔');
+      }
+    }
+
+    // درخواست مسترد کرنا: pending سے سیدھا حذف کریں
+    async function rejectUser(pushKey) {
+      try {
+        const singleRef = child(pendingRef, pushKey);
+        const snap = await get(singleRef);
+        if (!snap.exists()) {
+          showMessage('درخواست دستیاب نہیں۔');
+          return;
+        }
+        const userObj = snap.val();
+        await remove(singleRef);
+        showMessage(`User "${userObj.userId}" مسترد کر دیا گیا۔`, 'info');
+        fetchPendingUsers();
+      } catch (err) {
+        console.error('Error rejecting user:', err);
+        showMessage('درخواست مسترد کرنے میں خرابی۔');
+      }
+    }
+
+    // میسج باکس میں اطلاع دکھائیں
+    function showMessage(text, type = 'error') {
+      msgBox.textContent = text;
+      msgBox.style.display = 'block';
+      if (type === 'success') {
+        msgBox.style.background = '#ddffdd';
+        msgBox.style.border = '1px solid #aaffaa';
+      } else if (type === 'info') {
+        msgBox.style.background = '#eeeeff';
+        msgBox.style.border = '1px solid #aaaaff';
+      } else {
+        msgBox.style.background = '#ffdddd';
+        msgBox.style.border = '1px solid #ffaaaa';
+      }
+      setTimeout(() => {
+        msgBox.style.display = 'none';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
