@@ -1,251 +1,156 @@
 <!DOCTYPE html>
-<html lang="ur">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Panel – Pending Users</title>
-  <!-- Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <title>Admin Panel – Approve Signups</title>
+
+  <!-- Firebase SDKs (Auth + Firestore) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      updateDoc,
+      deleteDoc,
+      doc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // Firebase config (same as in index.html)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBsx…EpICEzA",
+      authDomain: "attandace-management.firebaseapp.com",
+      projectId: "attandace-management",
+      storageBucket: "attandace-management.appspot.com",
+      messagingSenderId: "222685278846",
+      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+      measurementId: "G-V2MY85R73B",
+      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM elements
+    const requestsTableBody = document.getElementById("requests-body");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    // Utility: show/hide
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    // Ensure only Admin can view this page
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Not logged in, redirect to index.html
+        window.location.href = "index.html";
+        return;
+      }
+      // Check Firestore users/{uid}
+      const userDocRef = doc(db, "users", user.uid);
+      const userSnap = await userDocRef.get();
+      if (!userSnap.exists() || userSnap.data().role !== "admin") {
+        alert("Access denied. Only Admins can view this page.");
+        await signOut(auth);
+        window.location.href = "index.html";
+        return;
+      }
+      // If Admin, load pending requests
+      loadPendingRequests();
+    });
+
+    // Load all documents in "pendingRequests"
+    async function loadPendingRequests() {
+      requestsTableBody.innerHTML = "";
+      const q = query(collection(db, "pendingRequests"));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${data.name}</td>
+          <td>${data.email}</td>
+          <td>${data.role}</td>
+          <td>
+            <button class="approve-btn" data-id="${docSnap.id}">Approve</button>
+            <button class="reject-btn" data-id="${docSnap.id}">Reject</button>
+          </td>`;
+        requestsTableBody.appendChild(row);
+      });
+
+      // Attach event listeners
+      document.querySelectorAll(".approve-btn").forEach((btn) => {
+        btn.onclick = () => handleApprove(btn.dataset.id);
+      });
+      document.querySelectorAll(".reject-btn").forEach((btn) => {
+        btn.onclick = () => handleReject(btn.dataset.id);
+      });
+    }
+
+    // Approve a pending request
+    async function handleApprove(requestId) {
+      const reqDocRef = doc(db, "pendingRequests", requestId);
+      const reqSnap = await getDoc(reqDocRef);
+      if (!reqSnap.exists()) return;
+
+      const { uid, name, email, role } = reqSnap.data();
+      // Create user profile in "users/{uid}"
+      const userDocRef = doc(db, "users", uid);
+      await setDoc(userDocRef, { name, email, role, approvedAt: Date.now() });
+
+      // Remove from pendingRequests
+      await deleteDoc(reqDocRef);
+
+      // Refresh table
+      loadPendingRequests();
+    }
+
+    // Reject a pending request
+    async function handleReject(requestId) {
+      const reqDocRef = doc(db, "pendingRequests", requestId);
+      await deleteDoc(reqDocRef);
+      loadPendingRequests();
+    }
+
+    // Logout
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    };
+  </script>
+
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 1em;
-      direction: rtl;
-      text-align: right;
-      background: #f0f0f0;
-    }
-    h1 {
-      margin-bottom: 0.5em;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1em;
-      background: #fff;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5em;
-      text-align: center;
-    }
-    th {
-      background: #ececec;
-    }
-    button {
-      padding: 0.3em 0.6em;
-      margin: 0.2em;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      color: #fff;
-    }
-    .approve {
-      background: #4CAF50;
-    }
-    .reject {
-      background: #F44336;
-    }
-    .logout-btn {
-      background: #555;
-      margin-bottom: 1em;
-    }
-    .message {
-      margin-top: 1em;
-      padding: 0.5em;
-      background: #ffdddd;
-      border: 1px solid #ffaaaa;
-      display: none;
-    }
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    h1 { margin-bottom: 1em; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    .btn { padding: 0.4em 0.8em; margin-right: 0.5em; border: none; border-radius: 4px; cursor: pointer; }
+    .approve-btn { background: #4CAF50; color: #fff; }
+    .reject-btn  { background: #F44336; color: #fff; }
+    #logout-btn { background: #2196F3; color: #fff; float: right; }
   </style>
 </head>
 <body>
-  <h1><i class="fas fa-user-shield"></i> Admin Panel – درخواستیں برائے منظوری</h1>
-  <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> لاگ آؤٹ</button>
-  <div class="message" id="msgBox"></div>
-  <table id="pendingTable">
+  <h1>Pending Signup Requests</h1>
+  <button id="logout-btn" class="btn">Logout</button>
+  <table>
     <thead>
       <tr>
-        <th>نمبر</th>
-        <th>نام</th>
-        <th>User ID</th>
-        <th>Role</th>
-        <th>School</th>
-        <th>Class</th>
-        <th>Section</th>
-        <th>عمل</th>
+        <th>Name</th><th>Email</th><th>Role</th><th>Actions</th>
       </tr>
     </thead>
-    <tbody>
-      <!-- یہ جگہ JS سے پر ہوگی -->
+    <tbody id="requests-body">
+      <!-- Populated dynamically -->
     </tbody>
   </table>
-
-  <script type="module">
-    import "./firebase-config.js"; 
-    import {
-      getDatabase,
-      ref as dbRef,
-      get,
-      child,
-      set,
-      remove
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    // IndexedDB کے لیے idb-keyval
-    const { get: idbGet, del: idbDel } = window.idbKeyval;
-
-    // Firebase ریفرنسز
-    const db = getDatabase();
-    const pendingRef = dbRef(db, 'pendingUsers');
-    const usersRef   = dbRef(db, 'users');
-
-    const pendingTableBody = document.querySelector('#pendingTable tbody');
-    const msgBox = document.getElementById('msgBox');
-    const logoutBtn = document.getElementById('logoutBtn');
-
-    // صفحہ لوڈ ہوتے ہی چیک کریں کہ ایڈمن لاگ ان ہے یا نہیں
-    window.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const sess = await idbGet('session');
-        if (!sess || sess.role !== 'Admin') {
-          alert('آپ کے پاس ایڈمن کے حقوق نہیں ہیں۔');
-          window.location.href = 'index.html';
-          return;
-        }
-        // اگر ایڈمن ہے تو pending requests لائیں
-        fetchPendingUsers();
-      } catch (err) {
-        console.error(err);
-        alert('سیشن چیک میں مسئلہ ہوا۔ براہِ کرم دوبارہ لاگ ان کریں۔');
-        window.location.href = 'index.html';
-      }
-    });
-
-    // لاگ آؤٹ: session ڈیلیٹ کر کے انڈیکس پر ری ڈائریکٹ کریں
-    logoutBtn.addEventListener('click', async () => {
-      await idbDel('session');
-      window.location.href = 'index.html';
-    });
-
-    // pendingRequests کو Firebase سے حاصل کر کے ٹیبل میں رینڈر کرنا
-    async function fetchPendingUsers() {
-      try {
-        const snapshot = await get(pendingRef);
-        if (!snapshot.exists()) {
-          pendingTableBody.innerHTML = '<tr><td colspan="8">کوئی درخواست نہیں۔</td></tr>';
-          return;
-        }
-        const data = snapshot.val(); // object: { pushKey1: {...}, pushKey2: {...}, ... }
-        pendingTableBody.innerHTML = '';
-        let idx = 1;
-        Object.entries(data).forEach(([pushKey, userObj]) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${idx++}</td>
-            <td>${userObj.name}</td>
-            <td>${userObj.userId}</td>
-            <td>${userObj.role}</td>
-            <td>${userObj.school}</td>
-            <td>${userObj.cls || ''}</td>
-            <td>${userObj.sec || ''}</td>
-            <td>
-              <button class="approve" data-key="${pushKey}"><i class="fas fa-check"></i> منظور</button>
-              <button class="reject"  data-key="${pushKey}"><i class="fas fa-times"></i> مسترد</button>
-            </td>
-          `;
-          pendingTableBody.appendChild(tr);
-        });
-
-        // “منظور” بٹن کے لیے event listeners
-        document.querySelectorAll('.approve').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const key = btn.dataset.key;
-            await approveUser(key);
-          });
-        });
-
-        // “مسترد” بٹن کے لیے event listeners
-        document.querySelectorAll('.reject').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const key = btn.dataset.key;
-            await rejectUser(key);
-          });
-        });
-      } catch (error) {
-        console.error('Error fetching pending users:', error);
-        showMessage('درخواستیں لوڈ کرنے میں خرابی۔');
-      }
-    }
-
-    // درخواست منظور کرنا: pendingUsers سے اٹھا کر users/{userId} پر محفوظ کریں اور پھر pending سے ہٹا دیں
-    async function approveUser(pushKey) {
-      try {
-        const singleRef = child(pendingRef, pushKey);
-        const snap = await get(singleRef);
-        if (!snap.exists()) {
-          showMessage('درخواست دستیاب نہیں۔');
-          return;
-        }
-        const userObj = snap.val();
-        // users/{userId} شاخ میں active:true کے ساتھ سیٹ کریں
-        await set(child(usersRef, userObj.userId), {
-          name:   userObj.name,
-          role:   userObj.role,
-          school: userObj.school,
-          userId: userObj.userId,
-          key:    userObj.key,
-          cls:    userObj.cls || null,
-          sec:    userObj.sec || null,
-          active: true
-        });
-        // pending سے حذف کریں
-        await remove(singleRef);
-        showMessage(`User "${userObj.userId}" منظوری کے لیے قابل ہے۔`, 'success');
-        // ٹیبل ریفریش
-        fetchPendingUsers();
-      } catch (err) {
-        console.error('Error approving user:', err);
-        showMessage('درخواست منظور کرنے میں خرابی۔');
-      }
-    }
-
-    // درخواست مسترد کرنا: pending سے سیدھا حذف کریں
-    async function rejectUser(pushKey) {
-      try {
-        const singleRef = child(pendingRef, pushKey);
-        const snap = await get(singleRef);
-        if (!snap.exists()) {
-          showMessage('درخواست دستیاب نہیں۔');
-          return;
-        }
-        const userObj = snap.val();
-        await remove(singleRef);
-        showMessage(`User "${userObj.userId}" مسترد کر دیا گیا۔`, 'info');
-        fetchPendingUsers();
-      } catch (err) {
-        console.error('Error rejecting user:', err);
-        showMessage('درخواست مسترد کرنے میں خرابی۔');
-      }
-    }
-
-    // میسج باکس میں اطلاع دکھائیں
-    function showMessage(text, type = 'error') {
-      msgBox.textContent = text;
-      msgBox.style.display = 'block';
-      if (type === 'success') {
-        msgBox.style.background = '#ddffdd';
-        msgBox.style.border = '1px solid #aaffaa';
-      } else if (type === 'info') {
-        msgBox.style.background = '#eeeeff';
-        msgBox.style.border = '1px solid #aaaaff';
-      } else {
-        msgBox.style.background = '#ffdddd';
-        msgBox.style.border = '1px solid #ffaaaa';
-      }
-      setTimeout(() => {
-        msgBox.style.display = 'none';
-      }, 4000);
-    }
-  </script>
 </body>
 </html>
