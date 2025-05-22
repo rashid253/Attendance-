@@ -11,6 +11,7 @@ import {
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 const db = getDatabase();
+// Using root-level users path
 const usersRef   = dbRef(db, 'users');
 const pendingRef = dbRef(db, 'pendingUsers');
 const schoolsRef = dbRef(db, 'appData/schools');
@@ -56,6 +57,7 @@ loginForm.addEventListener('submit', async e => {
   const key    = loginForm.key.value.trim();
 
   console.log('🟢 Attempting login for:', userId, '– key entered:', key);
+  // Read from root-level users path
   const snap = await get(dbRef(db, `users/${userId}`));
   console.log('🟢 snap.exists():', snap.exists());
   if (snap.exists()) console.log('🟢 snap.val():', snap.val());
