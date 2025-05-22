@@ -5,19 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
-
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-  <!-- idb-keyval -->
+  <!-- idb-keyval (IndexedDB storage) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- PWA & jsPDF & Chart.js -->
+  <!-- Chart.js, jsPDF & AutoTable -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -101,9 +95,9 @@
       <h1><i class="fas fa-school"></i> Attendance Management</h1>
       <div class="header-buttons">
         <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
-        <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
+        <button id="restoreData"        class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
         <input type="file" id="restoreFile" accept=".json" hidden />
-        <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
+        <button id="resetData"          class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
       </div>
     </header>
 
@@ -157,7 +151,7 @@
       </div>
       <div class="table-actions">
         <button id="editSelected" disabled class="btn"><i class="fas fa-edit"></i> Edit</button>
-        <button id="doneEditing" class="btn hidden"><i class="fas fa-check"></i> Done</button>
+        <button id="doneEditing"  class="btn hidden"><i class="fas fa-check"></i> Done</button>
         <button id="deleteSelected" disabled class="btn"><i class="fas fa-trash"></i> Delete</button>
         <button id="saveRegistration" class="btn"><i class="fas fa-save"></i> Save</button>
         <button id="editRegistration" class="btn hidden"><i class="fas fa-undo"></i> Restore</button>
@@ -185,7 +179,7 @@
 
     <!-- 6. ANALYTICS -->
     <section id="analytics-section" class="card">
-      <h2><i class="fas fa-chart-bar"></i> Analytics <button id="analyticsFilterBtn"><i class="fas fa-filter"></i></button></h2>
+      <h2><i class="fas fa-chart-bar"></i> Analytics <button id="analyticsFilterBtn" class="btn"><i class="fas fa-filter"></i></button></h2>
       <div class="row-inline">
         <select id="analyticsTarget">
           <option disabled selected>-- Report For --</option>
@@ -204,20 +198,26 @@
           <option value="semester">Semester</option>
           <option value="year">Year</option>
         </select>
-        <input type="date"   id="analyticsDate" class="hidden"/>
-        <input type="month"  id="analyticsMonth" class="hidden"/>
-        <input type="month"  id="semesterStart" class="hidden"/>
-        <input type="month"  id="semesterEnd" class="hidden"/>
+        <input type="date" id="analyticsDate" class="hidden"/>
+        <input type="month" id="analyticsMonth" class="hidden"/>
+        <input type="month" id="semesterStart" class="hidden"/>
+        <input type="month" id="semesterEnd" class="hidden"/>
         <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-        <input type="text"   id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
+        <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
         <button id="loadAnalytics" class="btn"><i class="fas fa-chart-bar"></i> Load</button>
         <button id="resetAnalytics" class="btn hidden"><i class="fas fa-undo"></i> Change</button>
       </div>
       <div id="instructions" class="hidden"></div>
       <div id="analyticsContainer" class="table-wrapper hidden">
-        <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
+        <table id="analyticsTable">
+          <thead><tr></tr></thead>
+          <tbody id="analyticsBody"></tbody>
+        </table>
       </div>
-      <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
+      <div id="graphs" class="hidden">
+        <canvas id="barChart"></canvas>
+        <canvas id="pieChart"></canvas>
+      </div>
       <div id="analyticsActions" class="table-actions hidden">
         <button id="downloadAnalytics" class="btn"><i class="fas fa-download"></i> Download</button>
         <button id="shareAnalytics" class="btn"><i class="fas fa-share-alt"></i> Share</button>
@@ -236,15 +236,15 @@
       </div>
       <div class="table-actions">
         <button id="changeRegister" class="btn hidden"><i class="fas fa-undo"></i> Reset</button>
-        <button id="saveRegister"   class="btn hidden"><i class="fas fa-save"></i> Save</button>
+        <button id="saveRegister" class="btn hidden"><i class="fas fa-save"></i> Save</button>
         <button id="downloadRegister" class="btn"><i class="fas fa-download"></i> Download</button>
-        <button id="shareRegister"    class="btn hidden"><i class="fas fa-share-alt"></i> Share</button>
+        <button id="shareRegister" class="btn hidden"><i class="fas fa-share-alt"></i> Share</button>
       </div>
     </section>
 
   </div>
 
-  <!-- Load configuration, auth and app scripts -->
+  <!-- Load Firebase config, auth and app scripts -->
   <script type="module" src="firebase-config.js"></script>
   <script type="module" src="auth.js"></script>
   <script type="module" src="app.js"></script>
