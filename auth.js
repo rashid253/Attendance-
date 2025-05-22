@@ -9,7 +9,8 @@ import {
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 const db = getDatabase();
-const USERS_PATH   = 'appData/users';    // ← correctly point here
+// Paths
+const USERS_PATH   = 'appData/users';
 const PENDING_PATH = 'pendingUsers';
 const SCHOOLS_PATH = 'appData/schools';
 
@@ -19,12 +20,12 @@ const signupForm  = document.getElementById('signupForm');
 const signupRole  = document.getElementById('signupRole');
 const classFields = document.getElementById('classSectionFields');
 
-// Toggle class/section on role change
+// Show/hide class-section fields based on role
 signupRole.addEventListener('change', () => {
   classFields.classList.toggle('hidden', signupRole.value !== 'Teacher');
 });
 
-// Sign-Up → push into pendingUsers
+// Sign Up: push to pendingUsers
 signupForm.addEventListener('submit', async e => {
   e.preventDefault();
   const name   = signupForm.name.value.trim();
@@ -35,19 +36,19 @@ signupForm.addEventListener('submit', async e => {
   const cls    = role === 'Teacher' ? signupForm.cls.value : null;
   const sec    = role === 'Teacher' ? signupForm.sec.value : null;
 
-  if (!name || !role || !school || !uid || !key || (role==='Teacher' && (!cls||!sec))) {
-    return alert('تمام فیلڈز بھر دیں۔');
+  if (!name || !role || !school || !uid || !key || (role === 'Teacher' && (!cls || !sec))) {
+    alert('تمام فیلڈز بھر دیں۔');
+    return;
   }
 
-  await push(dbRef(db, PENDING_PATH), {
-    name, role, school, userId: uid, key, cls, sec, active: false
-  });
+  await push(dbRef(db, PENDING_PATH), { name, role, school, userId: uid, key, cls, sec, active: false });
   alert('درخواست بھیج دی گئی۔ Admin کی منظوری پھ انتظار کریں۔');
+
   signupForm.reset();
   classFields.classList.add('hidden');
 });
 
-// Login → fetch from appData/users/{userId}
+// Login: fetch from appData/users/{userId}
 loginForm.addEventListener('submit', async e => {
   e.preventDefault();
   const userId = loginForm.userId.value.trim();
@@ -57,38 +58,35 @@ loginForm.addEventListener('submit', async e => {
   const snap = await get(dbRef(db, `${USERS_PATH}/${userId}`));
   console.log('🟢 snap.exists():', snap.exists());
   if (!snap.exists()) {
-    return alert('Invalid credentials یا approve نہیں ہوئے۔');
+    alert('Invalid credentials یا approve نہیں ہوئے۔');
+    return;
   }
 
   const user = snap.val();
   console.log('🟢 Stored key:', user.key, 'Active:', user.active);
 
   if (user.key !== key) {
-    return alert('Key غلط ہے۔');
+    alert('Key غلط ہے۔');
+    return;
   }
   if (!user.active) {
-    return alert('Account ابھی pending ہے۔');
+    alert('Account ابھی pending ہے۔');
+    return;
   }
 
-  // Success → save session and show setup
-  const session = {
-    userId,
-    role:   user.role,
-    school: user.school,
-    cls:    user.cls,
-    sec:    user.sec
-  };
+  // Save session and show setup
+  const session = { userId, role: user.role, school: user.school, cls: user.cls, sec: user.sec };
   await idbSet('session', session);
   showSetup(session);
 });
 
-// Auto-login if session exists
+// Auto-login on page load
 (async () => {
   const session = await idbGet('session');
   if (session) showSetup(session);
 })();
 
-// Show post-login setup UI
+// Show the post-login setup UI
 async function showSetup(sess) {
   document.getElementById('loginSection').classList.add('hidden');
   document.getElementById('signupSection').classList.add('hidden');
@@ -101,10 +99,11 @@ async function showSetup(sess) {
   schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach(s => schoolSelect.append(new Option(s, s)));
 
-  // Role-based UI...
+  // Role-specific UI
   const inpNew = document.getElementById('schoolInput');
   const selCls = document.getElementById('teacherClassSelect');
   const selSec = document.getElementById('teacherSectionSelect');
+
   if (sess.role === 'Admin') {
     inpNew.classList.remove('hidden');
     selCls.classList.remove('hidden');
@@ -123,15 +122,15 @@ async function showSetup(sess) {
   }
 }
 
-// Save setup
 document.getElementById('saveSetup').addEventListener('click', async () => {
   const school = document.getElementById('schoolSelect').value;
   const cls    = document.getElementById('teacherClassSelect').value;
   const sec    = document.getElementById('teacherSectionSelect').value || null;
   const sess   = await idbGet('session');
 
-  if (!school || !cls || (sess.role==='Teacher' && !sec)) {
-    return alert('تمام ضروری فیلڈز مکمل کریں۔');
+  if (!school || !cls || (sess.role === 'Teacher' && !sec)) {
+    alert('تمام ضروری فیلڈز مکمل کریں۔');
+    return;
   }
 
   await idbSet('setup', { school, cls, sec });
@@ -140,7 +139,7 @@ document.getElementById('saveSetup').addEventListener('click', async () => {
   document.getElementById('mainApp').classList.remove('hidden');
 });
 
-// Utility to disable a select and set its value
+// Utility to disable and set default value on a select
 function disable(id, val) {
   const el = document.getElementById(id);
   el.append(new Option(val, val));
