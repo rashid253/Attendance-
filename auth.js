@@ -4,17 +4,14 @@ import {
   getDatabase,
   ref as dbRef,
   push,
-  get,
-  set,
-  remove
+  get
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 const db = getDatabase();
-// Using root-level users path
-const usersRef   = dbRef(db, 'users');
-const pendingRef = dbRef(db, 'pendingUsers');
-const schoolsRef = dbRef(db, 'appData/schools');
+const USERS_PATH   = 'users';           // ← root-level users
+const PENDING_PATH = 'pendingUsers';
+const SCHOOLS_PATH = 'appData/schools';
 
 // Elements
 const loginForm   = document.getElementById('loginForm');
@@ -22,12 +19,12 @@ const signupForm  = document.getElementById('signupForm');
 const signupRole  = document.getElementById('signupRole');
 const classFields = document.getElementById('classSectionFields');
 
-// Toggle class/section inputs
+// Toggle class/section on role change
 signupRole.addEventListener('change', () => {
   classFields.classList.toggle('hidden', signupRole.value !== 'Teacher');
 });
 
-// Sign Up
+// Sign-Up → push into pendingUsers
 signupForm.addEventListener('submit', async e => {
   e.preventDefault();
   const name   = signupForm.name.value.trim();
@@ -35,72 +32,84 @@ signupForm.addEventListener('submit', async e => {
   const school = signupForm.school.value.trim();
   const uid    = signupForm.userId.value.trim();
   const key    = signupForm.key.value.trim();
-  const cls    = role==='Teacher' ? signupForm.cls.value : null;
-  const sec    = role==='Teacher' ? signupForm.sec.value : null;
+  const cls    = role === 'Teacher' ? signupForm.cls.value : null;
+  const sec    = role === 'Teacher' ? signupForm.sec.value : null;
 
-  if (!name || !role || !school || !uid || !key || (role==='Teacher' && (!cls || !sec))) {
+  if (!name || !role || !school || !uid || !key || (role==='Teacher' && (!cls||!sec))) {
     return alert('تمام فیلڈز بھر دیں۔');
   }
 
-  // Push to pendingUsers for admin approval
-  await push(pendingRef, { name, role, school, userId: uid, key, cls, sec, active: false });
+  await push(dbRef(db, PENDING_PATH), {
+    name, role, school, userId: uid, key, cls, sec, active: false
+  });
   alert('درخواست بھیج دی گئی۔ Admin کی منظوری پھ انتظار کریں۔');
-
   signupForm.reset();
   classFields.classList.add('hidden');
 });
 
-// Login
+// Login → fetch from /users/{userId}
 loginForm.addEventListener('submit', async e => {
   e.preventDefault();
   const userId = loginForm.userId.value.trim();
   const key    = loginForm.key.value.trim();
 
   console.log('🟢 Attempting login for:', userId, '– key entered:', key);
-  // Read from root-level users path
-  const snap = await get(dbRef(db, `users/${userId}`));
+  const snap = await get(dbRef(db, `${USERS_PATH}/${userId}`));
   console.log('🟢 snap.exists():', snap.exists());
-  if (snap.exists()) console.log('🟢 snap.val():', snap.val());
-
-  if (!snap.exists() || snap.val().key !== key || !snap.val().active) {
+  if (!snap.exists()) {
     return alert('Invalid credentials یا approve نہیں ہوئے۔');
   }
 
-  const u = snap.val();
-  const sess = { userId, role: u.role, school: u.school, cls: u.cls, sec: u.sec };
-  await idbSet('session', sess);
-  showSetup(sess);
+  const user = snap.val();
+  console.log('🟢 Stored key:', user.key, 'Active:', user.active);
+
+  if (user.key !== key) {
+    return alert('Key غلط ہے۔');
+  }
+  if (!user.active) {
+    return alert('Account ابھی pending ہے۔');
+  }
+
+  // Success → save session and show setup
+  const session = {
+    userId,
+    role:   user.role,
+    school: user.school,
+    cls:    user.cls,
+    sec:    user.sec
+  };
+  await idbSet('session', session);
+  showSetup(session);
 });
 
-// Auto-login
-(async ()=>{
-  const sess = await idbGet('session');
-  if (sess) showSetup(sess);
+// Auto-login if session exists
+(async () => {
+  const session = await idbGet('session');
+  if (session) showSetup(session);
 })();
 
-// Show Setup
+// Show post-login setup UI
 async function showSetup(sess) {
   document.getElementById('loginSection').classList.add('hidden');
   document.getElementById('signupSection').classList.add('hidden');
-  const setup = document.getElementById('teacher-setup');
-  setup.classList.remove('hidden');
+  document.getElementById('teacher-setup').classList.remove('hidden');
 
-  // Populate schools dropdown
-  const snap = await get(schoolsRef);
-  const opts = snap.exists() ? Object.values(snap.val()) : [];
-  const ss = document.getElementById('schoolSelect');
-  ss.innerHTML = '<option disabled selected>-- Select School --</option>';
-  opts.forEach(s => ss.append(new Option(s, s)));
+  // Load schools
+  const snap = await get(dbRef(db, SCHOOLS_PATH));
+  const schools = snap.exists() ? Object.values(snap.val()) : [];
+  const schoolSelect = document.getElementById('schoolSelect');
+  schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
+  schools.forEach(s => schoolSelect.append(new Option(s, s)));
 
-  // Role-based fields
+  // Role-based form fields...
   const inpNew = document.getElementById('schoolInput');
   const selCls = document.getElementById('teacherClassSelect');
   const selSec = document.getElementById('teacherSectionSelect');
-  if (sess.role==='Admin') {
+  if (sess.role === 'Admin') {
     inpNew.classList.remove('hidden');
     selCls.classList.remove('hidden');
     selSec.classList.remove('hidden');
-  } else if (sess.role==='Principal') {
+  } else if (sess.role === 'Principal') {
     inpNew.classList.add('hidden');
     disable('schoolSelect', sess.school);
     selCls.classList.remove('hidden');
@@ -108,15 +117,13 @@ async function showSetup(sess) {
   } else {
     inpNew.classList.add('hidden');
     disable('schoolSelect', sess.school);
-    selCls.innerHTML = '';
     disable('teacherClassSelect', sess.cls);
     selSec.classList.remove('hidden');
-    selSec.innerHTML = '';
     disable('teacherSectionSelect', sess.sec);
   }
 }
 
-// Save Setup
+// Save setup button
 document.getElementById('saveSetup').addEventListener('click', async () => {
   const school = document.getElementById('schoolSelect').value;
   const cls    = document.getElementById('teacherClassSelect').value;
@@ -133,6 +140,7 @@ document.getElementById('saveSetup').addEventListener('click', async () => {
   document.getElementById('mainApp').classList.remove('hidden');
 });
 
+// Utility to disable a select and set its value
 function disable(id, val) {
   const el = document.getElementById(id);
   el.append(new Option(val, val));
