@@ -1,78 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Attendance App | Admin Console</title>
-  <link rel="stylesheet" href="css/styles.css">
+<html><head><title>Admin Dashboard</title></head><body>
+  <h1>Pending Approvals</h1>
+  <table id="tbl"><tr><th>Email</th><th>Role</th><th>Actions</th></tr></table>
+  <script type="module">
+    import { auth } from './app.js';
+    import { onUserStateChanged } from './auth.js';
+    import { db } from './app.js';
+    import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
-  <!-- app.js initializes Firebase; admin.js will handle the admin logic -->
-  <script type="module" src="app.js"></script>
-  <script type="module" src="admin.js"></script>
-</head>
-<body>
-  <div class="container">
-    <h2>Admin Console</h2>
-    <button id="adminLogoutBtn" style="margin-bottom: 1rem;">
-      Log Out
-    </button>
-
-    <!-- Section to approve or reject user sign-ups -->
-    <section id="userApprovalSection">
-      <h3>Pending User Approvals</h3>
-      <table id="pendingUsersTable" border="1" cellpadding="8" style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>School</th>
-            <th>Requested On</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Rows will be injected by admin.js -->
-        </tbody>
-      </table>
-      <div id="userApprovalError" style="color: red; margin-top: 1rem;"></div>
-    </section>
-  </div>
-
-  <style>
-    .container {
-      max-width: 800px;
-      margin: 2rem auto;
-      font-family: Arial, sans-serif;
-      line-height: 1.4;
-    }
-    table th, table td {
-      text-align: left;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .approveBtn {
-      background-color: #28a745;
-      margin-right: 0.5rem;
-    }
-    .approveBtn:hover {
-      background-color: #218838;
-    }
-    .rejectBtn {
-      background-color: #dc3545;
-    }
-    .rejectBtn:hover {
-      background-color: #c82333;
-    }
-  </style>
-</body>
-</html>
+    onUserStateChanged(async user=>{
+      if(!user) return location='login.html';
+      // Check if admin
+      const me = (await getDocs(doc(db,'users',user.uid))).data();
+      if(me.role!=='admin') return alert('Not authorized');
+      // Load pending
+      const q = query(collection(db,'users'), where('status','==','pending'));
+      (await getDocs(q)).forEach(snap=>{
+        const d=snap.data();
+        const tr=tbl.insertRow();
+        tr.insertCell(0).textContent=d.email;
+        tr.insertCell(1).textContent=d.role;
+        const cell=tr.insertCell(2);
+        ['approved','rejected'].forEach(st=>{
+          const btn=document.createElement('button'); btn.textContent=st;
+          btn.onclick=()=> updateDoc(doc(db,'users',snap.id),{status:st}).then(()=>location.reload());
+          cell.append(btn);
+        });
+      });
+    });
+  </script>
+</body></html>
