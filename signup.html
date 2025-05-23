@@ -1,56 +1,94 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Attendance App | سائن اپ</title>
+  <title>Attendance App | Sign Up</title>
   <link rel="stylesheet" href="css/styles.css">
+
+  <!-- app.js already includes Firebase initialization -->
   <script type="module" src="app.js"></script>
   <script type="module" src="auth.js"></script>
 </head>
 <body>
   <div class="container">
-    <h2>سائن اپ کریں</h2>
+    <h2>Create an Account</h2>
     <form id="signupForm">
-      <label for="fullName">پورا نام:</label>
+      <label for="fullName">Full Name:</label>
       <input type="text" id="fullName" required>
 
-      <label for="signupEmail">ای میل:</label>
+      <label for="signupEmail">Email Address:</label>
       <input type="email" id="signupEmail" required>
 
-      <label for="signupPassword">پاس ورڈ:</label>
+      <label for="signupPassword">Password:</label>
       <input type="password" id="signupPassword" required minlength="6">
 
-      <label for="confirmPassword">پاس ورڈ دوبارہ لکھیں:</label>
+      <label for="confirmPassword">Confirm Password:</label>
       <input type="password" id="confirmPassword" required>
 
-      <label for="roleSelect">میرے طور پر رجسٹر ہوں:</label>
+      <label for="roleSelect">Register As:</label>
       <select id="roleSelect" required>
-        <option value="" disabled selected>✦ رول منتخب کریں</option>
+        <option value="" disabled selected>-- Select Role --</option>
         <option value="principal">Principal</option>
         <option value="teacher">Teacher</option>
       </select>
 
-      <!-- اگر Teacher منتخب ہوا، تو اضافی فیلڈز ظاہر ہوں -->
+      <!-- These fields only show when “Teacher” is selected -->
       <div id="teacherFields" class="hidden">
-        <label for="teacherSchool">اسکول کا نام:</label>
+        <label for="teacherSchool">School Name:</label>
         <input type="text" id="teacherSchool">
 
-        <label for="teacherClass">کلاس:</label>
+        <label for="teacherClass">Class:</label>
         <input type="text" id="teacherClass">
 
-        <label for="teacherSection">سیکشن:</label>
+        <label for="teacherSection">Section:</label>
         <input type="text" id="teacherSection">
       </div>
 
-      <button type="submit">سائن اپ کریں</button>
+      <button type="submit">Sign Up</button>
     </form>
-    <p>اکاؤنٹ ہے؟ <a href="login.html">لاگ اِن کریں</a></p>
-    <div id="signupError" class="error-message"></div>
+
+    <p>Already have an account? <a href="login.html">Log In</a></p>
+    <div id="signupError" class="error-message" style="color: red; margin-top: 1rem;"></div>
   </div>
 
   <style>
-    /* Teacher کے لیے اضافی فیلڈز چھپانے/دکھانے کی کلاس */
+    /* Hide the Teacher-only fields by default */
     .hidden { display: none; }
+    /* Basic styling for readability */
+    .container {
+      max-width: 400px;
+      margin: 2rem auto;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
   </style>
 </body>
 </html>
