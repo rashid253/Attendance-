@@ -1,25 +1,29 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Attendance App | لاگ اِن</title>
+  <title>Attendance App | Login</title>
   <link rel="stylesheet" href="css/styles.css">
-  <!-- چونکہ Firebase کنفیگریشن اور initializeApp پہلے ہی app.js میں ہے، اسے شامل کریں -->
+
+  <!-- app.js already includes Firebase initialization -->
   <script type="module" src="app.js"></script>
   <script type="module" src="auth.js"></script>
 </head>
 <body>
   <div class="container">
-    <h2>لاگ اِن کریں</h2>
+    <h2>Login</h2>
     <form id="loginForm">
-      <label for="loginEmail">ای میل:</label>
+      <label for="loginEmail">Email Address:</label>
       <input type="email" id="loginEmail" required>
-      <label for="loginPassword">پاس ورڈ:</label>
+
+      <label for="loginPassword">Password:</label>
       <input type="password" id="loginPassword" required>
-      <button type="submit">لاگ اِن</button>
+
+      <button type="submit">Log In</button>
     </form>
-    <p>نیا اکاؤنٹ؟ <a href="signup.html">سائن اپ کریں</a></p>
-    <div id="loginError" class="error-message"></div>
+
+    <p>Don’t have an account? <a href="signup.html">Sign Up</a></p>
+    <div id="loginError" class="error-message" style="color: red; margin-top: 1rem;"></div>
   </div>
 </body>
 </html>
