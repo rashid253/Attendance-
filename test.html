@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>SDK Test</title></head>
+<body>
+  <h1>Firebase SDK Import Test</h1>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+    // Paste your exact config object here:
+    const firebaseConfig = {
+      apiKey: "AIzaSy…",
+      authDomain: "attandace-management.firebaseapp.com",
+      databaseURL: "https://…firebaseio.com",
+      projectId: "attandace-management",
+      storageBucket: "…",
+      messagingSenderId: "…",
+      appId: "…"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, user => {
+      console.log("Auth state changed:", user);
+      document.body.insertAdjacentHTML("beforeend",
+        `<p>Logged in? ${user ? "YES" : "NO"}</p>`);
+    });
+  </script>
+</body>
+</html>
