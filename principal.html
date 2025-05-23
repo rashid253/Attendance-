@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Principal Dashboard</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body { font-family: sans-serif; }
+    .app-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #2196F3; color: white; }
+    .btn { margin: 0 .5rem; }
+  </style>
+</head>
+<body>
+  <!-- 1. Route‐guard: only principals may view -->
+  <script type="module">
+    import { auth, onAuthStateChanged, signOut } from './firebase.js';
+    onAuthStateChanged(auth, async user => {
+      if (!user) return window.location = 'index.html';
+      const token = await user.getIdTokenResult();
+      if (token.claims.role !== 'principal') {
+        await signOut(auth);
+        return window.location = 'index.html';
+      }
+      // user is principal—page will render below
+    });
+  </script>
+
+  <!-- 2. Header & Sign Out -->
+  <header class="app-header">
+    <div><i class="fas fa-school"></i> Principal Dashboard</div>
+    <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+  </header>
+
+  <!-- 3. Include the same main-app sections from index.html -->
+  <div id="main-app">
+    <!-- Setup / Financial Settings / Counters / Registration / Attendance / Analytics / Register -->
+    <!-- Copy the <section id="teacher-setup">…</section> and all other sections here -->
+    <!-- For principal, you may collapse teacher-specific UI, but you can reuse the same sections -->
+  </div>
+
+  <!-- 4. Scripts -->
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const { signOut, auth } = await import('./firebase.js');
+      await signOut(auth);
+      location = 'index.html';
+    });
+  </script>
+  <script src="firebase.js" defer></script>
+  <script src="auth.js" defer></script>
+  <script src="api.js" defer></script>
+  <script type="module" src="app.js"></script>
+  <script>
+    // Optionally hide teacher‐only controls if any, or automatically set current user’s school context
+  </script>
+</body>
+</html>
