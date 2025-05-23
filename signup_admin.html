@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><title>Admin Dashboard</title></head><body>
+  <h1>Pending Approvals</h1>
+  <table id="tbl"><tr><th>Email</th><th>Role</th><th>Actions</th></tr></table>
+  <script type="module">
+    import { auth } from './app.js';
+    import { onUserStateChanged } from './auth.js';
+    import { db } from './app.js';
+    import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+
+    onUserStateChanged(async user=>{
+      if(!user) return location='login.html';
+      // Check if admin
+      const me = (await getDocs(doc(db,'users',user.uid))).data();
+      if(me.role!=='admin') return alert('Not authorized');
+      // Load pending
+      const q = query(collection(db,'users'), where('status','==','pending'));
+      (await getDocs(q)).forEach(snap=>{
+        const d=snap.data();
+        const tr=tbl.insertRow();
+        tr.insertCell(0).textContent=d.email;
+        tr.insertCell(1).textContent=d.role;
+        const cell=tr.insertCell(2);
+        ['approved','rejected'].forEach(st=>{
+          const btn=document.createElement('button'); btn.textContent=st;
+          btn.onclick=()=> updateDoc(doc(db,'users',snap.id),{status:st}).then(()=>location.reload());
+          cell.append(btn);
+        });
+      });
+    });
+  </script>
+</body></html>
