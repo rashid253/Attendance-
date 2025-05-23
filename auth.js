@@ -1,31 +1,73 @@
-// auth.js
-import { auth, db } from './app.js';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+// File: auth.js
 
-// Sign up (principal or teacher)
-export async function signup(email, pass, role, extra = {}) {
-  const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-  await setDoc(doc(db, 'users', user.uid), { uid: user.uid, email, role, status: 'pending', ...extra });
-  return user;
+import { auth } from './firebase.js';
+import { requestSignup, redirectBasedOnRole } from './api.js';
+
+// Login form handler
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = loginForm['loginEmail'].value;
+    const password = loginForm['loginPassword'].value;
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
 }
 
-// Login
-export function login(email, pass) {
-  return signInWithEmailAndPassword(auth, email, pass);
+// Principal signup handler
+const signupPrincipalForm = document.getElementById('signupPrincipalForm');
+if (signupPrincipalForm) {
+  signupPrincipalForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = signupPrincipalForm['principalEmail'].value;
+    const password = signupPrincipalForm['principalPassword'].value;
+    try {
+      const { user } = await auth.createUserWithEmailAndPassword(email, password);
+      await requestSignup(user.uid, 'principal', {});
+      alert('Signup request submitted. Await admin approval.');
+      signupPrincipalForm.reset();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
 }
 
-// Logout
-export function logout() {
-  return signOut(auth);
+// Teacher signup handler
+const signupTeacherForm = document.getElementById('signupTeacherForm');
+if (signupTeacherForm) {
+  signupTeacherForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = signupTeacherForm['teacherEmail'].value;
+    const password = signupTeacherForm['teacherPassword'].value;
+    const school = signupTeacherForm['teacherSchool'].value;
+    const clazz = signupTeacherForm['teacherClass'].value;
+    const section = signupTeacherForm['teacherSection'].value;
+    try {
+      const { user } = await auth.createUserWithEmailAndPassword(email, password);
+      await requestSignup(user.uid, 'teacher', { school, clazz, section });
+      alert('Signup request submitted. Await admin approval.');
+      signupTeacherForm.reset();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
 }
 
-// Listen to auth changes
-export function onUserStateChanged(cb) {
-  return onAuthStateChanged(auth, cb);
+// Auth state & route-guard
+auth.onAuthStateChanged(async user => {
+  if (!user) return;
+  const idToken = await user.getIdTokenResult();
+  if (idToken.claims.role) {
+    redirectBasedOnRole(idToken.claims.role);
+  }
+});
+
+// Sign-out helper
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => auth.signOut());
 }
