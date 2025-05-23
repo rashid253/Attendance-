@@ -1,19 +1,54 @@
-// app.js (with per-school data segregation)
+// // app.js (with per-school data segregation)
 // -------------------------------------------------------------------------------------------------
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import {
-  getDatabase,
-  ref as dbRef,
-  set as dbSet,
-  onValue,
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase configuration (replace with your actual config)
-import { database, appDataRef, dbRef, dbSet, onValue } from './firebase.js';
+// Import only from your shared firebase.js—no SDK URLs or config here
+import {
+  database,
+  appDataRef,
+  dbRef,
+  dbSet,
+  onValue
+} from './firebase.js';
+
+// ----------------------
+// Now your per-school mappings and application logic can follow:
+
+// Example: ensure each school has its own data structures
+function ensureSchoolData(school) {
+  if (!studentsBySchool[school]) {
+    studentsBySchool[school]     = {};
+    attendanceDataBySchool[school] = {};
+    paymentsBySchool[school]     = {};
+    settingsBySchool[school]     = {};
+  }
+}
+
+// Initialize local state from IndexedDB then sync from Firebase
+async function initLocalState() {
+  const saved = await idbGet('appData');
+  if (saved) {
+    Object.assign(localAppData, saved);
+  }
+  // Listen to real-time updates
+  onValue(appDataRef, snapshot => {
+    const remote = snapshot.val() || {};
+    // merge remote into localAppData...
+    Object.assign(localAppData, remote);
+    // then persist locally
+    idbSet('appData', localAppData);
+    renderAll();
+  });
+}
+
+// To push updates back to Firebase:
+function syncToFirebase() {
+  dbSet(appDataRef, localAppData);
+}
+
+// Continue with the rest of your app.js code...
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
