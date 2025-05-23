@@ -27,10 +27,6 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-export const auth = getAuth(app);
-export const db = getFirestore(app);
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
