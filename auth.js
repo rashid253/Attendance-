@@ -1,73 +1,64 @@
 // File: auth.js
+// -------------------------------------------------------------------------------------------------
 
-import { auth } from './firebase.js';
-import { requestSignup, redirectBasedOnRole } from './api.js';
+import {
+  auth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
+} from './firebase.js';
 
-// Login form handler
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-  loginForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    const email = loginForm['loginEmail'].value;
-    const password = loginForm['loginPassword'].value;
-    try {
-      await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-}
+import { requestSignup, initAuthListener } from './api.js';
 
-// Principal signup handler
-const signupPrincipalForm = document.getElementById('signupPrincipalForm');
-if (signupPrincipalForm) {
-  signupPrincipalForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    const email = signupPrincipalForm['principalEmail'].value;
-    const password = signupPrincipalForm['principalPassword'].value;
-    try {
-      const { user } = await auth.createUserWithEmailAndPassword(email, password);
-      await requestSignup(user.uid, 'principal', {});
-      alert('Signup request submitted. Await admin approval.');
-      signupPrincipalForm.reset();
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-}
+// ----------------------------
+// 1. Auto-redirect based on login
+initAuthListener();
 
-// Teacher signup handler
-const signupTeacherForm = document.getElementById('signupTeacherForm');
-if (signupTeacherForm) {
-  signupTeacherForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    const email = signupTeacherForm['teacherEmail'].value;
-    const password = signupTeacherForm['teacherPassword'].value;
-    const school = signupTeacherForm['teacherSchool'].value;
-    const clazz = signupTeacherForm['teacherClass'].value;
-    const section = signupTeacherForm['teacherSection'].value;
-    try {
-      const { user } = await auth.createUserWithEmailAndPassword(email, password);
-      await requestSignup(user.uid, 'teacher', { school, clazz, section });
-      alert('Signup request submitted. Await admin approval.');
-      signupTeacherForm.reset();
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-}
-
-// Auth state & route-guard
-auth.onAuthStateChanged(async user => {
-  if (!user) return;
-  const idToken = await user.getIdTokenResult();
-  if (idToken.claims.role) {
-    redirectBasedOnRole(idToken.claims.role);
+// ----------------------------
+// 2. Login Form Handler
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = e.target.loginEmail.value;
+  const password = e.target.loginPassword.value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    // Auth listener handles redirection
+  } catch (err) {
+    alert('Login failed: ' + err.message);
   }
 });
 
-// Sign-out helper
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', () => auth.signOut());
-}
+// ----------------------------
+// 3. Principal Signup Request
+document.getElementById('signupPrincipalForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = e.target.principalEmail.value;
+  const password = e.target.principalPassword.value;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await requestSignup(cred.user.uid, 'principal');
+    alert('Signup request sent. Wait for admin approval.');
+    signOut(auth);
+  } catch (err) {
+    alert('Signup failed: ' + err.message);
+  }
+});
+
+// ----------------------------
+// 4. Teacher Signup Request
+document.getElementById('signupTeacherForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = e.target.teacherEmail.value;
+  const password = e.target.teacherPassword.value;
+  const school = e.target.teacherSchool.value;
+  const className = e.target.teacherClass.value;
+  const section = e.target.teacherSection.value;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await requestSignup(cred.user.uid, 'teacher', { school, className, section });
+    alert('Signup request sent. Wait for admin approval.');
+    signOut(auth);
+  } catch (err) {
+    alert('Signup failed: ' + err.message);
+  }
+});
