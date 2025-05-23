@@ -5,59 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Panel – Approve Signups</title>
 
-  <!-- Firebase SDKs (Auth + Firestore) -->
+  <!-- Import Firebase App & Config -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import "./firebase-config.js";
+
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import {
       getFirestore,
       collection,
       query,
-      where,
       getDocs,
-      updateDoc,
-      deleteDoc,
       doc,
-      setDoc
+      getDoc,
+      setDoc,
+      deleteDoc
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    // Firebase config (same as in index.html)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsx…EpICEzA",
-      authDomain: "attandace-management.firebaseapp.com",
-      projectId: "attandace-management",
-      storageBucket: "attandace-management.appspot.com",
-      messagingSenderId: "222685278846",
-      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-      measurementId: "G-V2MY85R73B",
-      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-    };
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const auth = getAuth();
+    const db   = getFirestore();
 
     // DOM elements
     const requestsTableBody = document.getElementById("requests-body");
     const logoutBtn = document.getElementById("logout-btn");
 
-    // Utility: show/hide
-    function show(el) { el.classList.remove("hidden"); }
-    function hide(el) { el.classList.add("hidden"); }
-
     // Ensure only Admin can view this page
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // Not logged in, redirect to index.html
         window.location.href = "index.html";
         return;
       }
-      // Check Firestore users/{uid}
       const userDocRef = doc(db, "users", user.uid);
-      const userSnap = await userDocRef.get();
+      const userSnap = await getDoc(userDocRef);
       if (!userSnap.exists() || userSnap.data().role !== "admin") {
         alert("Access denied. Only Admins can view this page.");
         await signOut(auth);
@@ -68,7 +46,6 @@
       loadPendingRequests();
     });
 
-    // Load all documents in "pendingRequests"
     async function loadPendingRequests() {
       requestsTableBody.innerHTML = "";
       const q = query(collection(db, "pendingRequests"));
@@ -87,7 +64,6 @@
         requestsTableBody.appendChild(row);
       });
 
-      // Attach event listeners
       document.querySelectorAll(".approve-btn").forEach((btn) => {
         btn.onclick = () => handleApprove(btn.dataset.id);
       });
@@ -96,32 +72,24 @@
       });
     }
 
-    // Approve a pending request
     async function handleApprove(requestId) {
       const reqDocRef = doc(db, "pendingRequests", requestId);
       const reqSnap = await getDoc(reqDocRef);
       if (!reqSnap.exists()) return;
 
       const { uid, name, email, role } = reqSnap.data();
-      // Create user profile in "users/{uid}"
       const userDocRef = doc(db, "users", uid);
       await setDoc(userDocRef, { name, email, role, approvedAt: Date.now() });
-
-      // Remove from pendingRequests
       await deleteDoc(reqDocRef);
-
-      // Refresh table
       loadPendingRequests();
     }
 
-    // Reject a pending request
     async function handleReject(requestId) {
       const reqDocRef = doc(db, "pendingRequests", requestId);
       await deleteDoc(reqDocRef);
       loadPendingRequests();
     }
 
-    // Logout
     logoutBtn.onclick = async () => {
       await signOut(auth);
       window.location.href = "index.html";
