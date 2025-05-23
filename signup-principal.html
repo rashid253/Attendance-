@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><title>Principal Sign Up</title></head><body>
+  <h1>Principal Sign Up</h1>
+  <form id="form">
+    <input type="email" id="email" required placeholder="Email">
+    <input type="password" id="pass" required placeholder="Password">
+    <button type="submit">Sign Up</button>
+  </form>
+  <script type="module">
+    import { signup } from './auth.js';
+    document.getElementById('form').addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        await signup(e.target.email.value, e.target.pass.value, 'principal');
+        alert('Signed up! Wait for admin approval.');
+        location='login.html';
+      } catch(err){ alert(err.message); }
+    });
+  </script>
+</body></html>
