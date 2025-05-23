@@ -43,6 +43,103 @@
   </style>
 </head>
 <body>
+  <!-- Add this at the very top of your <body> in index.html, before the <header> -->
+
+<div id="auth-container">
+  <!-- LOGIN FORM -->
+  <form id="loginForm" class="auth-form">
+    <h2>Login</h2>
+    <label>
+      Email
+      <input type="email" id="loginEmail" name="loginEmail" required />
+    </label>
+    <label>
+      Password
+      <input type="password" id="loginPassword" name="loginPassword" required />
+    </label>
+    <button type="submit" class="btn">Sign In</button>
+    <p><a href="#" id="showSignupPrincipal">Signup as Principal</a> |
+       <a href="#" id="showSignupTeacher">Signup as Teacher</a></p>
+  </form>
+
+  <!-- PRINCIPAL SIGNUP FORM (hidden by default) -->
+  <form id="signupPrincipalForm" class="auth-form hidden">
+    <h2>Signup as Principal</h2>
+    <label>
+      Email
+      <input type="email" id="principalEmail" name="principalEmail" required />
+    </label>
+    <label>
+      Password
+      <input type="password" id="principalPassword" name="principalPassword" required />
+    </label>
+    <button type="submit" class="btn">Request Signup</button>
+    <p><a href="#" id="backToLoginFromPrincipal">Back to Login</a></p>
+  </form>
+
+  <!-- TEACHER SIGNUP FORM (hidden by default) -->
+  <form id="signupTeacherForm" class="auth-form hidden">
+    <h2>Signup as Teacher</h2>
+    <label>
+      Email
+      <input type="email" id="teacherEmail" name="teacherEmail" required />
+    </label>
+    <label>
+      Password
+      <input type="password" id="teacherPassword" name="teacherPassword" required />
+    </label>
+    <label>
+      School
+      <input type="text" id="teacherSchool" name="teacherSchool" required />
+    </label>
+    <label>
+      Class
+      <select id="teacherClass" name="teacherClass" required>
+        <option disabled selected>-- Select Class --</option>
+        <option>Play Group</option><option>Nursery</option><option>KG</option>
+        <option>Class One</option>…<option>Class Ten</option>
+      </select>
+    </label>
+    <label>
+      Section
+      <select id="teacherSection" name="teacherSection" required>
+        <option disabled selected>-- Select Section --</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+    </label>
+    <button type="submit" class="btn">Request Signup</button>
+    <p><a href="#" id="backToLoginFromTeacher">Back to Login</a></p>
+  </form>
+</div>
+
+<!-- Then add this small script snippet (below your other <script> tags) to toggle between forms: -->
+<script>
+  const loginForm = document.getElementById('loginForm');
+  const princForm = document.getElementById('signupPrincipalForm');
+  const teachForm = document.getElementById('signupTeacherForm');
+
+  document.getElementById('showSignupPrincipal').onclick = e => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    princForm.classList.remove('hidden');
+  };
+  document.getElementById('backToLoginFromPrincipal').onclick = e => {
+    e.preventDefault();
+    princForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  };
+
+  document.getElementById('showSignupTeacher').onclick = e => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    teachForm.classList.remove('hidden');
+  };
+  document.getElementById('backToLoginFromTeacher').onclick = e => {
+    e.preventDefault();
+    teachForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  };
+</script>
   <header class="app-header">
     <h1><i class="fas fa-school"></i> Attendance Management</h1>
     <div class="header-buttons">
