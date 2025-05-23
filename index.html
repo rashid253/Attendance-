@@ -11,11 +11,8 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome (HTTPS) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <!-- idb-keyval (IIFE) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
@@ -46,28 +43,13 @@
   </style>
 </head>
 <body>
-   <header class="app-header">
-    <h1>
-      <i class="fas fa-school"></i>
-      Attendance Management
-    </h1>
+  <header class="app-header">
+    <h1><i class="fas fa-school"></i> Attendance Management</h1>
     <div class="header-buttons">
-      <button id="chooseBackupFolder" class="btn">
-        <i class="fas fa-folder-open"></i>
-        Select Backup Folder
-      </button>
-
-      <button id="restoreData" class="btn">
-        <i class="fas fa-upload"></i>
-        Restore Backup
-      </button>
-      <!-- hidden file input for restore -->
+      <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
+      <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
       <input type="file" id="restoreFile" accept=".json" hidden />
-
-      <button id="resetData" class="btn btn-danger">
-        <i class="fas fa-trash-alt"></i>
-        Factory Reset
-      </button>
+      <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
     </div>
   </header>
 
@@ -113,7 +95,7 @@
     </div>
   </section>
 
-  <!-- 3. COUNTERS (dynamic via JS) -->
+  <!-- 3. COUNTERS -->
   <section id="animatedCounters">
     <div id="countersContainer" class="scroll-row"></div>
   </section>
@@ -277,25 +259,25 @@
     </div>
   </div>
 
-  <!-- Load your main script as an ES module -->
+  <!-- Firebase + auth + API scripts -->
+  <script src="firebase.js"></script>
+  <script src="auth.js"></script>
+  <script src="api.js"></script>
+  <script src="notify.js"></script>
+
+  <!-- Main app logic as ES module -->
   <script type="module" src="app.js"></script>
 
-  <!-- Register service worker as a module -->
+  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('service-worker.js', { type: 'module' })
-          .then(reg => console.log('Service Worker registered as module:', reg))
+          .then(reg => console.log('SW registered:', reg))
           .catch(err => console.error('SW registration failed:', err));
       });
     }
   </script>
-  <!-- at bottom of index.html, admin.html, etc. -->
-<script src="firebase.js"></script>
-<script src="auth.js"></script>
-<script src="api.js"></script>
-<script src="notify.js"></script>
-<script src="app.js"></script>
 </body>
 </html>
