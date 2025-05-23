@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance App | لاگ اِن</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- چونکہ Firebase کنفیگریشن اور initializeApp پہلے ہی app.js میں ہے، اسے شامل کریں -->
+  <script type="module" src="app.js"></script>
+  <script type="module" src="auth.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>لاگ اِن کریں</h2>
+    <form id="loginForm">
+      <label for="loginEmail">ای میل:</label>
+      <input type="email" id="loginEmail" required>
+      <label for="loginPassword">پاس ورڈ:</label>
+      <input type="password" id="loginPassword" required>
+      <button type="submit">لاگ اِن</button>
+    </form>
+    <p>نیا اکاؤنٹ؟ <a href="signup.html">سائن اپ کریں</a></p>
+    <div id="loginError" class="error-message"></div>
+  </div>
+</body>
+</html>
