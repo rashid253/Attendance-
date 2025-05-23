@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance App | سائن اپ</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="app.js"></script>
+  <script type="module" src="auth.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>سائن اپ کریں</h2>
+    <form id="signupForm">
+      <label for="fullName">پورا نام:</label>
+      <input type="text" id="fullName" required>
+
+      <label for="signupEmail">ای میل:</label>
+      <input type="email" id="signupEmail" required>
+
+      <label for="signupPassword">پاس ورڈ:</label>
+      <input type="password" id="signupPassword" required minlength="6">
+
+      <label for="confirmPassword">پاس ورڈ دوبارہ لکھیں:</label>
+      <input type="password" id="confirmPassword" required>
+
+      <label for="roleSelect">میرے طور پر رجسٹر ہوں:</label>
+      <select id="roleSelect" required>
+        <option value="" disabled selected>✦ رول منتخب کریں</option>
+        <option value="principal">Principal</option>
+        <option value="teacher">Teacher</option>
+      </select>
+
+      <!-- اگر Teacher منتخب ہوا، تو اضافی فیلڈز ظاہر ہوں -->
+      <div id="teacherFields" class="hidden">
+        <label for="teacherSchool">اسکول کا نام:</label>
+        <input type="text" id="teacherSchool">
+
+        <label for="teacherClass">کلاس:</label>
+        <input type="text" id="teacherClass">
+
+        <label for="teacherSection">سیکشن:</label>
+        <input type="text" id="teacherSection">
+      </div>
+
+      <button type="submit">سائن اپ کریں</button>
+    </form>
+    <p>اکاؤنٹ ہے؟ <a href="login.html">لاگ اِن کریں</a></p>
+    <div id="signupError" class="error-message"></div>
+  </div>
+
+  <style>
+    /* Teacher کے لیے اضافی فیلڈز چھپانے/دکھانے کی کلاس */
+    .hidden { display: none; }
+  </style>
+</body>
+</html>
