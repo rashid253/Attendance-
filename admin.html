@@ -1,32 +1,109 @@
 <!DOCTYPE html>
-<html><head><title>Admin Dashboard</title></head><body>
-  <h1>Pending Approvals</h1>
-  <table id="tbl"><tr><th>Email</th><th>Role</th><th>Actions</th></tr></table>
-  <script type="module">
-    import { auth } from './app.js';
-    import { onUserStateChanged } from './auth.js';
-    import { db } from './app.js';
-    import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard – Approvals</title>
 
-    onUserStateChanged(async user=>{
-      if(!user) return location='login.html';
-      // Check if admin
-      const me = (await getDocs(doc(db,'users',user.uid))).data();
-      if(me.role!=='admin') return alert('Not authorized');
-      // Load pending
-      const q = query(collection(db,'users'), where('status','==','pending'));
-      (await getDocs(q)).forEach(snap=>{
-        const d=snap.data();
-        const tr=tbl.insertRow();
-        tr.insertCell(0).textContent=d.email;
-        tr.insertCell(1).textContent=d.role;
-        const cell=tr.insertCell(2);
-        ['approved','rejected'].forEach(st=>{
-          const btn=document.createElement('button'); btn.textContent=st;
-          btn.onclick=()=> updateDoc(doc(db,'users',snap.id),{status:st}).then(()=>location.reload());
-          cell.append(btn);
-        });
-      });
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: .5rem; border: 1px solid #ccc; text-align: left; }
+    button { margin-right: .5rem; }
+    #logoutBtn { float: right; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Admin Dashboard</h1>
+    <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+  </header>
+
+  <section>
+    <h2>Pending Signup Requests</h2>
+    <table id="approvalsTable">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Meta</th>
+          <th>Requested At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filled dynamically -->
+      </tbody>
+    </table>
+    <p id="noRequests" class="hidden">No pending requests.</p>
+  </section>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { auth, onAuthStateChanged, signOut } from './firebase.js';
+    import { fetchPendingApprovals, handleApproval } from './api.js';
+
+    // 1. Route-guard: only admin may view
+    onAuthStateChanged(auth, async user => {
+      if (!user) return window.location = 'index.html';
+      const token = await user.getIdTokenResult();
+      if (token.claims.role !== 'admin') {
+        await signOut(auth);
+        return window.location = 'index.html';
+      }
+      loadApprovals();
     });
+
+    // 2. Sign-out
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location = 'index.html';
+    });
+
+    // 3. Load & render pending requests
+    async function loadApprovals() {
+      const tbody = document.querySelector('#approvalsTable tbody');
+      tbody.innerHTML = '';
+      const requests = await fetchPendingApprovals(); // returns array of { uid, role, meta, requestedAt, email }
+      if (requests.length === 0) {
+        document.getElementById('approvalsTable').classList.add('hidden');
+        document.getElementById('noRequests').classList.remove('hidden');
+        return;
+      }
+      requests.forEach(req => {
+        const tr = document.createElement('tr');
+        const date = new Date(req.requestedAt).toLocaleString();
+        tr.innerHTML = `
+          <td>${req.meta.email || ''}</td>
+          <td>${req.role}</td>
+          <td>${JSON.stringify(req.meta)}</td>
+          <td>${date}</td>
+          <td>
+            <button class="approve btn">Approve</button>
+            <button class="reject btn">Reject</button>
+          </td>`;
+        tr.querySelector('.approve').onclick = async () => {
+          await handleApproval(req.uid, true, req.role);
+          tr.remove();
+        };
+        tr.querySelector('.reject').onclick = async () => {
+          await handleApproval(req.uid, false, req.role);
+          tr.remove();
+        };
+        tbody.appendChild(tr);
+      });
+    }
   </script>
-</body></html>
+
+  <!-- Shared scripts -->
+  <script src="firebase.js" defer></script>
+  <script src="api.js" defer></script>
+</body>
+</html>
