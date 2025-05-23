@@ -27,10 +27,12 @@
   <!-- Chart.js (IIFE) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Firebase SDKs (Auth + Firestore) -->
+  <!-- Firebase App, Auth, Firestore via separate config file -->
   <script type="module">
-    // Firebase App (the core Firebase SDK) is always required and must be listed first
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    // 1) First, import and run firebase-config.js so that initializeApp(...) is called.
+    import "./firebase-config.js";
+
+    // 2) Now import Auth and Firestore functions from modular SDK:
     import {
       getAuth,
       onAuthStateChanged,
@@ -42,31 +44,18 @@
       getFirestore,
       doc,
       setDoc,
-      getDoc,
       collection,
       addDoc,
-      query,
-      where,
-      getDocs,
-      updateDoc,
-      deleteDoc,
+      getDoc,
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    // Your existing Firebase config (same as in app.js)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsx…EpICEzA",
-      authDomain: "attandace-management.firebaseapp.com",
-      projectId: "attandace-management",
-      storageBucket: "attandace-management.appspot.com",
-      messagingSenderId: "222685278846",
-      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-      measurementId: "G-V2MY85R73B",
-      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-    };
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Initialize Auth & Firestore instances
+    const auth = getAuth();
+    const db   = getFirestore();
+
+    // Expose to window so app.js & auth.js can use
+    window.firebaseAuthInstance = auth;
+    window.firestoreInstance    = db;
 
     // DOM elements
     const loginContainer   = document.getElementById("login-container");
@@ -89,11 +78,11 @@
     const signupBtn           = document.getElementById("signup-btn");
     const showLoginLink       = document.getElementById("show-login");
 
-    // Utility: show/hide sections
-    function show(element) { element.classList.remove("hidden"); }
-    function hide(element) { element.classList.add("hidden"); }
+    // Utility: show/hide
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
 
-    // On load, hide everything except login
+    // On load, only show login
     hide(signupContainer);
     hide(mainAppContainer);
 
@@ -125,7 +114,7 @@
       }
     };
 
-    // Handle Signup: create user in Auth and add to "pendingRequests" in Firestore
+    // Handle Signup: create user in Auth and add to pendingRequests or auto‐admin
     signupBtn.onclick = async (e) => {
       e.preventDefault();
       const name = signupNameInput.value.trim();
@@ -138,57 +127,76 @@
       }
       try {
         const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-        // Add a pending request in Firestore
-        await addDoc(collection(db, "pendingRequests"), {
-          uid: user.uid,
-          name,
-          email,
-          role,
-          timestamp: Date.now(),
-        });
-        alert("Signup request submitted. Please wait for admin approval.");
-        // Immediately sign out so they cannot access the app until approved
-        await signOut(auth);
+
+        // Check if this is the very first user in Firestore → auto‐make them Admin
+        const usersCol = collection(db, "users");
+        const snapshot = await getDoc(doc(db, "users", user.uid)); 
+        const allUsersSnapshot = await usersCol.get();
+        if (!allUsersSnapshot.size) {
+          // First ever user → force-admin
+          await setDoc(doc(db, "users", user.uid), {
+            name,
+            email,
+            role: "admin",
+            approvedAt: Date.now(),
+          });
+          alert("You’ve been registered as the first Admin. Please log in again.");
+          await signOut(auth);
+        } else {
+          // Normal flow → add to pendingRequests
+          await addDoc(collection(db, "pendingRequests"), {
+            uid: user.uid,
+            name,
+            email,
+            role,
+            timestamp: Date.now(),
+          });
+          alert("Signup request submitted. Please wait for admin approval.");
+          await signOut(auth);
+        }
       } catch (err) {
         alert(err.message);
       }
     };
 
-    // Once auth state changes:
+    // onAuthStateChanged: Show main app only if user is approved
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Check if user is approved in Firestore
-        const userDoc = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userDoc);
-        if (!docSnap.exists()) {
-          // Not approved yet; force logout
+        // Check Firestore “users/{uid}”
+        const userDocRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) {
+          // Not approved yet
           alert("Your account is not yet approved by admin.");
           await signOut(auth);
           hide(mainAppContainer);
           show(loginContainer);
           return;
         }
-        const userData = docSnap.data();
-        // Approved – show main app and pass role info
+        const userData = userSnap.data();
+        // Approved → show main UI
         hide(loginContainer);
         hide(signupContainer);
         show(mainAppContainer);
-        // If user is Admin, show link to admin.html
+
+        // If Admin, reveal “Admin Panel” link
         if (userData.role === "admin") {
           show(adminLink);
         } else {
           hide(adminLink);
         }
-        // Initialize the rest of the app (app.js) AFTER role is known
+
+        // Expose role & name globally for app.js
         window.currentUserRole = userData.role;
         window.currentUserName = userData.name;
-        // Only after this, load your existing app.js
+
+        // Dynamically load app.js (so it only runs after auth)
         const script = document.createElement("script");
         script.type = "module";
         script.src = "app.js";
         document.body.appendChild(script);
       } else {
-        // No user signed in – show login again
+        // No user signed in → show login
         hide(mainAppContainer);
         show(loginContainer);
       }
@@ -216,6 +224,7 @@
     .table-wrapper { overflow-x: auto; margin-top: 1em; }
     .table-actions { margin-top: 0.5em; }
     .counter-card .card-number { font-size: 2rem; color: #2196F3; }
+
     /* ===== New styles for login/signup ===== */
     #login-container, #signup-container {
       max-width: 400px; margin: 2em auto; padding: 1em; border: 1px solid #ccc; border-radius: 6px;
@@ -513,7 +522,7 @@
       </div>
     </div>
 
-    <!-- Note: app.js is loaded dynamically by auth.js once user is authenticated -->
+    <!-- Note: app.js is loaded dynamically by auth code once user is authenticated -->
     
     <!-- Register service worker as a module -->
     <script>
