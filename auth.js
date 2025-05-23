@@ -1,24 +1,34 @@
 // auth.js
 
-// 1) Firebase Auth اور Database کے functions امپورٹ کریں
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         onAuthStateChanged, updateProfile, sendEmailVerification, signOut }
-  from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+// Import necessary Firebase functions
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
+  sendEmailVerification,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-import { getDatabase, ref as dbRef, set as dbSet }
-  from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import {
+  getDatabase,
+  ref as dbRef,
+  set as dbSet
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// چونکہ app.js پہلے ہی initializeApp چلا چکا ہے، ہم یہاں auth اور database لے لیں:
+// Since app.js already initializes Firebase (initializeApp), just grab auth and database
 const auth = getAuth();
 const database = getDatabase();
 
-// ---------------------------------------
-// 1) لاگ اِن (Login) کا کوڈ
-// ---------------------------------------
+/**
+ * 1) LOGIN FLOW
+ */
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const email = document.getElementById("loginEmail").value.trim();
     const password = document.getElementById("loginPassword").value;
     const errorDiv = document.getElementById("loginError");
@@ -26,22 +36,22 @@ if (loginForm) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // کامیاب لاگ ان پر، onAuthStateChanged کال بیک اگلے مرحلے میں ہینڈل کرے گا۔
+      // onAuthStateChanged listener in this file will handle redirection
     } catch (err) {
       errorDiv.textContent = err.message;
     }
   });
 }
 
-// ---------------------------------------
-// 2) سائن اپ (Signup) کا کوڈ
-// ---------------------------------------
+/**
+ * 2) SIGN-UP FLOW
+ */
 const signupForm = document.getElementById("signupForm");
 if (signupForm) {
   const roleSelect = document.getElementById("roleSelect");
   const teacherFields = document.getElementById("teacherFields");
 
-  // اگر Teacher منتخب ہو، تو اسکول/کلاس/سیکشن والے فیلڈز ظاہر کریں:
+  // Show/hide teacher-specific fields
   roleSelect.addEventListener("change", () => {
     if (roleSelect.value === "teacher") {
       teacherFields.classList.remove("hidden");
@@ -58,6 +68,7 @@ if (signupForm) {
 
   signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const fullName = document.getElementById("fullName").value.trim();
     const email = document.getElementById("signupEmail").value.trim();
     const password = document.getElementById("signupPassword").value;
@@ -66,49 +77,52 @@ if (signupForm) {
     const errorDiv = document.getElementById("signupError");
     errorDiv.textContent = "";
 
-    // پاس ورڈ میچ چیک کریں
+    // Simple password validation
     if (password !== confirmPassword) {
-      errorDiv.textContent = "پاس ورڈ میل نہیں کھاتے۔";
+      errorDiv.textContent = "Passwords do not match.";
       return;
     }
     if (password.length < 6) {
-      errorDiv.textContent = "پاس ورڈ کم از کم 6 حروف کا ہونا چاہیے۔";
+      errorDiv.textContent = "Password must be at least 6 characters long.";
       return;
     }
 
     try {
-      // Firebase Auth میں نیا یوزر بنائیں
+      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // displayName سیٹ کریں
+      // Set displayName to fullName
       await updateProfile(user, { displayName: fullName });
 
-      // Email Verification بھیج دیں
+      // Send email verification
       await sendEmailVerification(user);
 
-      // Realtime Database میں `users/{uid}` پر یوزر کا ڈیٹا لکھیں (approval کے لیے پیشگی فیلڈ)
+      // Write user record to Realtime Database under users/{uid}
       const uid = user.uid;
       const userData = {
         fullName,
         email,
         role,
-        approved: false,           // ابھی منظوری نہیں (بعد میں Admin کرے گا)
+        approved: false,             // Admin must later change this to true
         createdAt: new Date().toISOString()
       };
+
+      // If the role is “teacher,” include school/class/section
       if (role === "teacher") {
         userData.school = document.getElementById("teacherSchool").value.trim();
         userData.cls = document.getElementById("teacherClass").value.trim();
         userData.section = document.getElementById("teacherSection").value.trim();
       }
+
       await dbSet(dbRef(database, `users/${uid}`), userData);
 
-      alert("سائن اپ کامیاب! براہ کرم اپنی ای میل کی تصدیق کریں اور منتظم کی منظوری کا انتظار کریں۔");
+      alert("Sign-up successful! Please verify your email, then wait for admin approval.");
       await signOut(auth);
       window.location.href = "login.html";
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
-        errorDiv.textContent = "یہ ای میل پہلے سے استعمال میں ہے۔ براہِ کرم دوسرا ای میل استعمال کریں۔";
+        errorDiv.textContent = "This email is already in use. Please use a different email.";
       } else {
         errorDiv.textContent = err.message;
       }
@@ -116,14 +130,48 @@ if (signupForm) {
   });
 }
 
-// ---------------------------------------
-// 3) onAuthStateChanged (آگے استعمال کے لیے بنیاد)
-// ---------------------------------------
-onAuthStateChanged(auth, (user) => {
+/**
+ * 3) AUTH STATE LISTENER
+ *
+ * Once a user signs in (and email is verified + approved flag is set to true),
+ * redirect them to index.html. Otherwise, show an appropriate alert and log out.
+ */
+onAuthStateChanged(auth, async (user) => {
   if (user) {
-    console.log("User logged in:", user.email);
-    // اگلے مرحلے میں ہم `approved` چیک کر کے redirect کریں گے
+    // Fetch this user’s data from Realtime Database
+    const userRef = dbRef(database, `users/${user.uid}`);
+    const snapshot = await userRef.get();
+    if (!snapshot.exists()) {
+      alert("No account data found. Please sign up again.");
+      await signOut(auth);
+      window.location.href = "login.html";
+      return;
+    }
+
+    const userData = snapshot.val();
+
+    // 1) Ensure email is verified
+    if (!user.emailVerified) {
+      alert("Please verify your email address before logging in.");
+      await signOut(auth);
+      window.location.href = "login.html";
+      return;
+    }
+
+    // 2) Ensure admin has approved this account
+    if (!userData.approved) {
+      alert("Your account is not yet approved by the administrator. Please wait.");
+      await signOut(auth);
+      window.location.href = "login.html";
+      return;
+    }
+
+    // 3) All good → Redirect to the main app
+    // index.html contains your Attendance Management UI
+    window.location.href = "index.html";
   } else {
+    // No user is logged in
+    // (If you’re already on login.html or signup.html, do nothing)
     console.log("No user logged in");
   }
 });
