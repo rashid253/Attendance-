@@ -1,0 +1,59 @@
+<!-- File: teacher.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teacher Dashboard</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body { font-family: sans-serif; }
+    .app-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #4CAF50; color: white; }
+    .btn { margin: 0 .5rem; }
+  </style>
+</head>
+<body>
+  <!-- Route‐guard: only teachers may view -->
+  <script type="module">
+    import { auth, onAuthStateChanged, signOut } from './firebase.js';
+    onAuthStateChanged(auth, async user => {
+      if (!user) return window.location = 'index.html';
+      const token = await user.getIdTokenResult();
+      if (token.claims.role !== 'teacher') {
+        await signOut(auth);
+        return window.location = 'index.html';
+      }
+      // Optionally capture teacher’s meta (school/class/section) from token or DB here
+    });
+  </script>
+
+  <!-- Header & Sign Out -->
+  <header class="app-header">
+    <div><i class="fas fa-chalkboard-teacher"></i> Teacher Dashboard</div>
+    <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+  </header>
+
+  <!-- Main app sections -->
+  <div id="main-app">
+    <!-- Copy over the same <section id="teacher-setup">…</section> and others from index.html -->
+  </div>
+
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const { signOut, auth } = await import('./firebase.js');
+      await signOut(auth);
+      location = 'index.html';
+    });
+  </script>
+  <script src="firebase.js" defer></script>
+  <script src="auth.js" defer></script>
+  <script src="api.js" defer></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
