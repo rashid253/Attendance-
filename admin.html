@@ -1,3 +1,4 @@
+<!-- File: admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,19 +40,18 @@
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="approvalsBody">
         <!-- Filled dynamically -->
       </tbody>
     </table>
     <p id="noRequests" class="hidden">No pending requests.</p>
   </section>
 
-  <!-- Scripts -->
   <script type="module">
     import { auth, onAuthStateChanged, signOut } from './firebase.js';
     import { fetchPendingApprovals, handleApproval } from './api.js';
 
-    // Route-guard: only admin may view
+    // Route-guard: only admin
     onAuthStateChanged(auth, async user => {
       if (!user) return window.location = 'index.html';
       const token = await user.getIdTokenResult();
@@ -71,10 +71,10 @@
     // Load & render pending requests
     async function loadApprovals() {
       console.log('Loading approvals…');
-      const tbody = document.querySelector('#approvalsTable tbody');
+      const tbody = document.getElementById('approvalsBody');
       tbody.innerHTML = '';
 
-      const requests = await fetchPendingApprovals(); 
+      const requests = await fetchPendingApprovals();
       console.log('Pending requests:', requests);
 
       if (requests.length === 0) {
@@ -111,8 +111,5 @@
     }
   </script>
 
-  <!-- Shared scripts -->
-  <script src="firebase.js" defer></script>
-  <script src="api.js" defer></script>
 </body>
 </html>
