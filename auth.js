@@ -37,7 +37,6 @@ if (loginForm) {
     if (!email || !password) return alert('Enter email & password.');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will redirect
     } catch (err) {
       console.error('Login error:', err);
       alert('Login failed: ' + err.message);
@@ -55,6 +54,7 @@ if (princForm) {
     if (!email || !password) return alert('Enter email & password.');
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // include email in meta
       await requestSignup(cred.user.uid, 'principal', { email });
       alert('Signup request submitted. Await admin approval.');
       princForm.reset();
@@ -82,7 +82,13 @@ if (teachForm) {
     }
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await requestSignup(cred.user.uid, 'teacher', { email, school, clazz, section });
+      // include email in meta *alongside* school/clazz/section
+      await requestSignup(cred.user.uid, 'teacher', {
+        email,
+        school,
+        clazz,
+        section
+      });
       alert('Signup request submitted. Await admin approval.');
       teachForm.reset();
       await signOut(auth);
