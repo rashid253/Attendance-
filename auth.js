@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  getIdTokenResult
 } from './firebase.js';
 
 import {
@@ -17,17 +18,36 @@ import {
 
 // 1. Listen for auth state changes and redirect users
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
+  if (!user) {
+    window.location = 'index.html'; // redirect to login if no user
+    return;
+  }
+
   try {
-    const idToken = await user.getIdTokenResult();
-    if (idToken.claims.role) {
-      redirectBasedOnRole(idToken.claims.role);
+    const tokenResult = await getIdTokenResult(user);
+    const role = tokenResult.claims.role;
+
+    if (!role) {
+      await signOut(auth);
+      window.location = 'index.html';
+      return;
     }
+
+    // Only allow admin to stay on admin pages
+    if (window.location.pathname.includes('admin') && role !== 'admin') {
+      await signOut(auth);
+      window.location = 'index.html';
+      return;
+    }
+
+    // User is authorized — redirect or show content
+    redirectBasedOnRole(role);
+
   } catch (err) {
-    console.error('Error getting token claims:', err);
+    console.error('Token error:', err);
     await signOut(auth);
     alert('Authentication error. Please sign in again.');
-    window.location.href = 'index.html';
+    window.location = 'index.html';
   }
 });
 
@@ -43,7 +63,6 @@ if (loginForm) {
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will redirect on success
     } catch (err) {
       console.error('Login failed:', err);
       alert('Login failed: ' + err.message);
@@ -66,9 +85,7 @@ if (princForm) {
       await requestSignup(cred.user.uid, 'principal');
       alert('Principal signup request submitted. Await admin approval.');
       princForm.reset();
-      // Force sign-out so user cannot access until approved
       await signOut(auth);
-      // Show login form again
       document.getElementById('backToLoginFromPrincipal').click();
     } catch (err) {
       console.error('Principal signup failed:', err);
@@ -104,7 +121,7 @@ if (teachForm) {
   });
 }
 
-// 5. Sign-out button (if you have one in your UI)
+// 5. Sign-out button
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
   logoutBtn.addEventListener('click', async () => {
@@ -113,7 +130,7 @@ if (logoutBtn) {
   });
 }
 
-// 6. Optional: Toggle password visibility for all password inputs
+// 6. Toggle password visibility
 document.querySelectorAll('input[type="password"]').forEach((input) => {
   const toggle = document.createElement('button');
   toggle.type = 'button';
