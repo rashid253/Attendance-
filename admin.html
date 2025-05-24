@@ -17,6 +17,7 @@
     th, td { padding: .5rem; border: 1px solid #ccc; text-align: left; }
     button { margin-right: .5rem; }
     #logoutBtn { float: right; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -45,23 +46,26 @@
     <p id="noRequests" class="hidden">No pending requests.</p>
   </section>
 
-  <!-- Scripts -->
+  <!-- Firebase Auth & Approval Script -->
   <script type="module">
     import { auth, onAuthStateChanged, signOut } from './firebase.js';
     import { fetchPendingApprovals, handleApproval } from './api.js';
 
-    // 1. Route-guard: only admin may view
+    // 1. Route-guard: Only allow admin
     onAuthStateChanged(auth, async user => {
       if (!user) return window.location = 'index.html';
-      const token = await user.getIdTokenResult();
-      if (token.claims.role !== 'admin') {
+
+      const tokenResult = await user.getIdTokenResult(true); // force refresh to get latest claims
+      if (tokenResult.claims.role !== 'admin') {
         await signOut(auth);
         return window.location = 'index.html';
       }
+
+      // If user is admin, load approvals
       loadApprovals();
     });
 
-    // 2. Sign-out
+    // 2. Sign-out button
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await signOut(auth);
       window.location = 'index.html';
@@ -71,15 +75,21 @@
     async function loadApprovals() {
       const tbody = document.querySelector('#approvalsTable tbody');
       tbody.innerHTML = '';
-      const requests = await fetchPendingApprovals(); // returns array of { uid, role, meta, requestedAt, email }
-      if (requests.length === 0) {
+
+      const requests = await fetchPendingApprovals(); // expected: { uid, role, meta, requestedAt, email }
+      if (!requests || requests.length === 0) {
         document.getElementById('approvalsTable').classList.add('hidden');
         document.getElementById('noRequests').classList.remove('hidden');
         return;
       }
+
+      document.getElementById('approvalsTable').classList.remove('hidden');
+      document.getElementById('noRequests').classList.add('hidden');
+
       requests.forEach(req => {
         const tr = document.createElement('tr');
         const date = new Date(req.requestedAt).toLocaleString();
+
         tr.innerHTML = `
           <td>${req.meta.email || ''}</td>
           <td>${req.role}</td>
@@ -88,7 +98,9 @@
           <td>
             <button class="approve btn">Approve</button>
             <button class="reject btn">Reject</button>
-          </td>`;
+          </td>
+        `;
+
         tr.querySelector('.approve').onclick = async () => {
           await handleApproval(req.uid, true, req.role);
           tr.remove();
@@ -97,13 +109,11 @@
           await handleApproval(req.uid, false, req.role);
           tr.remove();
         };
+
         tbody.appendChild(tr);
       });
     }
   </script>
 
-  <!-- Shared scripts -->
-  <script src="firebase.js" defer></script>
-  <script src="api.js" defer></script>
 </body>
 </html>
