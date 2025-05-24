@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Dashboard – Approvals</title>
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -18,6 +15,7 @@
     button { margin-right: .5rem; }
     #logoutBtn { float: right; }
     .hidden { display: none; }
+    .filters { margin-top: 1rem; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -29,6 +27,18 @@
 
   <section>
     <h2>Pending Signup Requests</h2>
+
+    <div class="filters">
+      <label for="roleFilter">Filter by Role:</label>
+      <select id="roleFilter">
+        <option value="">All</option>
+        <option value="principal">Principal</option>
+        <option value="teacher">Teacher</option>
+      </select>
+
+      <button id="exportCSV" class="btn"><i class="fas fa-file-csv"></i> Export to CSV</button>
+    </div>
+
     <table id="approvalsTable">
       <thead>
         <tr>
@@ -40,79 +50,113 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Filled dynamically -->
+        <!-- Dynamic -->
       </tbody>
     </table>
+
     <p id="noRequests" class="hidden">No pending requests.</p>
   </section>
 
-  <!-- Firebase Auth & Approval Script -->
   <script type="module">
-    import { auth, onAuthStateChanged, signOut } from './firebase.js';
-    import { fetchPendingApprovals, handleApproval } from './api.js';
+    import { auth, onAuthStateChanged, signOut, db } from './firebase.js';
+    import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { handleApproval } from './api.js';
 
-    // 1. Route-guard: Only allow admin
-    onAuthStateChanged(auth, async user => {
+    const table = document.querySelector('#approvalsTable');
+    const tbody = table.querySelector('tbody');
+    const noRequests = document.getElementById('noRequests');
+    const roleFilter = document.getElementById('roleFilter');
+    let allRequests = [];
+
+    // Guard route
+    onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location = 'index.html';
-
-      const tokenResult = await user.getIdTokenResult(true); // force refresh to get latest claims
-      if (tokenResult.claims.role !== 'admin') {
+      const token = await user.getIdTokenResult(true);
+      if (token.claims.role !== 'admin') {
         await signOut(auth);
         return window.location = 'index.html';
       }
-
-      // If user is admin, load approvals
-      loadApprovals();
+      initApprovalsListener();
     });
 
-    // 2. Sign-out button
+    // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await signOut(auth);
       window.location = 'index.html';
     });
 
-    // 3. Load & render pending requests
-    async function loadApprovals() {
-      const tbody = document.querySelector('#approvalsTable tbody');
-      tbody.innerHTML = '';
+    // Real-time listener
+    function initApprovalsListener() {
+      const approvalsRef = collection(db, 'signup_requests');
+      onSnapshot(approvalsRef, (snapshot) => {
+        allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderRequests();
+      });
+    }
 
-      const requests = await fetchPendingApprovals(); // expected: { uid, role, meta, requestedAt, email }
-      if (!requests || requests.length === 0) {
-        document.getElementById('approvalsTable').classList.add('hidden');
-        document.getElementById('noRequests').classList.remove('hidden');
+    // Render requests
+    function renderRequests() {
+      tbody.innerHTML = '';
+      const role = roleFilter.value;
+      const filtered = allRequests.filter(r => !r.approved && (!role || r.role === role));
+
+      if (filtered.length === 0) {
+        table.classList.add('hidden');
+        noRequests.classList.remove('hidden');
         return;
       }
 
-      document.getElementById('approvalsTable').classList.remove('hidden');
-      document.getElementById('noRequests').classList.add('hidden');
+      table.classList.remove('hidden');
+      noRequests.classList.add('hidden');
 
-      requests.forEach(req => {
+      filtered.forEach(req => {
         const tr = document.createElement('tr');
         const date = new Date(req.requestedAt).toLocaleString();
-
         tr.innerHTML = `
-          <td>${req.meta.email || ''}</td>
+          <td>${req.meta?.email || ''}</td>
           <td>${req.role}</td>
-          <td>${JSON.stringify(req.meta)}</td>
+          <td>${JSON.stringify(req.meta || {})}</td>
           <td>${date}</td>
           <td>
             <button class="approve btn">Approve</button>
             <button class="reject btn">Reject</button>
           </td>
         `;
-
         tr.querySelector('.approve').onclick = async () => {
-          await handleApproval(req.uid, true, req.role);
-          tr.remove();
+          await handleApproval(req.id, true, req.role);
         };
         tr.querySelector('.reject').onclick = async () => {
-          await handleApproval(req.uid, false, req.role);
-          tr.remove();
+          await handleApproval(req.id, false, req.role);
         };
-
         tbody.appendChild(tr);
       });
     }
+
+    // Filter
+    roleFilter.addEventListener('change', renderRequests);
+
+    // CSV Export
+    document.getElementById('exportCSV').addEventListener('click', () => {
+      const rows = [['Email', 'Role', 'Meta', 'Requested At']];
+      const role = roleFilter.value;
+      allRequests.filter(r => !r.approved && (!role || r.role === role)).forEach(req => {
+        rows.push([
+          req.meta?.email || '',
+          req.role,
+          JSON.stringify(req.meta || {}),
+          new Date(req.requestedAt).toLocaleString()
+        ]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pending_requests.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
   </script>
 
 </body>
