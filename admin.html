@@ -5,15 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin Dashboard – Approvals</title>
 
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+
   <style>
     body { font-family: sans-serif; padding: 2rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     th, td { padding: .5rem; border: 1px solid #ccc; text-align: left; }
     button { margin-right: .5rem; }
     #logoutBtn { float: right; }
-    .hidden { display: none; }
-    .filters { margin-top: 1rem; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -25,18 +28,6 @@
 
   <section>
     <h2>Pending Signup Requests</h2>
-
-    <div class="filters">
-      <label for="roleFilter">Filter by Role:</label>
-      <select id="roleFilter">
-        <option value="">All</option>
-        <option value="principal">Principal</option>
-        <option value="teacher">Teacher</option>
-      </select>
-
-      <button id="exportCSV" class="btn"><i class="fas fa-file-csv"></i> Export to CSV</button>
-    </div>
-
     <table id="approvalsTable">
       <thead>
         <tr>
@@ -47,122 +38,72 @@
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody>
+        <!-- Filled dynamically -->
+      </tbody>
     </table>
-
     <p id="noRequests" class="hidden">No pending requests.</p>
   </section>
 
+  <!-- Scripts -->
   <script type="module">
-    import {
-      auth,
-      database,
-      onAuthStateChanged,
-      signOut,
-      getIdTokenResult,
-      dbRef,
-      onValue,
-      dbSet
-    } from './firebase.js';
+    import { auth, onAuthStateChanged, signOut } from './firebase.js';
+    import { fetchPendingApprovals, handleApproval } from './api.js';
 
-    const tbody = document.querySelector('tbody');
-    const table = document.querySelector('#approvalsTable');
-    const noRequests = document.getElementById('noRequests');
-    const roleFilter = document.getElementById('roleFilter');
-    const exportBtn = document.getElementById('exportCSV');
-    let allRequests = [];
-
-    // Protect route
-    onAuthStateChanged(auth, async (user) => {
+    // 1. Route-guard: only admin may view
+    onAuthStateChanged(auth, async user => {
       if (!user) return window.location = 'index.html';
-      const token = await getIdTokenResult(user, true);
+      const token = await user.getIdTokenResult();
       if (token.claims.role !== 'admin') {
         await signOut(auth);
         return window.location = 'index.html';
       }
-      listenForRequests();
+      loadApprovals();
     });
 
+    // 2. Sign-out
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await signOut(auth);
       window.location = 'index.html';
     });
 
-    // Fetch and listen for changes
-    function listenForRequests() {
-      const requestsRef = dbRef(database, 'appData/signup_requests');
-      onValue(requestsRef, (snapshot) => {
-        const data = snapshot.val() || {};
-        allRequests = Object.entries(data).map(([id, value]) => ({ id, ...value }));
-        renderRequests();
-      });
-    }
-
-    // Render requests
-    function renderRequests() {
+    // 3. Load & render pending requests
+    async function loadApprovals() {
+      const tbody = document.querySelector('#approvalsTable tbody');
       tbody.innerHTML = '';
-      const role = roleFilter.value;
-      const filtered = allRequests.filter(r => !r.approved && (!role || r.role === role));
-
-      if (filtered.length === 0) {
-        table.classList.add('hidden');
-        noRequests.classList.remove('hidden');
+      const requests = await fetchPendingApprovals(); // returns array of { uid, role, meta, requestedAt, email }
+      if (requests.length === 0) {
+        document.getElementById('approvalsTable').classList.add('hidden');
+        document.getElementById('noRequests').classList.remove('hidden');
         return;
       }
-
-      table.classList.remove('hidden');
-      noRequests.classList.add('hidden');
-
-      filtered.forEach(req => {
+      requests.forEach(req => {
         const tr = document.createElement('tr');
-        const date = req.requestedAt ? new Date(req.requestedAt).toLocaleString() : '';
+        const date = new Date(req.requestedAt).toLocaleString();
         tr.innerHTML = `
-          <td>${req.meta?.email || ''}</td>
+          <td>${req.meta.email || ''}</td>
           <td>${req.role}</td>
-          <td>${JSON.stringify(req.meta || {})}</td>
+          <td>${JSON.stringify(req.meta)}</td>
           <td>${date}</td>
           <td>
             <button class="approve btn">Approve</button>
             <button class="reject btn">Reject</button>
-          </td>
-        `;
-        tr.querySelector('.approve').onclick = () => handleApproval(req.id, true);
-        tr.querySelector('.reject').onclick = () => handleApproval(req.id, false);
+          </td>`;
+        tr.querySelector('.approve').onclick = async () => {
+          await handleApproval(req.uid, true, req.role);
+          tr.remove();
+        };
+        tr.querySelector('.reject').onclick = async () => {
+          await handleApproval(req.uid, false, req.role);
+          tr.remove();
+        };
         tbody.appendChild(tr);
       });
     }
-
-    roleFilter.addEventListener('change', renderRequests);
-
-    // Handle approval or rejection
-    async function handleApproval(id, isApproved) {
-      const ref = dbRef(database, `appData/signup_requests/${id}`);
-      await dbSet(ref, { ...allRequests.find(r => r.id === id), approved: isApproved });
-    }
-
-    // Export to CSV
-    exportBtn.addEventListener('click', () => {
-      const rows = [['Email', 'Role', 'Meta', 'Requested At']];
-      const role = roleFilter.value;
-      allRequests.filter(r => !r.approved && (!role || r.role === role)).forEach(req => {
-        rows.push([
-          req.meta?.email || '',
-          req.role,
-          JSON.stringify(req.meta || {}),
-          req.requestedAt ? new Date(req.requestedAt).toLocaleString() : ''
-        ]);
-      });
-      const csv = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'pending_requests.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
   </script>
 
+  <!-- Shared scripts -->
+  <script src="firebase.js" defer></script>
+  <script src="api.js" defer></script>
 </body>
 </html>
