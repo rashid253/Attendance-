@@ -55,7 +55,6 @@
 <body>
   <!-- AUTH CONTAINER -->
   <div id="auth-container">
-    <!-- LOGIN FORM -->
     <form id="loginForm" class="auth-form">
       <h2>Login</h2>
       <label>
@@ -71,7 +70,6 @@
          <a href="#" id="showSignupTeacher">Signup as Teacher</a></p>
     </form>
 
-    <!-- PRINCIPAL SIGNUP FORM (hidden) -->
     <form id="signupPrincipalForm" class="auth-form hidden">
       <h2>Signup as Principal</h2>
       <label>
@@ -86,7 +84,6 @@
       <p><a href="#" id="backToLoginFromPrincipal">Back to Login</a></p>
     </form>
 
-    <!-- TEACHER SIGNUP FORM (hidden) -->
     <form id="signupTeacherForm" class="auth-form hidden">
       <h2>Signup as Teacher</h2>
       <label>
@@ -278,15 +275,9 @@
       </div>
       <div id="instructions" class="hidden"></div>
       <div id="analyticsContainer" class="table-wrapper hidden">
-        <table id="analyticsTable">
-          <thead><tr></tr></thead>
-          <tbody id="analyticsBody"></tbody>
-        </table>
+        <table id="analyticsTable"><thead><tr></tr></thead><tbody id="analyticsBody"></tbody></table>
       </div>
-      <div id="graphs" class="hidden">
-        <canvas id="barChart"></canvas>
-        <canvas id="pieChart"></canvas>
-      </div>
+      <div id="graphs" class="hidden"><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
       <div class="table-actions hidden" id="analyticsActions">
         <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
         <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
@@ -349,10 +340,9 @@
         </form>
       </div>
     </div>
-
   </div><!-- end #main-app -->
 
-  <!-- TOGGLE SCRIPT -->
+  <!-- Toggle UI between auth & main-app -->
   <script defer>
     const loginForm = document.getElementById('loginForm');
     const princForm = document.getElementById('signupPrincipalForm');
@@ -397,20 +387,19 @@
     });
   </script>
 
-  <!-- Firebase + auth + API scripts -->
-  <script src="firebase.js" defer></script>
-  <script src="auth.js" defer></script>
-  <script src="api.js" defer></script>
-  <script src="notify.js" defer></script>
-
-  <!-- Main app logic as ES module -->
-  <script type="module" src="app.js"></script>
+  <!-- Single module loader -->
+  <script type="module">
+    import './auth.js';
+    import './api.js';
+    import './app.js';
+  </script>
 
   <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js', { type: 'module' })
+        navigator.serviceWorker
+          .register('service-worker.js')
           .then(reg => console.log('SW registered:', reg))
           .catch(err => console.error('SW registration failed:', err));
       });
