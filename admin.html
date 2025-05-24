@@ -1,3 +1,4 @@
+<!-- File: admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +22,6 @@
   </style>
 </head>
 <body>
-
   <header>
     <h1>Admin Dashboard</h1>
     <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
@@ -52,21 +52,7 @@
     import { auth, onAuthStateChanged, signOut } from './firebase.js';
     import { fetchPendingApprovals, handleApproval } from './api.js';
 
-    onAuthStateChanged(auth, async user => {
-      if (!user) return window.location = 'index.html';
-      const token = await user.getIdTokenResult();
-      if (token.claims.role !== 'admin') {
-        await signOut(auth);
-        return window.location = 'index.html';
-      }
-      loadApprovals();
-    });
-
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await signOut(auth);
-      window.location = 'index.html';
-    });
-
+    // Utility to render the table
     async function loadApprovals() {
       const tbody = document.getElementById('approvalsBody');
       tbody.innerHTML = '';
@@ -83,32 +69,65 @@
 
       requests.forEach(req => {
         const tr = document.createElement('tr');
-        const d = new Date(req.requestedAt).toLocaleString();
-        const meta = req.meta || {};
+        const date = new Date(req.requestedAt).toLocaleString();
+        const m = req.meta || {};
         tr.innerHTML = `
           <td>${req.email || ''}</td>
           <td>${req.role}</td>
-          <td>${meta.school || ''}</td>
-          <td>${meta.clazz || ''}</td>
-          <td>${meta.section || ''}</td>
-          <td>${d}</td>
+          <td>${m.school || ''}</td>
+          <td>${m.clazz || ''}</td>
+          <td>${m.section || ''}</td>
+          <td>${date}</td>
           <td>
-            <button class="approve btn">Approve</button>
-            <button class="reject btn">Reject</button>
+            <button data-uid="${req.uid}" data-role="${req.role}" class="approve btn">Approve</button>
+            <button data-uid="${req.uid}" data-role="${req.role}" class="reject btn">Reject</button>
           </td>
         `;
-        tr.querySelector('.approve').onclick = async () => {
-          await handleApproval(req.uid, true, req.role);
-          tr.remove();
-        };
-        tr.querySelector('.reject').onclick = async () => {
-          await handleApproval(req.uid, false, req.role);
-          tr.remove();
-        };
         tbody.appendChild(tr);
       });
     }
-  </script>
 
+    // Delegate clicks for approve/reject
+    document.getElementById('approvalsBody').addEventListener('click', async e => {
+      if (!e.target.matches('button.approve, button.reject')) return;
+      const btn = e.target;
+      const uid = btn.dataset.uid;
+      const role = btn.dataset.role;
+      const approve = btn.classList.contains('approve');
+      // disable buttons to prevent double-click
+      btn.disabled = true;
+      try {
+        await handleApproval(uid, approve, role);
+        // remove the row
+        btn.closest('tr').remove();
+        // if no rows remain, show noRequests message
+        if (!document.querySelector('#approvalsBody tr')) {
+          document.getElementById('approvalsTable').classList.add('hidden');
+          document.getElementById('noRequests').classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error('Approval error:', err);
+        btn.disabled = false;
+        alert('Error processing request. Check console.');
+      }
+    });
+
+    // Route-guard and initial load
+    onAuthStateChanged(auth, async user => {
+      if (!user) return window.location = 'index.html';
+      const token = await user.getIdTokenResult();
+      if (token.claims.role !== 'admin') {
+        await signOut(auth);
+        return window.location = 'index.html';
+      }
+      loadApprovals();
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location = 'index.html';
+    });
+  </script>
 </body>
 </html>
