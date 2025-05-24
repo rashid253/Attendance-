@@ -23,7 +23,7 @@ import {
 
 // 4. Your Firebase project configuration (from your original app.js) 
 const firebaseConfig = {
-  apiKey:      "YOUR_FULL_API_KEY_HERE",
+  apiKey:      "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain:  "attandace-management.firebaseapp.com",
   databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
   projectId:   "attandace-management",
