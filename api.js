@@ -1,4 +1,4 @@
-// File: api.js
+// api.js
 // -------------------------------------------------------------------------------------------------
 // Centralized wrappers for signup requests, role-based redirects, and admin approvals.
 
