@@ -1,4 +1,4 @@
-// // app.js (with per-school data segregation)
+// app.js (with per-school data segregation)
 // -------------------------------------------------------------------------------------------------
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
