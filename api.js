@@ -12,7 +12,6 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from './firebase.js';
-
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
 
@@ -65,7 +64,7 @@ export async function fetchPendingApprovals() {
       role: req.role,
       meta: req.meta || {},
       requestedAt: req.requestedAt,
-      email: req.meta.email || ''
+      email: req.meta?.email || ''
     }));
   console.log('Filtered pending approvals:', pending);
   return pending;
