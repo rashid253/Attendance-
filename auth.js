@@ -1,4 +1,4 @@
-// File: auth.js
+// auth.js
 // -------------------------------------------------------------------------------------------------
 // Handles UI interactions: login, principal/teacher signup, and redirects.
 
