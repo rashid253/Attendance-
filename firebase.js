@@ -1,4 +1,4 @@
-// firebase.js
+// File: firebase.js
 // -------------------------------------------------------------------------------------------------
 
 // 1. Import & initialize Firebase App
@@ -12,7 +12,7 @@ import {
   onValue
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// 3. (Optional) Import Auth if you need it later in auth.js / api.js
+// 3. Import Auth functions
 import {
   getAuth,
   onAuthStateChanged,
@@ -21,22 +21,22 @@ import {
   signOut
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
-// 4. Your Firebase project configuration
+// 4. Your Firebase project configuration (from your original app.js) 
 const firebaseConfig = {
-  apiKey:      "AIzaSyBsx…EpICEzA",
+  apiKey:      "YOUR_FULL_API_KEY_HERE",
   authDomain:  "attandace-management.firebaseapp.com",
   databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
   projectId:   "attandace-management",
-  storageBucket:"attandace-management.appspot.com",
+  storageBucket: "attandace-management.appspot.com",
   messagingSenderId: "222685278846",
   appId:       "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId:"G-V2MY85R73B"
+  measurementId: "G-V2MY85R73B"
 };
 
 // 5. Initialize App & Services
-const app      = initializeApp(firebaseConfig);
-export const database   = getDatabase(app);
-export const auth       = getAuth(app);
+const app    = initializeApp(firebaseConfig);
+export const database = getDatabase(app);
+export const auth     = getAuth(app);
 
 // 6. Reference to your top-level data node
 export const appDataRef = dbRef(database, 'appData');
