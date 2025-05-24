@@ -12,16 +12,17 @@ import {
   onValue
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// 3. Import Auth functions
+// 3. Import Auth functions (including getIdTokenResult)
 import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  getIdTokenResult  // <-- Added for checking custom claims
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
-// 4. Your Firebase project configuration (from your original app.js) 
+// 4. Your Firebase project configuration
 const firebaseConfig = {
   apiKey:      "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain:  "attandace-management.firebaseapp.com",
@@ -44,10 +45,11 @@ export const appDataRef = dbRef(database, 'appData');
 // 7. Re-export the DB helpers so other modules don’t need the SDK URLs
 export { dbRef, dbSet, onValue };
 
-// 8. Re-export Auth helpers for auth.js / api.js
+// 8. Re-export Auth helpers for auth.js / api.js (including getIdTokenResult)
 export {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  getIdTokenResult
 };
