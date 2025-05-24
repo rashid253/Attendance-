@@ -6,8 +6,6 @@
   <title>Admin Dashboard – Approvals</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-
   <style>
     body { font-family: sans-serif; padding: 2rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
@@ -49,47 +47,53 @@
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Dynamic -->
-      </tbody>
+      <tbody></tbody>
     </table>
 
     <p id="noRequests" class="hidden">No pending requests.</p>
   </section>
 
   <script type="module">
-    import { auth, onAuthStateChanged, signOut, db } from './firebase.js';
-    import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { handleApproval } from './api.js';
+    import {
+      auth,
+      database,
+      onAuthStateChanged,
+      signOut,
+      getIdTokenResult,
+      dbRef,
+      onValue,
+      dbSet
+    } from './firebase.js';
 
+    const tbody = document.querySelector('tbody');
     const table = document.querySelector('#approvalsTable');
-    const tbody = table.querySelector('tbody');
     const noRequests = document.getElementById('noRequests');
     const roleFilter = document.getElementById('roleFilter');
+    const exportBtn = document.getElementById('exportCSV');
     let allRequests = [];
 
-    // Guard route
+    // Protect route
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location = 'index.html';
-      const token = await user.getIdTokenResult(true);
+      const token = await getIdTokenResult(user, true);
       if (token.claims.role !== 'admin') {
         await signOut(auth);
         return window.location = 'index.html';
       }
-      initApprovalsListener();
+      listenForRequests();
     });
 
-    // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await signOut(auth);
       window.location = 'index.html';
     });
 
-    // Real-time listener
-    function initApprovalsListener() {
-      const approvalsRef = collection(db, 'signup_requests');
-      onSnapshot(approvalsRef, (snapshot) => {
-        allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Fetch and listen for changes
+    function listenForRequests() {
+      const requestsRef = dbRef(database, 'appData/signup_requests');
+      onValue(requestsRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        allRequests = Object.entries(data).map(([id, value]) => ({ id, ...value }));
         renderRequests();
       });
     }
@@ -111,7 +115,7 @@
 
       filtered.forEach(req => {
         const tr = document.createElement('tr');
-        const date = new Date(req.requestedAt).toLocaleString();
+        const date = req.requestedAt ? new Date(req.requestedAt).toLocaleString() : '';
         tr.innerHTML = `
           <td>${req.meta?.email || ''}</td>
           <td>${req.role}</td>
@@ -122,21 +126,22 @@
             <button class="reject btn">Reject</button>
           </td>
         `;
-        tr.querySelector('.approve').onclick = async () => {
-          await handleApproval(req.id, true, req.role);
-        };
-        tr.querySelector('.reject').onclick = async () => {
-          await handleApproval(req.id, false, req.role);
-        };
+        tr.querySelector('.approve').onclick = () => handleApproval(req.id, true);
+        tr.querySelector('.reject').onclick = () => handleApproval(req.id, false);
         tbody.appendChild(tr);
       });
     }
 
-    // Filter
     roleFilter.addEventListener('change', renderRequests);
 
-    // CSV Export
-    document.getElementById('exportCSV').addEventListener('click', () => {
+    // Handle approval or rejection
+    async function handleApproval(id, isApproved) {
+      const ref = dbRef(database, `appData/signup_requests/${id}`);
+      await dbSet(ref, { ...allRequests.find(r => r.id === id), approved: isApproved });
+    }
+
+    // Export to CSV
+    exportBtn.addEventListener('click', () => {
       const rows = [['Email', 'Role', 'Meta', 'Requested At']];
       const role = roleFilter.value;
       allRequests.filter(r => !r.approved && (!role || r.role === role)).forEach(req => {
@@ -144,7 +149,7 @@
           req.meta?.email || '',
           req.role,
           JSON.stringify(req.meta || {}),
-          new Date(req.requestedAt).toLocaleString()
+          req.requestedAt ? new Date(req.requestedAt).toLocaleString() : ''
         ]);
       });
       const csv = rows.map(r => r.join(',')).join('\n');
