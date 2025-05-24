@@ -10,7 +10,7 @@ function enableCors(req, res) {
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-// 1) setCustomClaim
+// 1) set setCustomClaim
 exports.setCustomClaim = functions
   .region('asia-south1')
   .https.onRequest(async (req, res) => {
