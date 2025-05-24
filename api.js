@@ -12,6 +12,7 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from './firebase.js';
+
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
 
@@ -20,19 +21,19 @@ const functions = getFunctions(undefined, 'asia-south1');
 const setCustomClaim = httpsCallable(functions, 'setCustomClaim');
 const deleteUserFn   = httpsCallable(functions, 'deleteUser');
 
-// 1. Request signup (writes to Realtime DB “approvals” node)
+// 1. Request signup (writes to Realtime DB `/approvals/${uid}`)
 export async function requestSignup(uid, role, meta = {}) {
-  const newReqRef = dbRef(database, `approvals/${uid}`);  // use uid as key
+  const newReqRef = dbRef(database, `approvals/${uid}`);
   await dbSet(newReqRef, {
     uid,
     role,
     meta,
-    status:      'pending',
+    status: 'pending',
     requestedAt: Date.now()
   });
 }
 
-// 2. Redirect user after login based on custom claim
+// 2. Redirect after login based on custom claim
 export async function redirectBasedOnRole(role) {
   switch (role) {
     case 'admin':
@@ -54,9 +55,10 @@ export async function redirectBasedOnRole(role) {
 // 3. Fetch all pending approvals once
 export async function fetchPendingApprovals() {
   const snap = await get(dbRef(database, 'approvals'));
+  console.log('Raw approvals snapshot:', snap.val());
   if (!snap.exists()) return [];
   const data = snap.val();
-  return Object.entries(data)
+  const pending = Object.entries(data)
     .filter(([uid, req]) => req.status === 'pending')
     .map(([uid, req]) => ({
       uid,
@@ -65,9 +67,11 @@ export async function fetchPendingApprovals() {
       requestedAt: req.requestedAt,
       email: req.meta.email || ''
     }));
+  console.log('Filtered pending approvals:', pending);
+  return pending;
 }
 
-// 4. Approve or reject a request (admin-only action)
+// 4. Approve or reject a request
 export async function handleApproval(uid, approve, role) {
   const statusRef = dbRef(database, `approvals/${uid}/status`);
   if (approve) {
@@ -79,7 +83,7 @@ export async function handleApproval(uid, approve, role) {
   }
 }
 
-// 5. Utility: listen to auth state + redirect automatically
+// 5. Init auth listener for redirects
 export function initAuthListener() {
   onAuthStateChanged(auth, async user => {
     if (!user) return;
