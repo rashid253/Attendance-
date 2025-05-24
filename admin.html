@@ -17,6 +17,7 @@
     th, td { padding: .5rem; border: 1px solid #ccc; text-align: left; }
     button { margin-right: .5rem; }
     #logoutBtn { float: right; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -50,7 +51,7 @@
     import { auth, onAuthStateChanged, signOut } from './firebase.js';
     import { fetchPendingApprovals, handleApproval } from './api.js';
 
-    // 1. Route-guard: only admin may view
+    // Route-guard: only admin may view
     onAuthStateChanged(auth, async user => {
       if (!user) return window.location = 'index.html';
       const token = await user.getIdTokenResult();
@@ -61,27 +62,35 @@
       loadApprovals();
     });
 
-    // 2. Sign-out
+    // Sign-out
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await signOut(auth);
       window.location = 'index.html';
     });
 
-    // 3. Load & render pending requests
+    // Load & render pending requests
     async function loadApprovals() {
+      console.log('Loading approvals…');
       const tbody = document.querySelector('#approvalsTable tbody');
       tbody.innerHTML = '';
-      const requests = await fetchPendingApprovals(); // returns array of { uid, role, meta, requestedAt, email }
+
+      const requests = await fetchPendingApprovals(); 
+      console.log('Pending requests:', requests);
+
       if (requests.length === 0) {
         document.getElementById('approvalsTable').classList.add('hidden');
         document.getElementById('noRequests').classList.remove('hidden');
         return;
       }
+
+      document.getElementById('approvalsTable').classList.remove('hidden');
+      document.getElementById('noRequests').classList.add('hidden');
+
       requests.forEach(req => {
         const tr = document.createElement('tr');
         const date = new Date(req.requestedAt).toLocaleString();
         tr.innerHTML = `
-          <td>${req.meta.email || ''}</td>
+          <td>${req.email}</td>
           <td>${req.role}</td>
           <td>${JSON.stringify(req.meta)}</td>
           <td>${date}</td>
