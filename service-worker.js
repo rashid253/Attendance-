@@ -1,4 +1,4 @@
-// File: service-worker.js
+// service-worker.js
 const CACHE_NAME = 'attendance-app-v1';
 const ASSETS = [
   '/',
