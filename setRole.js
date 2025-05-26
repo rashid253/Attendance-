@@ -1,4 +1,3 @@
-// setRole.js
 const admin = require('firebase-admin');
 
 const serviceAccount = require('./attandace-management-firebase-adminsdk-fbsvc-cb3d1d04e4.json');
