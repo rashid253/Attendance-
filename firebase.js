@@ -1,53 +1,76 @@
-// firebase.js
-// -------------------------------------------------------------------------------------------------
+// functions/index.js
+// -------------------------------------------
+// Updated Cloud Functions for admin approvals using HTTPS Callable (v1)
 
-// 1. Import & initialize Firebase App
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+// Force Firebase Functions to treat code as v1
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'attandace-management';
 
-// 2. Import Realtime Database functions
-import {
-  getDatabase,
-  ref as dbRef,
-  set as dbSet,
-  onValue
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
+const functions = require('firebase-functions');
+const admin     = require('firebase-admin');
 
-// 3. Import Auth functions
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+// Initialize the Admin SDK
+admin.initializeApp();
 
-// 4. Your Firebase project configuration (from your original app.js) 
-const firebaseConfig = {
-  apiKey:      "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
-  authDomain:  "attandace-management.firebaseapp.com",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-  projectId:   "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId:       "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B"
-};
+/**
+ * Callable function to set a custom claim on a user.
+ * Only admins (with role claim 'admin') can invoke this.
+ */
+exports.setCustomClaim = functions
+  .region('asia-south1')
+  .https.onCall(async (data, context) => {
+    // Verify caller is authenticated and has admin role
+    if (!(context.auth && context.auth.token.role === 'admin')) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Only administrators can modify roles.'
+      );
+    }
 
-// 5. Initialize App & Services
-const app    = initializeApp(firebaseConfig);
-export const database = getDatabase(app);
-export const auth     = getAuth(app);
+    const { uid, claimKey = 'role', claimValue } = data;
+    if (!uid || !claimValue) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Function must be called with uid and claimValue.'
+      );
+    }
 
-// 6. Reference to your top-level data node
-export const appDataRef = dbRef(database, 'appData');
+    try {
+      await admin.auth().setCustomUserClaims(uid, { [claimKey]: claimValue });
+      return { success: true };
+    } catch (error) {
+      console.error('setCustomClaim error:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  });
 
-// 7. Re-export the DB helpers so other modules don’t need the SDK URLs
-export { dbRef, dbSet, onValue };
+/**
+ * Callable function to delete a user by UID.
+ * Only admins (with role claim 'admin') can invoke this.
+ */
+exports.deleteUser = functions
+  .region('asia-south1')
+  .https.onCall(async (data, context) => {
+    // Verify caller is authenticated and has admin role
+    if (!(context.auth && context.auth.token.role === 'admin')) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Only administrators can delete users.'
+      );
+    }
 
-// 8. Re-export Auth helpers for auth.js / api.js
-export {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut
-};
+    const { uid } = data;
+    if (!uid) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Function must be called with a uid.'
+      );
+    }
+
+    try {
+      await admin.auth().deleteUser(uid);
+      return { success: true };
+    } catch (error) {
+      console.error('deleteUser error:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  });
