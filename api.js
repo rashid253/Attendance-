@@ -10,12 +10,16 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  app
 } from './firebase.js';
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
 
-// Base URL for your functions
-const FUNC_BASE = 'https://asia-south1-attandace-management.cloudfunctions.net';
+// Initialize Cloud Functions in asia-south1
+const functions = getFunctions(app, 'asia-south1');
+const deleteUserFn = httpsCallable(functions, 'deleteUser');
+const setCustomClaimFn = httpsCallable(functions, 'setCustomClaim');
 
 // 1. Request signup (writes to Realtime DB `/approvals/${uid}`)
 export async function requestSignup(uid, role, meta = {}) {
@@ -48,26 +52,6 @@ export async function redirectBasedOnRole(role) {
   }
 }
 
-// helper to call Cloud Function with auth
-async function callFn(path, body) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const resp = await fetch(`${FUNC_BASE}/${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(text || resp.statusText);
-  }
-  return resp.json();
-}
-
 // 3. Fetch all pending approvals once
 export async function fetchPendingApprovals() {
   const snap = await get(dbRef(database, 'approvals'));
@@ -87,14 +71,18 @@ export async function fetchPendingApprovals() {
   return pending;
 }
 
-// 4. Approve or reject a request
+// 4. Approve or reject a request using callable functions
 export async function handleApproval(uid, approve, role) {
   const statusRef = dbRef(database, `approvals/${uid}/status`);
   if (approve) {
-    await callFn('setCustomClaim', { uid, role });
+    // Set custom claim 'role'
+    const result = await setCustomClaimFn({ uid, claimKey: 'role', claimValue: role });
+    console.log('setCustomClaim result:', result);
     await dbSet(statusRef, 'approved');
   } else {
-    await callFn('deleteUser', { uid });
+    // Delete user
+    const result = await deleteUserFn({ uid });
+    console.log('deleteUser result:', result);
     await dbSet(statusRef, 'rejected');
   }
 }
