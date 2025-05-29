@@ -1,51 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Attendance Management</title>
-
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
-
-  <!-- Font Awesome (HTTPS) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
-
-  <!-- idb-keyval (IIFE) -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
-
-  <!-- jsPDF + AutoTable (IIFE) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- Chart.js (IIFE) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
-
-  <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
-    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .table-wrapper { overflow-x: auto; margin-top: 1em; }
-    .table-actions { margin-top: 0.5em; }
-    .counter-card .card-number { font-size: 2rem; color: #2196F3; }
-    /* New styles for login modal */
-    #loginModal .modal-content { max-width: 300px; }
-    #loginModal input { width: 100%; padding: 0.5em; margin-bottom: 1em; }
+#loginModal input { width: 100%; padding: 0.5em; margin-bottom: 1em; }
     #loginModal button { width: 100%; }
   </style>
 </head>
@@ -83,7 +36,7 @@
   <div id="loginModal" class="modal">
     <div class="modal-content">
       <span id="closeLoginModal" class="modal-close">&times;</span>
-      <h3>Admin Login</h3>
+      <h3>User Login</h3>
       <input type="email" id="loginEmail" placeholder="Email" />
       <input type="password" id="loginPassword" placeholder="Password" />
       <button id="loginBtn" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
@@ -91,7 +44,7 @@
     </div>
   </div>
 
-  <!-- 1. SETUP (wrapped for auth-restriction) -->
+  <!-- 1. SETUP (only for Admin) -->
   <section id="teacher-setup" class="hidden">
     <h2><i class="fas fa-cog"></i> Setup</h2>
     <div id="setupForm" class="row-inline">
@@ -300,8 +253,8 @@
   <!-- Include all JS in one module -->
   <script type="module">
     //–– FIREBASE IMPORTS VIA CDN ––
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref as dbRef, set as dbSet } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { initializeApp }                        from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref as dbRef, set as dbSet, get as dbGet, child } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
     //–– IndexedDB helpers (idb-keyval must be loaded before this script) ––
@@ -320,10 +273,10 @@
     };
 
     //–– Initialize Firebase ––
-    const app      = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    const app        = initializeApp(firebaseConfig);
+    const database   = getDatabase(app);
     const appDataRef = dbRef(database, "appData");
-    const auth     = getAuth(app);
+    const auth       = getAuth(app);
 
     //–– Local application state (per-school mappings) ––
     let studentsBySchool       = {};
@@ -342,6 +295,12 @@
     let attendanceData = {};
     let paymentsData   = {};
     let lastAdmNo      = 0;
+
+    //–– Role management variables ––
+    let userRole           = null;   // "admin", "principal", or "teacher"
+    let assignedSchool     = null;
+    let assignedClass      = null;
+    let assignedSection    = null;
 
     //–– Ensure data structures exist for a given school ––
     async function ensureSchoolData(school) {
@@ -412,6 +371,27 @@
     const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
     const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
+    //–– Fetch user role and assigned details from database ––
+    async function fetchUserRole(uid) {
+      try {
+        const userSnapshot = await dbGet(child(dbRef(database), `users/${uid}`));
+        if (userSnapshot.exists()) {
+          const data = userSnapshot.val();
+          userRole = data.role || null;               // "admin", "principal", "teacher"
+          assignedSchool = data.school || null;       // for principal/teacher
+          assignedClass = data.class || null;         // for teacher
+          assignedSection = data.section || null;     // for teacher
+        } else {
+          userRole = null;
+          assignedSchool = assignedClass = assignedSection = null;
+        }
+      } catch (err) {
+        console.error("Error fetching user role:", err);
+        userRole = null;
+        assignedSchool = assignedClass = assignedSection = null;
+      }
+    }
+
     //–– DOMContentLoaded: Main Initialization & Auth → UI Logic ––
     window.addEventListener("DOMContentLoaded", async () => {
       const $ = (id) => document.getElementById(id);
@@ -420,30 +400,80 @@
       await initLocalState();
 
       //–– AUTH: Show login modal if not signed in ––
-      const loginModal = $("loginModal");
-      const loginBtn   = $("loginBtn");
-      const closeLoginModal = $("closeLoginModal");
-      const loginEmail = $("loginEmail");
-      const loginPassword = $("loginPassword");
-      const loginStatus = $("loginStatus");
-      const logoutBtn  = $("logoutBtn");
-      const setupSection = $("teacher-setup");
+      const loginModal       = $("loginModal");
+      const loginBtn         = $("loginBtn");
+      const closeLoginModal  = $("closeLoginModal");
+      const loginEmail       = $("loginEmail");
+      const loginPassword    = $("loginPassword");
+      const loginStatus      = $("loginStatus");
+      const logoutBtn        = $("logoutBtn");
+      const setupSection     = $("teacher-setup");
 
-      function requireAuthShowSetup(user) {
+      // These elements will be used based on role
+      const schoolSelect     = $("schoolSelect");
+      const classSelect      = $("teacherClassSelect");
+      const sectionSelect    = $("teacherSectionSelect");
+      const setupForm        = $("setupForm");
+      const setupDisplay     = $("setupDisplay");
+      const setupText        = $("setupText");
+      const saveSetupBtn     = $("saveSetup");
+      const editSetupBtn     = $("editSetup");
+      const schoolListDiv    = $("schoolList");
+
+      onAuthStateChanged(auth, async (user) => {
         if (user) {
-          hide(loginModal);
-          show(logoutBtn);
-          show(setupSection);
-          loadSetup();
+          // Fetch role info from database
+          await fetchUserRole(user.uid);
+
+          if (userRole === "admin") {
+            // Admin sees full setup
+            hide(loginModal);
+            show(logoutBtn);
+            show(setupSection);
+            loadSetupAdmin();
+          } else if (userRole === "principal") {
+            // Principal: can view their assigned school's classes/sections, but cannot create new schools.
+            hide(loginModal);
+            show(logoutBtn);
+            hide(setupForm);            // no adding new schools
+            show(setupDisplay);         // display assigned school, allow class/section selection
+            currentSchool = assignedSchool;
+            await idbSet("currentSchool", currentSchool);
+            teacherClass = null;
+            teacherSection = null;
+            await idbSet("teacherClass", null);
+            await idbSet("teacherSection", null);
+            renderSetupPrincipal();
+          } else if (userRole === "teacher") {
+            // Teacher: automatically assigned school/class/section; skip setup entirely.
+            hide(loginModal);
+            show(logoutBtn);
+            hide(setupSection);
+            currentSchool = assignedSchool;
+            teacherClass = assignedClass;
+            teacherSection = assignedSection;
+            await idbSet("currentSchool", currentSchool);
+            await idbSet("teacherClass", teacherClass);
+            await idbSet("teacherSection", teacherSection);
+            await ensureSchoolData(currentSchool);
+            students       = studentsBySchool[currentSchool];
+            attendanceData = attendanceDataBySchool[currentSchool];
+            paymentsData   = paymentsDataBySchool[currentSchool];
+            lastAdmNo      = lastAdmNoBySchool[currentSchool];
+            renderTeacherView();
+          } else {
+            // Role not defined or unauthorized
+            loginStatus.textContent = "Access denied: role not recognized.";
+            await signOut(auth);
+            return;
+          }
         } else {
-          hide(setupSection);
+          // Not signed in
           hide(logoutBtn);
+          hide(setupSection);
+          hide($("financial-settings"), $("animatedCounters"), $("student-registration"), $("attendance-section"), $("analytics-section"), $("register-section"));
           show(loginModal);
         }
-      }
-
-      onAuthStateChanged(auth, (user) => {
-        requireAuthShowSetup(user);
       });
 
       closeLoginModal.onclick = () => {
@@ -467,9 +497,13 @@
 
       logoutBtn.onclick = async () => {
         await signOut(auth);
+        userRole = null;
+        assignedSchool = assignedClass = assignedSection = null;
       };
 
-      //–– After auth, initialize the rest ––
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+      //–– ADMIN FUNCTIONS
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
       // Generate new admission number (per school)
       async function genAdmNo() {
@@ -480,19 +514,49 @@
         return String(lastAdmNo).padStart(4, "0");
       }
 
-      //–– 1. SETUP SECTION ––
-      const setupForm      = $("setupForm");
-      const setupDisplay   = $("setupDisplay");
-      const schoolInput    = $("schoolInput");
-      const schoolSelect   = $("schoolSelect");
-      const classSelect    = $("teacherClassSelect");
-      const sectionSelect  = $("teacherSectionSelect");
-      const setupText      = $("setupText");
-      const saveSetupBtn   = $("saveSetup");
-      const editSetupBtn   = $("editSetup");
-      const schoolListDiv  = $("schoolList");
+      // Load Setup UI for Admin
+      async function loadSetupAdmin() {
+        schools        = (await idbGet("schools")) || [];
+        currentSchool  = await idbGet("currentSchool");
+        teacherClass   = await idbGet("teacherClass");
+        teacherSection = await idbGet("teacherSection");
 
-      function renderSchoolList() {
+        // Populate school dropdown
+        schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
+          ...schools.map(s => `<option value="${s}">${s}</option>` )
+        ].join("");
+        if (currentSchool) schoolSelect.value = currentSchool;
+
+        // Render list of schools with edit/delete for Admin
+        renderSchoolListAdmin();
+
+        if (currentSchool && teacherClass && teacherSection) {
+          await ensureSchoolData(currentSchool);
+          students       = studentsBySchool[currentSchool];
+          attendanceData = attendanceDataBySchool[currentSchool];
+          paymentsData   = paymentsDataBySchool[currentSchool];
+          lastAdmNo      = lastAdmNoBySchool[currentSchool];
+
+          classSelect.value = teacherClass;
+          sectionSelect.value = teacherSection;
+          setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+          hide(setupForm);
+          show(setupDisplay);
+
+          resetViews();
+          setTimeout(() => {
+            renderStudents();
+            updateCounters();
+          }, 0);
+        } else {
+          show(setupForm);
+          hide(setupDisplay);
+          resetViews();
+        }
+      }
+
+      // Render the list of schools with edit/delete buttons (Admin only)
+      function renderSchoolListAdmin() {
         schoolListDiv.innerHTML = "";
         schools.forEach((sch, idx) => {
           const row = document.createElement("div");
@@ -514,6 +578,7 @@
               schools[idx] = newName.trim();
               await idbSet("schools", schools);
 
+              // Rename mappings in IndexedDB & local state
               studentsBySchool[newName] = studentsBySchool[oldName] || [];
               delete studentsBySchool[oldName];
               await idbSet("studentsBySchool", studentsBySchool);
@@ -531,7 +596,7 @@
               await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
 
               await syncToFirebase();
-              await loadSetup();
+              await loadSetupAdmin();
             }
           };
         });
@@ -560,63 +625,25 @@
               await idbSet("teacherSection", null);
             }
             await syncToFirebase();
-            await loadSetup();
+            await loadSetupAdmin();
           };
         });
       }
 
-      let loadSetup = async () => {
-        schools        = (await idbGet("schools")) || [];
-        currentSchool  = await idbGet("currentSchool");
-        teacherClass   = await idbGet("teacherClass");
-        teacherSection = await idbGet("teacherSection");
-
-        // Populate school dropdown
-        schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-          ...schools.map(s => `<option value="${s}">${s}</option>` )
-        ].join("");
-        if (currentSchool) schoolSelect.value = currentSchool;
-
-        renderSchoolList();
-
-        if (currentSchool && teacherClass && teacherSection) {
-          await ensureSchoolData(currentSchool);
-          students       = studentsBySchool[currentSchool];
-          attendanceData = attendanceDataBySchool[currentSchool];
-          paymentsData   = paymentsDataBySchool[currentSchool];
-          lastAdmNo      = lastAdmNoBySchool[currentSchool];
-
-          classSelect.value = teacherClass;
-          sectionSelect.value = teacherSection;
-          setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-          hide(setupForm);
-          show(setupDisplay);
-
-          resetViews();
-          setTimeout(() => {
-            renderStudents();
-            updateCounters();
-          }, 0);
-
-        } else {
-          show(setupForm);
-          hide(setupDisplay);
-          resetViews();
-        }
-      };
-
       saveSetupBtn.onclick = async (e) => {
         e.preventDefault();
-        const newSchool = schoolInput.value.trim();
+        const newSchool = schoolSelect.previousElementSibling.value.trim();
         if (newSchool) {
+          // Admin creating a new school
           if (!schools.includes(newSchool)) {
             schools.push(newSchool);
             await idbSet("schools", schools);
             await syncToFirebase();
           }
-          schoolInput.value = "";
-          return loadSetup();
+          schoolSelect.previousElementSibling.value = "";
+          return loadSetupAdmin();
         }
+        // Otherwise, Admin selecting existing school/class/section
         const selSchool  = schoolSelect.value;
         const selClass   = classSelect.value;
         const selSection = sectionSelect.value;
@@ -631,7 +658,7 @@
         await idbSet("teacherClass", teacherClass);
         await idbSet("teacherSection", teacherSection);
         await syncToFirebase();
-        await loadSetup();
+        await loadSetupAdmin();
       };
 
       editSetupBtn.onclick = (e) => {
@@ -640,6 +667,74 @@
         hide(setupDisplay);
         resetViews();
       };
+
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+      //–– PRINCIPAL FUNCTIONS
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+      // Render Setup UI for Principal (cannot create or delete schools, only select class/section)
+      function renderSetupPrincipal() {
+        // Populate school dropdown with assigned school only
+        schoolSelect.innerHTML = `<option selected value="${assignedSchool}">${assignedSchool}</option>`;
+        setupText.textContent = `${assignedSchool} 🏫`;
+        // Show class/section selection
+        show(setupDisplay);
+        hide(setupForm);
+
+        // Remove edit/delete from schoolList (Principal cannot modify)
+        schoolListDiv.innerHTML = "";
+
+        // Show class/section dropdowns for principal to choose
+        classSelect.value = "";
+        sectionSelect.value = "";
+        // After selecting class and section, call loadPrincipalView
+        saveSetupBtn.onclick = async (e) => {
+          e.preventDefault();
+          const selClass   = classSelect.value;
+          const selSection = sectionSelect.value;
+          if (!selClass || !selSection) {
+            alert("Please select a class and section.");
+            return;
+          }
+          teacherClass = selClass;
+          teacherSection = selSection;
+          await idbSet("currentSchool", assignedSchool);
+          await idbSet("teacherClass", teacherClass);
+          await idbSet("teacherSection", teacherSection);
+          await ensureSchoolData(assignedSchool);
+          students       = studentsBySchool[assignedSchool];
+          attendanceData = attendanceDataBySchool[assignedSchool];
+          paymentsData   = paymentsDataBySchool[assignedSchool];
+          lastAdmNo      = lastAdmNoBySchool[assignedSchool];
+          loadPrincipalView();
+        };
+      }
+
+      // Load view for Principal after class/section chosen
+      function loadPrincipalView() {
+        hide(setupSection);
+        show($("financial-settings"), $("animatedCounters"), $("student-registration"), $("attendance-section"), $("analytics-section"), $("register-section"));
+        renderStudents();
+        updateCounters();
+      }
+
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+      //–– TEACHER FUNCTIONS
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+      // Load the full UI for Teacher (assigned school/class/section)
+      function renderTeacherView() {
+        hide(setupSection);
+        show($("financial-settings"), $("animatedCounters"), $("student-registration"), $("attendance-section"), $("analytics-section"), $("register-section"));
+        // Populate setupDisplay with assigned details
+        setupText.textContent = `${assignedSchool} 🏫 | Class: ${assignedClass} | Section: ${assignedSection}`;
+        renderStudents();
+        updateCounters();
+      }
+
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+      //–– COMMON FUNCTIONS (for Admin, Principal, Teacher) ––
+      //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
       //–– 2. FINANCIAL SETTINGS SECTION ––
       const formDiv             = $("financialForm");
