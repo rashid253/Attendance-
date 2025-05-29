@@ -1,25 +1,26 @@
 // functions/index.js
 // -------------------------------------------
-// Updated Cloud Functions for admin approvals using HTTPS Callable (v1)
+// Updated Cloud Functions for admin approvals using HTTPS Callable
 
-// Force Firebase Functions to treat code as v1
+// Ensure Functions uses the correct project
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'attandace-management';
 
 const functions = require('firebase-functions');
 const admin     = require('firebase-admin');
 
-// Initialize the Admin SDK
+// Initialize Admin SDK
 admin.initializeApp();
 
 /**
- * Callable function to set a custom claim on a user.
- * Only admins (with role claim 'admin') can invoke this.
+ * Callable function: setCustomClaim
+ * - Only callable by authenticated users with admin role
+ * - Parameters: { uid, claimKey?: string, claimValue }
  */
 exports.setCustomClaim = functions
   .region('asia-south1')
   .https.onCall(async (data, context) => {
-    // Verify caller is authenticated and has admin role
-    if (!(context.auth && context.auth.token.role === 'admin')) {
+    // Authorization check
+    if (!context.auth || context.auth.token.role !== 'admin') {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Only administrators can modify roles.'
@@ -27,7 +28,7 @@ exports.setCustomClaim = functions
     }
 
     const { uid, claimKey = 'role', claimValue } = data;
-    if (!uid || !claimValue) {
+    if (!uid || claimValue === undefined) {
       throw new functions.https.HttpsError(
         'invalid-argument',
         'Function must be called with uid and claimValue.'
@@ -44,14 +45,15 @@ exports.setCustomClaim = functions
   });
 
 /**
- * Callable function to delete a user by UID.
- * Only admins (with role claim 'admin') can invoke this.
+ * Callable function: deleteUser
+ * - Only callable by authenticated users with admin role
+ * - Parameters: { uid }
  */
 exports.deleteUser = functions
   .region('asia-south1')
   .https.onCall(async (data, context) => {
-    // Verify caller is authenticated and has admin role
-    if (!(context.auth && context.auth.token.role === 'admin')) {
+    // Authorization check
+    if (!context.auth || context.auth.token.role !== 'admin') {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Only administrators can delete users.'
