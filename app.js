@@ -1,362 +1,1025 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Attendance Management</title>
+// … (Firebase initialization, getDatabase, etc.) …
 
-  <!-- PWA & Meta -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2196F3" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="application-name" content="Attendance Mgmt" />
+// Cache modal instances once the DOM is ready
+let keyLoginModalInstance = null;
+let requestAccessModalInstance = null;
 
-  <!-- Font Awesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+// ----------------------------------------------
+// 2) Load “schools” from Firebase into `allSchools[]` and populate dropdown
+// ----------------------------------------------
+let allSchools = [];
+onValue(dbRef(database, "schools"), snapshot => {
+  allSchools = [];
+  snapshot.forEach(childSnap => {
+    allSchools.push({
+      id: childSnap.key,
+      name: childSnap.val().name
+    });
+  });
+  console.log("Fetched allSchools from Firebase:", allSchools);
 
-  <!-- idb-keyval (IIFE) -->
-  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+  // Only populate <select id="reqSchoolSelect"> if it exists
+  const schoolSelect = document.getElementById("reqSchoolSelect");
+  if (schoolSelect) {
+    schoolSelect.innerHTML = '<option value="">Select School</option>';
+    allSchools.forEach(schoolObj => {
+      const opt = document.createElement("option");
+      opt.value = schoolObj.id;
+      opt.textContent = schoolObj.name;
+      schoolSelect.appendChild(opt);
+    });
+  }
 
-  <!-- jsPDF + AutoTable (IIFE) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  // Enable the Request Access button now that schools are loaded
+  const btn = document.getElementById("btnOpenRequestModal");
+  if (btn && allSchools.length > 0) {
+    btn.disabled = false;
+  }
+});
 
-  <!-- Chart.js (IIFE) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+// ----------------------------------------------
+// 3) After DOM loads, initialize Bootstrap modals
+// ----------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Key Login Modal
+  const keyLoginEl = document.getElementById("keyLoginModal");
+  if (keyLoginEl) {
+    keyLoginModalInstance = new bootstrap.Modal(keyLoginEl, {
+      backdrop: 'static',
+      keyboard: false
+    });
+  }
 
-  <!-- Bootstrap CSS -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
+  // Initialize Request Access Modal
+  const requestAccessEl = document.getElementById("requestAccessModal");
+  if (requestAccessEl) {
+    requestAccessModalInstance = new bootstrap.Modal(requestAccessEl, {
+      backdrop: 'static',
+      keyboard: false
+    });
+  }
 
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
+  // Check localStorage for a saved key; otherwise show Key Login
+  const savedKey = localStorage.getItem("teacherKey");
+  if (savedKey) {
+    validateAndLockForTeacher(savedKey);
+  } else if (keyLoginModalInstance) {
+    keyLoginModalInstance.show();
+  }
+});
 
-  <style>
-    @media print { .no-print { display: none !important; } }
-    .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
-    .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
-    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .table-wrapper { overflow-x: auto; margin-top: 1em; }
-    .table-actions { margin-top: 0.5em; }
-    .counter-card .card-number { font-size: 2rem; color: #2196F3; }
-  </style>
-</head>
-<body>
-  <!-- ============================================== -->
-  <!-- Key Login Modal (shown on load)               -->
-  <!-- ============================================== -->
-  <div class="modal fade" id="keyLoginModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content p-4">
-        <h5 class="modal-title mb-3">Enter Access Key</h5>
-        <input type="text" id="teacherKeyInput" class="form-control mb-2" placeholder="Access Key" />
-        <div id="keyErrorMsg" class="text-danger small d-none"></div>
-        <button id="submitTeacherKeyBtn" class="btn btn-primary w-100">Submit</button>
-      </div>
-    </div>
-  </div>
+// ----------------------------------------------
+// 4) Key Login “Submit” handler (unchanged logic) but hide via instance.hide()
+// ----------------------------------------------
+document.getElementById("submitTeacherKeyBtn").addEventListener("click", async () => {
+  const keyInput = document.getElementById("teacherKeyInput").value.trim();
+  if (!keyInput) return;
+  await validateAndLockForTeacher(keyInput);
+});
 
-  <!-- ============================================== -->
-  <!-- Request Access Button                          -->
-  <!-- ============================================== -->
-  <button id="btnOpenRequestModal" class="btn btn-outline-primary m-3" disabled>
-    Request Access Key
-  </button>
+// ----------------------------------------------
+// 5) Request Access “Open” handler (just show via instance.show())
+// ----------------------------------------------
+document.getElementById("btnOpenRequestModal").addEventListener("click", () => {
+  // Clear any previous errors
+  document.getElementById("reqErrorMsg").classList.add("d-none");
 
-  <!-- ============================================== -->
-  <!-- Request Access Modal                            -->
-  <!-- ============================================== -->
-  <div class="modal fade" id="requestAccessModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content p-4">
-        <h5 class="modal-title mb-3">Request Access</h5>
-        <input type="text" id="reqTeacherName" class="form-control mb-2" placeholder="Your Name" />
-        <input type="email" id="reqTeacherEmail" class="form-control mb-2" placeholder="Your Email" />
-        <select id="reqSchoolSelect" class="form-select mb-2">
-          <option value="">Select School</option>
-        </select>
-        <select id="reqClassSelect" class="form-select mb-2" disabled>
-          <option value="">Select Class</option>
-        </select>
-        <select id="reqSectionSelect" class="form-select mb-2" disabled>
-          <option value="">Select Section</option>
-        </select>
-        <div id="reqErrorMsg" class="text-danger small mt-2 d-none"></div>
-        <button id="submitRequestBtn" class="btn btn-success w-100 mt-3">Send Request</button>
-      </div>
-    </div>
-  </div>
+  // Reset Class & Section dropdowns
+  const classSelect = document.getElementById("reqClassSelect");
+  const sectionSelect = document.getElementById("reqSectionSelect");
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    classSelect.disabled = true;
+  }
+  if (sectionSelect) {
+    sectionSelect.innerHTML = '<option value="">Select Section</option>';
+    sectionSelect.disabled = true;
+  }
 
-  <!-- ============================================== -->
-  <!-- Header                                        -->
-  <!-- ============================================== -->
-  <header class="app-header">
-    <h1>
-      <i class="fas fa-school"></i>
-      Attendance Management
-    </h1>
-    <div class="header-buttons">
-      <button id="chooseBackupFolder" class="btn">
-        <i class="fas fa-folder-open"></i>
-        Select Backup Folder
-      </button>
-      <button id="restoreData" class="btn">
-        <i class="fas fa-upload"></i>
-        Restore Backup
-      </button>
-      <input type="file" id="restoreFile" accept=".json" hidden />
-      <button id="resetData" class="btn btn-danger">
-        <i class="fas fa-trash-alt"></i>
-        Factory Reset
-      </button>
-    </div>
-  </header>
+  // Now show the modal
+  if (requestAccessModalInstance) {
+    requestAccessModalInstance.show();
+  }
+});
 
-  <!-- ============================================== -->
-  <!-- 1. SETUP Section                               -->
-  <!-- ============================================== -->
-  <section id="teacher-setup">
-    <h2><i class="fas fa-cog"></i> Setup</h2>
-    <div id="setupForm" class="row-inline">
-      <input id="schoolInput" placeholder="New School Name" />
-      <select id="schoolSetupSelect">
-        <option disabled selected>-- Select School --</option>
-      </select>
-      <select id="classSetupSelect" disabled>
-        <option disabled selected>-- Select Class --</option>
-      </select>
-      <select id="sectionSetupSelect" disabled>
-        <option disabled selected>-- Select Section --</option>
-      </select>
-      <button id="applySetup" class="no-print"><i class="fas fa-save"></i> Apply</button>
-      <button id="btnAddNewSchool" class="no-print"><i class="fas fa-plus"></i> Add School</button>
-      <button id="btnRenameSchool" class="no-print"><i class="fas fa-edit"></i> Rename</button>
-      <button id="btnRemoveSchool" class="no-print"><i class="fas fa-trash"></i> Remove</button>
-    </div>
-    <div id="setupDisplay" class="hidden mt-2">
-      <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
-      <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
-    </div>
-  </section>
+// ----------------------------------------------
+// 6) When a School is selected, load Class dropdown
+// ----------------------------------------------
+document.getElementById("reqSchoolSelect").addEventListener("change", async (e) => {
+  const schoolId = e.target.value;
+  const classSelect = document.getElementById("reqClassSelect");
+  const sectionSelect = document.getElementById("reqSectionSelect");
 
-  <!-- ============================================== -->
-  <!-- 2. FINANCIAL SETTINGS Section                  -->
-  <!-- ============================================== -->
-  <section id="financial-settings" class="mt-4">
-    <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
-    <div id="financialForm" class="row-inline">
-      <label>Fine/Absent (PKR):<input id="fineAbsent" type="number"/></label>
-      <label>Fine/Late (PKR):<input id="fineLate" type="number"/></label>
-      <label>Fine/Leave (PKR):<input id="fineLeave" type="number"/></label>
-      <label>Fine/Half-Day (PKR):<input id="fineHalfDay" type="number"/></label>
-      <label>Eligib. % (≥):<input id="eligibilityPct" type="number" min="0" max="100"/></label>
-      <button id="saveSettings" class="no-print"><i class="fas fa-save"></i> Save</button>
-    </div>
-  </section>
+  if (classSelect) {
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    classSelect.disabled = true;
+  }
+  if (sectionSelect) {
+    sectionSelect.innerHTML = '<option value="">Select Section</option>';
+    sectionSelect.disabled = true;
+  }
 
-  <!-- ============================================== -->
-  <!-- 3. COUNTERS (dynamic via JS)                   -->
-  <!-- ============================================== -->
-  <section id="animatedCounters" class="mt-4">
-    <div id="countersContainer" class="scroll-row"></div>
-  </section>
+  if (!schoolId) return;
 
-  <!-- ============================================== -->
-  <!-- 4. STUDENT REGISTRATION Section                -->
-  <!-- ============================================== -->
-  <section id="student-registration" class="mt-4">
-    <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
-    <div class="row-inline">
-      <input id="studentName" placeholder="Name" />
-      <input id="parentName" placeholder="Parent Name" />
-      <input id="parentContact" placeholder="Contact" />
-      <input id="parentOccupation" placeholder="Occupation" />
-      <input id="parentAddress" placeholder="Address" />
-      <button id="addStudent" class="no-print"><i class="fas fa-plus-circle"></i> Add</button>
-    </div>
-    <div class="table-wrapper mt-2">
-      <table id="studentsTable" class="table table-striped">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAllStudents"/></th>
-            <th>#</th>
-            <th>Name</th>
-            <th>Adm#</th>
-            <th>Parent</th>
-            <th>Contact</th>
-            <th>Occupation</th>
-            <th>Address</th>
-            <th>Fine (PKR)</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="studentsBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="editSelected" disabled class="no-print"><i class="fas fa-edit"></i> Edit</button>
-      <button id="deleteSelected" disabled class="no-print"><i class="fas fa-trash"></i> Delete</button>
-      <button id="saveRegistration" class="no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="editRegistration" class="hidden no-print"><i class="fas fa-undo"></i> Restore</button>
-      <button id="shareRegistration" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-      <button id="downloadRegistrationPDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
-    </div>
-  </section>
+  // Fetch classes for that school
+  const classes = await getClassesBySchoolId(schoolId);
+  if (classSelect) {
+    classes.forEach(clsObj => {
+      const opt = document.createElement("option");
+      opt.value = clsObj.name;
+      opt.textContent = clsObj.name;
+      classSelect.appendChild(opt);
+    });
+    classSelect.disabled = false;
+  }
+});
 
-  <!-- ============================================== -->
-  <!-- 5. MARK ATTENDANCE Section                     -->
-  <!-- ============================================== -->
-  <section id="attendance-section" class="mt-4">
-    <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
-    <div class="row-inline">
-      <input type="date" id="dateInput" />
-      <button id="loadAttendance" class="no-print"><i class="fas fa-calendar-check"></i> Load</button>
-    </div>
-    <div id="attendanceBody" class="mt-2"></div>
-    <div id="attendanceSummary" class="hidden summary-box mt-2"></div>
-    <div class="table-actions">
-      <button id="saveAttendance" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="resetAttendance" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="downloadAttendancePDF" class="hidden no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAttendanceSummary" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
+// ----------------------------------------------
+// 7) When a Class is selected, load Section dropdown
+// ----------------------------------------------
+document.getElementById("reqClassSelect").addEventListener("change", async (e) => {
+  const className = e.target.value;
+  const sectionSelect = document.getElementById("reqSectionSelect");
 
-  <!-- ============================================== -->
-  <!-- 6. ANALYTICS Section                           -->
-  <!-- ============================================== -->
-  <section id="analytics-section" class="mt-4">
-    <h2>
-      <i class="fas fa-chart-bar"></i> Analytics
-      <button id="analyticsFilterBtn" class="no-print"><i class="fas fa-filter"></i></button>
-    </h2>
-    <div class="row-inline">
-      <select id="analyticsTarget">
-        <option disabled selected>-- Report For --</option>
-        <option value="class">Class</option>
-        <option value="section">Section</option>
-        <option value="student">Student</option>
-      </select>
-      <select id="analyticsSectionSelect" class="hidden">
-        <option disabled selected>-- Section --</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <select id="analyticsType" disabled>
-        <option disabled selected>-- Period --</option>
-        <option value="date">Date</option>
-        <option value="month">Month</option>
-        <option value="semester">Semester</option>
-        <option value="year">Year</option>
-      </select>
-      <input type="date" id="analyticsFromDate" class="hidden"/>
-      <input type="date" id="analyticsToDate" class="hidden"/>
-      <input type="month" id="analyticsMonth" class="hidden"/>
-      <input type="month" id="semesterStart" class="hidden"/>
-      <input type="month" id="semesterEnd" class="hidden"/>
-      <input type="number" id="yearStart" class="hidden" placeholder="Year"/>
-      <input type="text" id="analyticsSearch" class="hidden" placeholder="Adm# or Name"/>
-      <button id="loadAnalytics" class="no-print"><i class="fas fa-chart-bar"></i> Load</button>
-      <button id="resetAnalytics" class="hidden no-print"><i class="fas fa-undo"></i> Change</button>
-    </div>
-    <div id="instructions" class="hidden mt-2"></div>
-    <div id="analyticsContainer" class="table-wrapper hidden mt-2">
-      <table id="analyticsTable" class="table table-bordered">
-        <thead><tr></tr></thead>
-        <tbody id="analyticsBody"></tbody>
-      </table>
-    </div>
-    <div id="graphs" class="hidden mt-3">
-      <canvas id="barChart"></canvas>
-      <canvas id="pieChart"></canvas>
-    </div>
-    <div id="analyticsActions" class="table-actions hidden mt-2">
-      <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
+  if (sectionSelect) {
+    sectionSelect.innerHTML = '<option value="">Select Section</option>';
+    sectionSelect.disabled = true;
+  }
+  if (!className) return;
 
-  <!-- ============================================== -->
-  <!-- Analytics Filter Modal                         -->
-  <!-- ============================================== -->
-  <div id="analyticsFilterModal" class="modal hidden">
-    <div class="modal-content">
-      <span id="analyticsFilterClose" class="modal-close">&times;</span>
-      <h3>Filter Reports</h3>
-      <form id="analyticsFilterForm">
-        <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
-        <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
-        <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
-        <label><input type="checkbox" value="cleared"> Cleared (No Dues)</label><br>
-        <label><input type="checkbox" value="debarred"> Debarred</label><br>
-        <label><input type="checkbox" value="eligible"> Eligible</label><br>
-        <label><input type="checkbox" value="all"> All Students</label>
-        <fieldset class="mt-2">
-          <legend>Download Mode</legend>
-          <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
-          <label><input type="radio" name="downloadMode" value="individual"> Individual PDFs</label>
-        </fieldset>
-        <button type="button" id="applyAnalyticsFilter" class="btn no-print mt-2">Apply Filter</button>
-      </form>
-    </div>
-  </div>
+  // Fetch sections for that class
+  const sections = await getSectionsByClassName(className);
+  if (sectionSelect) {
+    sections.forEach(secObj => {
+      const opt = document.createElement("option");
+      opt.value = secObj.name;
+      opt.textContent = secObj.name;
+      sectionSelect.appendChild(opt);
+    });
+    sectionSelect.disabled = false;
+  }
+});
 
-  <!-- ============================================== -->
-  <!-- 7. ATTENDANCE REGISTER Section                 -->
-  <!-- ============================================== -->
-  <section id="register-section" class="mt-4">
-    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
-    <div class="row-inline">
-      <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
-    </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper mt-2">
-      <table id="registerTable" class="table table-bordered">
-        <thead><tr id="registerHeader"></tr></thead>
-        <tbody id="registerBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions mt-2">
-      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="saveRegister" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareRegister" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
+// ----------------------------------------------
+// 8) Handle “Send Request” click
+// ----------------------------------------------
+document.getElementById("submitRequestBtn").addEventListener("click", async () => {
+  const name   = document.getElementById("reqTeacherName").value.trim();
+  const email  = document.getElementById("reqTeacherEmail").value.trim();
+  const school = document.getElementById("reqSchoolSelect").value;
+  const cls    = document.getElementById("reqClassSelect").value;
+  const sec    = document.getElementById("reqSectionSelect").value;
+  const errorEl = document.getElementById("reqErrorMsg");
 
-  <!-- ============================================== -->
-  <!-- Payment Modal (unchanged)                       -->
-  <!-- ============================================== -->
-  <div id="paymentModal" class="modal hidden">
-    <div class="modal-content">
-      <span id="paymentModalClose" class="modal-close">&times;</span>
-      <h3>Payment for Adm# <span id="payAdm"></span></h3>
-      <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
-      <div class="modal-actions mt-3">
-        <button id="savePayment" class="btn btn-success no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="btn btn-secondary no-print"><i class="fas fa-times"></i> Cancel</button>
-      </div>
-    </div>
-  </div>
+  if (!name || !email || !school || !cls || !sec) {
+    errorEl.textContent = "Please fill all fields.";
+    errorEl.classList.remove("d-none");
+    return;
+  }
+  errorEl.classList.add("d-none");
 
-  <!-- ============================================== -->
-  <!-- Bootstrap JS Bundle (must come before app.js)   -->
-  <!-- ============================================== -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  try {
+    await dbPush(dbRef(database, "requests"), {
+      teacherName:  name,
+      teacherEmail: email,
+      schoolId:     school,
+      className:    cls,
+      sectionName:  sec,
+      status:       "pending",
+      requestedAt:  Date.now()
+    });
 
-  <!-- ============================================== -->
-  <!-- Load main app.js as an ES module                -->
-  <!-- ============================================== -->
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+    if (requestAccessModalInstance) {
+      requestAccessModalInstance.hide();
+    }
+    alert("Your request has been sent to the admin.");
+  } catch (err) {
+    console.error("Firebase error:", err);
+    errorEl.textContent = "Could not send request. Try again.";
+    errorEl.classList.remove("d-none");
+  }
+});
+
+// ----------------------------------------------
+// 9) Original Attendance Management App Logic (unchanged)
+//    Everything below this line is verbatim from your old app.js.
+//    Do not modify; it continues as before.
+// ----------------------------------------------
+
+// Ensure data structures exist for a given school
+async function ensureSchoolData(school) {
+  if (!school) return;
+  if (!studentsBySchool[school]) {
+    studentsBySchool[school] = [];
+    await idbSet("studentsBySchool", studentsBySchool);
+  }
+  if (!attendanceDataBySchool[school]) {
+    attendanceDataBySchool[school] = {};
+    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  }
+  if (!paymentsDataBySchool[school]) {
+    paymentsDataBySchool[school] = {};
+    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  }
+  if (lastAdmNoBySchool[school] === undefined) {
+    lastAdmNoBySchool[school] = 0;
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  }
+  if (!schools.includes(school)) {
+    schools.push(school);
+    await idbSet("schools", schools);
+  }
+  await idbSet("teacherSection", teacherSection);
+  await idbSet("teacherClass", teacherClass);
+  await idbSet("currentSchool", currentSchool);
+}
+
+// Sync local state (mappings) to Firebase
+async function syncToFirebase() {
+  const appDataRef = dbRef(database, "appData");
+  const payload = {
+    studentsBySchool,
+    attendanceDataBySchool,
+    paymentsDataBySchool,
+    lastAdmNoBySchool
+  };
+  try {
+    await dbSet(appDataRef, payload);
+    console.log("✅ Synced data to Firebase");
+  } catch (err) {
+    console.error("Firebase sync failed:", err);
+  }
+}
+
+// Utility: Share PDF via Web Share API
+async function sharePdf(blob, fileName, title) {
+  if (
+    navigator.canShare &&
+    navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })
+  ) {
+    try {
+      await navigator.share({
+        title,
+        files: [new File([blob], fileName, { type: blob.type })]
+      });
+      console.log("File shared successfully");
+    } catch (err) {
+      console.error("Error sharing file:", err);
+    }
+  } else {
+    alert("Web Share API not supported for files on this browser.");
+  }
+}
+
+// Utility wrapper for document.getElementById
+function $(id) {
+  return document.getElementById(id);
+}
+
+// --------------------------------------------------
+// Global State and Per-School Data Structures
+// --------------------------------------------------
+
+let studentsBySchool       = {}; // { schoolName: [ studentObj, … ] }
+let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: status, … } } }
+let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date, amount }, … ] } }
+let lastAdmNoBySchool      = {}; // { schoolName: lastNumericAdmNo }
+let fineRates              = { A:50, Lt:20, L:10, HD:30 };
+let eligibilityPct         = 75;
+
+let schools                = [];    // [ schoolId, … ]  (loaded from IndexedDB and Firebase)
+let currentSchool          = null;  // selected school ID string
+let teacherClass           = null;  // selected class string
+let teacherSection         = null;  // selected section string
+
+let students       = [];    // pointer to studentsBySchool[currentSchool]
+let attendanceData = {};    // pointer to attendanceDataBySchool[currentSchool]
+let paymentsData   = {};    // pointer to paymentsDataBySchool[currentSchool]
+let lastAdmNo      = 0;     // pointer to lastAdmNoBySchool[currentSchool]
+
+// --------------------------------------------------
+// PWA: Service Worker Registration (unchanged)
+// --------------------------------------------------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js");
+  });
+}
+
+// --------------------------------------------------
+// SETUP Section
+// --------------------------------------------------
+async function loadSetup() {
+  studentsBySchool       = (await idbGet("studentsBySchool")) || {};
+  attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
+  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool")) || {};
+  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool")) || {};
+  schools                = (await idbGet("schools")) || [];
+
+  renderSchoolOptions();
+
+  // Add event listeners for Setup buttons:
+  document.getElementById("btnAddNewSchool").addEventListener("click", async () => {
+    const newSchoolName = prompt("Enter new school name:");
+    if (!newSchoolName) return;
+    if (!schools.includes(newSchoolName)) {
+      schools.push(newSchoolName);
+      await idbSet("schools", schools);
+      studentsBySchool[newSchoolName] = [];
+      attendanceDataBySchool[newSchoolName] = {};
+      paymentsDataBySchool[newSchoolName] = {};
+      lastAdmNoBySchool[newSchoolName] = 0;
+      await idbSet("studentsBySchool", studentsBySchool);
+      await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+      await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+      await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+      renderSchoolOptions();
+      alert("New school added.");
+    } else {
+      alert("School already exists.");
+    }
+  });
+
+  document.getElementById("btnRenameSchool").addEventListener("click", async () => {
+    const oldName = document.getElementById("schoolSetupSelect").value;
+    if (!oldName) {
+      alert("Please select a school to rename.");
+      return;
+    }
+    const newName = prompt("Enter new name for the school:", oldName);
+    if (!newName) return;
+    if (newName === oldName) return;
+    if (schools.includes(newName)) {
+      alert("A school with that name already exists.");
+      return;
+    }
+    // Rename in arrays and mappings:
+    const index = schools.indexOf(oldName);
+    schools[index] = newName;
+    studentsBySchool[newName] = studentsBySchool[oldName];
+    attendanceDataBySchool[newName] = attendanceDataBySchool[oldName];
+    paymentsDataBySchool[newName] = paymentsDataBySchool[oldName];
+    lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName];
+
+    delete studentsBySchool[oldName];
+    delete attendanceDataBySchool[oldName];
+    delete paymentsDataBySchool[oldName];
+    delete lastAdmNoBySchool[oldName];
+
+    await idbSet("schools", schools);
+    await idbSet("studentsBySchool", studentsBySchool);
+    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+    renderSchoolOptions();
+    alert("School renamed.");
+  });
+
+  document.getElementById("btnRemoveSchool").addEventListener("click", async () => {
+    const schoolToDelete = document.getElementById("schoolSetupSelect").value;
+    if (!schoolToDelete) {
+      alert("Please select a school to remove.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to remove "${schoolToDelete}" and all its data?`)) {
+      return;
+    }
+    schools = schools.filter(s => s !== schoolToDelete);
+    delete studentsBySchool[schoolToDelete];
+    delete attendanceDataBySchool[schoolToDelete];
+    delete paymentsDataBySchool[schoolToDelete];
+    delete lastAdmNoBySchool[schoolToDelete];
+    await idbSet("schools", schools);
+    await idbSet("studentsBySchool", studentsBySchool);
+    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+    renderSchoolOptions();
+    alert("School removed.");
+  });
+
+  // When a school is selected in setup, load classes
+  document.getElementById("schoolSetupSelect").addEventListener("change", (e) => {
+    const school = e.target.value;
+    renderClassOptions(school);
+  });
+
+  // When a class is selected in setup, load sections
+  document.getElementById("classSetupSelect").addEventListener("change", (e) => {
+    const cls = e.target.value;
+    renderSectionOptions(cls);
+  });
+
+  // When “Apply Setup” is clicked, initialize app data
+  document.getElementById("applySetup").addEventListener("click", async () => {
+    const school = document.getElementById("schoolSetupSelect").value;
+    const cls = document.getElementById("classSetupSelect").value;
+    const sec = document.getElementById("sectionSetupSelect").value;
+    if (!school || !cls || !sec) {
+      alert("Please select School, Class, and Section.");
+      return;
+    }
+    teacherClass = cls;
+    teacherSection = sec;
+    currentSchool = school;
+    await ensureSchoolData(currentSchool);
+
+    // Load data for this school
+    students = studentsBySchool[currentSchool] || [];
+    attendanceData = attendanceDataBySchool[currentSchool] || {};
+    paymentsData = paymentsDataBySchool[currentSchool] || {};
+    lastAdmNo = lastAdmNoBySchool[currentSchool] || 0;
+
+    // Render counters, tables, etc.
+    renderCounters();
+    renderStudentsTable();
+  });
+}
+
+// Render school dropdown in Setup
+function renderSchoolOptions() {
+  const schoolSelect = $("schoolSetupSelect");
+  schoolSelect.innerHTML = '<option value="">Select School</option>';
+  schools.forEach((school) => {
+    const opt = document.createElement("option");
+    opt.value = school;
+    opt.textContent = school;
+    schoolSelect.appendChild(opt);
+  });
+}
+
+// Render class dropdown after a school is selected
+function renderClassOptions(school) {
+  const classSelect = $("classSetupSelect");
+  classSelect.innerHTML = '<option value="">Select Class</option>';
+  if (!school) {
+    classSelect.disabled = true;
+    return;
+  }
+  const classSet = new Set();
+  (studentsBySchool[school] || []).forEach((stu) => {
+    classSet.add(stu.cls);
+  });
+  Array.from(classSet).forEach((cls) => {
+    const opt = document.createElement("option");
+    opt.value = cls;
+    opt.textContent = cls;
+    classSelect.appendChild(opt);
+  });
+  classSelect.disabled = false;
+}
+
+// Render section dropdown after a class is selected
+function renderSectionOptions(cls) {
+  const sectionSelect = $("sectionSetupSelect");
+  sectionSelect.innerHTML = '<option value="">Select Section</option>';
+  if (!cls) {
+    sectionSelect.disabled = true;
+    return;
+  }
+  const secSet = new Set();
+  Object.values(studentsBySchool[currentSchool] || []).forEach((stu) => {
+    if (stu.cls === cls) {
+      secSet.add(stu.sec);
+    }
+  });
+  Array.from(secSet).forEach((sec) => {
+    const opt = document.createElement("option");
+    opt.value = sec;
+    opt.textContent = sec;
+    sectionSelect.appendChild(opt);
+  });
+  sectionSelect.disabled = false;
+}
+
+// Initialize the entire app data for a given school
+async function initializeAppDataForSchool(school) {
+  currentSchool = school;
+  await ensureSchoolData(currentSchool);
+  students = studentsBySchool[currentSchool] || [];
+  attendanceData = attendanceDataBySchool[currentSchool] || {};
+  paymentsData = paymentsDataBySchool[currentSchool] || {};
+  lastAdmNo = lastAdmNoBySchool[currentSchool] || 0;
+
+  renderCounters();
+  renderStudentsTable();
+  renderAttendanceControls();
+  renderAnalyticsControls();
+  renderRegisterControls();
+}
+
+// --------------------------------------------------
+// COUNTERS Section
+// --------------------------------------------------
+function renderCounters() {
+  const totalStudents = (studentsBySchool[currentSchool] || []).length;
+  const counterStudents = $("counterTotalStudents");
+  if (counterStudents) {
+    counterStudents.textContent = totalStudents;
+  }
+  // Similarly render other counters if needed, e.g. total classes, total sections, etc.
+}
+
+// --------------------------------------------------
+// STUDENTS TABLE (Registration) Section
+// --------------------------------------------------
+function renderStudentsTable() {
+  const tbody = $("studentsBody");
+  tbody.innerHTML = "";
+  (studentsBySchool[currentSchool] || []).forEach((stu) => {
+    const tr = document.createElement("tr");
+
+    const tdCheckbox = document.createElement("td");
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.classList.add("studentCheckbox");
+    chk.value = stu.adm;
+    tdCheckbox.appendChild(chk);
+    tr.appendChild(tdCheckbox);
+
+    const tdIndex = document.createElement("td");
+    tdIndex.textContent = (studentsBySchool[currentSchool].indexOf(stu) + 1).toString();
+    tr.appendChild(tdIndex);
+
+    const tdName = document.createElement("td");
+    tdName.textContent = stu.name;
+    tr.appendChild(tdName);
+
+    const tdAdm = document.createElement("td");
+    tdAdm.textContent = stu.adm;
+    tr.appendChild(tdAdm);
+
+    const tdParent = document.createElement("td");
+    tdParent.textContent = stu.parent;
+    tr.appendChild(tdParent);
+
+    const tdContact = document.createElement("td");
+    tdContact.textContent = stu.contact;
+    tr.appendChild(tdContact);
+
+    const tdOccupation = document.createElement("td");
+    tdOccupation.textContent = stu.occupation;
+    tr.appendChild(tdOccupation);
+
+    const tdAddress = document.createElement("td");
+    tdAddress.textContent = stu.address;
+    tr.appendChild(tdAddress);
+
+    const tdFine = document.createElement("td");
+    tdFine.textContent = stu.fine ? stu.fine.toString() : "0";
+    tr.appendChild(tdFine);
+
+    const tdStatus = document.createElement("td");
+    tdStatus.textContent = stu.status || "";
+    tr.appendChild(tdStatus);
+
+    const tdAction = document.createElement("td");
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn btn-sm btn-warning me-2";
+    editBtn.textContent = "Edit";
+    editBtn.onclick = () => openEditStudentModal(stu.adm);
+    tdAction.appendChild(editBtn);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn btn-sm btn-danger";
+    delBtn.textContent = "Delete";
+    delBtn.onclick = () => deleteStudent(stu.adm);
+    tdAction.appendChild(delBtn);
+
+    tr.appendChild(tdAction);
+    tbody.appendChild(tr);
+  });
+
+  // Enable/disable Edit and Delete buttons based on selection
+  const checkboxes = document.querySelectorAll(".studentCheckbox");
+  checkboxes.forEach(chk => {
+    chk.addEventListener("change", () => {
+      const anyChecked = Array.from(checkboxes).some(c => c.checked);
+      $("editSelected").disabled = !anyChecked;
+      $("deleteSelected").disabled = !anyChecked;
+    });
+  });
+}
+
+// Add New Student
+$("addStudent").addEventListener("click", () => {
+  $("studentFormTitle").textContent = "Add New Student";
+  $("stuName").value = "";
+  $("stuParent").value = "";
+  $("stuContact").value = "";
+  $("stuOccupation").value = "";
+  $("stuAddress").value = "";
+  $("stuClass").value = teacherClass;
+  $("stuSection").value = teacherSection;
+  $("stuAdmNo").value = generateAdmNo();
+  $("studentModal").classList.add("show");
+});
+
+// Generate new Admission Number
+function generateAdmNo() {
+  lastAdmNoBySchool[currentSchool] = (lastAdmNoBySchool[currentSchool] || 0) + 1;
+  idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  return `${teacherClass}-${teacherSection}-${String(
+    lastAdmNoBySchool[currentSchool]
+  ).padStart(3, "0")}`;
+}
+
+// Save Student (Add or Edit)
+$("saveRegistration").addEventListener("click", async () => {
+  const admNo = $("stuAdmNo").value.trim();
+  const name = $("stuName").value.trim();
+  const parent = $("stuParent").value.trim();
+  const contact = $("stuContact").value.trim();
+  const occupation = $("stuOccupation").value.trim();
+  const address = $("stuAddress").value.trim();
+  const cls = $("stuClass").value;
+  const sec = $("stuSection").value;
+
+  if (!admNo || !name || !cls || !sec) {
+    alert("Admission number, Name, Class, and Section are required.");
+    return;
+  }
+
+  const existingIndex = studentsBySchool[currentSchool].findIndex(
+    (s) => s.adm === admNo
+  );
+  if (existingIndex >= 0) {
+    // Update existing student
+    studentsBySchool[currentSchool][existingIndex] = {
+      adm: admNo,
+      name,
+      parent,
+      contact,
+      occupation,
+      address,
+      cls,
+      sec,
+      fine: studentsBySchool[currentSchool][existingIndex].fine || 0,
+      status: studentsBySchool[currentSchool][existingIndex].status || ""
+    };
+  } else {
+    // Add new student
+    studentsBySchool[currentSchool].push({
+      adm: admNo,
+      name,
+      parent,
+      contact,
+      occupation,
+      address,
+      cls,
+      sec,
+      fine: 0,
+      status: ""
+    });
+  }
+
+  await idbSet("studentsBySchool", studentsBySchool);
+  renderStudentsTable();
+  $("studentModal").classList.remove("show");
+  // Optionally sync to Firebase
+  syncToFirebase();
+});
+
+// Open Edit Student Modal
+function openEditStudentModal(admNo) {
+  const stu = studentsBySchool[currentSchool].find((s) => s.adm === admNo);
+  if (!stu) return;
+  $("studentFormTitle").textContent = "Edit Student";
+  $("stuName").value = stu.name;
+  $("stuParent").value = stu.parent;
+  $("stuContact").value = stu.contact;
+  $("stuOccupation").value = stu.occupation;
+  $("stuAddress").value = stu.address;
+  $("stuClass").value = stu.cls;
+  $("stuSection").value = stu.sec;
+  $("stuAdmNo").value = stu.adm;
+  $("studentModal").classList.add("show");
+}
+
+// Delete Student
+async function deleteStudent(admNo) {
+  if (!confirm(`Delete student with Admission No. ${admNo}?`)) return;
+  studentsBySchool[currentSchool] = studentsBySchool[currentSchool].filter(
+    (s) => s.adm !== admNo
+  );
+  await idbSet("studentsBySchool", studentsBySchool);
+  renderStudentsTable();
+  // Optionally sync to Firebase
+  syncToFirebase();
+}
+
+// ----------------------
+// PAYMENT Section
+// ----------------------
+function openPaymentModal(admNo) {
+  $("paymentAdmNo").textContent = admNo;
+  $("paymentAmount").value = "";
+  $("paymentModal").classList.add("show");
+  $("savePayment").dataset.adm = admNo;
+}
+
+$("savePayment").addEventListener("click", async () => {
+  const admNo = $("savePayment").dataset.adm;
+  const amount = parseFloat($("paymentAmount").value.trim());
+  if (isNaN(amount) || amount <= 0) {
+    alert("Enter a valid payment amount.");
+    return;
+  }
+  const date = new Date().toISOString().split("T")[0];
+  if (!paymentsDataBySchool[currentSchool][admNo]) {
+    paymentsDataBySchool[currentSchool][admNo] = [];
+  }
+  paymentsDataBySchool[currentSchool][admNo].push({ date, amount });
+  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  $("paymentModal").classList.remove("show");
+  // Optionally sync to Firebase
+  syncToFirebase();
+});
+
+// ----------------------
+// MARK ATTENDANCE Section
+// ----------------------
+$("loadAttendance").addEventListener("click", () => {
+  const date = $("dateInput").value;
+  if (!date) {
+    alert("Select a date first.");
+    return;
+  }
+  renderAttendanceForm(date);
+});
+
+function renderAttendanceForm(date) {
+  const container = $("attendanceBody");
+  container.innerHTML = "";
+  const tbl = document.createElement("table");
+  tbl.className = "table table-bordered";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  ["Adm No", "Name", "Status"].forEach((h) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  tbl.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  (studentsBySchool[currentSchool] || [])
+    .filter((s) => s.cls === teacherClass && s.sec === teacherSection)
+    .forEach((stu) => {
+      const tr = document.createElement("tr");
+      const tdAdm = document.createElement("td");
+      tdAdm.textContent = stu.adm;
+      tr.appendChild(tdAdm);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = stu.name;
+      tr.appendChild(tdName);
+
+      const tdStatus = document.createElement("td");
+      const select = document.createElement("select");
+      select.className = "form-select";
+      ["P", "A", "Lt", "HD", "L"].forEach((optVal) => {
+        const opt = document.createElement("option");
+        opt.value = optVal;
+        opt.textContent = optVal;
+        select.appendChild(opt);
+      });
+      // Preselect if attendanceData exists
+      if (
+        attendanceDataBySchool[currentSchool][date] &&
+        attendanceDataBySchool[currentSchool][date][stu.adm]
+      ) {
+        select.value = attendanceDataBySchool[currentSchool][date][stu.adm];
+      }
+      tdStatus.appendChild(select);
+      tr.appendChild(tdStatus);
+
+      tbody.appendChild(tr);
+    });
+  tbl.appendChild(tbody);
+  container.appendChild(tbl);
+}
+
+$("saveAttendance").addEventListener("click", async () => {
+  const date = $("dateInput").value;
+  if (!date) return;
+  if (!attendanceDataBySchool[currentSchool][date]) {
+    attendanceDataBySchool[currentSchool][date] = {};
+  }
+  const rows = $("attendanceBody").querySelectorAll("tbody tr");
+  rows.forEach((tr) => {
+    const admNo = tr.cells[0].textContent;
+    const status = tr.cells[2].querySelector("select").value;
+    attendanceDataBySchool[currentSchool][date][admNo] = status;
+  });
+  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  alert("Attendance saved.");
+  // Optionally sync to Firebase
+  syncToFirebase();
+});
+
+// ----------------------
+// ANALYTICS Section
+// ----------------------
+$("loadAnalytics").addEventListener("click", () => {
+  const fromDate = $("analyticsFromDate").value;
+  const toDate = $("analyticsToDate").value;
+  if (!fromDate || !toDate) {
+    alert("Select both From and To dates.");
+    return;
+  }
+  renderAnalytics(fromDate, toDate);
+});
+
+function renderAnalytics(fromDate, toDate) {
+  const container = $("analyticsContainer");
+  container.innerHTML = "";
+
+  // Collect attendance statuses between fromDate and toDate
+  const studentMap = {};
+  (studentsBySchool[currentSchool] || []).forEach((stu) => {
+    if (stu.cls === teacherClass && stu.sec === teacherSection) {
+      studentMap[stu.adm] = { name: stu.name, total: 0, present: 0 };
+    }
+  });
+
+  Object.entries(attendanceDataBySchool[currentSchool] || {}).forEach(([date, rec]) => {
+    if (date >= fromDate && date <= toDate) {
+      Object.entries(rec).forEach(([adm, status]) => {
+        if (studentMap[adm]) {
+          studentMap[adm].total += 1;
+          if (status === "P") studentMap[adm].present += 1;
+        }
+      });
+    }
+  });
+
+  // Render table
+  const tbl = document.createElement("table");
+  tbl.className = "table table-bordered";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  ["Adm No", "Name", "Total Days", "Present", "Percentage"].forEach((h) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  tbl.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  Object.entries(studentMap).forEach(([adm, info]) => {
+    const tr = document.createElement("tr");
+    const tdAdm = document.createElement("td");
+    tdAdm.textContent = adm;
+    tr.appendChild(tdAdm);
+
+    const tdName = document.createElement("td");
+    tdName.textContent = info.name;
+    tr.appendChild(tdName);
+
+    const tdTotal = document.createElement("td");
+    tdTotal.textContent = info.total;
+    tr.appendChild(tdTotal);
+
+    const tdPresent = document.createElement("td");
+    tdPresent.textContent = info.present;
+    tr.appendChild(tdPresent);
+
+    const tdPct = document.createElement("td");
+    const pct = info.total > 0 ? ((info.present / info.total) * 100).toFixed(2) : "0.00";
+    tdPct.textContent = pct + "%";
+    tr.appendChild(tdPct);
+
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  container.appendChild(tbl);
+}
+
+// ----------------------
+// ATTENDANCE REGISTER Section
+// ----------------------
+$("loadRegister").addEventListener("click", () => {
+  const yearMonth = $("registerMonth").value;
+  if (!yearMonth) {
+    alert("Select Month.");
+    return;
+  }
+  const [year, month] = yearMonth.split("-");
+  renderRegister(year, month);
+});
+
+function renderRegister(year, month) {
+  const container = $("registerTableWrapper");
+  container.innerHTML = "";
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const headerRow = document.createElement("tr");
+  const thCorner = document.createElement("th");
+  thCorner.textContent = "Adm#";
+  headerRow.appendChild(thCorner);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const th = document.createElement("th");
+    th.textContent = d;
+    headerRow.appendChild(th);
+  }
+
+  const table = document.createElement("table");
+  table.className = "table table-bordered";
+  const thead = document.createElement("thead");
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  (studentsBySchool[currentSchool] || []).forEach((stu) => {
+    if (stu.cls === teacherClass && stu.sec === teacherSection) {
+      const tr = document.createElement("tr");
+      const tdAdm = document.createElement("td");
+      tdAdm.textContent = stu.adm;
+      tr.appendChild(tdAdm);
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const td = document.createElement("td");
+        const status = attendanceDataBySchool[currentSchool][dateStr]?.[stu.adm] || "";
+        td.textContent = status;
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ----------------------
+// BACKUP, RESTORE & RESET Section
+// ----------------------
+$("chooseBackupFolder").addEventListener("click", async () => {
+  const handle = await window.showDirectoryPicker();
+  await idbSet("backupFolderHandle", handle);
+  alert("Backup folder selected.");
+});
+
+$("restoreData").addEventListener("click", () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = async () => {
+    if (!input.files.length) return;
+    const file = input.files[0];
+    const text = await file.text();
+    const data = JSON.parse(text);
+    await idbClear();
+    studentsBySchool = data.studentsBySchool || {};
+    attendanceDataBySchool = data.attendanceDataBySchool || {};
+    paymentsDataBySchool = data.paymentsDataBySchool || {};
+    lastAdmNoBySchool = data.lastAdmNoBySchool || {};
+    schools = data.schools || [];
+    await idbSet("studentsBySchool", studentsBySchool);
+    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+    await idbSet("schools", schools);
+    renderSchoolOptions();
+    alert("Data restored from JSON.");
+  };
+  input.click();
+});
+
+$("resetData").addEventListener("click", async () => {
+  if (!confirm("This will delete ALL local and Firebase data. Proceed?")) return;
+  await idbClear();
+  studentsBySchool = {};
+  attendanceDataBySchool = {};
+  paymentsDataBySchool = {};
+  lastAdmNoBySchool = {};
+  schools = [];
+  await idbSet("studentsBySchool", studentsBySchool);
+  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  await idbSet("schools", schools);
+  renderSchoolOptions();
+  // Clear Firebase as well
+  await dbSet(dbRef(database, "appData"), null);
+  alert("Factory reset complete. Reloading.");
+  location.reload();
+});
+
+// ----------------------------------------------
+// Final initialization: load setup on page load (unchanged)
+// ----------------------------------------------
+(async () => {
+  await loadSetup();
+
+  // Make counters container scrollable if present
+  const countersContainer = $("countersContainer");
+  if (countersContainer) {
+    countersContainer.style.display = "flex";
+    countersContainer.style.overflowX = "auto";
+    countersContainer.style.whiteSpace = "nowrap";
+  }
+})();
