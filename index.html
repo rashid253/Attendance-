@@ -46,7 +46,55 @@
   </style>
 </head>
 <body>
-  
+  <!-- ============================================== -->
+  <!-- New: Key Login Modal (shown on page load)    -->
+  <!-- ============================================== -->
+  <div class="modal fade" id="keyLoginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4">
+        <h5 class="modal-title mb-3">Enter Access Key</h5>
+        <input type="text" id="teacherKeyInput" class="form-control mb-2" placeholder="Access Key" />
+        <div id="keyErrorMsg" class="text-danger small d-none"></div>
+        <button id="submitTeacherKeyBtn" class="btn btn-primary w-100">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- New: Request Access Button (visible near top) -->
+  <!-- ============================================== -->
+  <button id="btnOpenRequestModal" class="btn btn-outline-primary m-3">
+    Request Access Key
+  </button>
+
+  <!-- ============================================== -->
+  <!-- New: Request Access Modal                    -->
+  <!-- ============================================== -->
+  <div class="modal fade" id="requestAccessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4">
+        <h5 class="modal-title mb-3">Request Access</h5>
+        <input type="text" id="reqTeacherName" class="form-control mb-2" placeholder="Your Name" />
+        <input type="email" id="reqTeacherEmail" class="form-control mb-2" placeholder="Your Email" />
+        <select id="reqSchoolSelect" class="form-select mb-2">
+          <option value="">Select School</option>
+          <!-- Populated by JS via Firebase “schools” node -->
+        </select>
+        <select id="reqClassSelect" class="form-select mb-2" disabled>
+          <option value="">Select Class</option>
+        </select>
+        <select id="reqSectionSelect" class="form-select mb-2" disabled>
+          <option value="">Select Section</option>
+        </select>
+        <div id="reqErrorMsg" class="text-danger small mt-2 d-none"></div>
+        <button id="submitRequestBtn" class="btn btn-success w-100 mt-3">Send Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- Header                                       -->
+  <!-- ============================================== -->
   <header class="app-header">
     <h1>
       <i class="fas fa-school"></i>
@@ -57,14 +105,12 @@
         <i class="fas fa-folder-open"></i>
         Select Backup Folder
       </button>
-
       <button id="restoreData" class="btn">
         <i class="fas fa-upload"></i>
         Restore Backup
       </button>
       <!-- hidden file input for restore -->
       <input type="file" id="restoreFile" accept=".json" hidden />
-
       <button id="resetData" class="btn btn-danger">
         <i class="fas fa-trash-alt"></i>
         Factory Reset
@@ -72,7 +118,9 @@
     </div>
   </header>
 
-  <!-- 1. SETUP -->
+  <!-- ============================================== -->
+  <!-- 1. SETUP Section                              -->
+  <!-- ============================================== -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
     <div id="setupForm" class="row-inline">
@@ -101,7 +149,9 @@
     </div>
   </section>
 
-  <!-- 2. FINANCIAL SETTINGS -->
+  <!-- ============================================== -->
+  <!-- 2. FINANCIAL SETTINGS Section                 -->
+  <!-- ============================================== -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
@@ -114,12 +164,16 @@
     </div>
   </section>
 
-  <!-- 3. COUNTERS (dynamic via JS) -->
+  <!-- ============================================== -->
+  <!-- 3. COUNTERS (dynamic via JS)                  -->
+  <!-- ============================================== -->
   <section id="animatedCounters">
     <div id="countersContainer" class="scroll-row"></div>
   </section>
 
-  <!-- 4. STUDENT REGISTRATION -->
+  <!-- ============================================== -->
+  <!-- 4. STUDENT REGISTRATION Section               -->
+  <!-- ============================================== -->
   <section id="student-registration">
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
@@ -154,7 +208,9 @@
     </div>
   </section>
 
-  <!-- 5. MARK ATTENDANCE -->
+  <!-- ============================================== -->
+  <!-- 5. MARK ATTENDANCE Section                    -->
+  <!-- ============================================== -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
@@ -171,7 +227,9 @@
     </div>
   </section>
 
-  <!-- 6. ANALYTICS -->
+  <!-- ============================================== -->
+  <!-- 6. ANALYTICS Section                          -->
+  <!-- ============================================== -->
   <section id="analytics-section">
     <h2>
       <i class="fas fa-chart-bar"></i> Analytics
@@ -215,47 +273,15 @@
       <canvas id="barChart"></canvas>
       <canvas id="pieChart"></canvas>
     </div>
-    <div class="table-actions hidden" id="analyticsActions">
+    <div id="analyticsActions" class="table-actions hidden">
       <button id="downloadAnalytics" class="no-print"><i class="fas fa-download"></i> Download</button>
       <button id="shareAnalytics" class="no-print"><i class="fas fa-share-alt"></i> Share</button>
     </div>
   </section>
 
-  <!-- 7. ATTENDANCE REGISTER -->
-  <section id="register-section">
-    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
-    <div class="row-inline">
-      <input type="month" id="registerMonth" />
-      <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
-    </div>
-    <div id="registerTableWrapper" class="hidden table-wrapper">
-      <table id="registerTable">
-        <thead><tr id="registerHeader"></tr></thead>
-        <tbody id="registerBody"></tbody>
-      </table>
-    </div>
-    <div class="table-actions">
-      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
-      <button id="saveRegister" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
-      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
-      <button id="shareRegister" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
-    </div>
-  </section>
-
-  <!-- PAYMENT MODAL -->
-  <div id="paymentModal" class="modal hidden">
-    <div class="modal-content">
-      <span id="paymentModalClose" class="modal-close">&times;</span>
-      <h3>Payment for Adm# <span id="payAdm"></span></h3>
-      <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
-      <div class="modal-actions">
-        <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
-        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ANALYTICS FILTER MODAL -->
+  <!-- ============================================== -->
+  <!-- Analytics Filter Modal                         -->
+  <!-- ============================================== -->
   <div id="analyticsFilterModal" class="modal hidden">
     <div class="modal-content">
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
@@ -278,10 +304,52 @@
     </div>
   </div>
 
-  <!-- Load your main script as an ES module -->
+  <!-- ============================================== -->
+  <!-- 7. ATTENDANCE REGISTER Section                 -->
+  <!-- ============================================== -->
+  <section id="register-section">
+    <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
+    <div class="row-inline">
+      <input type="month" id="registerMonth" />
+      <button id="loadRegister" class="no-print"><i class="fas fa-calendar-alt"></i> Load</button>
+    </div>
+    <div id="registerTableWrapper" class="hidden table-wrapper">
+      <table id="registerTable">
+        <thead><tr id="registerHeader"></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button id="changeRegister" class="hidden no-print"><i class="fas fa-undo"></i> Reset</button>
+      <button id="saveRegister" class="hidden no-print"><i class="fas fa-save"></i> Save</button>
+      <button id="downloadRegister" class="no-print"><i class="fas fa-download"></i> Download</button>
+      <button id="shareRegister" class="hidden no-print"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- Payment Modal (unchanged)                      -->
+  <!-- ============================================== -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <span id="paymentModalClose" class="modal-close">&times;</span>
+      <h3>Payment for Adm# <span id="payAdm"></span></h3>
+      <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
+      <div class="modal-actions">
+        <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
+        <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- Load your main script as an ES module         -->
+  <!-- ============================================== -->
   <script type="module" src="app.js"></script>
 
-  <!-- Register service worker as a module -->
+  <!-- ============================================== -->
+  <!-- Register service worker as a module            -->
+  <!-- ============================================== -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
