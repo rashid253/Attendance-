@@ -16,18 +16,18 @@ import {
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
 
-// Initialize Functions client in asia-south1
-const functions = getFunctions(app, 'asia-south1');
-const deleteUserFn    = httpsCallable(functions, 'deleteUser');
+// — Initialize the Functions client (asia-south1) —
+const functions        = getFunctions(app, 'asia-south1');
+const deleteUserFn     = httpsCallable(functions, 'deleteUser');
 const setCustomClaimFn = httpsCallable(functions, 'setCustomClaim');
 
-// 1. Request signup (writes to Realtime DB `/approvals/${uid}`)
+// 1️⃣ Request signup (writes to RTDB `/approvals/${uid}`)
 export async function requestSignup(uid, role, meta = {}) {
   const ref = dbRef(database, `approvals/${uid}`);
   await dbSet(ref, { uid, role, meta, status: 'pending', requestedAt: Date.now() });
 }
 
-// 2. Redirect after login based on custom claim
+// 2️⃣ Redirect after login based on custom claim
 export async function redirectBasedOnRole(role) {
   switch (role) {
     case 'admin':
@@ -46,7 +46,7 @@ export async function redirectBasedOnRole(role) {
   }
 }
 
-// 3. Fetch all pending approvals once
+// 3️⃣ Fetch all pending approvals once
 export async function fetchPendingApprovals() {
   const snap = await get(dbRef(database, 'approvals'));
   if (!snap.exists()) return [];
@@ -62,7 +62,7 @@ export async function fetchPendingApprovals() {
     }));
 }
 
-// 4. Approve or reject a request using callable functions
+// 4️⃣ Approve or reject a request using HTTPS callables  
 export async function handleApproval(uid, approve, role) {
   const statusRef = dbRef(database, `approvals/${uid}/status`);
   try {
@@ -82,7 +82,7 @@ export async function handleApproval(uid, approve, role) {
   }
 }
 
-// 5. Init auth listener for redirects
+// 5️⃣ Init auth listener for role-based redirect
 export function initAuthListener() {
   onAuthStateChanged(auth, async user => {
     if (!user) return;
