@@ -11,7 +11,8 @@ import {
   set as dbSet,
   onValue,
   update as dbUpdate,
-  push as dbPush
+  push as dbPush,
+  get as dbGet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
@@ -36,19 +37,8 @@ const database = getDatabase(app);
 // 2) New: Load “schools” from Firebase into `allSchools[]`
 // ----------------------------------------------
 let allSchools = []; // will hold array of { id: "<schoolId>", name: "<schoolName>" }
-onValue(dbRef(database, "schools"), snapshot => {
-  allSchools = [];
-  snapshot.forEach(childSnap => {
-    allSchools.push({
-      id: childSnap.key,
-      name: childSnap.val().name
-    });
-  });
-});
-// 1) After Firebase initialization:
-console.log("app.js loaded, setting up listener for /schools");
 
-// 2) Inside the onValue listener:
+console.log("app.js loaded, setting up listener for /schools");
 onValue(dbRef(database, "schools"), snapshot => {
   allSchools = [];
   snapshot.forEach(childSnap => {
@@ -58,7 +48,26 @@ onValue(dbRef(database, "schools"), snapshot => {
     });
   });
   console.log("Fetched allSchools from Firebase:", allSchools);
+
+  // Populate the Request Access “School” dropdown immediately
+  const schoolSelect = document.getElementById("reqSchoolSelect");
+  if (schoolSelect) {
+    schoolSelect.innerHTML = '<option value="">Select School</option>';
+    allSchools.forEach(schoolObj => {
+      const opt = document.createElement("option");
+      opt.value = schoolObj.id;
+      opt.textContent = schoolObj.name;
+      schoolSelect.appendChild(opt);
+    });
+  }
+
+  // Enable the Request Access button once schools are loaded
+  const btn = document.getElementById("btnOpenRequestModal");
+  if (btn && allSchools.length > 0) {
+    btn.disabled = false;
+  }
 });
+
 // ----------------------------------------------
 // 3) New: Dummy or placeholder functions for classes & sections
 //    Replace these with your real data‐loading logic if you store those nodes in Firebase or IndexedDB
@@ -75,7 +84,7 @@ async function getClassesBySchoolId(schoolId) {
 }
 
 async function getSectionsByClassName(className) {
-  // Placeholder: return a static list.
+  // Placeholder: return a static list
   return [
     { name: "A" },
     { name: "B" },
@@ -90,7 +99,7 @@ async function getSectionsByClassName(className) {
 // Validate a teacher’s key and lock down the Setup UI accordingly.
 async function validateAndLockForTeacher(keyInput) {
   try {
-    const snap = await dbRef(database, `teachers/${keyInput}`).get();
+    const snap = await dbGet(dbRef(database, `teachers/${keyInput}`));
     const errEl = document.getElementById("keyErrorMsg");
     if (!snap.exists() || snap.val().isActive !== true) {
       // Key is invalid or blocked
@@ -128,6 +137,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (savedKey) {
     await validateAndLockForTeacher(savedKey);
   } else {
+    // Initially disable Request Access button until schools load
+    const btn = document.getElementById("btnOpenRequestModal");
+    if (btn) btn.disabled = true;
+
     // Show login modal if no key stored
     $('#keyLoginModal').modal({ backdrop: 'static', keyboard: false });
     $('#keyLoginModal').modal('show');
@@ -185,27 +198,25 @@ function lockDownSetupSection(schoolId, className, sectionName) {
 // 5) New: REQUEST ACCESS Modal Logic
 // ----------------------------------------------
 document.getElementById("btnOpenRequestModal").addEventListener("click", () => {
-  // Reset form fields
+  // Clear form fields
   document.getElementById("reqTeacherName").value = "";
   document.getElementById("reqTeacherEmail").value = "";
-  document.getElementById("reqSchoolSelect").innerHTML = '<option value="">Select School</option>';
-  document.getElementById("reqClassSelect").innerHTML = '<option value="">Select Class</option>';
-  document.getElementById("reqSectionSelect").innerHTML = '<option value="">Select Section</option>';
   document.getElementById("reqErrorMsg").classList.add("d-none");
 
-  // Populate the School dropdown from `allSchools[]`
-  allSchools.forEach(schoolObj => {
-    const opt = document.createElement("option");
-    opt.value = schoolObj.id;
-    opt.textContent = schoolObj.name;
-    document.getElementById("reqSchoolSelect").appendChild(opt);
-  });
+  // Reset Class and Section dropdowns
+  const classSelect = document.getElementById("reqClassSelect");
+  const sectionSelect = document.getElementById("reqSectionSelect");
+  classSelect.innerHTML = '<option value="">Select Class</option>';
+  classSelect.disabled = true;
+  sectionSelect.innerHTML = '<option value="">Select Section</option>';
+  sectionSelect.disabled = true;
 
   // Show the modal
+  $('#requestAccessModal').modal({ backdrop: 'static', keyboard: false });
   $('#requestAccessModal').modal('show');
 });
 
-// When a school is selected, load the Class dropdown:
+// When a School is selected, load its Class dropdown:
 document.getElementById("reqSchoolSelect").addEventListener("change", async (e) => {
   const schoolId = e.target.value;
   const classSelect = document.getElementById("reqClassSelect");
@@ -230,7 +241,7 @@ document.getElementById("reqSchoolSelect").addEventListener("change", async (e) 
   classSelect.disabled = false;
 });
 
-// When a class is selected, load the Section dropdown:
+// When a Class is selected, load its Section dropdown:
 document.getElementById("reqClassSelect").addEventListener("change", async (e) => {
   const className = e.target.value;
   const sectionSelect = document.getElementById("reqSectionSelect");
@@ -253,14 +264,13 @@ document.getElementById("reqClassSelect").addEventListener("change", async (e) =
 
 // Handle the “Send Request” button click:
 document.getElementById("submitRequestBtn").addEventListener("click", async () => {
-  const name = document.getElementById("reqTeacherName").value.trim();
-  const email = document.getElementById("reqTeacherEmail").value.trim();
+  const name   = document.getElementById("reqTeacherName").value.trim();
+  const email  = document.getElementById("reqTeacherEmail").value.trim();
   const school = document.getElementById("reqSchoolSelect").value;
-  const cls = document.getElementById("reqClassSelect").value;
-  const sec = document.getElementById("reqSectionSelect").value;
+  const cls    = document.getElementById("reqClassSelect").value;
+  const sec    = document.getElementById("reqSectionSelect").value;
   const errorEl = document.getElementById("reqErrorMsg");
 
-  // Simple validation
   if (!name || !email || !school || !cls || !sec) {
     errorEl.textContent = "Please fill all fields.";
     errorEl.classList.remove("d-none");
@@ -270,13 +280,13 @@ document.getElementById("submitRequestBtn").addEventListener("click", async () =
 
   try {
     await dbPush(dbRef(database, "requests"), {
-      teacherName: name,
+      teacherName:  name,
       teacherEmail: email,
-      schoolId: school,
-      className: cls,
-      sectionName: sec,
-      status: "pending",
-      requestedAt: Date.now()
+      schoolId:     school,
+      className:    cls,
+      sectionName:  sec,
+      status:       "pending",
+      requestedAt:  Date.now()
     });
 
     $('#requestAccessModal').modal('hide');
@@ -602,7 +612,9 @@ async function initializeAppDataForSchool(school) {
 function renderCounters() {
   const totalStudents = (studentsBySchool[currentSchool] || []).length;
   const counterStudents = $("counterTotalStudents");
-  counterStudents.textContent = totalStudents;
+  if (counterStudents) {
+    counterStudents.textContent = totalStudents;
+  }
   // Similarly render other counters if needed, e.g. total classes, total sections, etc.
 }
 
@@ -610,18 +622,30 @@ function renderCounters() {
 // STUDENTS TABLE (Registration) Section
 // --------------------------------------------------
 function renderStudentsTable() {
-  const tbody = $("studentsTableBody");
+  const tbody = $("studentsBody");
   tbody.innerHTML = "";
   (studentsBySchool[currentSchool] || []).forEach((stu) => {
     const tr = document.createElement("tr");
 
-    const tdAdm = document.createElement("td");
-    tdAdm.textContent = stu.adm;
-    tr.appendChild(tdAdm);
+    const tdCheckbox = document.createElement("td");
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.classList.add("studentCheckbox");
+    chk.value = stu.adm;
+    tdCheckbox.appendChild(chk);
+    tr.appendChild(tdCheckbox);
+
+    const tdIndex = document.createElement("td");
+    tdIndex.textContent = (studentsBySchool[currentSchool].indexOf(stu) + 1).toString();
+    tr.appendChild(tdIndex);
 
     const tdName = document.createElement("td");
     tdName.textContent = stu.name;
     tr.appendChild(tdName);
+
+    const tdAdm = document.createElement("td");
+    tdAdm.textContent = stu.adm;
+    tr.appendChild(tdAdm);
 
     const tdParent = document.createElement("td");
     tdParent.textContent = stu.parent;
@@ -639,34 +663,44 @@ function renderStudentsTable() {
     tdAddress.textContent = stu.address;
     tr.appendChild(tdAddress);
 
-    const tdClass = document.createElement("td");
-    tdClass.textContent = stu.cls;
-    tr.appendChild(tdClass);
+    const tdFine = document.createElement("td");
+    tdFine.textContent = stu.fine ? stu.fine.toString() : "0";
+    tr.appendChild(tdFine);
 
-    const tdSection = document.createElement("td");
-    tdSection.textContent = stu.sec;
-    tr.appendChild(tdSection);
+    const tdStatus = document.createElement("td");
+    tdStatus.textContent = stu.status || "";
+    tr.appendChild(tdStatus);
 
     const tdAction = document.createElement("td");
     const editBtn = document.createElement("button");
-    editBtn.textContent = "Edit";
     editBtn.className = "btn btn-sm btn-warning me-2";
+    editBtn.textContent = "Edit";
     editBtn.onclick = () => openEditStudentModal(stu.adm);
     tdAction.appendChild(editBtn);
 
     const delBtn = document.createElement("button");
-    delBtn.textContent = "Delete";
     delBtn.className = "btn btn-sm btn-danger";
+    delBtn.textContent = "Delete";
     delBtn.onclick = () => deleteStudent(stu.adm);
     tdAction.appendChild(delBtn);
 
     tr.appendChild(tdAction);
     tbody.appendChild(tr);
   });
+
+  // Enable/disable Edit and Delete buttons based on selection
+  const checkboxes = document.querySelectorAll(".studentCheckbox");
+  checkboxes.forEach(chk => {
+    chk.addEventListener("change", () => {
+      const anyChecked = Array.from(checkboxes).some(c => c.checked);
+      $("editSelected").disabled = !anyChecked;
+      $("deleteSelected").disabled = !anyChecked;
+    });
+  });
 }
 
 // Add New Student
-$("addStudentBtn").addEventListener("click", () => {
+$("addStudent").addEventListener("click", () => {
   $("studentFormTitle").textContent = "Add New Student";
   $("stuName").value = "";
   $("stuParent").value = "";
@@ -689,7 +723,7 @@ function generateAdmNo() {
 }
 
 // Save Student (Add or Edit)
-$("saveStudentBtn").addEventListener("click", async () => {
+$("saveRegistration").addEventListener("click", async () => {
   const admNo = $("stuAdmNo").value.trim();
   const name = $("stuName").value.trim();
   const parent = $("stuParent").value.trim();
@@ -717,7 +751,9 @@ $("saveStudentBtn").addEventListener("click", async () => {
       occupation,
       address,
       cls,
-      sec
+      sec,
+      fine: studentsBySchool[currentSchool][existingIndex].fine || 0,
+      status: studentsBySchool[currentSchool][existingIndex].status || ""
     };
   } else {
     // Add new student
@@ -729,7 +765,9 @@ $("saveStudentBtn").addEventListener("click", async () => {
       occupation,
       address,
       cls,
-      sec
+      sec,
+      fine: 0,
+      status: ""
     });
   }
 
@@ -775,11 +813,11 @@ function openPaymentModal(admNo) {
   $("paymentAdmNo").textContent = admNo;
   $("paymentAmount").value = "";
   $("paymentModal").classList.add("show");
-  $("savePaymentBtn").dataset.adm = admNo;
+  $("savePayment").dataset.adm = admNo;
 }
 
-$("savePaymentBtn").addEventListener("click", async () => {
-  const admNo = $("savePaymentBtn").dataset.adm;
+$("savePayment").addEventListener("click", async () => {
+  const admNo = $("savePayment").dataset.adm;
   const amount = parseFloat($("paymentAmount").value.trim());
   if (isNaN(amount) || amount <= 0) {
     alert("Enter a valid payment amount.");
@@ -799,8 +837,8 @@ $("savePaymentBtn").addEventListener("click", async () => {
 // ----------------------
 // MARK ATTENDANCE Section
 // ----------------------
-$("loadAttendanceBtn").addEventListener("click", () => {
-  const date = $("attendanceDate").value;
+$("loadAttendance").addEventListener("click", () => {
+  const date = $("dateInput").value;
   if (!date) {
     alert("Select a date first.");
     return;
@@ -809,7 +847,7 @@ $("loadAttendanceBtn").addEventListener("click", () => {
 });
 
 function renderAttendanceForm(date) {
-  const container = $("attendanceContainer");
+  const container = $("attendanceBody");
   container.innerHTML = "";
   const tbl = document.createElement("table");
   tbl.className = "table table-bordered";
@@ -861,13 +899,13 @@ function renderAttendanceForm(date) {
   container.appendChild(tbl);
 }
 
-$("saveAttendanceBtn").addEventListener("click", async () => {
-  const date = $("attendanceDate").value;
+$("saveAttendance").addEventListener("click", async () => {
+  const date = $("dateInput").value;
   if (!date) return;
-  const rows = $("attendanceContainer").querySelectorAll("tbody tr");
   if (!attendanceDataBySchool[currentSchool][date]) {
     attendanceDataBySchool[currentSchool][date] = {};
   }
+  const rows = $("attendanceBody").querySelectorAll("tbody tr");
   rows.forEach((tr) => {
     const admNo = tr.cells[0].textContent;
     const status = tr.cells[2].querySelector("select").value;
@@ -882,7 +920,7 @@ $("saveAttendanceBtn").addEventListener("click", async () => {
 // ----------------------
 // ANALYTICS Section
 // ----------------------
-$("loadAnalyticsBtn").addEventListener("click", () => {
+$("loadAnalytics").addEventListener("click", () => {
   const fromDate = $("analyticsFromDate").value;
   const toDate = $("analyticsToDate").value;
   if (!fromDate || !toDate) {
@@ -961,23 +999,25 @@ function renderAnalytics(fromDate, toDate) {
 // ----------------------
 // ATTENDANCE REGISTER Section
 // ----------------------
-$("loadRegisterBtn").addEventListener("click", () => {
-  const year = $("registerYear").value;
-  const month = $("registerMonth").value;
-  if (!year || !month) {
-    alert("Select Year and Month.");
+$("loadRegister").addEventListener("click", () => {
+  const yearMonth = $("registerMonth").value;
+  if (!yearMonth) {
+    alert("Select Month.");
     return;
   }
+  const [year, month] = yearMonth.split("-");
   renderRegister(year, month);
 });
 
 function renderRegister(year, month) {
-  const container = $("registerContainer");
+  const container = $("registerTableWrapper");
   container.innerHTML = "";
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const headerRow = document.createElement("tr");
-  headerRow.appendChild(document.createElement("th")); // empty corner cell
+  const thCorner = document.createElement("th");
+  thCorner.textContent = "Adm#";
+  headerRow.appendChild(thCorner);
   for (let d = 1; d <= daysInMonth; d++) {
     const th = document.createElement("th");
     th.textContent = d;
@@ -1015,13 +1055,13 @@ function renderRegister(year, month) {
 // ----------------------
 // BACKUP, RESTORE & RESET Section
 // ----------------------
-$("chooseBackupFolderBtn").addEventListener("click", async () => {
+$("chooseBackupFolder").addEventListener("click", async () => {
   const handle = await window.showDirectoryPicker();
   await idbSet("backupFolderHandle", handle);
   alert("Backup folder selected.");
 });
 
-$("restoreDataBtn").addEventListener("click", () => {
+$("restoreData").addEventListener("click", () => {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = ".json";
@@ -1047,7 +1087,7 @@ $("restoreDataBtn").addEventListener("click", () => {
   input.click();
 });
 
-$("resetDataBtn").addEventListener("click", async () => {
+$("resetData").addEventListener("click", async () => {
   if (!confirm("This will delete ALL local and Firebase data. Proceed?")) return;
   await idbClear();
   studentsBySchool = {};
