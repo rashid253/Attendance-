@@ -27,6 +27,18 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
+// Array to hold school data
+let allSchools = [];
+
+// Load schools from Firebase and store in allSchools[]
+firebase.database().ref("schools").once("value", (snapshot) => {
+  snapshot.forEach((child) => {
+    allSchools.push({
+      id: child.key,
+      name: child.val().name
+    });
+  });
+});
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
@@ -1671,5 +1683,115 @@ window.addEventListener("DOMContentLoaded", async () => {
     container.style.display = "flex";
     container.style.overflowX = "auto";
     container.style.whiteSpace = "nowrap";
+  }
+});
+// ===============================
+// REQUEST ACCESS MODAL LOGIC
+// ===============================
+
+// Show modal when button clicked
+document.getElementById("btnOpenRequestModal").addEventListener("click", () => {
+  // Reset form
+  document.getElementById("reqTeacherName").value = "";
+  document.getElementById("reqTeacherEmail").value = "";
+  document.getElementById("reqSchoolSelect").innerHTML = '<option value="">Select School</option>';
+  document.getElementById("reqClassSelect").innerHTML = '<option value="">Select Class</option>';
+  document.getElementById("reqSectionSelect").innerHTML = '<option value="">Select Section</option>';
+  document.getElementById("reqErrorMsg").classList.add("d-none");
+
+  // Fill school dropdown
+  allSchools.forEach((school) => {
+    const opt = document.createElement("option");
+    opt.value = school.id;
+    opt.textContent = school.name;
+    document.getElementById("reqSchoolSelect").appendChild(opt);
+  });
+
+  // Show modal
+  $('#requestAccessModal').modal('show');
+});
+
+// When school selected, load class options
+document.getElementById("reqSchoolSelect").addEventListener("change", async (e) => {
+  const schoolId = e.target.value;
+  const classSelect = document.getElementById("reqClassSelect");
+  const sectionSelect = document.getElementById("reqSectionSelect");
+
+  classSelect.innerHTML = '<option value="">Select Class</option>';
+  sectionSelect.innerHTML = '<option value="">Select Section</option>';
+  sectionSelect.disabled = true;
+
+  if (!schoolId) {
+    classSelect.disabled = true;
+    return;
+  }
+
+  const classes = await getClassesBySchoolId(schoolId);
+  classes.forEach(cls => {
+    const opt = document.createElement("option");
+    opt.value = cls.name;
+    opt.textContent = cls.name;
+    classSelect.appendChild(opt);
+  });
+  classSelect.disabled = false;
+});
+
+// When class selected, load section options
+document.getElementById("reqClassSelect").addEventListener("change", async (e) => {
+  const className = e.target.value;
+  const sectionSelect = document.getElementById("reqSectionSelect");
+
+  sectionSelect.innerHTML = '<option value="">Select Section</option>';
+
+  if (!className) {
+    sectionSelect.disabled = true;
+    return;
+  }
+
+  const sections = await getSectionsByClassName(className);
+  sections.forEach(sec => {
+    const opt = document.createElement("option");
+    opt.value = sec.name;
+    opt.textContent = sec.name;
+    sectionSelect.appendChild(opt);
+  });
+
+  sectionSelect.disabled = false;
+});
+
+// Handle submit
+document.getElementById("submitRequestBtn").addEventListener("click", async () => {
+  const name = document.getElementById("reqTeacherName").value.trim();
+  const email = document.getElementById("reqTeacherEmail").value.trim();
+  const school = document.getElementById("reqSchoolSelect").value;
+  const cls = document.getElementById("reqClassSelect").value;
+  const sec = document.getElementById("reqSectionSelect").value;
+  const errorEl = document.getElementById("reqErrorMsg");
+
+  if (!name || !email || !school || !cls || !sec) {
+    errorEl.textContent = "Please fill all fields.";
+    errorEl.classList.remove("d-none");
+    return;
+  }
+
+  errorEl.classList.add("d-none");
+
+  try {
+    await firebase.database().ref("requests").push({
+      teacherName: name,
+      teacherEmail: email,
+      schoolId: school,
+      className: cls,
+      sectionName: sec,
+      status: "pending",
+      requestedAt: Date.now()
+    });
+
+    $('#requestAccessModal').modal('hide');
+    alert("Your request has been sent to admin.");
+  } catch (err) {
+    console.error("Firebase error:", err);
+    errorEl.textContent = "Could not send request. Try again.";
+    errorEl.classList.remove("d-none");
   }
 });
