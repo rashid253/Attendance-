@@ -3,6 +3,7 @@
 // Centralized wrappers for signup requests, role-based redirects, and admin approvals.
 
 import {
+  app,
   auth,
   database,
   dbRef,
@@ -10,8 +11,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut,
-  app
+  signOut
 } from './firebase.js';
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
@@ -57,9 +57,10 @@ export async function fetchPendingApprovals() {
   const snap = await get(dbRef(database, 'approvals'));
   console.log('Raw approvals snapshot:', snap.val());
   if (!snap.exists()) return [];
+
   const data = snap.val();
-  const pending = Object.entries(data)
-    .filter(([uid, req]) => req.status === 'pending')
+  return Object.entries(data)
+    .filter(([_, req]) => req.status === 'pending')
     .map(([uid, req]) => ({
       uid,
       role: req.role,
@@ -67,23 +68,26 @@ export async function fetchPendingApprovals() {
       requestedAt: req.requestedAt,
       email: req.meta?.email || ''
     }));
-  console.log('Filtered pending approvals:', pending);
-  return pending;
 }
 
 // 4. Approve or reject a request using callable functions
 export async function handleApproval(uid, approve, role) {
   const statusRef = dbRef(database, `approvals/${uid}/status`);
-  if (approve) {
-    // Set custom claim 'role'
-    const result = await setCustomClaimFn({ uid, claimKey: 'role', claimValue: role });
-    console.log('setCustomClaim result:', result);
-    await dbSet(statusRef, 'approved');
-  } else {
-    // Delete user
-    const result = await deleteUserFn({ uid });
-    console.log('deleteUser result:', result);
-    await dbSet(statusRef, 'rejected');
+
+  try {
+    if (approve) {
+      // Pass the new role as `claimValue`
+      const result = await setCustomClaimFn({ uid, claimValue: role });
+      console.log('setCustomClaim result:', result);
+      await dbSet(statusRef, 'approved');
+    } else {
+      const result = await deleteUserFn({ uid });
+      console.log('deleteUser result:', result);
+      await dbSet(statusRef, 'rejected');
+    }
+  } catch (err) {
+    console.error('Approval error:', err.code, err.message);
+    alert(`Error (${err.code}): ${err.message}`);
   }
 }
 
