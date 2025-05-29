@@ -45,7 +45,20 @@ onValue(dbRef(database, "schools"), snapshot => {
     });
   });
 });
+// 1) After Firebase initialization:
+console.log("app.js loaded, setting up listener for /schools");
 
+// 2) Inside the onValue listener:
+onValue(dbRef(database, "schools"), snapshot => {
+  allSchools = [];
+  snapshot.forEach(childSnap => {
+    allSchools.push({
+      id: childSnap.key,
+      name: childSnap.val().name
+    });
+  });
+  console.log("Fetched allSchools from Firebase:", allSchools);
+});
 // ----------------------------------------------
 // 3) New: Dummy or placeholder functions for classes & sections
 //    Replace these with your real data‐loading logic if you store those nodes in Firebase or IndexedDB
