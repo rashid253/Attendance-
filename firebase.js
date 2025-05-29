@@ -1,76 +1,53 @@
-// functions/index.js
-// -------------------------------------------
-// Updated Cloud Functions for admin approvals using HTTPS Callable (v1)
+// firebase.js
+// -------------------------------------------------------------------------------------------------
 
-// Force Firebase Functions to treat code as v1
-process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'attandace-management';
+// 1. Import & initialize Firebase App
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
 
-const functions = require('firebase-functions');
-const admin     = require('firebase-admin');
+// 2. Import Realtime Database functions
+import {
+  getDatabase,
+  ref as dbRef,
+  set as dbSet,
+  onValue
+} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// Initialize the Admin SDK
-admin.initializeApp();
+// 3. Import Auth functions
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
-/**
- * Callable function to set a custom claim on a user.
- * Only admins (with role claim 'admin') can invoke this.
- */
-exports.setCustomClaim = functions
-  .region('asia-south1')
-  .https.onCall(async (data, context) => {
-    // Verify caller is authenticated and has admin role
-    if (!(context.auth && context.auth.token.role === 'admin')) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only administrators can modify roles.'
-      );
-    }
+// 4. Your Firebase project configuration
+const firebaseConfig = {
+  apiKey:      "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  authDomain:  "attandace-management.firebaseapp.com",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  projectId:   "attandace-management",
+  storageBucket: "attandace-management.appspot.com",
+  messagingSenderId: "222685278846",
+  appId:       "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+  measurementId: "G-V2MY85R73B"
+};
 
-    const { uid, claimKey = 'role', claimValue } = data;
-    if (!uid || !claimValue) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Function must be called with uid and claimValue.'
-      );
-    }
+// 5. Initialize App & Services
+export const app      = initializeApp(firebaseConfig);
+export const database = getDatabase(app);
+export const auth     = getAuth(app);
 
-    try {
-      await admin.auth().setCustomUserClaims(uid, { [claimKey]: claimValue });
-      return { success: true };
-    } catch (error) {
-      console.error('setCustomClaim error:', error);
-      throw new functions.https.HttpsError('internal', error.message);
-    }
-  });
+// 6. Reference to your top-level data node
+export const appDataRef = dbRef(database, 'appData');
 
-/**
- * Callable function to delete a user by UID.
- * Only admins (with role claim 'admin') can invoke this.
- */
-exports.deleteUser = functions
-  .region('asia-south1')
-  .https.onCall(async (data, context) => {
-    // Verify caller is authenticated and has admin role
-    if (!(context.auth && context.auth.token.role === 'admin')) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only administrators can delete users.'
-      );
-    }
+// 7. Re-export DB helpers
+export { dbRef, dbSet, onValue };
 
-    const { uid } = data;
-    if (!uid) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Function must be called with a uid.'
-      );
-    }
-
-    try {
-      await admin.auth().deleteUser(uid);
-      return { success: true };
-    } catch (error) {
-      console.error('deleteUser error:', error);
-      throw new functions.https.HttpsError('internal', error.message);
-    }
-  });
+// 8. Re-export Auth helpers
+export {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+};
