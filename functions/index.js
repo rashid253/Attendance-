@@ -1,66 +1,89 @@
 // functions/index.js
 // -------------------------------------------
-// Cloud Functions (asia-south1) for admin approvals
-// Uses HTTPS Callables—no CORS middleware needed.
+// HTTP‐triggered Functions with CORS for fetch()
 
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'attandace-management';
 
 const functions = require('firebase-functions');
 const admin     = require('firebase-admin');
+const cors      = require('cors')();
 
+// Initialize Admin SDK
 admin.initializeApp();
 
-/**
- * Callable function: setCustomClaim
- * - Only callable by authenticated users with admin role
- * - Expects data: { uid: string, claimValue: any }
- */
+// Common middleware to verify Bearer token + admin role
+async function verifyAdmin(req, res) {
+  const authHeader = req.get('Authorization') || '';
+  const idToken = authHeader.startsWith('Bearer ')
+    ? authHeader.split('Bearer ')[1]
+    : null;
+
+  if (!idToken) {
+    res.status(401).json({ error: 'Unauthorized: No ID token' });
+    return null;
+  }
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    if (decoded.role !== 'admin') {
+      res.status(403).json({ error: 'Forbidden: Not an admin' });
+      return null;
+    }
+    return decoded;
+  } catch (e) {
+    res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    return null;
+  }
+}
+
+// 1) Set Custom Claim
 exports.setCustomClaim = functions
   .region('asia-south1')
-  .https.onCall(async (data, context) => {
-    // Auth & role check
-    if (!context.auth || context.auth.token.role !== 'admin') {
-      throw new functions.https.HttpsError('permission-denied', 'Only admins can assign roles.');
-    }
+  .https.onRequest((req, res) => {
+    cors(req, res, async () => {
+      if (req.method === 'OPTIONS') return res.sendStatus(204);
+      if (req.method !== 'POST') return res.sendStatus(405);
 
-    const { uid, claimValue } = data;
-    if (!uid || claimValue === undefined) {
-      throw new functions.https.HttpsError('invalid-argument', 'Must supply uid and claimValue.');
-    }
+      const decoded = await verifyAdmin(req, res);
+      if (!decoded) return;
 
-    try {
-      // Here we set the 'role' claim to claimValue
-      await admin.auth().setCustomUserClaims(uid, { role: claimValue });
-      return { success: true };
-    } catch (error) {
-      console.error('setCustomClaim error:', error);
-      throw new functions.https.HttpsError('internal', error.message);
-    }
+      const { uid, role } = req.body;
+      if (!uid || !role) {
+        return res.status(400).json({ error: 'Missing uid or role' });
+      }
+
+      try {
+        await admin.auth().setCustomUserClaims(uid, { role });
+        return res.json({ success: true });
+      } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: e.message });
+      }
+    });
   });
 
-/**
- * Callable function: deleteUser
- * - Only callable by authenticated users with admin role
- * - Expects data: { uid: string }
- */
+// 2) Delete User
 exports.deleteUser = functions
   .region('asia-south1')
-  .https.onCall(async (data, context) => {
-    // Auth & role check
-    if (!context.auth || context.auth.token.role !== 'admin') {
-      throw new functions.https.HttpsError('permission-denied', 'Only admins can delete users.');
-    }
+  .https.onRequest((req, res) => {
+    cors(req, res, async () => {
+      if (req.method === 'OPTIONS') return res.sendStatus(204);
+      if (req.method !== 'POST') return res.sendStatus(405);
 
-    const { uid } = data;
-    if (!uid) {
-      throw new functions.https.HttpsError('invalid-argument', 'Must supply uid.');
-    }
+      const decoded = await verifyAdmin(req, res);
+      if (!decoded) return;
 
-    try {
-      await admin.auth().deleteUser(uid);
-      return { success: true };
-    } catch (error) {
-      console.error('deleteUser error:', error);
-      throw new functions.https.HttpsError('internal', error.message);
-    }
+      const { uid } = req.body;
+      if (!uid) {
+        return res.status(400).json({ error: 'Missing uid' });
+      }
+
+      try {
+        await admin.auth().deleteUser(uid);
+        return res.json({ success: true });
+      } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: e.message });
+      }
+    });
   });
