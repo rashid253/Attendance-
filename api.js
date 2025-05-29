@@ -16,21 +16,15 @@ import {
 import { get } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js';
 
-// Initialize Cloud Functions in asia-south1
+// Initialize Functions client in asia-south1
 const functions = getFunctions(app, 'asia-south1');
-const deleteUserFn = httpsCallable(functions, 'deleteUser');
+const deleteUserFn    = httpsCallable(functions, 'deleteUser');
 const setCustomClaimFn = httpsCallable(functions, 'setCustomClaim');
 
 // 1. Request signup (writes to Realtime DB `/approvals/${uid}`)
 export async function requestSignup(uid, role, meta = {}) {
-  const newReqRef = dbRef(database, `approvals/${uid}`);
-  await dbSet(newReqRef, {
-    uid,
-    role,
-    meta,
-    status: 'pending',
-    requestedAt: Date.now()
-  });
+  const ref = dbRef(database, `approvals/${uid}`);
+  await dbSet(ref, { uid, role, meta, status: 'pending', requestedAt: Date.now() });
 }
 
 // 2. Redirect after login based on custom claim
@@ -55,9 +49,7 @@ export async function redirectBasedOnRole(role) {
 // 3. Fetch all pending approvals once
 export async function fetchPendingApprovals() {
   const snap = await get(dbRef(database, 'approvals'));
-  console.log('Raw approvals snapshot:', snap.val());
   if (!snap.exists()) return [];
-
   const data = snap.val();
   return Object.entries(data)
     .filter(([_, req]) => req.status === 'pending')
@@ -73,16 +65,15 @@ export async function fetchPendingApprovals() {
 // 4. Approve or reject a request using callable functions
 export async function handleApproval(uid, approve, role) {
   const statusRef = dbRef(database, `approvals/${uid}/status`);
-
   try {
     if (approve) {
       // Pass the new role as `claimValue`
-      const result = await setCustomClaimFn({ uid, claimValue: role });
-      console.log('setCustomClaim result:', result);
+      const res = await setCustomClaimFn({ uid, claimValue: role });
+      console.log('setCustomClaim:', res);
       await dbSet(statusRef, 'approved');
     } else {
-      const result = await deleteUserFn({ uid });
-      console.log('deleteUser result:', result);
+      const res = await deleteUserFn({ uid });
+      console.log('deleteUser:', res);
       await dbSet(statusRef, 'rejected');
     }
   } catch (err) {
@@ -96,8 +87,6 @@ export function initAuthListener() {
   onAuthStateChanged(auth, async user => {
     if (!user) return;
     const token = await user.getIdTokenResult();
-    if (token.claims.role) {
-      redirectBasedOnRole(token.claims.role);
-    }
+    if (token.claims.role) redirectBasedOnRole(token.claims.role);
   });
 }
