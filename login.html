@@ -1,385 +1,277 @@
+<!-- login.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login / Sign Up</title>
+  <title>Attendance Mgmt – Login</title>
 
-  <!-- Font Awesome for icons (optional) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+  <!-- Firebase JS SDK (v9 modular) -->
+  <script type="module">
+    // IMPORTANT: Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: "<YOUR_FIREBASE_API_KEY>",
+      authDomain: "<YOUR_FIREBASE_AUTH_DOMAIN>",
+      projectId: "<YOUR_FIREBASE_PROJECT_ID>",
+      storageBucket: "<YOUR_FIREBASE_STORAGE_BUCKET>",
+      messagingSenderId: "<YOUR_FIREBASE_SENDER_ID>",
+      appId: "<YOUR_FIREBASE_APP_ID>",
+      measurementId: "<YOUR_FIREBASE_MEASUREMENT_ID>",
+      databaseURL: "<YOUR_FIREBASE_DATABASE_URL>"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getDatabase,
+      ref as dbRef,
+      set as dbSet,
+      push as dbPush,
+      get as dbGet,
+      child as dbChild,
+      query as dbQuery,
+      orderByChild,
+      equalTo
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    window.firebaseApp = initializeApp(firebaseConfig);
+    window.database = getDatabase(window.firebaseApp);
+  </script>
+
+  <!-- idb-keyval (for storing currentUser) -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       max-width: 400px;
-      margin: 2em auto;
-      padding: 1em;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      margin: 40px auto;
+      padding: 0 20px;
     }
-    h2 {
+    h1 {
       text-align: center;
+      margin-bottom: 1rem;
     }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5em;
+    .row {
+      margin-bottom: 1rem;
     }
-    input, select, button {
-      padding: 0.5em;
-      font-size: 1rem;
-      border: 1px solid #aaa;
-      border-radius: 4px;
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
     }
     button {
-      cursor: pointer;
-      background-color: #2196F3;
-      color: white;
+      width: 100%;
+      padding: 0.7rem;
+      background: #2196F3;
+      color: #fff;
       border: none;
-    }
-    .toggle-link {
-      text-align: center;
-      margin-top: 1em;
-      color: #2196F3;
+      border-radius: 4px;
       cursor: pointer;
+      font-size: 1rem;
     }
-    .error {
-      color: red;
-      margin-bottom: 0.5em;
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     .hidden {
       display: none;
     }
+    .message {
+      margin-top: 1rem;
+      color: #d32f2f;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <h1>Login / Request Access</h1>
 
-  <h2 id="formTitle">Login</h2>
-
-  <div id="errorMsg" class="error"></div>
-
-  <!-- LOGIN FORM -->
-  <form id="loginForm">
-    <input type="email" id="loginEmail" placeholder="Email" required />
-    <input type="password" id="loginPassword" placeholder="Password" required />
-    <button type="submit">Login</button>
-  </form>
-
-  <!-- SIGN-UP FORM -->
-  <form id="signupForm" class="hidden">
-    <input type="text" id="signupName" placeholder="Full Name" required />
-    <input type="email" id="signupEmail" placeholder="Email" required />
-    <input type="password" id="signupPassword" placeholder="Password" required />
-    <select id="signupRole" required>
-      <option disabled selected>— Select Role —</option>
-      <option value="admin">Admin</option>
-      <option value="principal">Principal</option>
-      <option value="teacher">Teacher</option>
+  <div class="row">
+    <label for="userType">I am a:</label>
+    <select id="userType">
+      <option value="" disabled selected>-- Select User Type --</option>
+      <option value="Teacher">Teacher</option>
+      <option value="Principal">Principal</option>
     </select>
-    <div id="principalFields" class="hidden">
-      <input type="text" id="principalSchool" placeholder="Assigned School" />
-    </div>
-    <div id="teacherFields" class="hidden">
-      <input type="text" id="teacherSchool" placeholder="Assigned School" />
-      <select id="teacherClass">
-        <option disabled selected>— Class —</option>
-        <option>Play Group</option>
-        <option>Nursery</option>
-        <option>KG</option>
-        <option>Class One</option>
-        <option>Class Two</option>
-        <option>Class Three</option>
-        <option>Class Four</option>
-        <option>Class Five</option>
-        <option>Class Six</option>
-        <option>Class Seven</option>
-        <option>Class Eight</option>
-        <option>Class Nine</option>
-        <option>Class Ten</option>
-      </select>
-      <select id="teacherSection">
-        <option disabled selected>— Section —</option>
-        <option>A</option>
-        <option>B</option>
-        <option>C</option>
-      </select>
-    </div>
-    <button type="submit">Sign Up</button>
-  </form>
+  </div>
 
-  <div class="toggle-link" id="toggleToSignup">Don’t have account? Sign up</div>
-  <div class="toggle-link hidden" id="toggleToLogin">Already have account? Login</div>
+  <div class="row">
+    <label for="fullName">Full Name (Identifier):</label>
+    <input type="text" id="fullName" placeholder="e.g. John Doe" />
+  </div>
 
-  <!-- Firebase App (the core Firebase SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <!-- Firebase Auth & Database -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <div class="row">
+    <label for="schoolSelect">Select School:</label>
+    <select id="schoolSelect">
+      <option value="" disabled selected>-- Select School --</option>
+      <!-- Populated from Firebase → appData/schools -->
+    </select>
+  </div>
+
+  <!-- Only show if “Teacher” is selected -->
+  <div class="row hidden" id="classRow">
+    <label for="classSelect">Select Class:</label>
+    <select id="classSelect">
+      <option value="" disabled selected>-- Select Class --</option>
+      <!-- Populated from Firebase → appData/classesBySchool/<school> -->
+    </select>
+  </div>
+  <div class="row hidden" id="sectionRow">
+    <label for="sectionSelect">Select Section:</label>
+    <select id="sectionSelect">
+      <option value="" disabled selected>-- Select Section --</option>
+      <!-- Populated from Firebase → appData/sectionsBySchool/<school>/<class> -->
+    </select>
+  </div>
+
+  <button id="loginBtn">Log In / Request Access</button>
+
+  <div class="message" id="messageBox"></div>
 
   <script type="module">
-    //-------------------------------------
-    // 1) FIREBASE INITIALIZATION
-    //-------------------------------------
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import {
-      getAuth,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import {
-      getDatabase,
-      ref,
-      set,
-      get,
-      child
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { get as idbGet, set as idbSet } from "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
-      authDomain: "attandace-management.firebaseapp.com",
-      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-      projectId: "attandace-management",
-      storageBucket: "attandace-management.appspot.com",
-      messagingSenderId: "222685278846",
-      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-      measurementId: "G-V2MY85R73B"
+    const userTypeEl   = document.getElementById("userType");
+    const fullNameEl   = document.getElementById("fullName");
+    const schoolEl     = document.getElementById("schoolSelect");
+    const classRow     = document.getElementById("classRow");
+    const sectionRow   = document.getElementById("sectionRow");
+    const classEl      = document.getElementById("classSelect");
+    const sectionEl    = document.getElementById("sectionSelect");
+    const loginBtn     = document.getElementById("loginBtn");
+    const messageBox   = document.getElementById("messageBox");
+
+    const db = window.database;
+    const appDataRef = dbRef(db, "appData");
+
+    // 1) Load existing schools into #schoolSelect
+    async function loadSchools() {
+      const snapshot = await dbGet(dbChild(appDataRef, "schools"));
+      const list = snapshot.exists() ? snapshot.val() : [];
+      schoolEl.innerHTML = `<option value="" disabled selected>-- Select School --</option>`
+        + list.map(s => `<option value="${s}">${s}</option>`).join("");
+    }
+
+    // 2) Whenever school changes, if Teacher, load classes for that school
+    schoolEl.onchange = async () => {
+      if (userTypeEl.value === "Teacher") {
+        const sch = schoolEl.value;
+        // fetch classesBySchool/<sch>
+        const snap = await dbGet(dbChild(appDataRef, `classesBySchool/${encodeKey(sch)}`));
+        const clsList = snap.exists() ? snap.val() : [];
+        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`
+          + clsList.map(c => `<option value="${c}">${c}</option>`).join("");
+        classRow.classList.remove("hidden");
+        sectionRow.classList.add("hidden");
+        sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
+      }
     };
 
-    // Initialize Firebase (compat style for ease of use)
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const database = getDatabase(app);
+    // 3) Whenever class changes, load sections for that school & class
+    classEl.onchange = async () => {
+      const sch = schoolEl.value;
+      const cls = classEl.value;
+      // fetch sectionsBySchool/<sch>/<cls>
+      const snap = await dbGet(dbChild(appDataRef, `sectionsBySchool/${encodeKey(sch)}/${encodeKey(cls)}`));
+      const secList = snap.exists() ? snap.val() : [];
+      sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`
+        + secList.map(s => `<option value="${s}">${s}</option>`).join("");
+      sectionRow.classList.remove("hidden");
+    };
 
-    //-------------------------------------
-    // 2) ELEMENT REFERENCES
-    //-------------------------------------
-    const loginForm        = document.getElementById("loginForm");
-    const signupForm       = document.getElementById("signupForm");
-    const toggleToSignup   = document.getElementById("toggleToSignup");
-    const toggleToLogin    = document.getElementById("toggleToLogin");
-    const formTitle        = document.getElementById("formTitle");
-    const errorMsg         = document.getElementById("errorMsg");
-
-    const loginEmail       = document.getElementById("loginEmail");
-    const loginPassword    = document.getElementById("loginPassword");
-
-    const signupName       = document.getElementById("signupName");
-    const signupEmail      = document.getElementById("signupEmail");
-    const signupPassword   = document.getElementById("signupPassword");
-    const signupRole       = document.getElementById("signupRole");
-
-    const principalFields  = document.getElementById("principalFields");
-    const principalSchool  = document.getElementById("principalSchool");
-
-    const teacherFields    = document.getElementById("teacherFields");
-    const teacherSchool    = document.getElementById("teacherSchool");
-    const teacherClassEl   = document.getElementById("teacherClass");
-    const teacherSectionEl = document.getElementById("teacherSection");
-
-    //-------------------------------------
-    // 3) TOGGLE BETWEEN LOGIN / SIGNUP
-    //-------------------------------------
-    toggleToSignup.addEventListener("click", () => {
-      errorMsg.textContent = "";
-      formTitle.textContent = "Sign Up";
-      loginForm.classList.add("hidden");
-      signupForm.classList.remove("hidden");
-      toggleToSignup.classList.add("hidden");
-      toggleToLogin.classList.remove("hidden");
-    });
-    toggleToLogin.addEventListener("click", () => {
-      errorMsg.textContent = "";
-      formTitle.textContent = "Login";
-      signupForm.classList.add("hidden");
-      loginForm.classList.remove("hidden");
-      toggleToLogin.classList.add("hidden");
-      toggleToSignup.classList.remove("hidden");
-      // hide role‐specific fields
-      principalFields.classList.add("hidden");
-      teacherFields.classList.add("hidden");
-      signupRole.value = "";
-    });
-
-    //-------------------------------------
-    // 4) SHOW/HIDE FIELDS BASED ON ROLE SELECTION
-    //-------------------------------------
-    signupRole.addEventListener("change", (e) => {
-      const r = e.target.value;
-      principalFields.classList.add("hidden");
-      teacherFields.classList.add("hidden");
-
-      if (r === "principal") {
-        principalFields.classList.remove("hidden");
-      } else if (r === "teacher") {
-        teacherFields.classList.remove("hidden");
+    // 4) Show/hide class/section rows based on userType
+    userTypeEl.onchange = () => {
+      messageBox.textContent = "";
+      if (userTypeEl.value === "Teacher") {
+        classRow.classList.remove("hidden");
+        sectionRow.classList.add("hidden");
+        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`;
+        sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
+      } else if (userTypeEl.value === "Principal") {
+        classRow.classList.add("hidden");
+        sectionRow.classList.add("hidden");
+        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`;
+        sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
       }
-    });
+    };
 
-    //-------------------------------------
-    // 5) SIGN-UP LOGIC
-    //-------------------------------------
-    signupForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorMsg.textContent = "";
+    // 5) Check if this user is already “approved” in Firebase
+    //    If yes & status="active", let them in → store “currentUser” in IndexedDB and redirect to index.html.
+    //    If yes & status="blocked", show error.
+    //    If not found, create a “loginRequests” entry → show “Your request is pending…”
+    loginBtn.onclick = async () => {
+      messageBox.textContent = "";
+      const fullName = fullNameEl.value.trim();
+      const userType = userTypeEl.value;
+      const sch      = schoolEl.value;
+      const cls      = classEl.value;
+      const sec      = sectionEl.value;
 
-      const name    = signupName.value.trim();
-      const email   = signupEmail.value.trim();
-      const pass    = signupPassword.value;
-      const role    = signupRole.value;
-
-      if (!name || !email || !pass || !role) {
-        errorMsg.textContent = "All fields are required.";
+      if (!fullName || !userType || !sch || (userType==="Teacher" && (!cls || !sec))) {
+        messageBox.textContent = "Please fill out all required fields.";
         return;
       }
-      if (role === "principal" && !principalSchool.value.trim()) {
-        errorMsg.textContent = "Principal must specify assigned school.";
-        return;
-      }
-      if (role === "teacher") {
-        if (!teacherSchool.value.trim() || !teacherClassEl.value || !teacherSectionEl.value) {
-          errorMsg.textContent = "Teacher must specify school, class, & section.";
+
+      // 5.a) Look for an existing approvedUser with the same (fullName, userType, school, class, section)
+      const approvedRef = dbRef(db, `approvedUsers`);
+      // We can query by “fullName_userType_school_cls_sec” composite key.
+      const compositeKey = encodeKey(`${fullName}||${userType}||${sch}||${userType==="Teacher"?cls:"ALL"}||${userType==="Teacher"?sec:"ALL"}`);
+
+      //   “approvedUsers/<compositeKey> = { fullName, userType, school, class, section, status: "active" or "blocked" }”
+      const snap = await dbGet(dbChild(approvedRef, compositeKey));
+      if (snap.exists()) {
+        const data = snap.val();
+        if (data.status === "active") {
+          // LOG THEM IN:
+          await idbSet("currentUser", {
+            fullName,
+            userType,
+            school: sch,
+            class: (userType==="Teacher"? cls : "ALL"),
+            section: (userType==="Teacher"? sec : "ALL")
+          });
+          // redirect to main app:
+          window.location.href = "index.html";
+          return;
+        } else {
+          // status=="blocked"
+          messageBox.textContent = "Your account has been blocked. Contact the administrator.";
           return;
         }
       }
 
-      try {
-        // 1) Create user in Firebase Auth
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        const uid = cred.user.uid;
+      // 5.b) Not found among approvedUsers → create a new request in “loginRequests”
+      const loginReqRef = dbRef(db, `loginRequests`);
+      const newReq = {
+        fullName,
+        userType,
+        school: sch,
+        class: (userType==="Teacher"? cls : "ALL"),
+        section: (userType==="Teacher"? sec : "ALL"),
+        timestamp: new Date().toISOString(),
+        status: "pending"
+      };
+      await dbPush(loginReqRef, newReq);
+      messageBox.textContent = "Your request has been submitted. Please wait for administrator approval.";
+      loginBtn.disabled = true;
+    };
 
-        // 2) Write to /loginRequests/{uid} with status = "pending"
-        const requestRef = ref(database, "loginRequests/" + uid);
-        await set(requestRef, {
-          email: email,
-          name:  name,
-          role:  role,
-          school: (role === "principal" ? principalSchool.value.trim() : (role === "teacher" ? teacherSchool.value.trim() : "")),
-          class:  (role === "teacher"   ? teacherClassEl.value : ""),
-          section:(role === "teacher"   ? teacherSectionEl.value : ""),
-          status: "pending",
-          requestedAt: new Date().toISOString()
-        });
+    // When page loads, populate the school list
+    window.addEventListener("DOMContentLoaded", loadSchools);
 
-        // 3) Immediately sign the user out (we don’t let them “in” until an admin approves)
-        await signOut(auth);
-        errorMsg.style.color = "green";
-        errorMsg.textContent = "Sign-up request submitted. Awaiting admin approval.";
-        signupForm.reset();
-        principalFields.classList.add("hidden");
-        teacherFields.classList.add("hidden");
-        signupRole.value = "";
-      } catch (err) {
-        console.error(err);
-        errorMsg.style.color = "red";
-        errorMsg.textContent = "Error: " + err.message;
-      }
-    });
-
-    //-------------------------------------
-    // 6) LOGIN LOGIC
-    //-------------------------------------
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorMsg.textContent = "";
-      const email = loginEmail.value.trim();
-      const pass  = loginPassword.value;
-
-      if (!email || !pass) {
-        errorMsg.textContent = "Email + password required.";
-        return;
-      }
-      try {
-        // 1) Sign in
-        const cred = await signInWithEmailAndPassword(auth, email, pass);
-        const uid = cred.user.uid;
-
-        // 2) Look up /users/{uid}/status
-        const userSnap = await get(child(ref(database), `users/${uid}`));
-        if (!userSnap.exists()) {
-          // no /users entry means still pending or not approved
-          // check /loginRequests/{uid}/status
-          const reqSnap = await get(child(ref(database), `loginRequests/${uid}`));
-          if (reqSnap.exists()) {
-            const r = reqSnap.val();
-            if (r.status === "pending") {
-              errorMsg.textContent = "Request still pending. Please wait.";
-            } else if (r.status === "rejected") {
-              errorMsg.textContent = "Your signup request was rejected by admin.";
-            } else if (r.status === "blocked") {
-              errorMsg.textContent = "Your account has been blocked. Contact admin.";
-            } else {
-              errorMsg.textContent = "Awaiting approval.";
-            }
-            // force sign out:
-            await signOut(auth);
-            return;
-          } else {
-            // user exists in Auth but no request found—block by default
-            errorMsg.textContent = "No approval record found. Contact admin.";
-            await signOut(auth);
-            return;
-          }
-        }
-
-        // 3) If /users/{uid} exists, check status
-        const userData = userSnap.val();
-        if (userData.status === "approved") {
-          // redirect based on role:
-          if (userData.role === "admin") {
-            window.location.href = "admin.html";
-          } else if (userData.role === "principal") {
-            window.location.href = "principal.html";
-          } else if (userData.role === "teacher") {
-            window.location.href = "teacher.html";
-          } else {
-            errorMsg.textContent = "Unknown role. Contact admin.";
-            await signOut(auth);
-          }
-        } else if (userData.status === "rejected") {
-          errorMsg.textContent = "Your account was rejected. Contact admin.";
-          await signOut(auth);
-        } else if (userData.status === "blocked") {
-          errorMsg.textContent = "Your account has been blocked. Contact admin.";
-          await signOut(auth);
-        } else {
-          errorMsg.textContent = "Awaiting admin approval.";
-          await signOut(auth);
-        }
-      } catch (err) {
-        console.error(err);
-        errorMsg.textContent = "Login error: " + err.message;
-      }
-    });
-
-    //-------------------------------------
-    // 7) AUTO-REDIRECT IF ALREADY LOGGED IN
-    //-------------------------------------
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // if they close the page and come back, redirect automatically
-        const uid = user.uid;
-        const userSnap = await get(child(ref(database), `users/${uid}`));
-        if (userSnap.exists() && userSnap.val().status === "approved") {
-          const r = userSnap.val().role;
-          if (r === "admin") {
-            window.location.href = "admin.html";
-          } else if (r === "principal") {
-            window.location.href = "principal.html";
-          } else if (r === "teacher") {
-            window.location.href = "teacher.html";
-          } else {
-            await signOut(auth);
-          }
-        } else {
-          await signOut(auth);
-        }
-      }
-    });
+    // Utility: Firebase keys cannot contain “.” or “/” or “[ ]” etc. We replace “/” with “__”, etc.
+    function encodeKey(str) {
+      return str.replace(/\./g, "___")
+                .replace(/\//g, "____")
+                .replace(/\$/g, "_____")
+                .replace(//g, "______")
+                .replace(//g, "_______")
+                .replace(/#/g, "________")
+                .replace(/\\/g, "_________");
+    }
   </script>
 </body>
 </html>
