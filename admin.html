@@ -1,0 +1,265 @@
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Mgmt – Admin Panel</title>
+
+  <!-- Firebase JS SDK (v9 modular) -->
+  <script type="module">
+    // IMPORTANT: Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: "<YOUR_FIREBASE_API_KEY>",
+      authDomain: "<YOUR_FIREBASE_AUTH_DOMAIN>",
+      projectId: "<YOUR_FIREBASE_PROJECT_ID>",
+      storageBucket: "<YOUR_FIREBASE_STORAGE_BUCKET>",
+      messagingSenderId: "<YOUR_FIREBASE_SENDER_ID>",
+      appId: "<YOUR_FIREBASE_APP_ID>",
+      measurementId: "<YOUR_FIREBASE_MEASUREMENT_ID>",
+      databaseURL: "<YOUR_FIREBASE_DATABASE_URL>"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getDatabase,
+      ref as dbRef,
+      onValue,
+      set as dbSet,
+      remove as dbRemove,
+      update as dbUpdate
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    window.firebaseApp = initializeApp(firebaseConfig);
+    window.database = getDatabase(window.firebaseApp);
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background: #f5f5f5;
+    }
+    button {
+      padding: 4px 8px;
+      margin-right: 4px;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .approve { background: #4caf50; }
+    .reject  { background: #f44336; }
+    .block   { background: #ff9800; }
+    .unblock { background: #2196f3; }
+    .section-title {
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #2196F3;
+      padding-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Admin Panel – Login Requests</h1>
+
+  <!-- PENDING requests -->
+  <div>
+    <div class="section-title">Pending Requests</div>
+    <table id="pendingTable">
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>User Type</th>
+          <th>School</th>
+          <th>Class</th>
+          <th>Section</th>
+          <th>Requested At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+  </div>
+
+  <!-- APPROVED users -->
+  <div>
+    <div class="section-title">Approved Users</div>
+    <table id="approvedTable">
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>User Type</th>
+          <th>School</th>
+          <th>Class</th>
+          <th>Section</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="approvedBody"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import {
+      getDatabase,
+      ref as dbRef,
+      onValue,
+      set as dbSet,
+      remove as dbRemove,
+      update as dbUpdate
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const db = window.database;
+    const loginReqRef   = dbRef(db, "loginRequests");
+    const approvedRef   = dbRef(db, "approvedUsers");
+
+    const pendingBody  = document.getElementById("pendingBody");
+    const approvedBody = document.getElementById("approvedBody");
+
+    // Utility to decode composite keys:
+    function decodeKey(ck) {
+      return ck
+        .replace(/_______/g, "]")
+        .replace(/______/g, "[")
+        .replace(/_____/g, "$")
+        .replace(/____/g, "/")
+        .replace(/___/g, ".");
+    }
+
+    // ────────────────
+    // 1) LISTEN FOR pending requests
+    // ────────────────
+    onValue(loginReqRef, snapshot => {
+      pendingBody.innerHTML = "";
+      if (!snapshot.exists()) return;
+
+      snapshot.forEach(childSnap => {
+        const reqId = childSnap.key;
+        const data  = childSnap.val();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${data.fullName}</td>
+          <td>${data.userType}</td>
+          <td>${data.school}</td>
+          <td>${data.class}</td>
+          <td>${data.section}</td>
+          <td>${new Date(data.timestamp).toLocaleString()}</td>
+          <td>
+            <button class="approve" data-id="${reqId}">Approve</button>
+            <button class="reject"  data-id="${reqId}">Reject</button>
+          </td>
+        `;
+        pendingBody.appendChild(tr);
+      });
+
+      // Attach click handlers
+      document.querySelectorAll(".approve").forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          const reqDataSnap = await dbRef(db, `loginRequests/${id}`);
+          const reqData = (await reqDataSnap.get()).val();
+          if (!reqData) return;
+
+          // Build compositeKey = fullName||userType||school||class||section
+          const ck = encodeKey(`${reqData.fullName}||${reqData.userType}||${reqData.school}||${reqData.class}||${reqData.section}`);
+          await dbSet(dbRef(db, `approvedUsers/${ck}`), {
+            fullName: reqData.fullName,
+            userType: reqData.userType,
+            school:   reqData.school,
+            class:    reqData.class,
+            section:  reqData.section,
+            status:   "active"
+          });
+          // Remove from loginRequests
+          await dbRemove(dbRef(db, `loginRequests/${id}`));
+        };
+      });
+
+      document.querySelectorAll(".reject").forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          // Just delete the request. Rejected requests are gone.
+          await dbRemove(dbRef(db, `loginRequests/${id}`));
+        };
+      });
+    });
+
+    // ────────────────
+    // 2) LISTEN FOR approved users (to show in approved table)
+    // ────────────────
+    onValue(approvedRef, snapshot => {
+      approvedBody.innerHTML = "";
+      if (!snapshot.exists()) return;
+
+      snapshot.forEach(childSnap => {
+        const ck  = childSnap.key;
+        const data = childSnap.val();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${data.fullName}</td>
+          <td>${data.userType}</td>
+          <td>${data.school}</td>
+          <td>${data.class}</td>
+          <td>${data.section}</td>
+          <td>${data.status}</td>
+          <td>
+            ${data.status === "active"
+              ? `<button class="block" data-ck="${ck}">Block</button>`
+              : `<button class="unblock" data-ck="${ck}">Unblock</button>`
+            }
+          </td>
+        `;
+        approvedBody.appendChild(tr);
+      });
+
+      // BLOCK
+      document.querySelectorAll(".block").forEach(btn => {
+        btn.onclick = async () => {
+          const ck = btn.dataset.ck;
+          await dbUpdate(dbRef(db, `approvedUsers/${ck}`), { status: "blocked" });
+        };
+      });
+
+      // UNBLOCK
+      document.querySelectorAll(".unblock").forEach(btn => {
+        btn.onclick = async () => {
+          const ck = btn.dataset.ck;
+          await dbUpdate(dbRef(db, `approvedUsers/${ck}`), { status: "active" });
+        };
+      });
+    });
+
+    function encodeKey(str) {
+      return str.replace(/\./g, "___")
+                .replace(/\//g, "____")
+                .replace(/\$/g, "_____")
+                .replace(//g, "______")
+                .replace(//g, "_______")
+                .replace(/#/g, "________")
+                .replace(/\\/g, "_________");
+    }
+  </script>
+</body>
+</html>
