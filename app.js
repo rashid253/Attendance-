@@ -1,4 +1,4 @@
-// app.js (updated with Firebase import, login, and role-based UI integration)
+// app.js (updated to ensure initialData.json is imported before login lookup)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -62,16 +62,21 @@ let lastAnalyticsShare     = "";    // for WhatsApp sharing
 // ----------------------
 // INITIAL DATA IMPORT (only once if appData is empty)
 // ----------------------
+let initialDataImported = false;
+
 async function importInitialDataIfEmpty() {
+  if (initialDataImported) return;
   const snapshot = await dbGet(appDataRef);
   if (!snapshot.exists()) {
-    fetch("initialData.json")
-      .then(resp => resp.json())
-      .then(data => {
-        dbSet(appDataRef, data).catch(err => console.error("Error importing initial data:", err));
-      })
-      .catch(err => console.error("Could not fetch initialData.json:", err));
+    try {
+      const resp = await fetch("initialData.json");
+      const data = await resp.json();
+      await dbSet(appDataRef, data);
+    } catch (err) {
+      console.error("Error importing initial data:", err);
+    }
   }
+  initialDataImported = true;
 }
 
 // ----------------------
@@ -84,6 +89,9 @@ function setupLogin() {
   const logoutBtn    = $("logoutBtn");
 
   loginBtn.addEventListener("click", async () => {
+    // Ensure initialData is imported before checking user key
+    await importInitialDataIfEmpty();
+
     const keyInput = $("userKeyInput").value.trim();
     if (!keyInput) {
       alert("Please enter your user key.");
@@ -567,7 +575,7 @@ function initAfterSetup() {
   });
 
   // Initial render if teacher role
-  if (currentUserRole === "teacher" || currentUserRole === "principal" || currentUserRole === "admin") {
+  if (["teacher", "principal", "admin"].includes(currentUserRole)) {
     renderStudentsTable();
   }
 
