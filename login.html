@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Mgmt – Login</title>
 
-  <!-- idb-keyval (for storing currentUser) -->
+  <!-- idb-keyval (IIFE) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
   <style>
@@ -101,18 +101,16 @@
   <div class="message" id="messageBox"></div>
 
   <script type="module">
-    import {
-      database,
-      appDataRef,
-      encodeKey
-    } from "./app.js";
-    import { get as idbGet, set as idbSet } from "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js";
+    // Import only what we need from app.js
+    import { database, appDataRef, encodeKey } from "./app.js";
     import {
       ref as dbRef,
       get as dbGet,
       child as dbChild,
       push as dbPush
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    // idbKeyval is globally available (IIFE loaded above)
+    const { get: idbGet, set: idbSet } = idbKeyval;
 
     const userTypeEl   = document.getElementById("userType");
     const fullNameEl   = document.getElementById("fullName");
@@ -124,15 +122,15 @@
     const loginBtn     = document.getElementById("loginBtn");
     const messageBox   = document.getElementById("messageBox");
 
-    // Load existing schools into #schoolSelect
+    // 1) Load existing schools into #schoolSelect
     async function loadSchools() {
-      const snapshot = await dbGet(child(appDataRef, "schools"));
-      const list = snapshot.exists() ? snapshot.val() : [];
+      const snap = await dbGet(child(appDataRef, "schools"));
+      const list = snap.exists() ? snap.val() : [];
       schoolEl.innerHTML = `<option value="" disabled selected>-- Select School --</option>`
         + list.map(s => `<option value="${s}">${s}</option>`).join("");
     }
 
-    // Whenever school changes, if Teacher, load classes for that school
+    // 2) Whenever school changes, if Teacher, load classes for that school
     schoolEl.onchange = async () => {
       messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
@@ -147,7 +145,7 @@
       }
     };
 
-    // Whenever class changes, load sections for that school & class
+    // 3) Whenever class changes, load sections for that school & class
     classEl.onchange = async () => {
       const sch = schoolEl.value;
       const cls = classEl.value;
@@ -158,7 +156,7 @@
       sectionRow.classList.remove("hidden");
     };
 
-    // Show/hide class/section rows based on userType
+    // 4) Show/hide class/section rows based on userType
     userTypeEl.onchange = () => {
       messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
@@ -174,7 +172,7 @@
       }
     };
 
-    // Log In / Request Access logic
+    // 5) Log In / Request Access logic
     loginBtn.onclick = async () => {
       messageBox.textContent = "";
       const fullName = fullNameEl.value.trim();
@@ -188,11 +186,16 @@
         return;
       }
 
-      const compositeKey = encodeKey(`${fullName}||${userType}||${sch}||${userType==="Teacher"?cls:"ALL"}||${userType==="Teacher"?sec:"ALL"}`);
-      const snap = await dbGet(child(dbRef(database), `approvedUsers/${compositeKey}`));
-      if (snap.exists()) {
-        const data = snap.val();
+      // Build the composite key
+      const compositeKey = encodeKey(
+        `${fullName}||${userType}||${sch}||${userType==="Teacher"?cls:"ALL"}||${userType==="Teacher"?sec:"ALL"}`
+      );
+      // Check approvedUsers/<compositeKey>
+      const approvedSnap = await dbGet(child(dbRef(database), `approvedUsers/${compositeKey}`));
+      if (approvedSnap.exists()) {
+        const data = approvedSnap.val();
         if (data.status === "active") {
+          // Already approved & active → log them in
           await idbSet("currentUser", {
             fullName,
             userType,
@@ -208,6 +211,7 @@
         }
       }
 
+      // Not approved → create a new loginRequests entry
       const loginReqRef = dbRef(database, "loginRequests");
       const newReq = {
         fullName,
@@ -223,6 +227,7 @@
       loginBtn.disabled = true;
     };
 
+    // When page loads, populate the school list
     window.addEventListener("DOMContentLoaded", loadSchools);
   </script>
 </body>
