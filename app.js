@@ -31,11 +31,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-const appDataRef = dbRef(database, "appData");
+
+export const database = getDatabase(app);
+export const appDataRef = dbRef(database, "appData");
 
 // Utility to encode keys in Firebase paths
-function encodeKey(str) {
+export function encodeKey(str) {
   return str
     .replace(/\./g, "___")
     .replace(/\//g, "____")
