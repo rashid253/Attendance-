@@ -1,4 +1,45 @@
- // app.js
+// app.js
+// ─── Paste this at the top of app.js ───────────────────────────────────────────────────
+
+// (A) Check for “admin preview” mode (no login) via URL or localStorage
+function isAdminPreviewMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("adminPreview") === "true") return true;
+  return localStorage.getItem("adminPreviewMode") === "1";
+}
+
+// (B) On DOMContentLoaded, redirect only if not in adminPreviewMode and not on login/admin pages
+window.addEventListener("DOMContentLoaded", async () => {
+  const pathname = window.location.pathname.split("/").pop();
+  const onLoginOrAdminPage = (pathname === "login.html" || pathname === "admin.html");
+
+  if (!onLoginOrAdminPage && !isAdminPreviewMode()) {
+    const currentUser = await idbGet("currentUser");
+    if (!currentUser) {
+      window.location.href = "login.html";
+      return;
+    }
+    window.currentUser = currentUser;
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.onclick = async () => {
+        await idbSet("currentUser", null);
+        window.location.href = "login.html";
+      };
+    }
+
+    initApp();
+  } else {
+    // If admin preview mode is active, still initialize the app (for debugging)
+    if (isAdminPreviewMode()) {
+      initApp();
+    }
+    // If on login.html or admin.html, do nothing here
+  }
+});
+
+// ─── End of snippet ─────────────────────────────────────────────────────────────────────
 // -------------------------------------------------------------------------------------------------
 // (1) FIREBASE + IDB-KEYVAL SETUP
 
