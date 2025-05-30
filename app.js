@@ -1,39 +1,5 @@
 // app.js
-// ─── Admin Preview Mode: Allow app access without login for debugging ────────────────
 
-function isAdminPreviewMode() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("adminPreview") === "true") return true;
-  return localStorage.getItem("adminPreviewMode") === "1";
-}
-
-window.addEventListener("DOMContentLoaded", async () => {
-  const pathname = window.location.pathname.split("/").pop();
-  const isLoginPage = pathname === "login.html";
-  const isAdminPage = pathname === "admin.html";
-
-  if (!isLoginPage && !isAdminPage && !isAdminPreviewMode()) {
-    const currentUser = await idbGet("currentUser");
-    if (!currentUser) {
-      window.location.href = "login.html";
-      return;
-    }
-    window.currentUser = currentUser;
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.onclick = async () => {
-        await idbSet("currentUser", null);
-        window.location.href = "login.html";
-      };
-    }
-
-    initApp(); // load app for real user
-  } else if (isAdminPreviewMode()) {
-    // Preview mode: don't check login — allow loading the app
-    initApp(); // load app in admin preview mode
-  }
-});
 // ----------------------------------------------------------
 // (1) FIREBASE + IDB-KEYVAL SETUP
 
