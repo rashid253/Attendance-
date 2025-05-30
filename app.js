@@ -34,6 +34,18 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const appDataRef = dbRef(database, "appData");
 
+// Utility to encode keys in Firebase paths
+function encodeKey(str) {
+  return str
+    .replace(/\./g, "___")
+    .replace(/\//g, "____")
+    .replace(/\$/g, "_____")
+    .replace(//g, "______")
+    .replace(//g, "_______")
+    .replace(/#/g, "________")
+    .replace(/\\/g, "_________");
+}
+
 // -------------------------------------------------------------------------------------------------
 // (2) LOGIN / LOGOUT LOGIC
 // We assume that login.html has stored “currentUser” in IndexedDB under key="currentUser":
@@ -1639,7 +1651,7 @@ async function initApp() {
     const sec = sectionSelect.value;
     currentSchoolStudents.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
       let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-      dateKeys.forEach(key => {
+      dateKeys.forEach((key, idx) => {
         const c = currentSchoolAttendance[key][s.adm] || "";
         const color = c === "P" ? "var(--success)" : c === "Lt" ? "var(--warning)" : c === "HD" ? "#FF9800" : c === "L" ? "var(--info)" : "var(--danger)";
         const style = c ? `style="background:${color};color:#fff"` : "";
@@ -1786,6 +1798,7 @@ async function initApp() {
     selectedSchool         = null;
     selectedClass          = null;
     selectedSection        = null;
+
     await Promise.all([
       idbSet("studentsBySchool", studentsBySchool),
       idbSet("attendanceDataBySchool", attendanceDataBySchool),
@@ -1825,7 +1838,7 @@ async function initApp() {
         teacherSection: selectedSection
       };
       const now = new Date();
-      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart("00")}-${String(now.getMinutes()).padStart(2,"00")}.json`;
+      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
       const fileHandle = await backupHandle.getFileHandle(fileName,{ create:true });
       const writer = await fileHandle.createWritable();
       await writer.write(JSON.stringify(backupData, null, 2));
@@ -1898,6 +1911,7 @@ async function initApp() {
     teacherKeysBySchool    = data.teacherKeysBySchool    || {};
     classesBySchool        = data.classesBySchool        || {};
     sectionsBySchool       = data.sectionsBySchool       || {};
+
     await Promise.all([
       idbSet("studentsBySchool", studentsBySchool),
       idbSet("attendanceDataBySchool", attendanceDataBySchool),
