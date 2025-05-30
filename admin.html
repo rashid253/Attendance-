@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Attendance Mgmt – Admin Panel</title>
 
   <style>
@@ -30,7 +30,7 @@
       background: #f5f5f5;
     }
     button {
-      padding: 4px 8px;
+      padding: 6px 10px;
       margin-right: 4px;
       border: none;
       color: #fff;
@@ -93,27 +93,27 @@
   </div>
 
   <script type="module">
-    import {
-      database,
-      encodeKey
-    } from "./app.js";
+    // 1) Import only what we exported from app.js
+    import { database, encodeKey } from "./app.js";
     import {
       ref as dbRef,
       onValue,
       set as dbSet,
       remove as dbRemove,
-      update as dbUpdate
+      update as dbUpdate,
+      child
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-    const loginReqRef = dbRef(database, "loginRequests");
-    const approvedRef = dbRef(database, "approvedUsers");
+    // 2) We do NOT import idb-keyval as an ES module—use the global IIFE instead:
+    //    const { get, set } = window.idbKeyval;  // (not needed in admin.html)
 
-    const pendingBody  = document.getElementById("pendingBody");
-    const approvedBody = document.getElementById("approvedBody");
+    const loginReqRef   = dbRef(database, "loginRequests");
+    const approvedRef   = dbRef(database, "approvedUsers");
 
-    // ────────────────
-    // 1) LISTEN FOR pending requests
-    // ────────────────
+    const pendingBody   = document.getElementById("pendingBody");
+    const approvedBody  = document.getElementById("approvedBody");
+
+    // (1) Listen for pending requests
     onValue(loginReqRef, snapshot => {
       pendingBody.innerHTML = "";
       if (!snapshot.exists()) return;
@@ -137,13 +137,17 @@
         pendingBody.appendChild(tr);
       });
 
+      // Approve / Reject handlers
       document.querySelectorAll(".approve").forEach(btn => {
         btn.onclick = async () => {
           const id = btn.dataset.id;
-          const reqSnap = await dbRef(database, `loginRequests/${id}`).get();
+          const reqSnap = await child(dbRef(database), `loginRequests/${id}`).get();
+          if (!reqSnap.exists()) return;
           const reqData = reqSnap.val();
-          if (!reqData) return;
-          const ck = encodeKey(`${reqData.fullName}||${reqData.userType}||${reqData.school}||${reqData.class}||${reqData.section}`);
+
+          const ck = encodeKey(
+            `${reqData.fullName}||${reqData.userType}||${reqData.school}||${reqData.class}||${reqData.section}`
+          );
           await dbSet(dbRef(database, `approvedUsers/${ck}`), {
             fullName: reqData.fullName,
             userType: reqData.userType,
@@ -164,15 +168,13 @@
       });
     });
 
-    // ────────────────
-    // 2) LISTEN FOR approved users
-    // ────────────────
+    // (2) Listen for approved users
     onValue(approvedRef, snapshot => {
       approvedBody.innerHTML = "";
       if (!snapshot.exists()) return;
 
       snapshot.forEach(childSnap => {
-        const ck  = childSnap.key;
+        const ck   = childSnap.key;
         const data = childSnap.val();
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -183,9 +185,10 @@
           <td>${data.section}</td>
           <td>${data.status}</td>
           <td>
-            ${data.status === "active"
-              ? `<button class="block" data-ck="${ck}">Block</button>`
-              : `<button class="unblock" data-ck="${ck}">Unblock</button>`
+            ${
+              data.status === "active"
+                ? `<button class="block" data-ck="${ck}">Block</button>`
+                : `<button class="unblock" data-ck="${ck}">Unblock</button>`
             }
           </td>
         `;
