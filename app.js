@@ -1,6 +1,5 @@
-// app.js
 // -------------------------------------------------------------------------------------------------
-// (1) FIREBASE + IDB‐KEYVAL SETUP
+// (1) FIREBASE + IDB-KEYVAL SETUP
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
@@ -18,7 +17,7 @@ import {
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Replace with your actual Firebase config
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -30,12 +29,14 @@ const firebaseConfig = {
   databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
 };
 
+// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
+// Export Firebase Database references
 export const database = getDatabase(app);
 export const appDataRef = dbRef(database, "appData");
 
-// Utility to encode keys in Firebase paths
+// Utility to safely encode strings for Firebase keys
 export function encodeKey(str) {
   return str
     .replace(/\./g, "___")
@@ -46,7 +47,6 @@ export function encodeKey(str) {
     .replace(/#/g, "________")
     .replace(/\\/g, "_________");
 }
-
 // -------------------------------------------------------------------------------------------------
 // (2) LOGIN / LOGOUT LOGIC
 // We assume that login.html has stored “currentUser” in IndexedDB under key="currentUser":
