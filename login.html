@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Mgmt – Login</title>
 
-  <!-- idb-keyval (IIFE) -->
+  <!-- idb-keyval (IIFE) for IndexedDB operations -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
   <style>
@@ -101,7 +101,7 @@
   <div class="message" id="messageBox"></div>
 
   <script type="module">
-    // Import only what we need from app.js
+    // Import exactly what we exported from app.js
     import { database, appDataRef, encodeKey } from "./app.js";
     import {
       ref as dbRef,
@@ -109,7 +109,8 @@
       child as dbChild,
       push as dbPush
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-    // idbKeyval is globally available (IIFE loaded above)
+
+    // idbKeyval was loaded as an IIFE, so we use its global functions
     const { get: idbGet, set: idbSet } = idbKeyval;
 
     const userTypeEl   = document.getElementById("userType");
@@ -122,57 +123,60 @@
     const loginBtn     = document.getElementById("loginBtn");
     const messageBox   = document.getElementById("messageBox");
 
-    // 1) Load existing schools into #schoolSelect
+    // (1) Populate "Select School" from Firebase → appData/schools
     async function loadSchools() {
       const snap = await dbGet(child(appDataRef, "schools"));
       const list = snap.exists() ? snap.val() : [];
-      schoolEl.innerHTML = `<option value="" disabled selected>-- Select School --</option>`
-        + list.map(s => `<option value="${s}">${s}</option>`).join("");
+      schoolEl.innerHTML =
+        `<option value="" disabled selected>-- Select School --</option>` +
+        list.map(s => `<option value="${s}">${s}</option>`).join("");
     }
 
-    // 2) Whenever school changes, if Teacher, load classes for that school
+    // (2) When a school is chosen, if Teacher, load classes from appData/classesBySchool/<school>
     schoolEl.onchange = async () => {
       messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
         const sch = schoolEl.value;
         const snap = await dbGet(child(appDataRef, `classesBySchool/${encodeKey(sch)}`));
         const clsList = snap.exists() ? snap.val() : [];
-        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`
-          + clsList.map(c => `<option value="${c}">${c}</option>`).join("");
+        classEl.innerHTML =
+          `<option value="" disabled selected>-- Select Class --</option>` +
+          clsList.map(c => `<option value="${c}">${c}</option>`).join("");
         classRow.classList.remove("hidden");
         sectionRow.classList.add("hidden");
         sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
       }
     };
 
-    // 3) Whenever class changes, load sections for that school & class
+    // (3) When a class is chosen, load sections from appData/sectionsBySchool/<school>/<class>
     classEl.onchange = async () => {
       const sch = schoolEl.value;
       const cls = classEl.value;
       const snap = await dbGet(child(appDataRef, `sectionsBySchool/${encodeKey(sch)}/${encodeKey(cls)}`));
       const secList = snap.exists() ? snap.val() : [];
-      sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`
-        + secList.map(s => `<option value="${s}">${s}</option>`).join("");
+      sectionEl.innerHTML =
+        `<option value="" disabled selected>-- Select Section --</option>` +
+        secList.map(s => `<option value="${s}">${s}</option>`).join("");
       sectionRow.classList.remove("hidden");
     };
 
-    // 4) Show/hide class/section rows based on userType
+    // (4) Show/hide class+section rows when userType changes
     userTypeEl.onchange = () => {
       messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
         classRow.classList.remove("hidden");
         sectionRow.classList.add("hidden");
-        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`;
+        classEl.innerHTML   = `<option value="" disabled selected>-- Select Class --</option>`;
         sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
       } else if (userTypeEl.value === "Principal") {
         classRow.classList.add("hidden");
         sectionRow.classList.add("hidden");
-        classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`;
+        classEl.innerHTML   = `<option value="" disabled selected>-- Select Class --</option>`;
         sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`;
       }
     };
 
-    // 5) Log In / Request Access logic
+    // (5) "Log In / Request Access" button
     loginBtn.onclick = async () => {
       messageBox.textContent = "";
       const fullName = fullNameEl.value.trim();
@@ -181,27 +185,33 @@
       const cls      = classEl.value;
       const sec      = sectionEl.value;
 
-      if (!fullName || !userType || !sch || (userType==="Teacher" && (!cls || !sec))) {
+      if (
+        !fullName ||
+        !userType ||
+        !sch ||
+        (userType === "Teacher" && (!cls || !sec))
+      ) {
         messageBox.textContent = "Please fill out all required fields.";
         return;
       }
 
-      // Build the composite key
+      // Build compositeKey = "FullName||UserType||School||Class||Section"
       const compositeKey = encodeKey(
-        `${fullName}||${userType}||${sch}||${userType==="Teacher"?cls:"ALL"}||${userType==="Teacher"?sec:"ALL"}`
+        `${fullName}||${userType}||${sch}||${userType === "Teacher" ? cls : "ALL"}||${userType === "Teacher" ? sec : "ALL"}`
       );
-      // Check approvedUsers/<compositeKey>
+
+      // Check if already in approvedUsers/<compositeKey>
       const approvedSnap = await dbGet(child(dbRef(database), `approvedUsers/${compositeKey}`));
       if (approvedSnap.exists()) {
         const data = approvedSnap.val();
         if (data.status === "active") {
-          // Already approved & active → log them in
+          // Approved and active → log them in
           await idbSet("currentUser", {
             fullName,
             userType,
             school: sch,
-            class: (userType==="Teacher"? cls : "ALL"),
-            section: (userType==="Teacher"? sec : "ALL")
+            class: userType === "Teacher" ? cls : "ALL",
+            section: userType === "Teacher" ? sec : "ALL"
           });
           window.location.href = "index.html";
           return;
@@ -211,14 +221,14 @@
         }
       }
 
-      // Not approved → create a new loginRequests entry
+      // Not found → push new loginRequests/<autoID>
       const loginReqRef = dbRef(database, "loginRequests");
       const newReq = {
         fullName,
         userType,
         school: sch,
-        class: (userType==="Teacher"? cls : "ALL"),
-        section: (userType==="Teacher"? sec : "ALL"),
+        class: userType === "Teacher" ? cls : "ALL",
+        section: userType === "Teacher" ? sec : "ALL",
         timestamp: new Date().toISOString(),
         status: "pending"
       };
@@ -227,7 +237,7 @@
       loginBtn.disabled = true;
     };
 
-    // When page loads, populate the school list
+    // On page load, populate schools dropdown
     window.addEventListener("DOMContentLoaded", loadSchools);
   </script>
 </body>
