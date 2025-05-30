@@ -1,3 +1,4 @@
+// app.js
 // -------------------------------------------------------------------------------------------------
 // (1) FIREBASE + IDB-KEYVAL SETUP
 
@@ -11,13 +12,13 @@ import {
   onValue,
   update as dbUpdate,
   remove as dbRemove,
-  child as dbChild
+  child,      // import `child` under its own name
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
+// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML BEFORE this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase configuration
+// ─────── Your Firebase config ───────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -29,14 +30,13 @@ const firebaseConfig = {
   databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
 };
 
-// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Export Firebase Database references
-export const database = getDatabase(app);
+// ─────── Exported Firebase references ───────────────────────────────────────────────────────
+export const database   = getDatabase(app);
 export const appDataRef = dbRef(database, "appData");
 
-// Utility to safely encode strings for Firebase keys
+// ─────── Utility to encode strings for Firebase keys ─────────────────────────────────────────
 export function encodeKey(str) {
   return str
     .replace(/\./g, "___")
@@ -47,12 +47,10 @@ export function encodeKey(str) {
     .replace(/#/g, "________")
     .replace(/\\/g, "_________");
 }
-// -------------------------------------------------------------------------------------------------
+
 // (2) LOGIN / LOGOUT LOGIC
-// We assume that login.html has stored “currentUser” in IndexedDB under key="currentUser":
-//    { fullName, userType, school, class, section }
-//
-// On index.html load, a small script checks IndexedDB; if no currentUser, redirect to login.html.
+// We assume login.html stores “currentUser” under key="currentUser" in IndexedDB.
+// On index.html load, if no currentUser → redirect to login.html.
 // Here we implement “Logout” to clear currentUser and redirect.
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -63,7 +61,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   window.currentUser = currentUser; // { fullName, userType, school, class, section }
 
-  // Attach logout button handler
+  // Attach logout button handler (if logoutBtn exists on this page)
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
@@ -72,7 +70,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     };
   }
 
-  // After that, proceed with the rest of initialization
+  // After login check, initialize the rest of the app
   initApp();
 });
 
