@@ -1,19 +1,18 @@
 // app.js
-// ─── Paste this at the top of app.js ───────────────────────────────────────────────────
+// ─── Admin Preview Mode: Allow app access without login for debugging ────────────────
 
-// (A) Check for “admin preview” mode (no login) via URL or localStorage
 function isAdminPreviewMode() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("adminPreview") === "true") return true;
   return localStorage.getItem("adminPreviewMode") === "1";
 }
 
-// (B) On DOMContentLoaded, redirect only if not in adminPreviewMode and not on login/admin pages
 window.addEventListener("DOMContentLoaded", async () => {
   const pathname = window.location.pathname.split("/").pop();
-  const onLoginOrAdminPage = (pathname === "login.html" || pathname === "admin.html");
+  const isLoginPage = pathname === "login.html";
+  const isAdminPage = pathname === "admin.html";
 
-  if (!onLoginOrAdminPage && !isAdminPreviewMode()) {
+  if (!isLoginPage && !isAdminPage && !isAdminPreviewMode()) {
     const currentUser = await idbGet("currentUser");
     if (!currentUser) {
       window.location.href = "login.html";
@@ -29,18 +28,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       };
     }
 
-    initApp();
-  } else {
-    // If admin preview mode is active, still initialize the app (for debugging)
-    if (isAdminPreviewMode()) {
-      initApp();
-    }
-    // If on login.html or admin.html, do nothing here
+    initApp(); // load app for real user
+  } else if (isAdminPreviewMode()) {
+    // Preview mode: don't check login — allow loading the app
+    initApp(); // load app in admin preview mode
   }
 });
-
-// ─── End of snippet ─────────────────────────────────────────────────────────────────────
-// -------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------
 // (1) FIREBASE + IDB-KEYVAL SETUP
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
