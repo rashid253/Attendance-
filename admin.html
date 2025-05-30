@@ -1,38 +1,9 @@
-<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Mgmt – Admin Panel</title>
-
-  <!-- Firebase JS SDK (v9 modular) -->
-  <script type="module">
-    // IMPORTANT: Replace with your Firebase config
-    const firebaseConfig = {
-      apiKey: "<YOUR_FIREBASE_API_KEY>",
-      authDomain: "<YOUR_FIREBASE_AUTH_DOMAIN>",
-      projectId: "<YOUR_FIREBASE_PROJECT_ID>",
-      storageBucket: "<YOUR_FIREBASE_STORAGE_BUCKET>",
-      messagingSenderId: "<YOUR_FIREBASE_SENDER_ID>",
-      appId: "<YOUR_FIREBASE_APP_ID>",
-      measurementId: "<YOUR_FIREBASE_MEASUREMENT_ID>",
-      databaseURL: "<YOUR_FIREBASE_DATABASE_URL>"
-    };
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import {
-      getDatabase,
-      ref as dbRef,
-      onValue,
-      set as dbSet,
-      remove as dbRemove,
-      update as dbUpdate
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    window.firebaseApp = initializeApp(firebaseConfig);
-    window.database = getDatabase(window.firebaseApp);
-  </script>
 
   <style>
     body {
@@ -123,7 +94,10 @@
 
   <script type="module">
     import {
-      getDatabase,
+      database,
+      encodeKey
+    } from "./app.js";
+    import {
       ref as dbRef,
       onValue,
       set as dbSet,
@@ -131,22 +105,11 @@
       update as dbUpdate
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-    const db = window.database;
-    const loginReqRef   = dbRef(db, "loginRequests");
-    const approvedRef   = dbRef(db, "approvedUsers");
+    const loginReqRef = dbRef(database, "loginRequests");
+    const approvedRef = dbRef(database, "approvedUsers");
 
     const pendingBody  = document.getElementById("pendingBody");
     const approvedBody = document.getElementById("approvedBody");
-
-    // Utility to decode composite keys:
-    function decodeKey(ck) {
-      return ck
-        .replace(/_______/g, "]")
-        .replace(/______/g, "[")
-        .replace(/_____/g, "$")
-        .replace(/____/g, "/")
-        .replace(/___/g, ".");
-    }
 
     // ────────────────
     // 1) LISTEN FOR pending requests
@@ -174,17 +137,14 @@
         pendingBody.appendChild(tr);
       });
 
-      // Attach click handlers
       document.querySelectorAll(".approve").forEach(btn => {
         btn.onclick = async () => {
           const id = btn.dataset.id;
-          const reqDataSnap = await dbRef(db, `loginRequests/${id}`);
-          const reqData = (await reqDataSnap.get()).val();
+          const reqSnap = await dbRef(database, `loginRequests/${id}`).get();
+          const reqData = reqSnap.val();
           if (!reqData) return;
-
-          // Build compositeKey = fullName||userType||school||class||section
           const ck = encodeKey(`${reqData.fullName}||${reqData.userType}||${reqData.school}||${reqData.class}||${reqData.section}`);
-          await dbSet(dbRef(db, `approvedUsers/${ck}`), {
+          await dbSet(dbRef(database, `approvedUsers/${ck}`), {
             fullName: reqData.fullName,
             userType: reqData.userType,
             school:   reqData.school,
@@ -192,22 +152,20 @@
             section:  reqData.section,
             status:   "active"
           });
-          // Remove from loginRequests
-          await dbRemove(dbRef(db, `loginRequests/${id}`));
+          await dbRemove(dbRef(database, `loginRequests/${id}`));
         };
       });
 
       document.querySelectorAll(".reject").forEach(btn => {
         btn.onclick = async () => {
           const id = btn.dataset.id;
-          // Just delete the request. Rejected requests are gone.
-          await dbRemove(dbRef(db, `loginRequests/${id}`));
+          await dbRemove(dbRef(database, `loginRequests/${id}`));
         };
       });
     });
 
     // ────────────────
-    // 2) LISTEN FOR approved users (to show in approved table)
+    // 2) LISTEN FOR approved users
     // ────────────────
     onValue(approvedRef, snapshot => {
       approvedBody.innerHTML = "";
@@ -234,32 +192,20 @@
         approvedBody.appendChild(tr);
       });
 
-      // BLOCK
       document.querySelectorAll(".block").forEach(btn => {
         btn.onclick = async () => {
           const ck = btn.dataset.ck;
-          await dbUpdate(dbRef(db, `approvedUsers/${ck}`), { status: "blocked" });
+          await dbUpdate(dbRef(database, `approvedUsers/${ck}`), { status: "blocked" });
         };
       });
 
-      // UNBLOCK
       document.querySelectorAll(".unblock").forEach(btn => {
         btn.onclick = async () => {
           const ck = btn.dataset.ck;
-          await dbUpdate(dbRef(db, `approvedUsers/${ck}`), { status: "active" });
+          await dbUpdate(dbRef(database, `approvedUsers/${ck}`), { status: "active" });
         };
       });
     });
-
-    function encodeKey(str) {
-      return str.replace(/\./g, "___")
-                .replace(/\//g, "____")
-                .replace(/\$/g, "_____")
-                .replace(//g, "______")
-                .replace(//g, "_______")
-                .replace(/#/g, "________")
-                .replace(/\\/g, "_________");
-    }
   </script>
 </body>
 </html>
