@@ -1,4 +1,4 @@
-// app.js
+ // app.js
 // -------------------------------------------------------------------------------------------------
 // (1) FIREBASE + IDB-KEYVAL SETUP
 
@@ -12,13 +12,13 @@ import {
   onValue,
   update as dbUpdate,
   remove as dbRemove,
-  child,      // import `child` under its own name
+  child,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML BEFORE this script)
+// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// ─────── Your Firebase config ───────────────────────────────────────────────────────────────
+// Replace with your actual Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBsx…EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -32,11 +32,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ─────── Exported Firebase references ───────────────────────────────────────────────────────
-export const database   = getDatabase(app);
+export const database  = getDatabase(app);
 export const appDataRef = dbRef(database, "appData");
 
-// ─────── Utility to encode strings for Firebase keys ─────────────────────────────────────────
+// Utility to encode keys in Firebase paths
 export function encodeKey(str) {
   return str
     .replace(/\./g, "___")
@@ -48,30 +47,35 @@ export function encodeKey(str) {
     .replace(/\\/g, "_________");
 }
 
+// -------------------------------------------------------------------------------------------------
 // (2) LOGIN / LOGOUT LOGIC
-// We assume login.html stores “currentUser” under key="currentUser" in IndexedDB.
-// On index.html load, if no currentUser → redirect to login.html.
-// Here we implement “Logout” to clear currentUser and redirect.
+// Only run this redirect‐to‐login check on pages OTHER than login.html or admin.html.
 
 window.addEventListener("DOMContentLoaded", async () => {
-  const currentUser = await idbGet("currentUser");
-  if (!currentUser) {
-    window.location.href = "login.html";
-    return;
-  }
-  window.currentUser = currentUser; // { fullName, userType, school, class, section }
+  const pathname = window.location.pathname.split("/").pop();
 
-  // Attach logout button handler (if logoutBtn exists on this page)
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.onclick = async () => {
-      await idbSet("currentUser", null);
+  // If we are on index.html (or any page that is NOT login.html/admin.html),
+  // check for currentUser and redirect if missing.
+  if (pathname !== "login.html" && pathname !== "admin.html") {
+    const currentUser = await idbGet("currentUser");
+    if (!currentUser) {
       window.location.href = "login.html";
-    };
-  }
+      return;
+    }
+    window.currentUser = currentUser; // { fullName, userType, school, class, section }
 
-  // After login check, initialize the rest of the app
-  initApp();
+    // Attach logout button (if it exists on this page)
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.onclick = async () => {
+        await idbSet("currentUser", null);
+        window.location.href = "login.html";
+      };
+    }
+
+    // After confirming user is logged in, initialize the rest of the app
+    initApp();
+  }
 });
 
 // -------------------------------------------------------------------------------------------------
