@@ -1,40 +1,9 @@
-<!-- login.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Mgmt – Login</title>
-
-  <!-- Firebase JS SDK (v9 modular) -->
-  <script type="module">
-    // IMPORTANT: Replace with your Firebase config
-    const firebaseConfig = {
-      apiKey: "<YOUR_FIREBASE_API_KEY>",
-      authDomain: "<YOUR_FIREBASE_AUTH_DOMAIN>",
-      projectId: "<YOUR_FIREBASE_PROJECT_ID>",
-      storageBucket: "<YOUR_FIREBASE_STORAGE_BUCKET>",
-      messagingSenderId: "<YOUR_FIREBASE_SENDER_ID>",
-      appId: "<YOUR_FIREBASE_APP_ID>",
-      measurementId: "<YOUR_FIREBASE_MEASUREMENT_ID>",
-      databaseURL: "<YOUR_FIREBASE_DATABASE_URL>"
-    };
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import {
-      getDatabase,
-      ref as dbRef,
-      set as dbSet,
-      push as dbPush,
-      get as dbGet,
-      child as dbChild,
-      query as dbQuery,
-      orderByChild,
-      equalTo
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-    window.firebaseApp = initializeApp(firebaseConfig);
-    window.database = getDatabase(window.firebaseApp);
-  </script>
 
   <!-- idb-keyval (for storing currentUser) -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
@@ -107,7 +76,7 @@
     <label for="schoolSelect">Select School:</label>
     <select id="schoolSelect">
       <option value="" disabled selected>-- Select School --</option>
-      <!-- Populated from Firebase → appData/schools -->
+      <!-- Populated from Firebase via app.js -->
     </select>
   </div>
 
@@ -116,14 +85,14 @@
     <label for="classSelect">Select Class:</label>
     <select id="classSelect">
       <option value="" disabled selected>-- Select Class --</option>
-      <!-- Populated from Firebase → appData/classesBySchool/<school> -->
+      <!-- Populated from Firebase via app.js -->
     </select>
   </div>
   <div class="row hidden" id="sectionRow">
     <label for="sectionSelect">Select Section:</label>
     <select id="sectionSelect">
       <option value="" disabled selected>-- Select Section --</option>
-      <!-- Populated from Firebase → appData/sectionsBySchool/<school>/<class> -->
+      <!-- Populated from Firebase via app.js -->
     </select>
   </div>
 
@@ -132,7 +101,18 @@
   <div class="message" id="messageBox"></div>
 
   <script type="module">
+    import {
+      database,
+      appDataRef,
+      encodeKey
+    } from "./app.js";
     import { get as idbGet, set as idbSet } from "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js";
+    import {
+      ref as dbRef,
+      get as dbGet,
+      child as dbChild,
+      push as dbPush
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
     const userTypeEl   = document.getElementById("userType");
     const fullNameEl   = document.getElementById("fullName");
@@ -144,23 +124,20 @@
     const loginBtn     = document.getElementById("loginBtn");
     const messageBox   = document.getElementById("messageBox");
 
-    const db = window.database;
-    const appDataRef = dbRef(db, "appData");
-
-    // 1) Load existing schools into #schoolSelect
+    // Load existing schools into #schoolSelect
     async function loadSchools() {
-      const snapshot = await dbGet(dbChild(appDataRef, "schools"));
+      const snapshot = await dbGet(child(appDataRef, "schools"));
       const list = snapshot.exists() ? snapshot.val() : [];
       schoolEl.innerHTML = `<option value="" disabled selected>-- Select School --</option>`
         + list.map(s => `<option value="${s}">${s}</option>`).join("");
     }
 
-    // 2) Whenever school changes, if Teacher, load classes for that school
+    // Whenever school changes, if Teacher, load classes for that school
     schoolEl.onchange = async () => {
+      messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
         const sch = schoolEl.value;
-        // fetch classesBySchool/<sch>
-        const snap = await dbGet(dbChild(appDataRef, `classesBySchool/${encodeKey(sch)}`));
+        const snap = await dbGet(child(appDataRef, `classesBySchool/${encodeKey(sch)}`));
         const clsList = snap.exists() ? snap.val() : [];
         classEl.innerHTML = `<option value="" disabled selected>-- Select Class --</option>`
           + clsList.map(c => `<option value="${c}">${c}</option>`).join("");
@@ -170,19 +147,18 @@
       }
     };
 
-    // 3) Whenever class changes, load sections for that school & class
+    // Whenever class changes, load sections for that school & class
     classEl.onchange = async () => {
       const sch = schoolEl.value;
       const cls = classEl.value;
-      // fetch sectionsBySchool/<sch>/<cls>
-      const snap = await dbGet(dbChild(appDataRef, `sectionsBySchool/${encodeKey(sch)}/${encodeKey(cls)}`));
+      const snap = await dbGet(child(appDataRef, `sectionsBySchool/${encodeKey(sch)}/${encodeKey(cls)}`));
       const secList = snap.exists() ? snap.val() : [];
       sectionEl.innerHTML = `<option value="" disabled selected>-- Select Section --</option>`
         + secList.map(s => `<option value="${s}">${s}</option>`).join("");
       sectionRow.classList.remove("hidden");
     };
 
-    // 4) Show/hide class/section rows based on userType
+    // Show/hide class/section rows based on userType
     userTypeEl.onchange = () => {
       messageBox.textContent = "";
       if (userTypeEl.value === "Teacher") {
@@ -198,10 +174,7 @@
       }
     };
 
-    // 5) Check if this user is already “approved” in Firebase
-    //    If yes & status="active", let them in → store “currentUser” in IndexedDB and redirect to index.html.
-    //    If yes & status="blocked", show error.
-    //    If not found, create a “loginRequests” entry → show “Your request is pending…”
+    // Log In / Request Access logic
     loginBtn.onclick = async () => {
       messageBox.textContent = "";
       const fullName = fullNameEl.value.trim();
@@ -215,17 +188,11 @@
         return;
       }
 
-      // 5.a) Look for an existing approvedUser with the same (fullName, userType, school, class, section)
-      const approvedRef = dbRef(db, `approvedUsers`);
-      // We can query by “fullName_userType_school_cls_sec” composite key.
       const compositeKey = encodeKey(`${fullName}||${userType}||${sch}||${userType==="Teacher"?cls:"ALL"}||${userType==="Teacher"?sec:"ALL"}`);
-
-      //   “approvedUsers/<compositeKey> = { fullName, userType, school, class, section, status: "active" or "blocked" }”
-      const snap = await dbGet(dbChild(approvedRef, compositeKey));
+      const snap = await dbGet(child(dbRef(database), `approvedUsers/${compositeKey}`));
       if (snap.exists()) {
         const data = snap.val();
         if (data.status === "active") {
-          // LOG THEM IN:
           await idbSet("currentUser", {
             fullName,
             userType,
@@ -233,18 +200,15 @@
             class: (userType==="Teacher"? cls : "ALL"),
             section: (userType==="Teacher"? sec : "ALL")
           });
-          // redirect to main app:
           window.location.href = "index.html";
           return;
         } else {
-          // status=="blocked"
           messageBox.textContent = "Your account has been blocked. Contact the administrator.";
           return;
         }
       }
 
-      // 5.b) Not found among approvedUsers → create a new request in “loginRequests”
-      const loginReqRef = dbRef(db, `loginRequests`);
+      const loginReqRef = dbRef(database, "loginRequests");
       const newReq = {
         fullName,
         userType,
@@ -259,19 +223,7 @@
       loginBtn.disabled = true;
     };
 
-    // When page loads, populate the school list
     window.addEventListener("DOMContentLoaded", loadSchools);
-
-    // Utility: Firebase keys cannot contain “.” or “/” or “[ ]” etc. We replace “/” with “__”, etc.
-    function encodeKey(str) {
-      return str.replace(/\./g, "___")
-                .replace(/\//g, "____")
-                .replace(/\$/g, "_____")
-                .replace(//g, "______")
-                .replace(//g, "_______")
-                .replace(/#/g, "________")
-                .replace(/\\/g, "_________");
-    }
   </script>
 </body>
 </html>
