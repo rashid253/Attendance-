@@ -1,4 +1,4 @@
-// app.js (updated to ensure initialData.json is imported before login lookup)
+// app.js (fully self-contained: embeds initialData, avoids fetch errors, and matches index.html IDs)
 // -------------------------------------------------------------------------------------------------
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -12,6 +12,529 @@ import {
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
+
+// ----------------------
+// Embed initialData directly to avoid fetch errors
+// ----------------------
+const initialData = {
+  "Users": {
+    "admin_master": {
+      "role": "admin"
+    },
+    "principal_alpha_school": {
+      "role": "principal",
+      "school": "Alpha School"
+    },
+    "teacher_alpha_school": {
+      "role": "teacher",
+      "school": "Alpha School",
+      "class": "Class One",
+      "section": "A"
+    },
+    "principal_beta_school": {
+      "role": "principal",
+      "school": "Beta School"
+    },
+    "teacher_beta_school": {
+      "role": "teacher",
+      "school": "Beta School",
+      "class": "Class Two",
+      "section": "B"
+    },
+    "principal_gamma_school": {
+      "role": "principal",
+      "school": "Gamma School"
+    },
+    "teacher_gamma_school": {
+      "role": "teacher",
+      "school": "Gamma School",
+      "class": "Class Three",
+      "section": "C"
+    },
+    "principal_delta_school": {
+      "role": "principal",
+      "school": "Delta School"
+    },
+    "teacher_delta_school": {
+      "role": "teacher",
+      "school": "Delta School",
+      "class": "Nursery",
+      "section": "A"
+    },
+    "principal_epsilon_school": {
+      "role": "principal",
+      "school": "Epsilon School"
+    },
+    "teacher_epsilon_school": {
+      "role": "teacher",
+      "school": "Epsilon School",
+      "class": "KG",
+      "section": "B"
+    },
+    "principal_zeta_school": {
+      "role": "principal",
+      "school": "Zeta School"
+    },
+    "teacher_zeta_school": {
+      "role": "teacher",
+      "school": "Zeta School",
+      "class": "Class Four",
+      "section": "C"
+    },
+    "principal_eta_school": {
+      "role": "principal",
+      "school": "Eta School"
+    },
+    "teacher_eta_school": {
+      "role": "teacher",
+      "school": "Eta School",
+      "class": "Class Five",
+      "section": "A"
+    },
+    "principal_theta_school": {
+      "role": "principal",
+      "school": "Theta School"
+    },
+    "teacher_theta_school": {
+      "role": "teacher",
+      "school": "Theta School",
+      "class": "Class Six",
+      "section": "B"
+    },
+    "principal_iota_school": {
+      "role": "principal",
+      "school": "Iota School"
+    },
+    "teacher_iota_school": {
+      "role": "teacher",
+      "school": "Iota School",
+      "class": "Class Seven",
+      "section": "C"
+    },
+    "principal_kappa_school": {
+      "role": "principal",
+      "school": "Kappa School"
+    },
+    "teacher_kappa_school": {
+      "role": "teacher",
+      "school": "Kappa School",
+      "class": "Class Eight",
+      "section": "A"
+    },
+    "principal_lambda_school": {
+      "role": "principal",
+      "school": "Lambda School"
+    },
+    "teacher_lambda_school": {
+      "role": "teacher",
+      "school": "Lambda School",
+      "class": "Class Nine",
+      "section": "B"
+    },
+    "principal_mu_school": {
+      "role": "principal",
+      "school": "Mu School"
+    },
+    "teacher_mu_school": {
+      "role": "teacher",
+      "school": "Mu School",
+      "class": "Class Ten",
+      "section": "C"
+    },
+    "principal_nu_school": {
+      "role": "principal",
+      "school": "Nu School"
+    },
+    "teacher_nu_school": {
+      "role": "teacher",
+      "school": "Nu School",
+      "class": "Play Group",
+      "section": "A"
+    },
+    "principal_xi_school": {
+      "role": "principal",
+      "school": "Xi School"
+    },
+    "teacher_xi_school": {
+      "role": "teacher",
+      "school": "Xi School",
+      "class": "Nursery",
+      "section": "B"
+    },
+    "principal_omicron_school": {
+      "role": "principal",
+      "school": "Omicron School"
+    },
+    "teacher_omicron_school": {
+      "role": "teacher",
+      "school": "Omicron School",
+      "class": "KG",
+      "section": "C"
+    }
+  },
+  "Schools": {
+    "Alpha School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_alpha_school",
+      "teachers": {
+        "teacher_alpha_school": {
+          "class": "Class One",
+          "section": "A"
+        }
+      }
+    },
+    "Beta School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_beta_school",
+      "teachers": {
+        "teacher_beta_school": {
+          "class": "Class Two",
+          "section": "B"
+        }
+      }
+    },
+    "Gamma School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_gamma_school",
+      "teachers": {
+        "teacher_gamma_school": {
+          "class": "Class Three",
+          "section": "C"
+        }
+      }
+    },
+    "Delta School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_delta_school",
+      "teachers": {
+        "teacher_delta_school": {
+          "class": "Nursery",
+          "section": "A"
+        }
+      }
+    },
+    "Epsilon School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_epsilon_school",
+      "teachers": {
+        "teacher_epsilon_school": {
+          "class": "KG",
+          "section": "B"
+        }
+      }
+    },
+    "Zeta School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_zeta_school",
+      "teachers": {
+        "teacher_zeta_school": {
+          "class": "Class Four",
+          "section": "C"
+        }
+      }
+    },
+    "Eta School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_eta_school",
+      "teachers": {
+        "teacher_eta_school": {
+          "class": "Class Five",
+          "section": "A"
+        }
+      }
+    },
+    "Theta School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_theta_school",
+      "teachers": {
+        "teacher_theta_school": {
+          "class": "Class Six",
+          "section": "B"
+        }
+      }
+    },
+    "Iota School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_iota_school",
+      "teachers": {
+        "teacher_iota_school": {
+          "class": "Class Seven",
+          "section": "C"
+        }
+      }
+    },
+    "Kappa School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_kappa_school",
+      "teachers": {
+        "teacher_kappa_school": {
+          "class": "Class Eight",
+          "section": "A"
+        }
+      }
+    },
+    "Lambda School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_lambda_school",
+      "teachers": {
+        "teacher_lambda_school": {
+          "class": "Class Nine",
+          "section": "B"
+        }
+      }
+    },
+    "Mu School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_mu_school",
+      "teachers": {
+        "teacher_mu_school": {
+          "class": "Class Ten",
+          "section": "C"
+        }
+      }
+    },
+    "Nu School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_nu_school",
+      "teachers": {
+        "teacher_nu_school": {
+          "class": "Play Group",
+          "section": "A"
+        }
+      }
+    },
+    "Xi School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_xi_school",
+      "teachers": {
+        "teacher_xi_school": {
+          "class": "Nursery",
+          "section": "B"
+        }
+      }
+    },
+    "Omicron School": {
+      "classes": {
+        "Play Group": ["A", "B", "C"],
+        "Nursery": ["A", "B", "C"],
+        "KG": ["A", "B", "C"],
+        "Class One": ["A", "B", "C"],
+        "Class Two": ["A", "B", "C"],
+        "Class Three": ["A", "B", "C"],
+        "Class Four": ["A", "B", "C"],
+        "Class Five": ["A", "B", "C"],
+        "Class Six": ["A", "B", "C"],
+        "Class Seven": ["A", "B", "C"],
+        "Class Eight": ["A", "B", "C"],
+        "Class Nine": ["A", "B", "C"],
+        "Class Ten": ["A", "B", "C"]
+      },
+      "principal": "principal_omicron_school",
+      "teachers": {
+        "teacher_omicron_school": {
+          "class": "KG",
+          "section": "C"
+        }
+      }
+    }
+  }
+};
 
 // ----------------------
 // Firebase configuration (replace with your actual config)
@@ -41,8 +564,8 @@ function $(id) {
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
-let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact, occupation, address, cls, sec } ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/... } } }
+let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact, occupation, address, cls, sec, fine, status } ] }
+let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/... } } }
 let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
 let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
 let fineRates              = { A:50, Lt:20, L:10, HD:30 };
@@ -57,7 +580,7 @@ let currentUserSchool      = null;
 let currentUserClass       = null;
 let currentUserSection     = null;
 let lastAdmNo              = 0;     // for the currently selected school
-let lastAnalyticsShare     = "";    // for WhatsApp sharing
+let lastAnalyticsShare     = "";    // for Web Share API
 
 // ----------------------
 // INITIAL DATA IMPORT (only once if appData is empty)
@@ -69,11 +592,9 @@ async function importInitialDataIfEmpty() {
   const snapshot = await dbGet(appDataRef);
   if (!snapshot.exists()) {
     try {
-      const resp = await fetch("initialData.json");
-      const data = await resp.json();
-      await dbSet(appDataRef, data);
+      await dbSet(appDataRef, initialData);
     } catch (err) {
-      console.error("Error importing initial data:", err);
+      console.error("Error writing initialData:", err);
     }
   }
   initialDataImported = true;
@@ -87,6 +608,11 @@ function setupLogin() {
   const mainContent  = $("mainContent");
   const loginBtn     = $("loginBtn");
   const logoutBtn    = $("logoutBtn");
+
+  if (!loginBtn || !logoutBtn || !loginSection || !mainContent) {
+    console.error("Login or mainContent elements not found in DOM.");
+    return;
+  }
 
   loginBtn.addEventListener("click", async () => {
     // Ensure initialData is imported before checking user key
@@ -115,7 +641,6 @@ function setupLogin() {
     mainContent.classList.remove("hidden");
 
     // Load initial data & setup UI based on role
-    await importInitialDataIfEmpty();
     await loadSetup();
 
     // Initialize the rest of the app (registration, attendance, analytics)
@@ -151,19 +676,24 @@ async function loadSetup() {
   // Populate local schools array
   const dbSchools = appData.Schools || {};
   schools = Object.keys(dbSchools);
-  schools.forEach(sch => ensureSchoolData(sch));
+  schools.forEach(s => ensureSchoolData(s));
 
-  const schoolInput = $("schoolInput");
-  const schoolSelect = $("schoolSelect");
-  const classSelect  = $("teacherClassSelect");
-  const sectionSelect = $("teacherSectionSelect");
-  const setupForm     = $("setupForm");
-  const saveSetupBtn  = $("saveSetup");
-  const schoolListDiv = $("schoolList");
+  const schoolInput     = $("schoolInput");
+  const schoolSelect    = $("schoolSelect");
+  const classSelect     = $("teacherClassSelect");
+  const sectionSelect   = $("teacherSectionSelect");
+  const setupForm       = $("setupForm");
+  const saveSetupBtn    = $("saveSetup");
+  const schoolListDiv   = $("schoolList");
+
+  if (!schoolInput || !schoolSelect || !classSelect || !sectionSelect || !setupForm || !saveSetupBtn || !schoolListDiv) {
+    console.error("One or more setup elements not found in DOM.");
+    return;
+  }
 
   // Clear previous
   schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
-  schoolListDiv.innerHTML  = "";
+  schoolListDiv.innerHTML = "";
 
   if (currentUserRole === "admin") {
     schoolInput.disabled = false;
@@ -205,8 +735,6 @@ async function loadSetup() {
   saveSetupBtn.onclick = async () => {
     const newSchool = schoolInput.value.trim();
     let chosenSchool = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
 
     if (currentUserRole === "admin") {
       if (newSchool) {
@@ -257,36 +785,40 @@ async function loadSetup() {
   const eligibilityInput  = $("eligibilityPct");
   const saveFinancialBtn  = $("saveFinancial");
 
-  if (currentUserRole === "admin" || currentUserRole === "principal") {
-    idbGet("fineRates").then(rates => {
-      if (rates) {
-        fineAbsentInput.value  = rates.A;
-        fineLateInput.value    = rates.Lt;
-        fineLeaveInput.value   = rates.L;
-        fineHalfDayInput.value = rates.HD;
-      } else {
-        fineAbsentInput.value  = fineRates.A;
-        fineLateInput.value    = fineRates.Lt;
-        fineLeaveInput.value   = fineRates.L;
-        fineHalfDayInput.value = fineRates.HD;
-      }
-    });
-    idbGet("eligibilityPct").then(pct => {
-      if (pct !== undefined) eligibilityInput.value = pct;
-      else eligibilityInput.value = eligibilityPct;
-    });
-    saveFinancialBtn.onclick = () => {
-      fineRates.A   = Number(fineAbsentInput.value);
-      fineRates.Lt  = Number(fineLateInput.value);
-      fineRates.L   = Number(fineLeaveInput.value);
-      fineRates.HD  = Number(fineHalfDayInput.value);
-      eligibilityPct = Number(eligibilityInput.value);
-      idbSet("fineRates", fineRates);
-      idbSet("eligibilityPct", eligibilityPct);
-      alert("Financial settings saved.");
-    };
+  if (!fineAbsentInput || !fineLateInput || !fineLeaveInput || !fineHalfDayInput || !eligibilityInput || !saveFinancialBtn) {
+    console.error("One or more financial elements not found in DOM.");
   } else {
-    $("financial-settings").classList.add("hidden");
+    if (currentUserRole === "admin" || currentUserRole === "principal") {
+      idbGet("fineRates").then(rates => {
+        if (rates) {
+          fineAbsentInput.value  = rates.A;
+          fineLateInput.value    = rates.Lt;
+          fineLeaveInput.value   = rates.L;
+          fineHalfDayInput.value = rates.HD;
+        } else {
+          fineAbsentInput.value  = fineRates.A;
+          fineLateInput.value    = fineRates.Lt;
+          fineLeaveInput.value   = fineRates.L;
+          fineHalfDayInput.value = fineRates.HD;
+        }
+      });
+      idbGet("eligibilityPct").then(pct => {
+        if (pct !== undefined) eligibilityInput.value = pct;
+        else eligibilityInput.value = eligibilityPct;
+      });
+      saveFinancialBtn.onclick = () => {
+        fineRates.A   = Number(fineAbsentInput.value);
+        fineRates.Lt  = Number(fineLateInput.value);
+        fineRates.L   = Number(fineLeaveInput.value);
+        fineRates.HD  = Number(fineHalfDayInput.value);
+        eligibilityPct = Number(eligibilityInput.value);
+        idbSet("fineRates", fineRates);
+        idbSet("eligibilityPct", eligibilityPct);
+        alert("Financial settings saved.");
+      };
+    } else {
+      $("financial-settings")?.classList.add("hidden");
+    }
   }
 
   // After setup & financial, set currentSchool/class/section based on role
@@ -300,7 +832,7 @@ async function loadSetup() {
     currentSchool = currentUserSchool;
     lastAdmNo = lastAdmNoBySchool[currentSchool] || 0;
     // Populate class dropdown
-    const classesObj = appData.Schools[currentSchool].classes || {};
+    const classesObj = appData.Schools[currentSchool]?.classes || {};
     classSelect.innerHTML = `<option disabled selected>-- Select Class --</option>`;
     Object.keys(classesObj).forEach(cn => {
       const opt = document.createElement("option");
@@ -332,11 +864,7 @@ async function loadSetup() {
 // After login & setup, initialize registration, attendance, analytics
 // ----------------------
 function initAfterSetup() {
-  // Wrap all existing initialization code under this function
-  
-  // ----------------------
   // Utility: format dates
-  // ----------------------
   function formatDate(dt) {
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, "0");
@@ -344,9 +872,7 @@ function initAfterSetup() {
     return `${y}-${m}-${d}`;
   }
 
-  // ----------------------
   // 0) Load from IndexedDB (sync local state)
-  // ----------------------
   idbGet("studentsBySchool").then(val => {
     if (val) studentsBySchool = val;
   });
@@ -358,14 +884,12 @@ function initAfterSetup() {
   });
   idbGet("lastAdmNoBySchool").then(val => {
     if (val) lastAdmNoBySchool = val;
-    if (currentSchool && lastAdmNoBySchool[currentSchool]) {
+    if (currentSchool && lastAdmNoBySchool[currentSchool] !== undefined) {
       lastAdmNo = lastAdmNoBySchool[currentSchool];
     }
   });
 
-  // ----------------------
   // Sync to Firebase (overwrite appData under currentSchool)
-  // ----------------------
   async function syncToFirebase() {
     if (!currentSchool) return;
     const schoolNode = `appData/Schools/${currentSchool}`;
@@ -377,9 +901,7 @@ function initAfterSetup() {
     await dbSet(dbRef(database, `${schoolNode}/data`), obj);
   }
 
-  // ----------------------
   // Generate Admission Number
-  // ----------------------
   async function genAdmNo() {
     lastAdmNo++;
     lastAdmNoBySchool[currentSchool] = lastAdmNo;
@@ -387,14 +909,6 @@ function initAfterSetup() {
     await syncToFirebase();
     return String(lastAdmNo).padStart(4, "0");
   }
-
-  // ----------------------
-  // 1. SETUP SECTION (handlers already bound in loadSetup)
-  // ----------------------
-
-  // ----------------------
-  // 2. FINANCIAL SETTINGS (handlers already bound)
-  // ----------------------
 
   // ----------------------
   // 3. STUDENT REGISTRATION
@@ -451,7 +965,7 @@ function initAfterSetup() {
     parentAddressInput.value    = "";
   }
 
-  addStudentBtn.addEventListener("click", async () => {
+  addStudentBtn?.addEventListener("click", async () => {
     if (!currentSchool) {
       alert("Select a school (and class/section if required).");
       return;
@@ -462,8 +976,8 @@ function initAfterSetup() {
     const contact   = parentContactInput.value.trim();
     const occupation= parentOccupationInput.value.trim();
     const address   = parentAddressInput.value.trim();
-    const cls       = currentUserRole === "teacher" ? teacherClass : $("teacherClassSelect").value;
-    const sec       = currentUserRole === "teacher" ? teacherSection : $("teacherSectionSelect").value;
+    const cls       = currentUserRole === "teacher" ? teacherClass : $("teacherClassSelect")?.value;
+    const sec       = currentUserRole === "teacher" ? teacherSection : $("teacherSectionSelect")?.value;
 
     if (!name || !parent || !contact || !cls || !sec) {
       alert("Fill in Name, Parent, Contact, Class & Section.");
@@ -481,14 +995,14 @@ function initAfterSetup() {
     renderStudentsTable();
   });
 
-  selectAllStudentsChk.addEventListener("change", () => {
+  selectAllStudentsChk?.addEventListener("change", () => {
     const chks = document.querySelectorAll(".stuChk");
     chks.forEach(cb => cb.checked = selectAllStudentsChk.checked);
     editSelectedBtn.disabled = !selectAllStudentsChk.checked;
     deleteSelectedBtn.disabled = !selectAllStudentsChk.checked;
   });
 
-  studentsBody.addEventListener("click", e => {
+  studentsBody?.addEventListener("click", e => {
     if (e.target.closest(".stuChk")) {
       const anyChecked = Array.from(document.querySelectorAll(".stuChk")).some(cb => cb.checked);
       editSelectedBtn.disabled   = !anyChecked;
@@ -503,13 +1017,12 @@ function initAfterSetup() {
       parentContactInput.value    = stu.contact;
       parentOccupationInput.value = stu.occupation;
       parentAddressInput.value    = stu.address;
-      // Remove from array (will re-add on Save)
       studentsBySchool[currentSchool].splice(idx, 1);
       renderStudentsTable();
     }
   });
 
-  deleteSelectedBtn.addEventListener("click", async () => {
+  deleteSelectedBtn?.addEventListener("click", async () => {
     const chks = document.querySelectorAll(".stuChk:checked");
     const idxs = Array.from(chks).map(cb => Number(cb.closest("tr").dataset.index));
     studentsBySchool[currentSchool] = studentsBySchool[currentSchool].filter((_, i) => !idxs.includes(i));
@@ -521,8 +1034,9 @@ function initAfterSetup() {
     deleteSelectedBtn.disabled    = true;
   });
 
-  editSelectedBtn.addEventListener("click", () => {
+  editSelectedBtn?.addEventListener("click", () => {
     const cb = document.querySelector(".stuChk:checked");
+    if (!cb) return;
     const idx = Number(cb.closest("tr").dataset.index);
     const stu = studentsBySchool[currentSchool][idx];
     studentNameInput.value      = stu.name;
@@ -538,17 +1052,17 @@ function initAfterSetup() {
     deleteSelectedBtn.disabled   = true;
   });
 
-  saveRegistrationBtn.addEventListener("click", async () => {
+  saveRegistrationBtn?.addEventListener("click", async () => {
     await idbSet("studentsBySchool", studentsBySchool);
     await syncToFirebase();
     alert("Student list saved.");
   });
 
-  editRegistrationBtn.addEventListener("click", () => {
+  editRegistrationBtn?.addEventListener("click", () => {
     renderStudentsTable();
   });
 
-  shareRegistrationBtn.addEventListener("click", async () => {
+  shareRegistrationBtn?.addEventListener("click", async () => {
     const arr = studentsBySchool[currentSchool] || [];
     let text = `Students of ${currentSchool}:\n`;
     arr.forEach((stu, i) => {
@@ -561,7 +1075,7 @@ function initAfterSetup() {
     }
   });
 
-  downloadRegistrationPDFBtn.addEventListener("click", () => {
+  downloadRegistrationPDFBtn?.addEventListener("click", () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const arr = studentsBySchool[currentSchool] || [];
@@ -574,20 +1088,17 @@ function initAfterSetup() {
     doc.save(`${currentSchool}_students.pdf`);
   });
 
-  // Initial render if teacher role
-  if (["teacher", "principal", "admin"].includes(currentUserRole)) {
-    renderStudentsTable();
-  }
+  renderStudentsTable();
 
   // ----------------------
   // 4. MARK ATTENDANCE
   // ----------------------
-  const attendanceDateInput   = $("attendanceDate");
-  const loadAttendanceBtn     = $("loadAttendance");
-  const attendanceTableWrapper= $("attendanceTableWrapper");
-  const attendanceBody        = $("attendanceBody");
-  const saveAttendanceBtn     = $("saveAttendance");
-  const resetAttendanceBtn    = $("resetAttendance");
+  const attendanceDateInput    = $("attendanceDate");
+  const loadAttendanceBtn      = $("loadAttendance");
+  const attendanceTableWrapper = $("attendanceTableWrapper");
+  const attendanceBody         = $("attendanceBody");
+  const saveAttendanceBtn      = $("saveAttendance");
+  const resetAttendanceBtn     = $("resetAttendance");
   const downloadAttendancePDFBtn = $("downloadAttendancePDF");
   const shareAttendanceSummaryBtn = $("shareAttendanceSummary");
 
@@ -599,7 +1110,6 @@ function initAfterSetup() {
     }
     if (!attendanceDataBySchool[currentSchool]) attendanceDataBySchool[currentSchool] = {};
     if (!attendanceDataBySchool[currentSchool][dateVal]) {
-      // initialize from student list
       const arr = studentsBySchool[currentSchool] || [];
       attendanceDataBySchool[currentSchool][dateVal] = {};
       arr.forEach(stu => {
@@ -637,9 +1147,9 @@ function initAfterSetup() {
     shareAttendanceSummaryBtn.classList.remove("hidden");
   }
 
-  loadAttendanceBtn.addEventListener("click", loadAttendanceForDate);
+  loadAttendanceBtn?.addEventListener("click", loadAttendanceForDate);
 
-  saveAttendanceBtn.addEventListener("click", async () => {
+  saveAttendanceBtn?.addEventListener("click", async () => {
     const dateVal = attendanceDateInput.value;
     const rows = attendanceBody.querySelectorAll("tr");
     rows.forEach(tr => {
@@ -656,7 +1166,7 @@ function initAfterSetup() {
     alert("Attendance saved.");
   });
 
-  resetAttendanceBtn.addEventListener("click", () => {
+  resetAttendanceBtn?.addEventListener("click", () => {
     attendanceTableWrapper.classList.add("hidden");
     attendanceBody.innerHTML = "";
     saveAttendanceBtn.classList.add("hidden");
@@ -665,7 +1175,7 @@ function initAfterSetup() {
     shareAttendanceSummaryBtn.classList.add("hidden");
   });
 
-  downloadAttendancePDFBtn.addEventListener("click", () => {
+  downloadAttendancePDFBtn?.addEventListener("click", () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const dateVal = attendanceDateInput.value;
@@ -685,7 +1195,7 @@ function initAfterSetup() {
     doc.save(`${currentSchool}_attendance_${dateVal}.pdf`);
   });
 
-  shareAttendanceSummaryBtn.addEventListener("click", () => {
+  shareAttendanceSummaryBtn?.addEventListener("click", () => {
     const dateVal = attendanceDateInput.value;
     let text = `Attendance for ${currentSchool} on ${dateVal}:\n`;
     const arr = studentsBySchool[currentSchool] || [];
@@ -693,7 +1203,7 @@ function initAfterSetup() {
       if (currentUserRole === "teacher") {
         if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
       }
-      const status = attendanceDataBySchool[currentSchool][dateVal][stu.adm] || "";
+      const status = attendanceDataBySchool[currentSchool][dateVal]?.[stu.adm] || "";
       text += `${i + 1}. ${stu.adm} ${stu.name}: ${status}\n`;
     });
     navigator.share({ title: `Attendance: ${currentSchool} ${dateVal}`, text });
@@ -702,28 +1212,28 @@ function initAfterSetup() {
   // ----------------------
   // 5. ANALYTICS
   // ----------------------
-  const analyticsFilterBtn    = $("analyticsFilterBtn");
-  const analyticsTargetSelect = $("analyticsTarget");
-  const analyticsSectionSelect= $("analyticsSectionSelect");
-  const analyticsTypeSelect   = $("analyticsType");
-  const analyticsFiltersDiv   = $("analyticsFilters");
-  const analyticsDateInput    = $("analyticsDate");
-  const analyticsMonthSelect  = $("analyticsMonth");
+  const analyticsFilterBtn     = $("analyticsFilterBtn");
+  const analyticsTargetSelect  = $("analyticsTarget");
+  const analyticsSectionSelect = $("analyticsSectionSelect");
+  const analyticsTypeSelect    = $("analyticsType");
+  const analyticsFiltersDiv    = $("analyticsFilters");
+  const analyticsDateInput     = $("analyticsDate");
+  const analyticsMonthSelect   = $("analyticsMonth");
   const analyticsSemesterSelect= $("analyticsSemester");
   const applyAnalyticsFilterBtn= $("applyAnalyticsFilter");
-  const analyticsTable        = $("analyticsTable");
-  const analyticsBody         = $("analyticsBody");
-  const analyticsContainer    = $("analyticsContainer");
-  const instructionsDiv       = $("instructions");
-  const graphsDiv             = $("graphs");
-  const barChartCanvas        = $("barChart");
-  const pieChartCanvas        = $("pieChart");
-  const downloadAnalyticsBtn  = $("downloadAnalytics");
-  const shareAnalyticsBtn     = $("shareAnalytics");
+  const analyticsTable         = $("analyticsTable");
+  const analyticsBody          = $("analyticsBody");
+  const analyticsContainer     = $("analyticsContainer");
+  const instructionsDiv        = $("instructions");
+  const graphsDiv              = $("graphs");
+  const barChartCanvas         = $("barChart");
+  const pieChartCanvas         = $("pieChart");
+  const downloadAnalyticsBtn   = $("downloadAnalytics");
+  const shareAnalyticsBtn      = $("shareAnalytics");
 
   let barChartInstance, pieChartInstance;
 
-  analyticsTargetSelect.onchange = () => {
+  analyticsTargetSelect?.addEventListener("change", () => {
     const val = analyticsTargetSelect.value;
     if (val === "class" || val === "section") {
       analyticsSectionSelect.classList.remove("hidden");
@@ -731,9 +1241,9 @@ function initAfterSetup() {
       analyticsSectionSelect.classList.add("hidden");
     }
     analyticsTypeSelect.disabled = false;
-  };
+  });
 
-  analyticsTypeSelect.onchange = () => {
+  analyticsTypeSelect?.addEventListener("change", () => {
     analyticsFiltersDiv.classList.remove("hidden");
     const type = analyticsTypeSelect.value;
     analyticsDateInput.classList.add("hidden");
@@ -742,7 +1252,7 @@ function initAfterSetup() {
     if (type === "date") analyticsDateInput.classList.remove("hidden");
     if (type === "month") analyticsMonthSelect.classList.remove("hidden");
     if (type === "semester") analyticsSemesterSelect.classList.remove("hidden");
-  };
+  });
 
   async function computeAnalytics() {
     const target = analyticsTargetSelect.value; // "class"/"section"/"student"
@@ -788,7 +1298,6 @@ function initAfterSetup() {
       if (target === "section" && stu.sec !== sectionFilter) return;
       if (target === "class" && stu.cls !== sectionFilter) return;
       if (target === "student") {
-        // only that student
         if (stu.adm !== analyticsSectionSelect.value) return;
       }
       let P=0, A=0, Lt=0, HD=0, L=0, total=0;
@@ -884,18 +1393,18 @@ function initAfterSetup() {
     });
   }
 
-  analyticsFilterBtn.addEventListener("click", () => {
-    $("analyticsFilterModal").classList.remove("hidden");
+  analyticsFilterBtn?.addEventListener("click", () => {
+    $("analyticsFilterModal")?.classList.remove("hidden");
   });
-  $("analyticsFilterClose").addEventListener("click", () => {
-    $("analyticsFilterModal").classList.add("hidden");
+  $("analyticsFilterClose")?.addEventListener("click", () => {
+    $("analyticsFilterModal")?.classList.add("hidden");
   });
-  applyAnalyticsFilterBtn.addEventListener("click", () => {
-    $("analyticsFilterModal").classList.add("hidden");
+  applyAnalyticsFilterBtn?.addEventListener("click", () => {
+    $("analyticsFilterModal")?.classList.add("hidden");
     computeAnalytics();
   });
 
-  downloadAnalyticsBtn.addEventListener("click", () => {
+  downloadAnalyticsBtn?.addEventListener("click", () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const rows = [];
@@ -910,7 +1419,7 @@ function initAfterSetup() {
     doc.save(`${currentSchool}_analytics.pdf`);
   });
 
-  shareAnalyticsBtn.addEventListener("click", async () => {
+  shareAnalyticsBtn?.addEventListener("click", async () => {
     try {
       await navigator.share({ title: `Analytics: ${currentSchool}`, text: lastAnalyticsShare });
     } catch (err) {
@@ -921,20 +1430,20 @@ function initAfterSetup() {
   // ----------------------
   // 6. ATTENDANCE REGISTER
   // ----------------------
-  const registerMonthInput = $("registerMonth");
-  const loadRegisterBtn    = $("loadRegister");
+  const registerMonthInput  = $("registerMonth");
+  const loadRegisterBtn     = $("loadRegister");
   const registerTableWrapper= $("registerTableWrapper");
-  const registerHeader     = $("registerHeader");
-  const registerBody       = $("registerBody");
+  const registerHeader      = $("registerHeader");
+  const registerBody        = $("registerBody");
 
-  loadRegisterBtn.addEventListener("click", () => {
+  loadRegisterBtn?.addEventListener("click", () => {
     const ym = registerMonthInput.value;
     if (!ym) {
       alert("Select a month.");
       return;
     }
     const [year, month] = ym.split("-");
-    // Build header: first column blank, then one column per day
+    // Build header: first column Adm#, then one column per day
     const daysInMonth = new Date(year, month, 0).getDate();
     registerHeader.innerHTML = `<th>Adm#</th>`;
     for (let d = 1; d <= daysInMonth; d++) {
@@ -969,9 +1478,7 @@ function initAfterSetup() {
   const cancelPaymentBtn   = $("cancelPayment");
   let currentPaymentAdm    = null;
 
-  // Open modal when clicking a payment button in students table (not shown here)
-  // For simplicity, assume clicking on a student's name opens payment modal
-  studentsBody.addEventListener("click", e => {
+  studentsBody?.addEventListener("click", e => {
     if (e.target.tagName === "TD" && e.target.cellIndex === 1) {
       const idx = e.target.closest("tr").dataset.index;
       const stu = studentsBySchool[currentSchool][idx];
@@ -980,13 +1487,13 @@ function initAfterSetup() {
     }
   });
 
-  paymentClose.addEventListener("click", () => {
+  paymentClose?.addEventListener("click", () => {
     paymentModal.classList.add("hidden");
   });
-  cancelPaymentBtn.addEventListener("click", () => {
+  cancelPaymentBtn?.addEventListener("click", () => {
     paymentModal.classList.add("hidden");
   });
-  savePaymentBtn.addEventListener("click", async () => {
+  savePaymentBtn?.addEventListener("click", async () => {
     const dateVal = paymentDateInput.value;
     const amt     = Number(paymentAmountInput.value);
     if (!dateVal || !amt) {
@@ -1005,29 +1512,13 @@ function initAfterSetup() {
   });
 
   // ----------------------
-  // Utility: Share PDF via Web Share API
+  // Final: make countersContainer scrollable if present
   // ----------------------
-  async function sharePdf(blob, fileName, title) {
-    if (
-      navigator.canShare &&
-      navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })
-    ) {
-      try {
-        await navigator.share({ title, files: [new File([blob], fileName, { type: "application/pdf" })] });
-      } catch (err) {
-        if (err.name !== "AbortError") console.error("Share failed", err);
-      }
-    }
-  }
-
-  // ----------------------
-  // Final: ensure counters container scrollable (from existing code)
-  // ----------------------
-  const container = $("countersContainer");
-  if (container) {
-    container.style.display = "flex";
-    container.style.overflowX = "auto";
-    container.style.whiteSpace = "nowrap";
+  const countersContainer = $("countersContainer");
+  if (countersContainer) {
+    countersContainer.style.display = "flex";
+    countersContainer.style.overflowX = "auto";
+    countersContainer.style.whiteSpace = "nowrap";
   }
 }
 
