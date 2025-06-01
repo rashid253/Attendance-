@@ -7,29 +7,29 @@ import {
   get as dbGet,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-const setupForm = document.getElementById("setupForm");
-const setupDisplay = document.getElementById("setupDisplay");
-const schoolInput = document.getElementById("schoolInput");
-const schoolSelect = document.getElementById("schoolSelect");
-const classSelect = document.getElementById("teacherClassSelect");
-const sectionSelect = document.getElementById("teacherSectionSelect");
-const setupText = document.getElementById("setupText");
-const saveSetupBtn = document.getElementById("saveSetup");
-const editSetupBtn = document.getElementById("editSetup");
-const schoolListDiv = document.getElementById("schoolList");
+const setupForm       = document.getElementById("setupForm");
+const setupDisplay    = document.getElementById("setupDisplay");
+const schoolInput     = document.getElementById("schoolInput");
+const schoolSelect    = document.getElementById("schoolSelect");
+const classSelect     = document.getElementById("teacherClassSelect");
+const sectionSelect   = document.getElementById("teacherSectionSelect");
+const setupText       = document.getElementById("setupText");
+const saveSetupBtn    = document.getElementById("saveSetup");
+const editSetupBtn    = document.getElementById("editSetup");
+const schoolListDiv   = document.getElementById("schoolList");
 
-let studentsBySchool = {};
+let studentsBySchool       = {};
 let attendanceDataBySchool = {};
-let paymentsDataBySchool = {};
-let lastAdmNoBySchool = {};
-let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
-let eligibilityPct = 75;
-let schools = [];
-let currentSchool = null;
-let teacherClass = null;
-let teacherSection = null;
+let paymentsDataBySchool   = {};
+let lastAdmNoBySchool      = {};
+let fineRates              = { A:50, Lt:20, L:10, HD:30 };
+let eligibilityPct         = 75;
+let schools                = [];
+let currentSchool          = null;
+let teacherClass           = null;
+let teacherSection         = null;
 
-// Hide/show functions
+// Hide/show main sections
 function hideMainSections() {
   [
     document.getElementById("financial-settings"),
@@ -52,21 +52,21 @@ function showMainSections() {
   ].forEach((sec) => sec && sec.classList.remove("hidden"));
 }
 
-// Called when the user logs in
+// جب user login ہو جائے تو appData load کریں
 document.addEventListener("userLoggedIn", async () => {
   const appDataSnap = await dbGet(dbRef(database, "appData"));
   if (appDataSnap.exists()) {
     const appData = appDataSnap.val();
-    schools = appData.schools || [];
-    studentsBySchool = appData.studentsBySchool || {};
+    schools                = appData.schools                || [];
+    studentsBySchool       = appData.studentsBySchool       || {};
     attendanceDataBySchool = appData.attendanceDataBySchool || {};
-    paymentsDataBySchool = appData.paymentsDataBySchool || {};
-    lastAdmNoBySchool = appData.lastAdmNoBySchool || {};
-    fineRates = appData.fineRates || fineRates;
-    eligibilityPct = appData.eligibilityPct || eligibilityPct;
-    currentSchool = appData.currentSchool || null;
-    teacherClass = appData.teacherClass || null;
-    teacherSection = appData.teacherSection || null;
+    paymentsDataBySchool   = appData.paymentsDataBySchool   || {};
+    lastAdmNoBySchool      = appData.lastAdmNoBySchool      || {};
+    fineRates              = appData.fineRates              || fineRates;
+    eligibilityPct         = appData.eligibilityPct         || eligibilityPct;
+    currentSchool          = appData.currentSchool          || null;
+    teacherClass           = appData.teacherClass           || null;
+    teacherSection         = appData.teacherSection         || null;
   } else {
     schools = [];
     studentsBySchool = {};
@@ -78,7 +78,7 @@ document.addEventListener("userLoggedIn", async () => {
   await renderSetupUI();
 });
 
-// Populate the School dropdown and the list of schools
+// School dropdown اور list بنائیں
 function populateSchoolDropdown() {
   schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach((s) => {
@@ -112,10 +112,10 @@ function renderSchoolList() {
         const trimmed = newName.trim();
         schools[idx] = trimmed;
 
-        studentsBySchool[trimmed] = studentsBySchool[oldName] || [];
+        studentsBySchool[trimmed]       = studentsBySchool[oldName]       || [];
         attendanceDataBySchool[trimmed] = attendanceDataBySchool[oldName] || {};
-        paymentsDataBySchool[trimmed] = paymentsDataBySchool[oldName] || {};
-        lastAdmNoBySchool[trimmed] = lastAdmNoBySchool[oldName] || 0;
+        paymentsDataBySchool[trimmed]   = paymentsDataBySchool[oldName]   || {};
+        lastAdmNoBySchool[trimmed]      = lastAdmNoBySchool[oldName]      || 0;
         delete studentsBySchool[oldName];
         delete attendanceDataBySchool[oldName];
         delete paymentsDataBySchool[oldName];
@@ -161,16 +161,17 @@ async function renderSetupUI() {
   renderSchoolList();
 
   if (profile.role === "admin") {
+    // Admin کے لیے: نئے اسکول کا انپٹ اور select دونوں دکھائیں
     schoolInput.classList.remove("hidden");
     schoolSelect.classList.remove("hidden");
-    classSelect.disabled = false;
+    classSelect.disabled   = false;
     sectionSelect.disabled = false;
-    saveSetupBtn.disabled = false;
+    saveSetupBtn.disabled  = false;
 
     if (currentSchool) {
-      schoolSelect.value = currentSchool;
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
+      schoolSelect.value    = currentSchool;
+      classSelect.value     = teacherClass;
+      sectionSelect.value   = teacherSection;
       setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
       setupForm.classList.add("hidden");
       setupDisplay.classList.remove("hidden");
@@ -180,27 +181,31 @@ async function renderSetupUI() {
       setupDisplay.classList.add("hidden");
       hideMainSections();
     }
-  } else if (profile.role === "principal") {
+  }
+  else if (profile.role === "principal") {
+    // Principal کے لیے: صرف fixed school
     const mySchool = profile.school;
-    currentSchool = mySchool;
-    teacherClass = null;
+    currentSchool  = mySchool;
+    teacherClass   = null;
     teacherSection = null;
 
     schoolSelect.innerHTML = `<option value="${mySchool}">${mySchool}</option>`;
-    schoolSelect.disabled = true;
-    classSelect.disabled = false;
+    schoolSelect.disabled  = true;
+    classSelect.disabled   = false;
     sectionSelect.disabled = false;
 
     setupForm.classList.remove("hidden");
     setupDisplay.classList.add("hidden");
     hideMainSections();
-  } else if (profile.role === "teacher") {
-    const mySchool = profile.school;
-    const myClass = profile.class;
+  }
+  else if (profile.role === "teacher") {
+    // Teacher کے لیے: fixed school, class, section
+    const mySchool  = profile.school;
+    const myClass   = profile.class;
     const mySection = profile.section;
 
-    currentSchool = mySchool;
-    teacherClass = myClass;
+    currentSchool  = mySchool;
+    teacherClass   = myClass;
     teacherSection = mySection;
 
     setupText.textContent = `${mySchool} 🏫 | Class: ${myClass} | Section: ${mySection}`;
@@ -213,15 +218,17 @@ async function renderSetupUI() {
 saveSetupBtn.addEventListener("click", async (e) => {
   e.preventDefault();
   const profile = window.currentUserProfile;
+
   if (profile.role === "admin") {
+    // اگر نیا اسکول لکھنا ہے
     const newSchool = schoolInput.value.trim();
     if (newSchool) {
       if (!schools.includes(newSchool)) {
         schools.push(newSchool);
-        studentsBySchool[newSchool] = [];
+        studentsBySchool[newSchool]       = [];
         attendanceDataBySchool[newSchool] = {};
-        paymentsDataBySchool[newSchool] = {};
-        lastAdmNoBySchool[newSchool] = 0;
+        paymentsDataBySchool[newSchool]   = {};
+        lastAdmNoBySchool[newSchool]      = 0;
       }
       schoolInput.value = "";
       await syncAppDataToFirebase();
@@ -229,32 +236,35 @@ saveSetupBtn.addEventListener("click", async (e) => {
       renderSchoolList();
       return;
     }
-    const selSchool = schoolSelect.value;
-    const selClass = classSelect.value;
+    // اگر پہلے سے موجود اسکول select کرنا ہے
+    const selSchool  = schoolSelect.value;
+    const selClass   = classSelect.value;
     const selSection = sectionSelect.value;
     if (!selSchool || !selClass || !selSection) {
       alert("Please select a school, class, and section.");
       return;
     }
-    currentSchool = selSchool;
-    teacherClass = selClass;
-    teacherSection = selSection;
+    currentSchool   = selSchool;
+    teacherClass    = selClass;
+    teacherSection  = selSection;
     await syncAppDataToFirebase();
     setupText.textContent = `${selSchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
     setupForm.classList.add("hidden");
     setupDisplay.classList.remove("hidden");
     showMainSections();
-  } else if (profile.role === "principal") {
-    const mySchool = profile.school;
-    const selClass = classSelect.value;
+  }
+  else if (profile.role === "principal") {
+    // Principal: fixed school, صرف class اور section select کریں
+    const mySchool   = profile.school;
+    const selClass   = classSelect.value;
     const selSection = sectionSelect.value;
     if (!selClass || !selSection) {
       alert("Please select a class and section.");
       return;
     }
-    currentSchool = mySchool;
-    teacherClass = selClass;
-    teacherSection = selSection;
+    currentSchool   = mySchool;
+    teacherClass    = selClass;
+    teacherSection  = selSection;
     await syncAppDataToFirebase();
     setupText.textContent = `${mySchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
     setupForm.classList.add("hidden");
