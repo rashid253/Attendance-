@@ -4,7 +4,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebas
 import { getAuth }        from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { getDatabase }    from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// یہ وہی configuration ہونا چاہیے جو Firebase Console سے لیا تھا
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -17,6 +16,5 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
 export const auth     = getAuth(app);
 export const database = getDatabase(app);
