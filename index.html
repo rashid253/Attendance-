@@ -5,32 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
-  <!-- Firebase App (core SDK) -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    // Your Firebase configuration (replace these values اپنی Firebase کنسول سے حاصل کر کے)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsx…EpICEzA",
-      authDomain: "attandace-management.firebaseapp.com",
-      projectId: "attandace-management",
-      storageBucket: "attandace-management.appspot.com",
-      messagingSenderId: "222685278846",
-      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-      measurementId: "G-V2MY85R73B",
-      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-    };
-
-    // Initialize Firebase App, Auth, Database
-    export const firebaseApp = initializeApp(firebaseConfig);
-    export const auth = getAuth(firebaseApp);
-    export const database = getDatabase(firebaseApp);
-  </script>
-
-  <!-- Font Awesome (HTTPS) -->
+  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -50,10 +25,7 @@
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    /* ----------------------
-       اسٹائل: ہدف یہ ہے کہ آپ کے پہلے سے موجود اسٹائل میں فرق نہ آئے
-       بس لاگ ان / سائن اپ فارم کے لیے چند کلاسز شامل کی گئی ہیں
-       ---------------------- */
+    /* آپ کے پہلے سے موجود اسٹائلز (بالکل ویسے کے ویسے) */
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
@@ -87,16 +59,13 @@
 <body>
 
   <!-- ==============================
-       0. LOGIN / SIGNUP فارم
+       0. LOGIN / SIGNUP فارم (وہی جیسا پہلے تھا)
        ============================== -->
   <div id="auth-container">
     <h2 id="form-title">Login to Attendance App</h2>
-
-    <!-- Email اور Password کے لئے ان پٹ -->
     <input type="email" id="emailInput" placeholder="Email" />
     <input type="password" id="passwordInput" placeholder="Password" />
 
-    <!-- سائن اپ کے لیے مزید فیلڈز (hidden by default) -->
     <div id="signup-extra" class="hidden">
       <select id="roleSelect">
         <option disabled selected>-- Select Role --</option>
@@ -105,9 +74,9 @@
         <option value="teacher">Teacher</option>
       </select>
       <input type="text" id="displayNameInput" placeholder="Full Name" />
-      <select id="schoolRegisterSelect"> 
+      <select id="schoolRegisterSelect">
         <option disabled selected>-- Select School (for principal/teacher) --</option>
-        <!-- یہ آپشنز JavaScript سے fill ہوں گی -->
+        <!-- Options JavaScript سے fill ہوں گی -->
       </select>
       <select id="classRegisterSelect" class="hidden">
         <option disabled selected>-- Select Class (for teacher) --</option>
@@ -123,42 +92,24 @@
       </select>
     </div>
 
-    <!-- لاگ ان / سائن اپ کا بٹن -->
     <button id="authButton">Login</button>
-
-    <!-- سائن اپ/لاگ ان کے درمیان سوئچ -->
     <div id="auth-switch">
       <span id="toggleAuth">Don't have an account? Sign Up</span>
     </div>
   </div>
 
   <!-- ==============================
-       1. MAIN APP (جو پہلے سے آپ کی index.html میں ہوتا تھا)
-       اسے ہم ابتدائی طور پر hidden رکھیں گے جب تک یوزر لاگ ان نہ ہو
+       1. MAIN APP (hidden by default)
        ============================== -->
   <div id="main-app" class="hidden">
-
     <header class="app-header">
-      <h1>
-        <i class="fas fa-school"></i>
-        Attendance Management
-      </h1>
+      <h1><i class="fas fa-school"></i> Attendance Management</h1>
       <div class="header-buttons">
         <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-        <button id="chooseBackupFolder" class="btn">
-          <i class="fas fa-folder-open"></i>
-          Select Backup Folder
-        </button>
-        <button id="restoreData" class="btn">
-          <i class="fas fa-upload"></i>
-          Restore Backup
-        </button>
-        <!-- hidden file input for restore -->
+        <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
+        <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
         <input type="file" id="restoreFile" accept=".json" hidden />
-        <button id="resetData" class="btn btn-danger">
-          <i class="fas fa-trash-alt"></i>
-          Factory Reset
-        </button>
+        <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
       </div>
     </header>
 
@@ -204,7 +155,7 @@
       </div>
     </section>
 
-    <!-- 3. COUNTERS (dynamic via JS) -->
+    <!-- 3. COUNTERS -->
     <section id="animatedCounters">
       <div id="countersContainer" class="scroll-row"></div>
     </section>
@@ -368,12 +319,13 @@
       </div>
     </div>
 
-    <!-- Load your scripts in order: auth.js → setup.js → app.js -->
+    <!-- Load modules in order: first firebase-config.js, پھر auth.js, پھر setup.js، پھر app.js -->
+    <script type="module" src="firebase-config.js"></script>
     <script type="module" src="auth.js"></script>
     <script type="module" src="setup.js"></script>
     <script type="module" src="app.js"></script>
 
-    <!-- Register service worker as a module -->
+    <!-- Register service worker -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
