@@ -1,11 +1,10 @@
 // firebase-config.js
 
-// 1. Firebase Core + Auth + Database کے CDN Imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getAuth }        from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { getDatabase }    from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// 2. Firebase Console سے حاصل کردہ Configuration
+// یہ وہی configuration ہونا چاہیے جو Firebase Console سے لیا تھا
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
@@ -17,9 +16,7 @@ const firebaseConfig = {
   measurementId: "G-V2MY85R73B"
 };
 
-// 3. Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// 4. Auth اور Database انسٹینسز حاصل کر کے Export کریں
 export const auth     = getAuth(app);
 export const database = getDatabase(app);
