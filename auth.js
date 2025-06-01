@@ -36,7 +36,7 @@ const logoutBtn             = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1) /appData/schools پر سبسکرائب کریں تاکہ dropdown ہمیشہ اپڈیٹ ہو
+// 1) /appData/schools پر سبسکرائب کریں تاکہ dropdown اپڈیٹ رہے
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(
@@ -115,14 +115,14 @@ authButton.addEventListener("click", async () => {
   }
 
   if (isLoginMode) {
-    // ─── LOGIN ───
+    // ─── LOGIN ─────────────
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       alert("Login نامنظور: " + err.message);
     }
   } else {
-    // ─── SIGNUP ───
+    // ─── SIGNUP ────────────
     const displayName = displayNameInput.value.trim();
     const role        = roleSelect.value;
     const school      = schoolRegisterSelect.value;
@@ -150,7 +150,7 @@ authButton.addEventListener("click", async () => {
       await updateProfile(userCred.user, { displayName });
       const uid = userCred.user.uid;
 
-      // 3) DB میں profile لکھیں
+      // 3) DB میں profile لکھیں (اب "permission_denied" نہیں آئے گا کیونکہ Rules بھی درست ہیں)
       const userRef = dbRef(database, `users/${uid}`);
       await dbSet(userRef, {
         displayName,
@@ -161,7 +161,7 @@ authButton.addEventListener("click", async () => {
         section: sec,
       });
 
-      // 4) ab signOut کریں تاکہ "onAuthStateChanged" میں main-app ظاہر نہ ہو جائے
+      // 4) اب signOut کریں تاکہ "onAuthStateChanged" میں main-app تب ہی کھلے جب profile DB میں ہو
       await signOut(auth);
 
       alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
@@ -175,12 +175,11 @@ authButton.addEventListener("click", async () => {
 // 6) Monitor Auth state changes
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    // جب signup ہو کر یہ callback فوراً fire ہو، تو profile DB میں ابھی لکھا نہ ہوا ہو سکتا ہے
-    // تو ہم صرف اس صورت main-app دکھائیں گے جب DB سے profile ملے
     try {
+      // signup کے فوراً بعد یہ fire ہو سکتا ہے، لہٰذا پہلے DB سے profile پڑھیں
       const snap = await dbGet(dbRef(database, `users/${user.uid}`));
       if (snap.exists()) {
-        // Profile مل گیا، اب main-app دکھائیں
+        // اگر profile مل گیا تو main-app دکھائیں
         const profile = snap.val();
         window.currentUserProfile = {
           uid: user.uid,
@@ -195,7 +194,7 @@ onAuthStateChanged(auth, async (user) => {
         mainApp.classList.remove("hidden");
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // اگر profile ابھی نہیں ملا، تو silent sign out (بغیر alert کے)
+        // اگر profile ابھی نہیں ملا تو silent sign out کریں
         await signOut(auth);
       }
     } catch (err) {
@@ -219,5 +218,5 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
-// 8) شروع میں /appData/schools پر سبسکرائب کریں
+// 8) شروع میں /appData/schools سبسکرائب کریں
 subscribeSchools();
