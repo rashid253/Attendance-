@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Test Firebase Write</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+    // اپنی firebase-config بالکل ویسی ہی copy کریں:
+    const firebaseConfig = {
+      apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+      authDomain: "attandace-management.firebaseapp.com",
+      databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+      projectId: "attandace-management",
+      storageBucket: "attandace-management.appspot.com",
+      messagingSenderId: "222685278846",
+      appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+      measurementId: "G-V2MY85R73B"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getDatabase(app);
+
+    // anonymous sign-in کر کے write ٹرائی کریں گے
+    signInAnonymously(auth)
+      .catch(err => console.error("Auth error:", err.code, err.message));
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        const uid = user.uid;
+        console.log("Anonymous UID:", uid);
+        // اب /users/testNode پر write ٹرائی کریں:
+        set(ref(db, "users/testNode"), {
+          timestamp: Date.now(),
+          message: "Hello from test-write"
+        })
+        .then(() => {
+          console.log("✅ Public write کامیاب");
+          document.body.innerHTML = "<h3>Write succeeded!</h3>";
+        })
+        .catch(err => {
+          console.error("❌ Public write failed:", err.code, err.message);
+          document.body.innerHTML = "<h3>Write failed: " + err.message + "</h3>";
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <h2>Testing public write to /users/testNode …</h2>
+</body>
+</html>
