@@ -3,8 +3,8 @@
 import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
-  get as dbGet,
   onValue,
+  get as dbGet,
   set as dbSet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
@@ -35,7 +35,7 @@ const logoutBtn              = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1. Subscribe to appData/schools so dropdown ہمیشہ اپڈیٹ ہو
+// 1. Subscribe to /appData/schools (public read) so dropdown always updates
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(schoolsRef, (snapshot) => {
@@ -47,7 +47,7 @@ function subscribeSchools() {
   });
 }
 
-// Populate the School dropdown (ہمیشہ populate کریں، چاہے Login ہو یا Sign-Up)
+// Populate the School dropdown
 function populateSchoolDropdown() {
   schoolRegisterSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   console.log("DEBUG: Populating dropdown with:", schoolsList);
@@ -68,13 +68,13 @@ function populateSchoolDropdown() {
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
-    // Switch to Sign Up
     formTitle.textContent = "Sign Up for Attendance App";
     authButton.textContent = "Sign Up";
     signupExtra.classList.remove("hidden");
     toggleAuthSpan.textContent = "Already have an account? Login";
+    // Ensure dropdown is populated whenever signup is shown
+    populateSchoolDropdown();
   } else {
-    // Switch to Login
     formTitle.textContent = "Login to Attendance App";
     authButton.textContent = "Login";
     signupExtra.classList.add("hidden");
