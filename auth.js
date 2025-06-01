@@ -35,36 +35,43 @@ const logoutBtn              = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1. Subscribe to /appData/schools (public read) so dropdown always updates
+// Subscribe to /appData/schools so dropdown always updates
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
-  onValue(schoolsRef, (snapshot) => {
-    schoolsList = snapshot.exists() ? snapshot.val() : [];
-    console.log("DEBUG: Loaded schools from DB:", schoolsList);
-    populateSchoolDropdown();
-  }, (error) => {
-    console.error("DEBUG: onValue error for appData/schools:", error);
-  });
+  onValue(
+    schoolsRef,
+    (snapshot) => {
+      schoolsList = snapshot.exists() ? snapshot.val() : [];
+      console.log("DEBUG: Loaded schools from DB:", schoolsList);
+      populateSchoolDropdown();
+    },
+    (error) => {
+      console.error("DEBUG: onValue error for appData/schools:", error);
+    }
+  );
 }
 
 // Populate the School dropdown
 function populateSchoolDropdown() {
-  schoolRegisterSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
+  schoolRegisterSelect.innerHTML =
+    '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   console.log("DEBUG: Populating dropdown with:", schoolsList);
 
   if (Array.isArray(schoolsList) && schoolsList.length > 0) {
-    schoolsList.forEach(s => {
+    schoolsList.forEach((s) => {
       const opt = document.createElement("option");
       opt.value = s;
       opt.textContent = s;
       schoolRegisterSelect.appendChild(opt);
     });
   } else {
-    console.log("DEBUG: schoolsList is empty; dropdown remains with only placeholder.");
+    console.log(
+      "DEBUG: schoolsList is empty; dropdown remains with only placeholder."
+    );
   }
 }
 
-// 2. Toggle between Login and Sign Up forms
+// Toggle between Login and Sign Up forms
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
@@ -81,20 +88,20 @@ function toggleAuthMode() {
     toggleAuthSpan.textContent = "Don't have an account? Sign Up";
   }
   // Reset inputs
-  emailInput.value          = "";
-  passwordInput.value       = "";
-  displayNameInput.value    = "";
-  roleSelect.value          = "";
-  schoolRegisterSelect.value= "";
+  emailInput.value = "";
+  passwordInput.value = "";
+  displayNameInput.value = "";
+  roleSelect.value = "";
+  schoolRegisterSelect.value = "";
   classRegisterSelect.value = "";
-  sectionRegisterSelect.value="";
+  sectionRegisterSelect.value = "";
   classRegisterSelect.classList.add("hidden");
   sectionRegisterSelect.classList.add("hidden");
 }
 
 toggleAuthSpan.addEventListener("click", toggleAuthMode);
 
-// 3. Show/hide Class & Section selects when Role = teacher
+// Show/hide Class & Section selects when Role = teacher
 roleSelect.addEventListener("change", () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -105,9 +112,9 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
-// 4. Handle Login / Sign Up button click
+// Handle Login / Sign Up button click
 authButton.addEventListener("click", async () => {
-  const email    = emailInput.value.trim();
+  const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
   if (!email || !password) {
     alert("Email اور Password دونوں ضروری ہیں۔");
@@ -124,11 +131,12 @@ authButton.addEventListener("click", async () => {
   } else {
     // SIGNUP
     const displayName = displayNameInput.value.trim();
-    const role        = roleSelect.value;
-    const school      = schoolRegisterSelect.value;
-    const cls         = role === "teacher" ? classRegisterSelect.value : "";
-    const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
+    const role = roleSelect.value;
+    const school = schoolRegisterSelect.value;
+    const cls = role === "teacher" ? classRegisterSelect.value : "";
+    const sec = role === "teacher" ? sectionRegisterSelect.value : "";
 
+    // Validate all required fields before creating user
     if (!displayName || !role || !school) {
       alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
       return;
@@ -139,10 +147,16 @@ authButton.addEventListener("click", async () => {
     }
 
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      // Create user in Auth
+      const userCred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       await updateProfile(userCred.user, { displayName });
       const uid = userCred.user.uid;
-      // Save profile under /users/{uid} in Realtime Database
+
+      // Write user profile to Realtime Database
       const userRef = dbRef(database, `users/${uid}`);
       await dbSet(userRef, {
         displayName,
@@ -150,9 +164,13 @@ authButton.addEventListener("click", async () => {
         role,
         school,
         class: cls,
-        section: sec
+        section: sec,
       });
-      alert("Sign Up کامیاب! براہِ کرم لاگ ان کریں۔");
+
+      // After writing to DB, sign out immediately so onAuthStateChanged won't trigger "profile missing"
+      await signOut(auth);
+
+      alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
       toggleAuthMode();
     } catch (err) {
       alert("Sign Up ناکام: " + err.message);
@@ -160,7 +178,7 @@ authButton.addEventListener("click", async () => {
   }
 });
 
-// 5. Monitor Auth state changes
+// Monitor Auth state changes
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     authContainer.classList.add("hidden");
@@ -177,16 +195,15 @@ onAuthStateChanged(auth, async (user) => {
           role: profile.role,
           school: profile.school,
           class: profile.class || "",
-          section: profile.section || ""
+          section: profile.section || "",
         };
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        alert("User profile نہ ملا، دوبارہ Login کریں۔");
+        // If profile isn't yet written, just sign out silently (no alert)
         await signOut(auth);
       }
     } catch (err) {
       console.error("Error reading user profile:", err);
-      alert("پروفائل پڑھنے میں مسئلہ، دوبارہ کوشش کریں۔");
       await signOut(auth);
     }
   } else {
@@ -196,7 +213,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// 6. Logout بٹن فنکشن
+// Logout button
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
@@ -205,5 +222,5 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
-// 7. Start listening for changes to the schools list
+// Start listening for changes to the schools list
 subscribeSchools();
