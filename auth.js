@@ -5,7 +5,7 @@ import {
   ref as dbRef,
   onValue,
   get as dbGet,
-  set as dbSet
+  set as dbSet,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
@@ -15,27 +15,27 @@ import {
   updateProfile,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-const emailInput             = document.getElementById("emailInput");
-const passwordInput          = document.getElementById("passwordInput");
-const authButton             = document.getElementById("authButton");
-const toggleAuthSpan         = document.getElementById("toggleAuth");
-const formTitle              = document.getElementById("form-title");
+const emailInput            = document.getElementById("emailInput");
+const passwordInput         = document.getElementById("passwordInput");
+const authButton            = document.getElementById("authButton");
+const toggleAuthSpan        = document.getElementById("toggleAuth");
+const formTitle             = document.getElementById("form-title");
 
-const signupExtra            = document.getElementById("signup-extra");
-const roleSelect             = document.getElementById("roleSelect");
-const displayNameInput       = document.getElementById("displayNameInput");
-const schoolRegisterSelect   = document.getElementById("schoolRegisterSelect");
-const classRegisterSelect    = document.getElementById("classRegisterSelect");
-const sectionRegisterSelect  = document.getElementById("sectionRegisterSelect");
+const signupExtra           = document.getElementById("signup-extra");
+const roleSelect            = document.getElementById("roleSelect");
+const displayNameInput      = document.getElementById("displayNameInput");
+const schoolRegisterSelect  = document.getElementById("schoolRegisterSelect");
+const classRegisterSelect   = document.getElementById("classRegisterSelect");
+const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
 
-const authContainer          = document.getElementById("auth-container");
-const mainApp                = document.getElementById("main-app");
-const logoutBtn              = document.getElementById("logoutBtn");
+const authContainer         = document.getElementById("auth-container");
+const mainApp               = document.getElementById("main-app");
+const logoutBtn             = document.getElementById("logoutBtn");
 
 let isLoginMode = true;
 let schoolsList = [];
 
-// Subscribe to /appData/schools so dropdown always updates
+// ─── 1. /appData/schools پر سبسکرائب کریں ───────────────────────────────
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(
@@ -51,12 +51,10 @@ function subscribeSchools() {
   );
 }
 
-// Populate the School dropdown
+// ─── 2. Signup فارم میں اسکولز ڈالیں ───────────────────────────────────
 function populateSchoolDropdown() {
   schoolRegisterSelect.innerHTML =
     '<option disabled selected>-- Select School (for principal/teacher) --</option>';
-  console.log("DEBUG: Populating dropdown with:", schoolsList);
-
   if (Array.isArray(schoolsList) && schoolsList.length > 0) {
     schoolsList.forEach((s) => {
       const opt = document.createElement("option");
@@ -64,44 +62,38 @@ function populateSchoolDropdown() {
       opt.textContent = s;
       schoolRegisterSelect.appendChild(opt);
     });
-  } else {
-    console.log(
-      "DEBUG: schoolsList is empty; dropdown remains with only placeholder."
-    );
   }
 }
 
-// Toggle between Login and Sign Up forms
+// ─── 3. Login ↔ SignUp موڈ ٹوگل کریں ─────────────────────────────────
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
-    formTitle.textContent = "Sign Up for Attendance App";
-    authButton.textContent = "Sign Up";
+    formTitle.textContent     = "Sign Up for Attendance App";
+    authButton.textContent    = "Sign Up";
     signupExtra.classList.remove("hidden");
-    toggleAuthSpan.textContent = "Already have an account? Login";
-    // Ensure dropdown is populated whenever signup is shown
+    toggleAuthSpan.textContent= "Already have an account? Login";
     populateSchoolDropdown();
   } else {
-    formTitle.textContent = "Login to Attendance App";
-    authButton.textContent = "Login";
+    formTitle.textContent     = "Login to Attendance App";
+    authButton.textContent    = "Login";
     signupExtra.classList.add("hidden");
-    toggleAuthSpan.textContent = "Don't have an account? Sign Up";
+    toggleAuthSpan.textContent= "Don't have an account? Sign Up";
   }
-  // Reset inputs
-  emailInput.value = "";
-  passwordInput.value = "";
-  displayNameInput.value = "";
-  roleSelect.value = "";
+  // فیلڈز ری سیٹ کر دیں
+  emailInput.value           = "";
+  passwordInput.value        = "";
+  displayNameInput.value     = "";
+  roleSelect.value           = "";
   schoolRegisterSelect.value = "";
-  classRegisterSelect.value = "";
-  sectionRegisterSelect.value = "";
+  classRegisterSelect.value  = "";
+  sectionRegisterSelect.value= "";
   classRegisterSelect.classList.add("hidden");
   sectionRegisterSelect.classList.add("hidden");
 }
-
 toggleAuthSpan.addEventListener("click", toggleAuthMode);
 
-// Show/hide Class & Section selects when Role = teacher
+// ─── 4. Role منتخب کرنے پر Class/Section دکھائیں ─────────────────────────
 roleSelect.addEventListener("change", () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -112,9 +104,9 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
-// Handle Login / Sign Up button click
+// ─── 5. Login / Sign Up बटन کا فنکشن ───────────────────────────────────
 authButton.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
+  const email    = emailInput.value.trim();
   const password = passwordInput.value.trim();
   if (!email || !password) {
     alert("Email اور Password دونوں ضروری ہیں۔");
@@ -122,21 +114,21 @@ authButton.addEventListener("click", async () => {
   }
 
   if (isLoginMode) {
-    // LOGIN
+    // ───────────── LOGIN ────────────
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       alert("Login نامنظور: " + err.message);
     }
   } else {
-    // SIGNUP
+    // ──────────── SIGNUP ─────────────
     const displayName = displayNameInput.value.trim();
-    const role = roleSelect.value;
-    const school = schoolRegisterSelect.value;
-    const cls = role === "teacher" ? classRegisterSelect.value : "";
-    const sec = role === "teacher" ? sectionRegisterSelect.value : "";
+    const role        = roleSelect.value;
+    const school      = schoolRegisterSelect.value;
+    const cls         = role === "teacher" ? classRegisterSelect.value : "";
+    const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
 
-    // Validate all required fields before creating user
+    // لازمی فیلڈز ویلیڈیٹ کریں
     if (!displayName || !role || !school) {
       alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
       return;
@@ -147,16 +139,17 @@ authButton.addEventListener("click", async () => {
     }
 
     try {
-      // Create user in Auth
+      // 1) پہلے Auth میں user بنائیں
       const userCred = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
+      // 2) displayName update کریں
       await updateProfile(userCred.user, { displayName });
       const uid = userCred.user.uid;
 
-      // Write user profile to Realtime Database
+      // 3) DB میں profile لکھیں
       const userRef = dbRef(database, `users/${uid}`);
       await dbSet(userRef, {
         displayName,
@@ -167,7 +160,7 @@ authButton.addEventListener("click", async () => {
         section: sec,
       });
 
-      // After writing to DB, sign out immediately so onAuthStateChanged won't trigger "profile missing"
+      // 4) صرف اس وقت logout کریں جب profile DB میں محفوظ ہو چکا ہو
       await signOut(auth);
 
       alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
@@ -178,13 +171,14 @@ authButton.addEventListener("click", async () => {
   }
 });
 
-// Monitor Auth state changes
+// ─── 6. Auth state changes پر عمل ─────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     authContainer.classList.add("hidden");
     mainApp.classList.remove("hidden");
     const uid = user.uid;
     try {
+      // user کے پروفائل کو DB سے پڑھیں
       const snap = await dbGet(dbRef(database, `users/${uid}`));
       if (snap.exists()) {
         const profile = snap.val();
@@ -199,7 +193,7 @@ onAuthStateChanged(auth, async (user) => {
         };
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // If profile isn't yet written, just sign out silently (no alert)
+        // اگر ابھی profile نہیں ملا تو خاموشی سے لاگ آؤٹ
         await signOut(auth);
       }
     } catch (err) {
@@ -213,7 +207,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Logout button
+// ─── 7. Logout بٹن ───────────────────────────────────────────────────
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
@@ -222,5 +216,5 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
-// Start listening for changes to the schools list
+// ─── 8. /appData/schools سبسکرائب کریں ────────────────────────────────
 subscribeSchools();
