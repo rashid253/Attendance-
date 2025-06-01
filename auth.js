@@ -5,7 +5,7 @@ import {
   ref as dbRef,
   onValue,
   get as dbGet,
-  set as dbSet,
+  set as dbSet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
@@ -15,6 +15,7 @@ import {
   updateProfile,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+// DOM references
 const emailInput            = document.getElementById("emailInput");
 const passwordInput         = document.getElementById("passwordInput");
 const authButton            = document.getElementById("authButton");
@@ -35,7 +36,7 @@ const logoutBtn             = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// ─── 1. /appData/schools پر سبسکرائب کریں ───────────────────────────────
+// 1) /appData/schools پر سبسکرائب کریں تاکہ dropdown ہمیشہ اپڈیٹ ہو
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(
@@ -51,7 +52,7 @@ function subscribeSchools() {
   );
 }
 
-// ─── 2. Signup فارم میں اسکولز ڈالیں ───────────────────────────────────
+// 2) Signup فارم میں اسکولز ڈالیں
 function populateSchoolDropdown() {
   schoolRegisterSelect.innerHTML =
     '<option disabled selected>-- Select School (for principal/teacher) --</option>';
@@ -65,22 +66,22 @@ function populateSchoolDropdown() {
   }
 }
 
-// ─── 3. Login ↔ SignUp موڈ ٹوگل کریں ─────────────────────────────────
+// 3) Toggle Login ↔ SignUp
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
-    formTitle.textContent     = "Sign Up for Attendance App";
-    authButton.textContent    = "Sign Up";
+    formTitle.textContent      = "Sign Up for Attendance App";
+    authButton.textContent     = "Sign Up";
     signupExtra.classList.remove("hidden");
-    toggleAuthSpan.textContent= "Already have an account? Login";
+    toggleAuthSpan.textContent = "Already have an account? Login";
     populateSchoolDropdown();
   } else {
-    formTitle.textContent     = "Login to Attendance App";
-    authButton.textContent    = "Login";
+    formTitle.textContent      = "Login to Attendance App";
+    authButton.textContent     = "Login";
     signupExtra.classList.add("hidden");
-    toggleAuthSpan.textContent= "Don't have an account? Sign Up";
+    toggleAuthSpan.textContent = "Don't have an account? Sign Up";
   }
-  // فیلڈز ری سیٹ کر دیں
+  // Reset fields
   emailInput.value           = "";
   passwordInput.value        = "";
   displayNameInput.value     = "";
@@ -93,7 +94,7 @@ function toggleAuthMode() {
 }
 toggleAuthSpan.addEventListener("click", toggleAuthMode);
 
-// ─── 4. Role منتخب کرنے پر Class/Section دکھائیں ─────────────────────────
+// 4) Role منتخب ہونے پر Class & Section دکھائیں
 roleSelect.addEventListener("change", () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -104,7 +105,7 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
-// ─── 5. Login / Sign Up बटन کا فنکشن ───────────────────────────────────
+// 5) Handle Login / SignUp بٹن
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -114,21 +115,21 @@ authButton.addEventListener("click", async () => {
   }
 
   if (isLoginMode) {
-    // ───────────── LOGIN ────────────
+    // ─── LOGIN ───
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       alert("Login نامنظور: " + err.message);
     }
   } else {
-    // ──────────── SIGNUP ─────────────
+    // ─── SIGNUP ───
     const displayName = displayNameInput.value.trim();
     const role        = roleSelect.value;
     const school      = schoolRegisterSelect.value;
     const cls         = role === "teacher" ? classRegisterSelect.value : "";
     const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
 
-    // لازمی فیلڈز ویلیڈیٹ کریں
+    // Validate fields
     if (!displayName || !role || !school) {
       alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
       return;
@@ -139,7 +140,7 @@ authButton.addEventListener("click", async () => {
     }
 
     try {
-      // 1) پہلے Auth میں user بنائیں
+      // 1) Auth میں user بنائیں
       const userCred = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -160,7 +161,7 @@ authButton.addEventListener("click", async () => {
         section: sec,
       });
 
-      // 4) صرف اس وقت logout کریں جب profile DB میں محفوظ ہو چکا ہو
+      // 4) ab signOut کریں تاکہ "onAuthStateChanged" میں main-app ظاہر نہ ہو جائے
       await signOut(auth);
 
       alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
@@ -171,19 +172,18 @@ authButton.addEventListener("click", async () => {
   }
 });
 
-// ─── 6. Auth state changes پر عمل ─────────────────────────────────────
+// 6) Monitor Auth state changes
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    authContainer.classList.add("hidden");
-    mainApp.classList.remove("hidden");
-    const uid = user.uid;
+    // جب signup ہو کر یہ callback فوراً fire ہو، تو profile DB میں ابھی لکھا نہ ہوا ہو سکتا ہے
+    // تو ہم صرف اس صورت main-app دکھائیں گے جب DB سے profile ملے
     try {
-      // user کے پروفائل کو DB سے پڑھیں
-      const snap = await dbGet(dbRef(database, `users/${uid}`));
+      const snap = await dbGet(dbRef(database, `users/${user.uid}`));
       if (snap.exists()) {
+        // Profile مل گیا، اب main-app دکھائیں
         const profile = snap.val();
         window.currentUserProfile = {
-          uid,
+          uid: user.uid,
           displayName: profile.displayName,
           email: profile.email,
           role: profile.role,
@@ -191,9 +191,11 @@ onAuthStateChanged(auth, async (user) => {
           class: profile.class || "",
           section: profile.section || "",
         };
+        authContainer.classList.add("hidden");
+        mainApp.classList.remove("hidden");
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // اگر ابھی profile نہیں ملا تو خاموشی سے لاگ آؤٹ
+        // اگر profile ابھی نہیں ملا، تو silent sign out (بغیر alert کے)
         await signOut(auth);
       }
     } catch (err) {
@@ -201,13 +203,14 @@ onAuthStateChanged(auth, async (user) => {
       await signOut(auth);
     }
   } else {
+    // user لاگ آؤٹ ہے
     authContainer.classList.remove("hidden");
     mainApp.classList.add("hidden");
     window.currentUserProfile = null;
   }
 });
 
-// ─── 7. Logout بٹن ───────────────────────────────────────────────────
+// 7) Logout بٹن
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
@@ -216,5 +219,5 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
-// ─── 8. /appData/schools سبسکرائب کریں ────────────────────────────────
+// 8) شروع میں /appData/schools پر سبسکرائب کریں
 subscribeSchools();
