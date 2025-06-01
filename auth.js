@@ -1,7 +1,13 @@
 // auth.js
 
 import { auth, database } from "./firebase-config.js";
-import { ref as dbRef, get as dbGet } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import {
+  ref as dbRef,
+  get as dbGet,
+  onValue,
+  child,
+  set as dbSet,
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -30,21 +36,18 @@ const logoutBtn              = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1. Load schools array from Firebase → appData/schools
-async function loadSchools() {
-  try {
-    const snap = await dbGet(dbRef(database, "appData/schools"));
-    if (snap.exists()) {
-      schoolsList = snap.val();
-    } else {
-      schoolsList = [];
-    }
-  } catch (err) {
-    console.error("Error fetching schools:", err);
-    schoolsList = [];
-  }
+// 1. Subscribe to appData/schools in realtime so dropdown stays updated
+function subscribeSchools() {
+  const schoolsRef = dbRef(database, "appData/schools");
+  onValue(schoolsRef, (snapshot) => {
+    schoolsList = snapshot.exists() ? snapshot.val() : [];
+    populateSchoolDropdown();
+  });
+}
 
-  // Populate the dropdown
+// Populate the School dropdown
+function populateSchoolDropdown() {
+  // Clear existing options
   schoolRegisterSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   schoolsList.forEach(s => {
     const opt = document.createElement("option");
@@ -53,7 +56,6 @@ async function loadSchools() {
     schoolRegisterSelect.appendChild(opt);
   });
 }
-loadSchools();
 
 // 2. Toggle between Login and Sign Up forms
 function toggleAuthMode() {
@@ -63,8 +65,6 @@ function toggleAuthMode() {
     formTitle.textContent = "Sign Up for Attendance App";
     authButton.textContent = "Sign Up";
     signupExtra.classList.remove("hidden");
-    // repopulate schools each time signup is shown
-    loadSchools();
     toggleAuthSpan.textContent = "Already have an account? Login";
   } else {
     // Switch to Login
@@ -136,8 +136,6 @@ authButton.addEventListener("click", async () => {
       await updateProfile(userCred.user, { displayName });
       const uid = userCred.user.uid;
       // Save profile under /users/{uid} in Realtime Database
-      await dbGet(dbRef(database, `users/${uid}`)); // ensure path exists
-      await dbRef(database, `users/${uid}`);
       const userRef = dbRef(database, `users/${uid}`);
       await dbSet(userRef, {
         displayName,
@@ -200,3 +198,6 @@ logoutBtn.addEventListener("click", async () => {
     console.error("Logout میں مسئلہ:", err);
   }
 });
+
+// Start listening for changes to the schools list
+subscribeSchools();
