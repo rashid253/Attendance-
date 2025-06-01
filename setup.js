@@ -1,7 +1,11 @@
 // setup.js
 
 import { database } from "./firebase-config.js";
-import { ref as dbRef, set as dbSet, get as dbGet } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import {
+  ref as dbRef,
+  set as dbSet,
+  get as dbGet,
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 const setupForm       = document.getElementById("setupForm");
 const setupDisplay    = document.getElementById("setupDisplay");
@@ -16,7 +20,6 @@ const schoolListDiv   = document.getElementById("schoolList");
 
 const { get: idbGet, set: idbSet } = window.idbKeyval;
 
-// Global state (mirrors firebase data)
 let studentsBySchool       = {};
 let attendanceDataBySchool = {};
 let paymentsDataBySchool   = {};
@@ -28,7 +31,7 @@ let currentSchool          = null;
 let teacherClass           = null;
 let teacherSection         = null;
 
-// Expose hide/show functions at module scope
+// Hide/show functions
 function hideMainSections() {
   [
     document.getElementById("financial-settings"),
@@ -53,7 +56,6 @@ function showMainSections() {
 
 // Called when the user logs in
 document.addEventListener("userLoggedIn", async () => {
-  // Fetch appData from Firebase
   const appDataSnap = await dbGet(dbRef(database, "appData"));
   if (appDataSnap.exists()) {
     const appData = appDataSnap.val();
@@ -112,7 +114,6 @@ function renderSchoolList() {
         const trimmed = newName.trim();
         schools[idx] = trimmed;
 
-        // Migrate data keys
         studentsBySchool[trimmed]       = studentsBySchool[oldName]       || [];
         attendanceDataBySchool[trimmed] = attendanceDataBySchool[oldName] || {};
         paymentsDataBySchool[trimmed]   = paymentsDataBySchool[oldName]   || {};
@@ -158,12 +159,10 @@ async function renderSetupUI() {
   const profile = window.currentUserProfile;
   if (!profile) return;
 
-  // Populate schoolSelect immediately
   populateSchoolDropdown();
   renderSchoolList();
 
   if (profile.role === "admin") {
-    // Admin can add new school or select existing
     schoolInput.classList.remove("hidden");
     schoolSelect.classList.remove("hidden");
     classSelect.disabled   = false;
@@ -171,7 +170,6 @@ async function renderSetupUI() {
     saveSetupBtn.disabled  = false;
 
     if (currentSchool) {
-      // If already set up
       schoolSelect.value    = currentSchool;
       classSelect.value     = teacherClass;
       sectionSelect.value   = teacherSection;
@@ -186,7 +184,6 @@ async function renderSetupUI() {
     }
   }
   else if (profile.role === "principal") {
-    // Principal: fixed school
     const mySchool = profile.school;
     currentSchool  = mySchool;
     teacherClass   = null;
@@ -202,7 +199,6 @@ async function renderSetupUI() {
     hideMainSections();
   }
   else if (profile.role === "teacher") {
-    // Teacher: fixed school, class, section
     const mySchool  = profile.school;
     const myClass   = profile.class;
     const mySection = profile.section;
@@ -293,6 +289,7 @@ export async function syncAppDataToFirebase() {
     teacherSection
   };
   try {
+    // Write entire appData
     await dbSet(dbRef(database, "appData"), payload);
     console.log("✅ App Data Synced to Firebase");
   } catch (err) {
