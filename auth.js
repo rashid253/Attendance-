@@ -35,15 +35,11 @@ const logoutBtn              = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1. Subscribe to appData/schools so dropdown خود بخود اپڈیٹ ہو
+// 1. Subscribe to appData/schools so dropdown ہمیشہ اپڈیٹ ہو
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(schoolsRef, (snapshot) => {
-    if (snapshot.exists()) {
-      schoolsList = snapshot.val();
-    } else {
-      schoolsList = [];
-    }
+    schoolsList = snapshot.exists() ? snapshot.val() : [];
     console.log("DEBUG: Loaded schools from DB:", schoolsList);
     populateSchoolDropdown();
   }, (error) => {
@@ -51,12 +47,8 @@ function subscribeSchools() {
   });
 }
 
-// Populate the School dropdown
+// Populate the School dropdown (ہمیشہ populate کریں، چاہے Login ہو یا Sign-Up)
 function populateSchoolDropdown() {
-  // اگر ابھی signupExtra hidden ہے تو dropdown کو خالی کرنا
-  if (signupExtra.classList.contains("hidden")) return;
-
-  // واضح کریں کون سی options پہلے موجود ہیں
   schoolRegisterSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   console.log("DEBUG: Populating dropdown with:", schoolsList);
 
@@ -68,7 +60,6 @@ function populateSchoolDropdown() {
       schoolRegisterSelect.appendChild(opt);
     });
   } else {
-    // اگر فہرست خالی ہے تو صرف default placeholder دکھائیں
     console.log("DEBUG: schoolsList is empty; dropdown remains with only placeholder.");
   }
 }
@@ -82,8 +73,6 @@ function toggleAuthMode() {
     authButton.textContent = "Sign Up";
     signupExtra.classList.remove("hidden");
     toggleAuthSpan.textContent = "Already have an account? Login";
-    // اب اس وقت ڈراپ ڈاؤن دکھائیں گے → populate کریں
-    populateSchoolDropdown();
   } else {
     // Switch to Login
     formTitle.textContent = "Login to Attendance App";
