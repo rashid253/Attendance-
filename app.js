@@ -1,1531 +1,1187 @@
-// app.js (fully self-contained: embeds initialData, avoids fetch errors, and matches index.html IDs)
-// -------------------------------------------------------------------------------------------------
+// app.js (Complete and Updated for Auth + Role-Based Access)
+// -------------------------------------------------------------------------------------------
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+// 1. IMPORTS & INITIALIZATION FOR AUTH & DATABASE
+import { auth, database } from "./index.html";
 import {
-  getDatabase,
   ref as dbRef,
   set as dbSet,
   get as dbGet,
-  onValue,
+  onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// ----------------------
-// Embed initialData directly to avoid fetch errors
-// ----------------------
-const initialData = {
-  "Users": {
-    "admin_master": {
-      "role": "admin"
-    },
-    "principal_alpha_school": {
-      "role": "principal",
-      "school": "Alpha School"
-    },
-    "teacher_alpha_school": {
-      "role": "teacher",
-      "school": "Alpha School",
-      "class": "Class One",
-      "section": "A"
-    },
-    "principal_beta_school": {
-      "role": "principal",
-      "school": "Beta School"
-    },
-    "teacher_beta_school": {
-      "role": "teacher",
-      "school": "Beta School",
-      "class": "Class Two",
-      "section": "B"
-    },
-    "principal_gamma_school": {
-      "role": "principal",
-      "school": "Gamma School"
-    },
-    "teacher_gamma_school": {
-      "role": "teacher",
-      "school": "Gamma School",
-      "class": "Class Three",
-      "section": "C"
-    },
-    "principal_delta_school": {
-      "role": "principal",
-      "school": "Delta School"
-    },
-    "teacher_delta_school": {
-      "role": "teacher",
-      "school": "Delta School",
-      "class": "Nursery",
-      "section": "A"
-    },
-    "principal_epsilon_school": {
-      "role": "principal",
-      "school": "Epsilon School"
-    },
-    "teacher_epsilon_school": {
-      "role": "teacher",
-      "school": "Epsilon School",
-      "class": "KG",
-      "section": "B"
-    },
-    "principal_zeta_school": {
-      "role": "principal",
-      "school": "Zeta School"
-    },
-    "teacher_zeta_school": {
-      "role": "teacher",
-      "school": "Zeta School",
-      "class": "Class Four",
-      "section": "C"
-    },
-    "principal_eta_school": {
-      "role": "principal",
-      "school": "Eta School"
-    },
-    "teacher_eta_school": {
-      "role": "teacher",
-      "school": "Eta School",
-      "class": "Class Five",
-      "section": "A"
-    },
-    "principal_theta_school": {
-      "role": "principal",
-      "school": "Theta School"
-    },
-    "teacher_theta_school": {
-      "role": "teacher",
-      "school": "Theta School",
-      "class": "Class Six",
-      "section": "B"
-    },
-    "principal_iota_school": {
-      "role": "principal",
-      "school": "Iota School"
-    },
-    "teacher_iota_school": {
-      "role": "teacher",
-      "school": "Iota School",
-      "class": "Class Seven",
-      "section": "C"
-    },
-    "principal_kappa_school": {
-      "role": "principal",
-      "school": "Kappa School"
-    },
-    "teacher_kappa_school": {
-      "role": "teacher",
-      "school": "Kappa School",
-      "class": "Class Eight",
-      "section": "A"
-    },
-    "principal_lambda_school": {
-      "role": "principal",
-      "school": "Lambda School"
-    },
-    "teacher_lambda_school": {
-      "role": "teacher",
-      "school": "Lambda School",
-      "class": "Class Nine",
-      "section": "B"
-    },
-    "principal_mu_school": {
-      "role": "principal",
-      "school": "Mu School"
-    },
-    "teacher_mu_school": {
-      "role": "teacher",
-      "school": "Mu School",
-      "class": "Class Ten",
-      "section": "C"
-    },
-    "principal_nu_school": {
-      "role": "principal",
-      "school": "Nu School"
-    },
-    "teacher_nu_school": {
-      "role": "teacher",
-      "school": "Nu School",
-      "class": "Play Group",
-      "section": "A"
-    },
-    "principal_xi_school": {
-      "role": "principal",
-      "school": "Xi School"
-    },
-    "teacher_xi_school": {
-      "role": "teacher",
-      "school": "Xi School",
-      "class": "Nursery",
-      "section": "B"
-    },
-    "principal_omicron_school": {
-      "role": "principal",
-      "school": "Omicron School"
-    },
-    "teacher_omicron_school": {
-      "role": "teacher",
-      "school": "Omicron School",
-      "class": "KG",
-      "section": "C"
-    }
-  },
-  "Schools": {
-    "Alpha School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_alpha_school",
-      "teachers": {
-        "teacher_alpha_school": {
-          "class": "Class One",
-          "section": "A"
-        }
-      }
-    },
-    "Beta School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_beta_school",
-      "teachers": {
-        "teacher_beta_school": {
-          "class": "Class Two",
-          "section": "B"
-        }
-      }
-    },
-    "Gamma School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_gamma_school",
-      "teachers": {
-        "teacher_gamma_school": {
-          "class": "Class Three",
-          "section": "C"
-        }
-      }
-    },
-    "Delta School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_delta_school",
-      "teachers": {
-        "teacher_delta_school": {
-          "class": "Nursery",
-          "section": "A"
-        }
-      }
-    },
-    "Epsilon School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_epsilon_school",
-      "teachers": {
-        "teacher_epsilon_school": {
-          "class": "KG",
-          "section": "B"
-        }
-      }
-    },
-    "Zeta School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_zeta_school",
-      "teachers": {
-        "teacher_zeta_school": {
-          "class": "Class Four",
-          "section": "C"
-        }
-      }
-    },
-    "Eta School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_eta_school",
-      "teachers": {
-        "teacher_eta_school": {
-          "class": "Class Five",
-          "section": "A"
-        }
-      }
-    },
-    "Theta School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_theta_school",
-      "teachers": {
-        "teacher_theta_school": {
-          "class": "Class Six",
-          "section": "B"
-        }
-      }
-    },
-    "Iota School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_iota_school",
-      "teachers": {
-        "teacher_iota_school": {
-          "class": "Class Seven",
-          "section": "C"
-        }
-      }
-    },
-    "Kappa School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_kappa_school",
-      "teachers": {
-        "teacher_kappa_school": {
-          "class": "Class Eight",
-          "section": "A"
-        }
-      }
-    },
-    "Lambda School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_lambda_school",
-      "teachers": {
-        "teacher_lambda_school": {
-          "class": "Class Nine",
-          "section": "B"
-        }
-      }
-    },
-    "Mu School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_mu_school",
-      "teachers": {
-        "teacher_mu_school": {
-          "class": "Class Ten",
-          "section": "C"
-        }
-      }
-    },
-    "Nu School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_nu_school",
-      "teachers": {
-        "teacher_nu_school": {
-          "class": "Play Group",
-          "section": "A"
-        }
-      }
-    },
-    "Xi School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_xi_school",
-      "teachers": {
-        "teacher_xi_school": {
-          "class": "Nursery",
-          "section": "B"
-        }
-      }
-    },
-    "Omicron School": {
-      "classes": {
-        "Play Group": ["A", "B", "C"],
-        "Nursery": ["A", "B", "C"],
-        "KG": ["A", "B", "C"],
-        "Class One": ["A", "B", "C"],
-        "Class Two": ["A", "B", "C"],
-        "Class Three": ["A", "B", "C"],
-        "Class Four": ["A", "B", "C"],
-        "Class Five": ["A", "B", "C"],
-        "Class Six": ["A", "B", "C"],
-        "Class Seven": ["A", "B", "C"],
-        "Class Eight": ["A", "B", "C"],
-        "Class Nine": ["A", "B", "C"],
-        "Class Ten": ["A", "B", "C"]
-      },
-      "principal": "principal_omicron_school",
-      "teachers": {
-        "teacher_omicron_school": {
-          "class": "KG",
-          "section": "C"
-        }
-      }
-    }
-  }
-};
-
-// ----------------------
-// Firebase configuration (replace with your actual config)
-// ----------------------
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-};
-
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Reference to Firebase node for entire appData
 const appDataRef = dbRef(database, "appData");
 
-// ----------------------
-// Utility: document.getElementById shortcut
-// ----------------------
-function $(id) {
-  return document.getElementById(id);
-}
-
-// ----------------------
-// Local application state (per-school mappings)
-// ----------------------
-let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact, occupation, address, cls, sec, fine, status } ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/... } } }
-let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
-let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
+// 2. GLOBAL STATE (PER-SCHOOL & APP STATE VARIABLES)
+let studentsBySchool       = {};   // { schoolName: [ { name, adm, parentName, contact, occupation, address, fine, status } ] }
+let attendanceDataBySchool = {};   // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/... } } }
+let paymentsDataBySchool   = {};   // { schoolName: { admNumber: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
+let lastAdmNoBySchool      = {};   // { schoolName: Number }
 let fineRates              = { A:50, Lt:20, L:10, HD:30 };
 let eligibilityPct         = 75;
-let schools                = [];    // array of school names (strings)
-let currentSchool          = null;  // selected school name
-let teacherClass           = null;  // selected class (e.g. "Class One")
-let teacherSection         = null;  // selected section (e.g. "A")
-let currentUserKey         = null;
-let currentUserRole        = null;
-let currentUserSchool      = null;
-let currentUserClass       = null;
-let currentUserSection     = null;
-let lastAdmNo              = 0;     // for the currently selected school
-let lastAnalyticsShare     = "";    // for Web Share API
+let schools                = [];   // [ "School A", "School B", ... ]
 
-// ----------------------
-// INITIAL DATA IMPORT (only once if appData is empty)
-// ----------------------
-let initialDataImported = false;
+// These three will be set by setup.js (or overwritten if teacher)
+let currentSchool    = null; // e.g. "Bright Future School"
+let teacherClass     = null; // e.g. "Class Five"
+let teacherSection   = null; // e.g. "A"
 
-async function importInitialDataIfEmpty() {
-  if (initialDataImported) return;
-  const snapshot = await dbGet(appDataRef);
-  if (!snapshot.exists()) {
-    try {
-      await dbSet(appDataRef, initialData);
-    } catch (err) {
-      console.error("Error writing initialData:", err);
+// Active-school derived vars
+let students       = [];   // references studentsBySchool[currentSchool]
+let attendanceData = {};   // references attendanceDataBySchool[currentSchool]
+let paymentsData   = {};   // references paymentsDataBySchool[currentSchool]
+let lastAdmNo      = 0;    // references lastAdmNoBySchool[currentSchool]
+
+// 3. ON USER LOGIN & SETUP COMPLETE → INITIALIZE DATA
+document.addEventListener("userLoggedIn", async () => {
+  // 3.1 Fetch existing appData from Firebase (if any)
+  try {
+    const appDataSnap = await dbGet(appDataRef);
+    if (appDataSnap.exists()) {
+      const appData = appDataSnap.val();
+      studentsBySchool       = appData.studentsBySchool       || {};
+      attendanceDataBySchool = appData.attendanceDataBySchool || {};
+      paymentsDataBySchool   = appData.paymentsDataBySchool   || {};
+      lastAdmNoBySchool      = appData.lastAdmNoBySchool      || {};
+      fineRates              = appData.fineRates              || fineRates;
+      eligibilityPct         = appData.eligibilityPct         || eligibilityPct;
+      schools                = appData.schools                || [];
+      currentSchool          = appData.currentSchool          || null;
+      teacherClass           = appData.teacherClass           || null;
+      teacherSection         = appData.teacherSection         || null;
     }
+  } catch (err) {
+    console.error("Error fetching appData from Firebase:", err);
   }
-  initialDataImported = true;
+
+  // 3.2 If this is a Teacher, override with profile values
+  const profile = window.currentUserProfile;
+  if (profile && profile.role === "teacher") {
+    currentSchool  = profile.school;
+    teacherClass   = profile.class;
+    teacherSection = profile.section;
+  }
+
+  // 3.3 Only proceed if all three are set
+  if (currentSchool && teacherClass && teacherSection) {
+    // Ensure IndexedDB entries exist for this school
+    await ensureSchoolData(currentSchool);
+
+    // Derive active arrays/objects
+    students       = studentsBySchool[currentSchool];
+    attendanceData = attendanceDataBySchool[currentSchool];
+    paymentsData   = paymentsDataBySchool[currentSchool];
+    lastAdmNo      = lastAdmNoBySchool[currentSchool] || 0;
+
+    // Initialize local state from IndexedDB (if present)
+    await initLocalState();
+
+    // Now that data is loaded, render UI
+    resetViews();
+    renderStudents();
+    updateCounters();
+  }
+});
+
+// -------------------------------------------------------------------------------------------
+// 4. ORIGINAL app.js CONTENT (WITH MINIMAL CHANGES)
+//    – Firebase initialization and per-school variables above have replaced the original ones.
+//    – KEEP functions exactly as they were, except remove duplicate imports/initialization.
+// -------------------------------------------------------------------------------------------
+
+// ----------------------
+// ENSURE DATA STRUCTURES EXIST FOR A GIVEN SCHOOL
+// ----------------------
+async function ensureSchoolData(school) {
+  if (!school) return;
+  if (!studentsBySchool[school]) {
+    studentsBySchool[school] = [];
+    await idbSet("studentsBySchool", studentsBySchool);
+  }
+  if (!attendanceDataBySchool[school]) {
+    attendanceDataBySchool[school] = {};
+    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  }
+  if (!paymentsDataBySchool[school]) {
+    paymentsDataBySchool[school] = {};
+    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  }
+  if (lastAdmNoBySchool[school] === undefined) {
+    lastAdmNoBySchool[school] = 0;
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  }
+}
+
+// ----------------------------
+// INITIALIZE LOCAL STATE FROM IndexedDB
+// ----------------------------
+async function initLocalState() {
+  studentsBySchool       = (await idbGet("studentsBySchool"))       || studentsBySchool;
+  attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || attendanceDataBySchool;
+  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || paymentsDataBySchool;
+  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || lastAdmNoBySchool;
+  fineRates              = (await idbGet("fineRates"))              || fineRates;
+  eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
+  schools                = (await idbGet("schools"))                || schools;
+  currentSchool          = (await idbGet("currentSchool"))          || currentSchool;
+  teacherClass           = (await idbGet("teacherClass"))           || teacherClass;
+  teacherSection         = (await idbGet("teacherSection"))         || teacherSection;
+
+  if (currentSchool) {
+    await ensureSchoolData(currentSchool);
+    students       = studentsBySchool[currentSchool];
+    attendanceData = attendanceDataBySchool[currentSchool];
+    paymentsData   = paymentsDataBySchool[currentSchool];
+    lastAdmNo      = lastAdmNoBySchool[currentSchool] || 0;
+  }
+}
+
+// ----------------------------
+// SYNC ENTIRE appData BACK TO FIREBASE
+// ----------------------------
+async function syncToFirebase() {
+  const payload = {
+    studentsBySchool,
+    attendanceDataBySchool,
+    paymentsDataBySchool,
+    lastAdmNoBySchool,
+    fineRates,
+    eligibilityPct,
+    schools,
+    currentSchool,
+    teacherClass,
+    teacherSection,
+  };
+  try {
+    await dbSet(appDataRef, payload);
+    console.log("✅ Synced data to Firebase");
+  } catch (err) {
+    console.error("Firebase sync failed:", err);
+  }
 }
 
 // ----------------------
-// LOGIN BY KEY (no Firebase Auth, just read from appData/Users/<key>)
+// STUDENT REGISTRATION
 // ----------------------
-function setupLogin() {
-  const loginSection = $("loginSection");
-  const mainContent  = $("mainContent");
-  const loginBtn     = $("loginBtn");
-  const logoutBtn    = $("logoutBtn");
+const studentNameInput      = document.getElementById("studentName");
+const parentNameInput       = document.getElementById("parentName");
+const parentContactInput    = document.getElementById("parentContact");
+const parentOccupationInput = document.getElementById("parentOccupation");
+const parentAddressInput    = document.getElementById("parentAddress");
+const addStudentBtn         = document.getElementById("addStudent");
 
-  if (!loginBtn || !logoutBtn || !loginSection || !mainContent) {
-    console.error("Login or mainContent elements not found in DOM.");
+addStudentBtn.addEventListener("click", async () => {
+  const name       = studentNameInput.value.trim();
+  const parentName = parentNameInput.value.trim();
+  const contact    = parentContactInput.value.trim();
+  const occupation = parentOccupationInput.value.trim();
+  const address    = parentAddressInput.value.trim();
+
+  if (!name) {
+    alert("Student name is required.");
     return;
   }
 
-  loginBtn.addEventListener("click", async () => {
-    // Ensure initialData is imported before checking user key
-    await importInitialDataIfEmpty();
+  // Increment admission number for this school
+  lastAdmNo += 1;
+  lastAdmNoBySchool[currentSchool] = lastAdmNo;
 
-    const keyInput = $("userKeyInput").value.trim();
-    if (!keyInput) {
-      alert("Please enter your user key.");
-      return;
-    }
-    currentUserKey = keyInput;
-    const userRef = dbRef(database, `appData/Users/${currentUserKey}`);
-    const userSnap = await dbGet(userRef);
-    if (!userSnap.exists()) {
-      alert("Invalid user key. Please try again.");
-      return;
-    }
-    const userData = userSnap.val();
-    currentUserRole    = userData.role;
-    currentUserSchool  = userData.school   || null;
-    currentUserClass   = userData.class    || null;
-    currentUserSection = userData.section  || null;
-
-    // Hide login, show main UI
-    loginSection.classList.add("hidden");
-    mainContent.classList.remove("hidden");
-
-    // Load initial data & setup UI based on role
-    await loadSetup();
-
-    // Initialize the rest of the app (registration, attendance, analytics)
-    initAfterSetup();
-  });
-
-  logoutBtn.addEventListener("click", () => {
-    window.location.reload();
-  });
-}
-
-// ----------------------
-// Ensure data structures exist for a given school
-// ----------------------
-function ensureSchoolData(schoolName) {
-  if (!schools.includes(schoolName)) {
-    schools.push(schoolName);
-    studentsBySchool[schoolName]       = [];
-    attendanceDataBySchool[schoolName] = {};
-    paymentsDataBySchool[schoolName]   = {};
-    lastAdmNoBySchool[schoolName]      = 0;
-  }
-}
-
-// ----------------------
-// LOAD SETUP (reads appData from Firebase, populates UI based on role)
-// ----------------------
-async function loadSetup() {
-  const snapshot = await dbGet(appDataRef);
-  if (!snapshot.exists()) return;
-  const appData = snapshot.val();
-
-  // Populate local schools array
-  const dbSchools = appData.Schools || {};
-  schools = Object.keys(dbSchools);
-  schools.forEach(s => ensureSchoolData(s));
-
-  const schoolInput     = $("schoolInput");
-  const schoolSelect    = $("schoolSelect");
-  const classSelect     = $("teacherClassSelect");
-  const sectionSelect   = $("teacherSectionSelect");
-  const setupForm       = $("setupForm");
-  const saveSetupBtn    = $("saveSetup");
-  const schoolListDiv   = $("schoolList");
-
-  if (!schoolInput || !schoolSelect || !classSelect || !sectionSelect || !setupForm || !saveSetupBtn || !schoolListDiv) {
-    console.error("One or more setup elements not found in DOM.");
-    return;
-  }
-
-  // Clear previous
-  schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
-  schoolListDiv.innerHTML = "";
-
-  if (currentUserRole === "admin") {
-    schoolInput.disabled = false;
-    // populate dropdown with all schools
-    schools.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s; opt.textContent = s;
-      schoolSelect.appendChild(opt);
-    });
-    setupForm.classList.remove("hidden");
-  }
-  else if (currentUserRole === "principal") {
-    schoolInput.disabled = true;
-    schoolInput.value = "";
-    if (currentUserSchool) {
-      const opt = document.createElement("option");
-      opt.value = currentUserSchool;
-      opt.textContent = currentUserSchool;
-      schoolSelect.appendChild(opt);
-      schoolSelect.value = currentUserSchool;
-    }
-    setupForm.classList.remove("hidden");
-  }
-  else { // teacher
-    setupForm.classList.add("hidden");
-  }
-
-  // Display list of schools (Admin sees all; Principal only theirs)
-  if (currentUserRole === "admin" || currentUserRole === "principal") {
-    schools.forEach(s => {
-      if (currentUserRole === "principal" && s !== currentUserSchool) return;
-      const row = document.createElement("div");
-      row.textContent = s;
-      schoolListDiv.appendChild(row);
-    });
-  }
-
-  // Setup Save button
-  saveSetupBtn.onclick = async () => {
-    const newSchool = schoolInput.value.trim();
-    let chosenSchool = schoolSelect.value;
-
-    if (currentUserRole === "admin") {
-      if (newSchool) {
-        chosenSchool = newSchool;
-        const newSchoolObj = {
-          classes: {
-            "Play Group": ["A", "B", "C"],
-            "Nursery": ["A", "B", "C"],
-            "KG": ["A", "B", "C"],
-            "Class One": ["A", "B", "C"],
-            "Class Two": ["A", "B", "C"],
-            "Class Three": ["A", "B", "C"],
-            "Class Four": ["A", "B", "C"],
-            "Class Five": ["A", "B", "C"],
-            "Class Six": ["A", "B", "C"],
-            "Class Seven": ["A", "B", "C"],
-            "Class Eight": ["A", "B", "C"],
-            "Class Nine": ["A", "B", "C"],
-            "Class Ten": ["A", "B", "C"],
-          },
-          principal: null,
-          teachers: {},
-        };
-        await dbSet(dbRef(database, `appData/Schools/${chosenSchool}`), newSchoolObj);
-        alert(`New school "${chosenSchool}" created.`);
-        return loadSetup();
-      } else {
-        alert("To create a new school, enter its name. Otherwise select an existing school.");
-        return;
-      }
-    }
-    else if (currentUserRole === "principal") {
-      chosenSchool = currentUserSchool;
-      // Assign this principal to the school in Firebase
-      await dbSet(dbRef(database, `appData/Schools/${chosenSchool}/principal`), currentUserKey);
-      await dbSet(dbRef(database, `appData/Users/${currentUserKey}/school`), chosenSchool);
-      alert(`You (${currentUserKey}) are now principal of ${chosenSchool}`);
-      return;
-    }
-    // Teachers never see this button
+  const newStudent = {
+    adm: lastAdmNo,
+    name,
+    parentName,
+    contact,
+    occupation,
+    address,
+    fine: 0,
+    status: "Registered"
   };
 
-  // FINANCIAL SETTINGS (Admin & Principal only)
-  const fineAbsentInput   = $("fineAbsent");
-  const fineLateInput     = $("fineLate");
-  const fineLeaveInput    = $("fineLeave");
-  const fineHalfDayInput  = $("fineHalfDay");
-  const eligibilityInput  = $("eligibilityPct");
-  const saveFinancialBtn  = $("saveFinancial");
+  // Add to local array
+  students.push(newStudent);
+  studentsBySchool[currentSchool] = students;
 
-  if (!fineAbsentInput || !fineLateInput || !fineLeaveInput || !fineHalfDayInput || !eligibilityInput || !saveFinancialBtn) {
-    console.error("One or more financial elements not found in DOM.");
-  } else {
-    if (currentUserRole === "admin" || currentUserRole === "principal") {
-      idbGet("fineRates").then(rates => {
-        if (rates) {
-          fineAbsentInput.value  = rates.A;
-          fineLateInput.value    = rates.Lt;
-          fineLeaveInput.value   = rates.L;
-          fineHalfDayInput.value = rates.HD;
-        } else {
-          fineAbsentInput.value  = fineRates.A;
-          fineLateInput.value    = fineRates.Lt;
-          fineLeaveInput.value   = fineRates.L;
-          fineHalfDayInput.value = fineRates.HD;
-        }
-      });
-      idbGet("eligibilityPct").then(pct => {
-        if (pct !== undefined) eligibilityInput.value = pct;
-        else eligibilityInput.value = eligibilityPct;
-      });
-      saveFinancialBtn.onclick = () => {
-        fineRates.A   = Number(fineAbsentInput.value);
-        fineRates.Lt  = Number(fineLateInput.value);
-        fineRates.L   = Number(fineLeaveInput.value);
-        fineRates.HD  = Number(fineHalfDayInput.value);
-        eligibilityPct = Number(eligibilityInput.value);
-        idbSet("fineRates", fineRates);
-        idbSet("eligibilityPct", eligibilityPct);
-        alert("Financial settings saved.");
-      };
-    } else {
-      $("financial-settings")?.classList.add("hidden");
-    }
-  }
+  // Save to IndexedDB
+  await idbSet("studentsBySchool", studentsBySchool);
+  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
 
-  // After setup & financial, set currentSchool/class/section based on role
-  if (currentUserRole === "admin") {
-    $("schoolSelect").onchange = () => {
-      currentSchool = $("schoolSelect").value;
-      lastAdmNo = lastAdmNoBySchool[currentSchool] || 0;
-    };
-  }
-  else if (currentUserRole === "principal") {
-    currentSchool = currentUserSchool;
-    lastAdmNo = lastAdmNoBySchool[currentSchool] || 0;
-    // Populate class dropdown
-    const classesObj = appData.Schools[currentSchool]?.classes || {};
-    classSelect.innerHTML = `<option disabled selected>-- Select Class --</option>`;
-    Object.keys(classesObj).forEach(cn => {
-      const opt = document.createElement("option");
-      opt.value = cn; opt.textContent = cn;
-      classSelect.appendChild(opt);
+  // Sync to Firebase
+  await syncToFirebase();
+
+  renderStudents();
+  updateCounters();
+
+  // Clear inputs
+  studentNameInput.value = "";
+  parentNameInput.value = "";
+  parentContactInput.value = "";
+  parentOccupationInput.value = "";
+  parentAddressInput.value = "";
+});
+
+// ----------------------
+// RENDER STUDENTS TABLE
+// ----------------------
+function renderStudents() {
+  const studentsBody = document.getElementById("studentsBody");
+  if (!studentsBody) return;
+  studentsBody.innerHTML = "";
+
+  students.forEach((stu, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" class="stuCheckbox" data-index="${index}" /></td>
+      <td>${index + 1}</td>
+      <td>${stu.name}</td>
+      <td>${stu.adm}</td>
+      <td>${stu.parentName}</td>
+      <td>${stu.contact}</td>
+      <td>${stu.occupation}</td>
+      <td>${stu.address}</td>
+      <td>${stu.fine}</td>
+      <td>${stu.status}</td>
+      <td>
+        <button class="edit-stu btn" data-index="${index}"><i class="fas fa-edit"></i></button>
+        <button class="delete-stu btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button>
+      </td>`;
+    studentsBody.appendChild(tr);
+  });
+
+  // Enable/Disable Edit & Delete buttons based on selection
+  const selectAll = document.getElementById("selectAllStudents");
+  if (selectAll) {
+    selectAll.checked = false;
+    selectAll.addEventListener("change", () => {
+      document.querySelectorAll(".stuCheckbox").forEach(cb => {
+        cb.checked = selectAll.checked;
+      });
+      toggleStudentActions();
     });
-    classSelect.onchange = () => {
-      teacherClass = classSelect.value;
-      sectionSelect.innerHTML = `<option disabled selected>-- Select Section --</option>`;
-      classesObj[teacherClass].forEach(letter => {
-        const opt = document.createElement("option");
-        opt.value = letter; opt.textContent = letter;
-        sectionSelect.appendChild(opt);
-      });
-    };
-    sectionSelect.onchange = () => {
-      teacherSection = sectionSelect.value;
-    };
   }
-  else if (currentUserRole === "teacher") {
-    currentSchool   = currentUserSchool;
-    teacherClass    = currentUserClass;
-    teacherSection  = currentUserSection;
-    lastAdmNo       = lastAdmNoBySchool[currentSchool] || 0;
-  }
+
+  document.querySelectorAll(".stuCheckbox").forEach(cb => {
+    cb.addEventListener("change", toggleStudentActions);
+  });
+  toggleStudentActions();
+
+  // Edit single student
+  document.querySelectorAll(".edit-stu").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = +btn.dataset.index;
+      enterEditMode(idx);
+    });
+  });
+
+  // Delete single student
+  document.querySelectorAll(".delete-stu").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const idx = +btn.dataset.index;
+      if (confirm(`Delete student ${students[idx].name}?`)) {
+        students.splice(idx, 1);
+        studentsBySchool[currentSchool] = students;
+        await idbSet("studentsBySchool", studentsBySchool);
+        await syncToFirebase();
+        renderStudents();
+        updateCounters();
+      }
+    });
+  });
+}
+
+function toggleStudentActions() {
+  const checked = document.querySelectorAll(".stuCheckbox:checked").length;
+  document.getElementById("editSelected").disabled   = checked !== 1;
+  document.getElementById("deleteSelected").disabled = checked === 0;
 }
 
 // ----------------------
-// After login & setup, initialize registration, attendance, analytics
+// EDIT SELECTED STUDENT
 // ----------------------
-function initAfterSetup() {
-  // Utility: format dates
-  function formatDate(dt) {
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, "0");
-    const d = String(dt.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+const editSelectedBtn = document.getElementById("editSelected");
+const doneEditingBtn  = document.getElementById("doneEditing");
+
+editSelectedBtn.addEventListener("click", () => {
+  const checkedBoxes = document.querySelectorAll(".stuCheckbox:checked");
+  if (checkedBoxes.length !== 1) return;
+  const idx = +checkedBoxes[0].dataset.index;
+  enterEditMode(idx);
+});
+
+doneEditingBtn.addEventListener("click", async () => {
+  const idx = +doneEditingBtn.dataset.index;
+  const name       = studentNameInput.value.trim();
+  const parentName = parentNameInput.value.trim();
+  const contact    = parentContactInput.value.trim();
+  const occupation = parentOccupationInput.value.trim();
+  const address    = parentAddressInput.value.trim();
+
+  if (!name) {
+    alert("Student name is required.");
+    return;
   }
 
-  // 0) Load from IndexedDB (sync local state)
-  idbGet("studentsBySchool").then(val => {
-    if (val) studentsBySchool = val;
-  });
-  idbGet("attendanceDataBySchool").then(val => {
-    if (val) attendanceDataBySchool = val;
-  });
-  idbGet("paymentsDataBySchool").then(val => {
-    if (val) paymentsDataBySchool = val;
-  });
-  idbGet("lastAdmNoBySchool").then(val => {
-    if (val) lastAdmNoBySchool = val;
-    if (currentSchool && lastAdmNoBySchool[currentSchool] !== undefined) {
-      lastAdmNo = lastAdmNoBySchool[currentSchool];
-    }
-  });
+  const stu = students[idx];
+  stu.name       = name;
+  stu.parentName = parentName;
+  stu.contact    = contact;
+  stu.occupation = occupation;
+  stu.address    = address;
 
-  // Sync to Firebase (overwrite appData under currentSchool)
-  async function syncToFirebase() {
-    if (!currentSchool) return;
-    const schoolNode = `appData/Schools/${currentSchool}`;
-    const obj = {
-      students: studentsBySchool[currentSchool] || [],
-      attendance: attendanceDataBySchool[currentSchool] || {},
-      payments: paymentsDataBySchool[currentSchool] || {},
-    };
-    await dbSet(dbRef(database, `${schoolNode}/data`), obj);
+  studentsBySchool[currentSchool] = students;
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+
+  exitEditMode();
+  renderStudents();
+  updateCounters();
+});
+
+// ----------------------
+// ENTER EDIT MODE FOR A STUDENT
+// ----------------------
+function enterEditMode(index) {
+  const stu = students[index];
+  studentNameInput.value      = stu.name;
+  parentNameInput.value       = stu.parentName;
+  parentContactInput.value    = stu.contact;
+  parentOccupationInput.value = stu.occupation;
+  parentAddressInput.value    = stu.address;
+
+  addStudentBtn.classList.add("hidden");
+  editSelectedBtn.classList.add("hidden");
+  doneEditingBtn.classList.remove("hidden");
+  doneEditingBtn.dataset.index = index;
+}
+
+// ----------------------
+// EXIT EDIT MODE
+// ----------------------
+function exitEditMode() {
+  studentNameInput.value      = "";
+  parentNameInput.value       = "";
+  parentContactInput.value    = "";
+  parentOccupationInput.value = "";
+  parentAddressInput.value    = "";
+
+  addStudentBtn.classList.remove("hidden");
+  editSelectedBtn.classList.remove("hidden");
+  doneEditingBtn.classList.add("hidden");
+  doneEditingBtn.dataset.index = "";
+}
+
+// ----------------------
+// DELETE SELECTED STUDENTS
+// ----------------------
+const deleteSelectedBtn = document.getElementById("deleteSelected");
+deleteSelectedBtn.addEventListener("click", async () => {
+  const checkedBoxes = document.querySelectorAll(".stuCheckbox:checked");
+  if (checkedBoxes.length === 0) return;
+
+  if (!confirm(`Delete ${checkedBoxes.length} selected student(s)?`)) return;
+  const indices = Array.from(checkedBoxes).map(cb => +cb.dataset.index).sort((a,b)=>b-a);
+  for (const idx of indices) {
+    students.splice(idx, 1);
   }
+  studentsBySchool[currentSchool] = students;
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+  renderStudents();
+  updateCounters();
+});
 
-  // Generate Admission Number
-  async function genAdmNo() {
-    lastAdmNo++;
-    lastAdmNoBySchool[currentSchool] = lastAdmNo;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-    await syncToFirebase();
-    return String(lastAdmNo).padStart(4, "0");
-  }
+// ----------------------
+// SAVE REGISTRATION (persist IndexedDB & Firebase)
+// ----------------------
+const saveRegistrationBtn = document.getElementById("saveRegistration");
+saveRegistrationBtn.addEventListener("click", async () => {
+  await idbSet("studentsBySchool", studentsBySchool);
+  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  await syncToFirebase();
+  alert("Registration saved successfully.");
+});
 
-  // ----------------------
-  // 3. STUDENT REGISTRATION
-  // ----------------------
-  const studentNameInput      = $("studentName");
-  const studentAdmInput       = $("studentAdm");
-  const studentParentInput    = $("studentParent");
-  const parentContactInput    = $("parentContact");
-  const parentOccupationInput = $("parentOccupation");
-  const parentAddressInput    = $("parentAddress");
-  const addStudentBtn         = $("addStudent");
-  const studentsBody          = $("studentsBody");
-  const selectAllStudentsChk  = $("selectAllStudents");
-  const editSelectedBtn       = $("editSelected");
-  const doneEditingBtn        = $("doneEditing");
-  const deleteSelectedBtn     = $("deleteSelected");
-  const saveRegistrationBtn   = $("saveRegistration");
-  const editRegistrationBtn   = $("editRegistration");
-  const shareRegistrationBtn  = $("shareRegistration");
-  const downloadRegistrationPDFBtn = $("downloadRegistrationPDF");
+// ----------------------
+// RESTORE REGISTRATION (from IndexedDB backup file)
+// ----------------------
+const restoreFileInput = document.getElementById("restoreFile");
+const restoreDataBtn   = document.getElementById("restoreData");
+restoreDataBtn.addEventListener("click", () => restoreFileInput.click());
 
-  function renderStudentsTable() {
-    if (!currentSchool) return;
-    const arr = studentsBySchool[currentSchool] || [];
-    studentsBody.innerHTML = "";
-    arr.forEach((stu, idx) => {
-      if (currentUserRole === "teacher") {
-        if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-      }
-      const tr = document.createElement("tr");
-      tr.dataset.index = idx;
-      tr.innerHTML = `
-        <td><input type="checkbox" class="stuChk"/></td>
-        <td>${idx + 1}</td>
-        <td>${stu.name}</td>
-        <td>${stu.adm}</td>
-        <td>${stu.parent}</td>
-        <td>${stu.contact}</td>
-        <td>${stu.occupation}</td>
-        <td>${stu.address}</td>
-        <td>${stu.fine || 0}</td>
-        <td>${stu.status || ""}</td>
-        <td><button class="editStuBtn"><i class="fas fa-edit"></i></button></td>`;
-      studentsBody.appendChild(tr);
-    });
-  }
+restoreFileInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const backup = JSON.parse(text);
+    if (!backup.studentsBySchool) throw new Error("Invalid backup format.");
+    // Overwrite local and Firebase
+    studentsBySchool       = backup.studentsBySchool;
+    attendanceDataBySchool = backup.attendanceDataBySchool;
+    paymentsDataBySchool   = backup.paymentsDataBySchool;
+    lastAdmNoBySchool      = backup.lastAdmNoBySchool;
+    fineRates              = backup.fineRates;
+    eligibilityPct         = backup.eligibilityPct;
+    schools                = backup.schools;
+    currentSchool          = backup.currentSchool;
+    teacherClass           = backup.teacherClass;
+    teacherSection         = backup.teacherSection;
 
-  function clearRegistrationForm() {
-    studentNameInput.value      = "";
-    studentAdmInput.value       = "";
-    studentParentInput.value    = "";
-    parentContactInput.value    = "";
-    parentOccupationInput.value = "";
-    parentAddressInput.value    = "";
-  }
-
-  addStudentBtn?.addEventListener("click", async () => {
-    if (!currentSchool) {
-      alert("Select a school (and class/section if required).");
-      return;
-    }
-    const name      = studentNameInput.value.trim();
-    let adm         = studentAdmInput.value.trim();
-    const parent    = studentParentInput.value.trim();
-    const contact   = parentContactInput.value.trim();
-    const occupation= parentOccupationInput.value.trim();
-    const address   = parentAddressInput.value.trim();
-    const cls       = currentUserRole === "teacher" ? teacherClass : $("teacherClassSelect")?.value;
-    const sec       = currentUserRole === "teacher" ? teacherSection : $("teacherSectionSelect")?.value;
-
-    if (!name || !parent || !contact || !cls || !sec) {
-      alert("Fill in Name, Parent, Contact, Class & Section.");
-      return;
-    }
-    if (!adm) {
-      adm = await genAdmNo();
-    }
-    const newStu = { name, adm, parent, contact, occupation, address, cls, sec, fine: 0, status: "" };
-    if (!studentsBySchool[currentSchool]) studentsBySchool[currentSchool] = [];
-    studentsBySchool[currentSchool].push(newStu);
     await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    clearRegistrationForm();
-    renderStudentsTable();
-  });
-
-  selectAllStudentsChk?.addEventListener("change", () => {
-    const chks = document.querySelectorAll(".stuChk");
-    chks.forEach(cb => cb.checked = selectAllStudentsChk.checked);
-    editSelectedBtn.disabled = !selectAllStudentsChk.checked;
-    deleteSelectedBtn.disabled = !selectAllStudentsChk.checked;
-  });
-
-  studentsBody?.addEventListener("click", e => {
-    if (e.target.closest(".stuChk")) {
-      const anyChecked = Array.from(document.querySelectorAll(".stuChk")).some(cb => cb.checked);
-      editSelectedBtn.disabled   = !anyChecked;
-      deleteSelectedBtn.disabled = !anyChecked;
-    }
-    if (e.target.closest(".editStuBtn")) {
-      const idx = e.target.closest("tr").dataset.index;
-      const stu = studentsBySchool[currentSchool][idx];
-      studentNameInput.value      = stu.name;
-      studentAdmInput.value       = stu.adm;
-      studentParentInput.value    = stu.parent;
-      parentContactInput.value    = stu.contact;
-      parentOccupationInput.value = stu.occupation;
-      parentAddressInput.value    = stu.address;
-      studentsBySchool[currentSchool].splice(idx, 1);
-      renderStudentsTable();
-    }
-  });
-
-  deleteSelectedBtn?.addEventListener("click", async () => {
-    const chks = document.querySelectorAll(".stuChk:checked");
-    const idxs = Array.from(chks).map(cb => Number(cb.closest("tr").dataset.index));
-    studentsBySchool[currentSchool] = studentsBySchool[currentSchool].filter((_, i) => !idxs.includes(i));
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    renderStudentsTable();
-    selectAllStudentsChk.checked = false;
-    editSelectedBtn.disabled      = true;
-    deleteSelectedBtn.disabled    = true;
-  });
-
-  editSelectedBtn?.addEventListener("click", () => {
-    const cb = document.querySelector(".stuChk:checked");
-    if (!cb) return;
-    const idx = Number(cb.closest("tr").dataset.index);
-    const stu = studentsBySchool[currentSchool][idx];
-    studentNameInput.value      = stu.name;
-    studentAdmInput.value       = stu.adm;
-    studentParentInput.value    = stu.parent;
-    parentContactInput.value    = stu.contact;
-    parentOccupationInput.value = stu.occupation;
-    parentAddressInput.value    = stu.address;
-    studentsBySchool[currentSchool].splice(idx, 1);
-    renderStudentsTable();
-    selectAllStudentsChk.checked = false;
-    editSelectedBtn.disabled     = true;
-    deleteSelectedBtn.disabled   = true;
-  });
-
-  saveRegistrationBtn?.addEventListener("click", async () => {
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    alert("Student list saved.");
-  });
-
-  editRegistrationBtn?.addEventListener("click", () => {
-    renderStudentsTable();
-  });
-
-  shareRegistrationBtn?.addEventListener("click", async () => {
-    const arr = studentsBySchool[currentSchool] || [];
-    let text = `Students of ${currentSchool}:\n`;
-    arr.forEach((stu, i) => {
-      text += `${i + 1}. ${stu.adm} ${stu.name} (${stu.cls}-${stu.sec})\n`;
-    });
-    try {
-      await navigator.share({ title: `Students: ${currentSchool}`, text });
-    } catch (err) {
-      console.error("Share failed", err);
-    }
-  });
-
-  downloadRegistrationPDFBtn?.addEventListener("click", () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const arr = studentsBySchool[currentSchool] || [];
-    doc.autoTable({
-      head: [[ "#", "Adm#", "Name", "Class", "Section", "Parent", "Contact", "Occupation", "Address" ]],
-      body: arr.map((stu, i) => [
-        i + 1, stu.adm, stu.name, stu.cls, stu.sec, stu.parent, stu.contact, stu.occupation, stu.address
-      ])
-    });
-    doc.save(`${currentSchool}_students.pdf`);
-  });
-
-  renderStudentsTable();
-
-  // ----------------------
-  // 4. MARK ATTENDANCE
-  // ----------------------
-  const attendanceDateInput    = $("attendanceDate");
-  const loadAttendanceBtn      = $("loadAttendance");
-  const attendanceTableWrapper = $("attendanceTableWrapper");
-  const attendanceBody         = $("attendanceBody");
-  const saveAttendanceBtn      = $("saveAttendance");
-  const resetAttendanceBtn     = $("resetAttendance");
-  const downloadAttendancePDFBtn = $("downloadAttendancePDF");
-  const shareAttendanceSummaryBtn = $("shareAttendanceSummary");
-
-  async function loadAttendanceForDate() {
-    const dateVal = attendanceDateInput.value;
-    if (!dateVal) {
-      alert("Select a date.");
-      return;
-    }
-    if (!attendanceDataBySchool[currentSchool]) attendanceDataBySchool[currentSchool] = {};
-    if (!attendanceDataBySchool[currentSchool][dateVal]) {
-      const arr = studentsBySchool[currentSchool] || [];
-      attendanceDataBySchool[currentSchool][dateVal] = {};
-      arr.forEach(stu => {
-        if (currentUserRole === "teacher") {
-          if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-        }
-        attendanceDataBySchool[currentSchool][dateVal][stu.adm] = "P";
-      });
-      await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-      await syncToFirebase();
-    }
-    // Render table
-    attendanceBody.innerHTML = "";
-    const arr = studentsBySchool[currentSchool] || [];
-    arr.forEach((stu, idx) => {
-      if (currentUserRole === "teacher") {
-        if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-      }
-      const status = attendanceDataBySchool[currentSchool][dateVal][stu.adm];
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>${stu.name}</td>
-        <td>${stu.adm}</td>
-        <td><input type="radio" name="att_${stu.adm}" value="P" ${status === "P" ? "checked" : ""}/></td>
-        <td><input type="radio" name="att_${stu.adm}" value="Lt" ${status === "Lt" ? "checked" : ""}/></td>
-        <td><input type="radio" name="att_${stu.adm}" value="A" ${status === "A" ? "checked" : ""}/></td>
-      `;
-      attendanceBody.appendChild(tr);
-    });
-    attendanceTableWrapper.classList.remove("hidden");
-    saveAttendanceBtn.classList.remove("hidden");
-    resetAttendanceBtn.classList.remove("hidden");
-    downloadAttendancePDFBtn.classList.remove("hidden");
-    shareAttendanceSummaryBtn.classList.remove("hidden");
-  }
-
-  loadAttendanceBtn?.addEventListener("click", loadAttendanceForDate);
-
-  saveAttendanceBtn?.addEventListener("click", async () => {
-    const dateVal = attendanceDateInput.value;
-    const rows = attendanceBody.querySelectorAll("tr");
-    rows.forEach(tr => {
-      const adm = tr.cells[2].textContent;
-      const radios = tr.querySelectorAll(`input[name="att_${adm}"]`);
-      radios.forEach(r => {
-        if (r.checked) {
-          attendanceDataBySchool[currentSchool][dateVal][adm] = r.value;
-        }
-      });
-    });
     await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-    await syncToFirebase();
-    alert("Attendance saved.");
-  });
-
-  resetAttendanceBtn?.addEventListener("click", () => {
-    attendanceTableWrapper.classList.add("hidden");
-    attendanceBody.innerHTML = "";
-    saveAttendanceBtn.classList.add("hidden");
-    resetAttendanceBtn.classList.add("hidden");
-    downloadAttendancePDFBtn.classList.add("hidden");
-    shareAttendanceSummaryBtn.classList.add("hidden");
-  });
-
-  downloadAttendancePDFBtn?.addEventListener("click", () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const dateVal = attendanceDateInput.value;
-    const arr = studentsBySchool[currentSchool] || [];
-    const body = [];
-    arr.forEach((stu, i) => {
-      if (currentUserRole === "teacher") {
-        if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-      }
-      const status = attendanceDataBySchool[currentSchool][dateVal][stu.adm] || "";
-      body.push([i + 1, stu.adm, stu.name, status]);
-    });
-    doc.autoTable({
-      head: [[ "#", "Adm#", "Name", "Status" ]],
-      body,
-    });
-    doc.save(`${currentSchool}_attendance_${dateVal}.pdf`);
-  });
-
-  shareAttendanceSummaryBtn?.addEventListener("click", () => {
-    const dateVal = attendanceDateInput.value;
-    let text = `Attendance for ${currentSchool} on ${dateVal}:\n`;
-    const arr = studentsBySchool[currentSchool] || [];
-    arr.forEach((stu, i) => {
-      if (currentUserRole === "teacher") {
-        if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-      }
-      const status = attendanceDataBySchool[currentSchool][dateVal]?.[stu.adm] || "";
-      text += `${i + 1}. ${stu.adm} ${stu.name}: ${status}\n`;
-    });
-    navigator.share({ title: `Attendance: ${currentSchool} ${dateVal}`, text });
-  });
-
-  // ----------------------
-  // 5. ANALYTICS
-  // ----------------------
-  const analyticsFilterBtn     = $("analyticsFilterBtn");
-  const analyticsTargetSelect  = $("analyticsTarget");
-  const analyticsSectionSelect = $("analyticsSectionSelect");
-  const analyticsTypeSelect    = $("analyticsType");
-  const analyticsFiltersDiv    = $("analyticsFilters");
-  const analyticsDateInput     = $("analyticsDate");
-  const analyticsMonthSelect   = $("analyticsMonth");
-  const analyticsSemesterSelect= $("analyticsSemester");
-  const applyAnalyticsFilterBtn= $("applyAnalyticsFilter");
-  const analyticsTable         = $("analyticsTable");
-  const analyticsBody          = $("analyticsBody");
-  const analyticsContainer     = $("analyticsContainer");
-  const instructionsDiv        = $("instructions");
-  const graphsDiv              = $("graphs");
-  const barChartCanvas         = $("barChart");
-  const pieChartCanvas         = $("pieChart");
-  const downloadAnalyticsBtn   = $("downloadAnalytics");
-  const shareAnalyticsBtn      = $("shareAnalytics");
-
-  let barChartInstance, pieChartInstance;
-
-  analyticsTargetSelect?.addEventListener("change", () => {
-    const val = analyticsTargetSelect.value;
-    if (val === "class" || val === "section") {
-      analyticsSectionSelect.classList.remove("hidden");
-    } else {
-      analyticsSectionSelect.classList.add("hidden");
-    }
-    analyticsTypeSelect.disabled = false;
-  });
-
-  analyticsTypeSelect?.addEventListener("change", () => {
-    analyticsFiltersDiv.classList.remove("hidden");
-    const type = analyticsTypeSelect.value;
-    analyticsDateInput.classList.add("hidden");
-    analyticsMonthSelect.classList.add("hidden");
-    analyticsSemesterSelect.classList.add("hidden");
-    if (type === "date") analyticsDateInput.classList.remove("hidden");
-    if (type === "month") analyticsMonthSelect.classList.remove("hidden");
-    if (type === "semester") analyticsSemesterSelect.classList.remove("hidden");
-  });
-
-  async function computeAnalytics() {
-    const target = analyticsTargetSelect.value; // "class"/"section"/"student"
-    const sectionFilter = analyticsSectionSelect.value;
-    const periodType = analyticsTypeSelect.value; // "date"/"month"/"semester"
-    let from, to;
-    if (periodType === "date") {
-      if (!analyticsDateInput.value) {
-        alert("Select a date.");
-        return;
-      }
-      from = to = analyticsDateInput.value;
-    }
-    if (periodType === "month") {
-      if (!analyticsMonthSelect.value) {
-        alert("Select a month.");
-        return;
-      }
-      const [year, month] = analyticsMonthSelect.value.split("-");
-      from = `${year}-${month}-01`;
-      const lastDay = new Date(year, month, 0).getDate();
-      to = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
-    }
-    if (periodType === "semester") {
-      if (!analyticsSemesterSelect.value) {
-        alert("Select a semester.");
-        return;
-      }
-      const sem = analyticsSemesterSelect.value;
-      const year = new Date().getFullYear();
-      if (sem === "1") {
-        from = `${year}-01-01`;
-        to = `${year}-06-30`;
-      } else {
-        from = `${year}-07-01`;
-        to = `${year}-12-31`;
-      }
-    }
-    // Build a list of student stats
-    const arr = studentsBySchool[currentSchool] || [];
-    const stats = [];
-    arr.forEach(stu => {
-      if (target === "section" && stu.sec !== sectionFilter) return;
-      if (target === "class" && stu.cls !== sectionFilter) return;
-      if (target === "student") {
-        if (stu.adm !== analyticsSectionSelect.value) return;
-      }
-      let P=0, A=0, Lt=0, HD=0, L=0, total=0;
-      let outstanding = 0;
-      const attendances = attendanceDataBySchool[currentSchool] || {};
-      Object.keys(attendances).forEach(dateKey => {
-        if (dateKey >= from && dateKey <= to) {
-          const status = attendances[dateKey][stu.adm];
-          if (status === "P") P++;
-          if (status === "A") A++;
-          if (status === "Lt") Lt++;
-          if (status === "HD") HD++;
-          if (status === "L") L++;
-          total++;
-        }
-      });
-      const pays = paymentsDataBySchool[currentSchool]?.[stu.adm] || [];
-      pays.forEach(pay => outstanding += pay.amount);
-      const attendancePct = total ? (P / total) * 100 : 0;
-      const statusLabel = attendancePct >= eligibilityPct && outstanding === 0 ? "Eligible"
-                        : attendancePct < eligibilityPct ? "Debarred"
-                        : "Pending";
-      stats.push({
-        adm: stu.adm, name: stu.name, P, A, Lt, HD, L, total,
-        pct: attendancePct.toFixed(1), outstanding, status: statusLabel
-      });
-    });
-    // Render table
-    analyticsBody.innerHTML = "";
-    stats.forEach((st, idx) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>${st.adm}</td>
-        <td>${st.name}</td>
-        <td>${st.P}</td>
-        <td>${st.A}</td>
-        <td>${st.Lt}</td>
-        <td>${st.HD}</td>
-        <td>${st.L}</td>
-        <td>${st.total}</td>
-        <td>${st.pct}%</td>
-        <td>${st.outstanding}</td>
-        <td>${st.status}</td>
-      `;
-      analyticsBody.appendChild(tr);
-    });
-    analyticsContainer.classList.remove("hidden");
-    graphsDiv.classList.remove("hidden");
-    renderAnalyticsCharts(stats);
-
-    // Prepare share text
-    lastAnalyticsShare = `Attendance Analytics (${from} to ${to})\n` +
-      stats.map((st, i) => `${i+1}. ${st.adm} ${st.name}: ${st.pct}% / PKR ${st.outstanding}`).join("\n");
-  }
-
-  function renderAnalyticsCharts(stats) {
-    const labels = stats.map(st => st.adm);
-    const Pdata = stats.map(st => st.P);
-    const Adata = stats.map(st => st.A);
-    const Ltdata= stats.map(st => st.Lt);
-    // Bar chart: Present vs Absent vs Late
-    if (barChartInstance) {
-      barChartInstance.destroy();
-    }
-    barChartInstance = new Chart(barChartCanvas.getContext("2d"), {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          { label: "Present", data: Pdata },
-          { label: "Absent", data: Adata },
-          { label: "Late", data: Ltdata }
-        ]
-      }
-    });
-    // Pie chart: distribution of statuses
-    const statusCounts = stats.reduce((acc, st) => {
-      acc[st.status] = (acc[st.status] || 0) + 1;
-      return acc;
-    }, {});
-    const pieLabels = Object.keys(statusCounts);
-    const pieData   = pieLabels.map(l => statusCounts[l]);
-    if (pieChartInstance) {
-      pieChartInstance.destroy();
-    }
-    pieChartInstance = new Chart(pieChartCanvas.getContext("2d"), {
-      type: "pie",
-      data: {
-        labels: pieLabels,
-        datasets: [{ data: pieData }]
-      }
-    });
-  }
-
-  analyticsFilterBtn?.addEventListener("click", () => {
-    $("analyticsFilterModal")?.classList.remove("hidden");
-  });
-  $("analyticsFilterClose")?.addEventListener("click", () => {
-    $("analyticsFilterModal")?.classList.add("hidden");
-  });
-  applyAnalyticsFilterBtn?.addEventListener("click", () => {
-    $("analyticsFilterModal")?.classList.add("hidden");
-    computeAnalytics();
-  });
-
-  downloadAnalyticsBtn?.addEventListener("click", () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const rows = [];
-    const theadRow = analyticsTable.querySelector("thead tr");
-    const headers = Array.from(theadRow.cells).map(th => th.textContent);
-    const trs = analyticsTable.querySelectorAll("tbody tr");
-    trs.forEach(tr => {
-      const row = Array.from(tr.cells).map(td => td.textContent);
-      rows.push(row);
-    });
-    doc.autoTable({ head: [headers], body: rows });
-    doc.save(`${currentSchool}_analytics.pdf`);
-  });
-
-  shareAnalyticsBtn?.addEventListener("click", async () => {
-    try {
-      await navigator.share({ title: `Analytics: ${currentSchool}`, text: lastAnalyticsShare });
-    } catch (err) {
-      console.error("Share failed", err);
-    }
-  });
-
-  // ----------------------
-  // 6. ATTENDANCE REGISTER
-  // ----------------------
-  const registerMonthInput  = $("registerMonth");
-  const loadRegisterBtn     = $("loadRegister");
-  const registerTableWrapper= $("registerTableWrapper");
-  const registerHeader      = $("registerHeader");
-  const registerBody        = $("registerBody");
-
-  loadRegisterBtn?.addEventListener("click", () => {
-    const ym = registerMonthInput.value;
-    if (!ym) {
-      alert("Select a month.");
-      return;
-    }
-    const [year, month] = ym.split("-");
-    // Build header: first column Adm#, then one column per day
-    const daysInMonth = new Date(year, month, 0).getDate();
-    registerHeader.innerHTML = `<th>Adm#</th>`;
-    for (let d = 1; d <= daysInMonth; d++) {
-      registerHeader.innerHTML += `<th>${String(d).padStart(2, "0")}</th>`;
-    }
-    registerBody.innerHTML = "";
-    const arr = studentsBySchool[currentSchool] || [];
-    arr.forEach(stu => {
-      if (currentUserRole === "teacher") {
-        if (stu.cls !== teacherClass || stu.sec !== teacherSection) return;
-      }
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${stu.adm}</td>`;
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const status = attendanceDataBySchool[currentSchool]?.[dateKey]?.[stu.adm] || "";
-        tr.innerHTML += `<td>${status}</td>`;
-      }
-      registerBody.appendChild(tr);
-    });
-    registerTableWrapper.classList.remove("hidden");
-  });
-
-  // ----------------------
-  // 7. PAYMENT MODAL
-  // ----------------------
-  const paymentModal       = $("paymentModal");
-  const paymentClose       = $("paymentClose");
-  const paymentDateInput   = $("paymentDate");
-  const paymentAmountInput = $("paymentAmount");
-  const savePaymentBtn     = $("savePayment");
-  const cancelPaymentBtn   = $("cancelPayment");
-  let currentPaymentAdm    = null;
-
-  studentsBody?.addEventListener("click", e => {
-    if (e.target.tagName === "TD" && e.target.cellIndex === 1) {
-      const idx = e.target.closest("tr").dataset.index;
-      const stu = studentsBySchool[currentSchool][idx];
-      currentPaymentAdm = stu.adm;
-      paymentModal.classList.remove("hidden");
-    }
-  });
-
-  paymentClose?.addEventListener("click", () => {
-    paymentModal.classList.add("hidden");
-  });
-  cancelPaymentBtn?.addEventListener("click", () => {
-    paymentModal.classList.add("hidden");
-  });
-  savePaymentBtn?.addEventListener("click", async () => {
-    const dateVal = paymentDateInput.value;
-    const amt     = Number(paymentAmountInput.value);
-    if (!dateVal || !amt) {
-      alert("Enter date and amount.");
-      return;
-    }
-    if (!paymentsDataBySchool[currentSchool]) paymentsDataBySchool[currentSchool] = {};
-    if (!paymentsDataBySchool[currentSchool][currentPaymentAdm]) paymentsDataBySchool[currentSchool][currentPaymentAdm] = [];
-    paymentsDataBySchool[currentSchool][currentPaymentAdm].push({ date: dateVal, amount: amt });
     await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+    await idbSet("fineRates", fineRates);
+    await idbSet("eligibilityPct", eligibilityPct);
+    await idbSet("schools", schools);
+    await idbSet("currentSchool", currentSchool);
+    await idbSet("teacherClass", teacherClass);
+    await idbSet("teacherSection", teacherSection);
+
     await syncToFirebase();
-    paymentModal.classList.add("hidden");
-    paymentDateInput.value   = "";
-    paymentAmountInput.value = "";
-    alert("Payment recorded.");
+    alert("Data restored from backup. Please reload the page.");
+    location.reload();
+  } catch (err) {
+    alert("Failed to restore backup: " + err.message);
+  }
+});
+
+// ----------------------
+// FACTORY RESET
+// ----------------------
+const resetDataBtn = document.getElementById("resetData");
+resetDataBtn.addEventListener("click", async () => {
+  if (!confirm("Factory reset will delete ALL data for this school. Continue?")) return;
+  students = [];
+  attendanceData = {};
+  paymentsData = {};
+  lastAdmNo = 0;
+
+  studentsBySchool[currentSchool]       = [];
+  attendanceDataBySchool[currentSchool] = {};
+  paymentsDataBySchool[currentSchool]   = {};
+  lastAdmNoBySchool[currentSchool]      = 0;
+
+  await idbSet("studentsBySchool", studentsBySchool);
+  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+
+  await syncToFirebase();
+  renderStudents();
+  updateCounters();
+  resetViews();
+});
+
+// ----------------------
+// MARK ATTENDANCE
+// ----------------------
+const dateInput      = document.getElementById("dateInput");
+const loadAttendanceBtn = document.getElementById("loadAttendance");
+const attendanceBody = document.getElementById("attendanceBody");
+const attendanceSummary = document.getElementById("attendanceSummary");
+const saveAttendanceBtn = document.getElementById("saveAttendance");
+const resetAttendanceBtn = document.getElementById("resetAttendance");
+
+loadAttendanceBtn.addEventListener("click", () => {
+  const date = dateInput.value;
+  if (!date) {
+    alert("Select a date first.");
+    return;
+  }
+  renderAttendanceTable(date);
+});
+
+function renderAttendanceTable(date) {
+  attendanceBody.innerHTML = "";
+  attendanceSummary.classList.add("hidden");
+  saveAttendanceBtn.classList.add("hidden");
+  resetAttendanceBtn.classList.add("hidden");
+
+  // Ensure there's an entry for this date
+  if (!attendanceData[date]) {
+    attendanceData[date] = {};
+  }
+
+  const table = document.createElement("table");
+  table.classList.add("table");
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>#</th><th>Adm#</th><th>Name</th><th>Status</th></tr>";
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  students.forEach((stu, idx) => {
+    const status = attendanceData[date][stu.adm] || "P";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${stu.adm}</td>
+      <td>${stu.name}</td>
+      <td>
+        <select class="att-select" data-adm="${stu.adm}">
+          <option value="P" ${status === "P" ? "selected" : ""}>P</option>
+          <option value="A" ${status === "A" ? "selected" : ""}>A</option>
+          <option value="Lt" ${status === "Lt" ? "selected" : ""}>Lt</option>
+          <option value="HD" ${status === "HD" ? "selected" : ""}>HD</option>
+          <option value="L" ${status === "L" ? "selected" : ""}>L</option>
+        </select>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  attendanceBody.appendChild(table);
+
+  saveAttendanceBtn.classList.remove("hidden");
+  resetAttendanceBtn.classList.remove("hidden");
+}
+
+// Save attendance for selected date
+saveAttendanceBtn.addEventListener("click", async () => {
+  const date = dateInput.value;
+  document.querySelectorAll(".att-select").forEach(sel => {
+    const adm = sel.dataset.adm;
+    attendanceData[date][adm] = sel.value;
+  });
+  attendanceDataBySchool[currentSchool] = attendanceData;
+  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  await syncToFirebase();
+  alert("Attendance saved for " + date);
+  calculateSummary(date);
+});
+
+resetAttendanceBtn.addEventListener("click", () => {
+  const date = dateInput.value;
+  if (attendanceData[date]) {
+    delete attendanceData[date];
+    attendanceDataBySchool[currentSchool] = attendanceData;
+    idbSet("attendanceDataBySchool", attendanceDataBySchool);
+    syncToFirebase();
+    renderAttendanceTable(date);
+  }
+});
+
+// Calculate and display attendance summary
+function calculateSummary(date) {
+  const summaryBox = attendanceSummary;
+  summaryBox.innerHTML = "";
+  const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+  students.forEach(stu => {
+    const status = attendanceData[date][stu.adm] || "P";
+    stats[status]++;
+  });
+  const total = students.length;
+  const present = stats.P + stats.Lt + stats.HD;
+  const perc = ((present / total) * 100).toFixed(2);
+
+  summaryBox.innerHTML = `
+    <p>Total Students: ${total}</p>
+    <p>Present: ${stats.P}</p>
+    <p>Late: ${stats.Lt}</p>
+    <p>Half Day: ${stats.HD}</p>
+    <p>Absent: ${stats.A}</p>
+    <p>Leave: ${stats.L}</p>
+    <p>Attendance %: ${perc}%</p>`;
+  summaryBox.classList.remove("hidden");
+}
+
+// ----------------------
+// ANALYTICS
+// ----------------------
+const analyticsTargetSelect    = document.getElementById("analyticsTarget");
+const analyticsSectionSelect   = document.getElementById("analyticsSectionSelect");
+const analyticsTypeSelect      = document.getElementById("analyticsType");
+const analyticsDateInput       = document.getElementById("analyticsDate");
+const analyticsMonthInput      = document.getElementById("analyticsMonth");
+const semesterStartInput       = document.getElementById("semesterStart");
+const semesterEndInput         = document.getElementById("semesterEnd");
+const yearStartInput           = document.getElementById("yearStart");
+const analyticsSearchInput     = document.getElementById("analyticsSearch");
+const loadAnalyticsBtn         = document.getElementById("loadAnalytics");
+const resetAnalyticsBtn        = document.getElementById("resetAnalytics");
+const analyticsContainer       = document.getElementById("analyticsContainer");
+const analyticsBody            = document.getElementById("analyticsBody");
+const analyticsTableHeadRow    = document.querySelector("#analyticsTable thead tr");
+const graphsDiv                = document.getElementById("graphs");
+let barChartInstance           = null;
+let pieChartInstance           = null;
+
+analyticsTargetSelect.addEventListener("change", () => {
+  analyticsSectionSelect.classList.add("hidden");
+  analyticsTypeSelect.disabled = false;
+  analyticsDateInput.classList.add("hidden");
+  analyticsMonthInput.classList.add("hidden");
+  semesterStartInput.classList.add("hidden");
+  semesterEndInput.classList.add("hidden");
+  yearStartInput.classList.add("hidden");
+  analyticsSearchInput.classList.add("hidden");
+
+  const target = analyticsTargetSelect.value;
+  if (target === "section") {
+    analyticsSectionSelect.classList.remove("hidden");
+  }
+});
+
+analyticsTypeSelect.addEventListener("change", () => {
+  analyticsDateInput.classList.add("hidden");
+  analyticsMonthInput.classList.add("hidden");
+  semesterStartInput.classList.add("hidden");
+  semesterEndInput.classList.add("hidden");
+  yearStartInput.classList.add("hidden");
+  analyticsSearchInput.classList.add("hidden");
+
+  const type = analyticsTypeSelect.value;
+  switch (type) {
+    case "date":
+      analyticsDateInput.classList.remove("hidden");
+      break;
+    case "month":
+      analyticsMonthInput.classList.remove("hidden");
+      break;
+    case "semester":
+      semesterStartInput.classList.remove("hidden");
+      semesterEndInput.classList.remove("hidden");
+      break;
+    case "year":
+      yearStartInput.classList.remove("hidden");
+      analyticsSearchInput.classList.remove("hidden");
+      break;
+  }
+});
+
+loadAnalyticsBtn.addEventListener("click", () => {
+  const target  = analyticsTargetSelect.value;
+  const section = analyticsSectionSelect.value;
+  const type    = analyticsTypeSelect.value;
+  if (!target || !type) {
+    alert("Please select report target and period.");
+    return;
+  }
+  generateAnalytics(target, section, type);
+});
+
+resetAnalyticsBtn.addEventListener("click", () => {
+  analyticsTargetSelect.value = "";
+  analyticsSectionSelect.value = "";
+  analyticsSectionSelect.classList.add("hidden");
+  analyticsTypeSelect.value = "";
+  analyticsTypeSelect.disabled = true;
+  analyticsDateInput.value = "";
+  analyticsMonthInput.value = "";
+  semesterStartInput.value = "";
+  semesterEndInput.value = "";
+  yearStartInput.value = "";
+  analyticsSearchInput.value = "";
+  analyticsContainer.classList.add("hidden");
+  graphsDiv.classList.add("hidden");
+  resetAnalyticsBtn.classList.add("hidden");
+});
+
+// Generate analytics table & chart
+function generateAnalytics(target, section, type) {
+  let filteredStudents = [...students];
+
+  // Filter by section if needed
+  if (target === "section" && section) {
+    filteredStudents = filteredStudents.filter(stu => stu.section === section);
+  }
+
+  // Determine date range
+  let dates = Object.keys(attendanceData);
+  if (type === "date") {
+    const selDate = analyticsDateInput.value;
+    dates = dates.filter(d => d === selDate);
+  } else if (type === "month") {
+    const [year, month] = analyticsMonthInput.value.split("-");
+    dates = dates.filter(d => {
+      const dt = new Date(d);
+      return dt.getFullYear() === +year && dt.getMonth() + 1 === +month;
+    });
+  } else if (type === "semester") {
+    const start = semesterStartInput.value;
+    const end   = semesterEndInput.value;
+    dates = dates.filter(d => d >= start && d <= end);
+  } else if (type === "year") {
+    const year = +yearStartInput.value;
+    dates = dates.filter(d => new Date(d).getFullYear() === year);
+  }
+
+  // Build stats per student
+  const analyticsStats = filteredStudents.map(stu => {
+    const stat = { adm: stu.adm, name: stu.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+    dates.forEach(d => {
+      const status = attendanceData[d]?.[stu.adm] || "P";
+      stat[status]++;
+    });
+    stat.total = stat.P + stat.Lt + stat.HD + stat.A + stat.L;
+    stat.perc  = stat.total > 0 ? ((stat.P + stat.Lt + stat.HD) / stat.total * 100).toFixed(2) : "0.00";
+    stat.outstanding = stu.fine;
+    stat.status = stat.perc >= eligibilityPct ? "Eligible" : "Debarred";
+    return stat;
   });
 
-  // ----------------------
-  // Final: make countersContainer scrollable if present
-  // ----------------------
-  const countersContainer = $("countersContainer");
+  // Build HTML table
+  analyticsTableHeadRow.innerHTML = [
+    "#", "Adm#", "Name", "P", "A", "Lt", "HD", "L", "Total", "%", "Outstanding", "Status"
+  ].map(h => `<th>${h}</th>`).join("");
+
+  analyticsBody.innerHTML = "";
+  analyticsStats.forEach((st, idx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${st.adm}</td>
+      <td>${st.name}</td>
+      <td>${st.P}</td>
+      <td>${st.A}</td>
+      <td>${st.Lt}</td>
+      <td>${st.HD}</td>
+      <td>${st.L}</td>
+      <td>${st.total}</td>
+      <td>${st.perc}%</td>
+      <td>${st.outstanding}</td>
+      <td>${st.status}</td>`;
+    analyticsBody.appendChild(tr);
+  });
+
+  analyticsContainer.classList.remove("hidden");
+  graphsDiv.classList.remove("hidden");
+  resetAnalyticsBtn.classList.remove("hidden");
+
+  // Generate Bar Chart (Attendance percentages)
+  if (barChartInstance) {
+    barChartInstance.destroy();
+  }
+  const barCtx = document.getElementById("barChart").getContext("2d");
+  barChartInstance = new Chart(barCtx, {
+    type: "bar",
+    data: {
+      labels: analyticsStats.map(st => st.adm),
+      datasets: [{
+        label: "% Attendance",
+        data: analyticsStats.map(st => +st.perc),
+        backgroundColor: null // default color
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+
+  // Generate Pie Chart (Present vs Absent counts for all)
+  if (pieChartInstance) {
+    pieChartInstance.destroy();
+  }
+  const pieCtx = document.getElementById("pieChart").getContext("2d");
+  const totalP   = analyticsStats.reduce((sum, st) => sum + st.P, 0);
+  const totalA   = analyticsStats.reduce((sum, st) => sum + st.A, 0);
+  const totalLt  = analyticsStats.reduce((sum, st) => sum + st.Lt, 0);
+  const totalHD  = analyticsStats.reduce((sum, st) => sum + st.HD, 0);
+  const totalL   = analyticsStats.reduce((sum, st) => sum + st.L, 0);
+  pieChartInstance = new Chart(pieCtx, {
+    type: "pie",
+    data: {
+      labels: ["Present", "Absent", "Late", "Half-Day", "Leave"],
+      datasets: [{
+        data: [totalP, totalA, totalLt, totalHD, totalL]
+      }]
+    }
+  });
+}
+
+// ----------------------
+// ATTENDANCE REGISTER (MONTHLY)
+// ----------------------
+const registerMonthInput  = document.getElementById("registerMonth");
+const loadRegisterBtn     = document.getElementById("loadRegister");
+const registerTableWrapper= document.getElementById("registerTableWrapper");
+const registerHeaderRow   = document.getElementById("registerHeader");
+const registerBody        = document.getElementById("registerBody");
+const changeRegisterBtn   = document.getElementById("changeRegister");
+const saveRegisterBtn     = document.getElementById("saveRegister");
+const downloadRegisterBtn = document.getElementById("downloadRegister");
+const shareRegisterBtn    = document.getElementById("shareRegister");
+
+loadRegisterBtn.addEventListener("click", () => {
+  const monthVal = registerMonthInput.value;
+  if (!monthVal) {
+    alert("Select a month first.");
+    return;
+  }
+  renderRegister(monthVal);
+});
+
+function renderRegister(monthVal) {
+  const [year, month] = monthVal.split("-");
+  const daysInMonth = new Date(+year, +month, 0).getDate();
+  const headerHTML = ["Name", "Adm#"].concat(
+    Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString())
+  ).map(h => `<th>${h}</th>`).join("");
+  registerHeaderRow.innerHTML = headerHTML;
+
+  registerBody.innerHTML = "";
+  students.forEach(stu => {
+    const tr = document.createElement("tr");
+    let rowHTML = `<td>${stu.name}</td><td>${stu.adm}</td>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${month.padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
+      const status = attendanceData[dateStr]?.[stu.adm] || "";
+      rowHTML += `<td>${status}</td>`;
+    }
+    tr.innerHTML = rowHTML;
+    registerBody.appendChild(tr);
+  });
+
+  registerTableWrapper.classList.remove("hidden");
+  changeRegisterBtn.classList.remove("hidden");
+  saveRegisterBtn.classList.remove("hidden");
+  shareRegisterBtn.classList.remove("hidden");
+}
+
+changeRegisterBtn.addEventListener("click", () => {
+  registerMonthInput.value = "";
+  registerTableWrapper.classList.add("hidden");
+  changeRegisterBtn.classList.add("hidden");
+  saveRegisterBtn.classList.add("hidden");
+  shareRegisterBtn.classList.add("hidden");
+});
+
+// Save register is just re-syncing existing attendance for the month
+saveRegisterBtn.addEventListener("click", async () => {
+  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+  await syncToFirebase();
+  alert("Attendance register saved.");
+});
+
+// ----------------------
+// SHARE & DOWNLOAD (PDF) UTILITIES
+// ----------------------
+const { jsPDF } = window.jspdf;
+const autoTable = window.jspdf?.autoTable;
+
+// Student Registration PDF
+const downloadRegistrationPDFBtn = document.getElementById("downloadRegistrationPDF");
+downloadRegistrationPDFBtn.addEventListener("click", () => {
+  const doc = new jsPDF();
+  autoTable(doc, {
+    head: [["#", "Adm#", "Name", "Parent", "Contact", "Occupation", "Address", "Fine", "Status"]],
+    body: students.map((stu, idx) => [
+      idx + 1, stu.adm, stu.name, stu.parentName, stu.contact, stu.occupation, stu.address, stu.fine, stu.status
+    ])
+  });
+  doc.save(`Registration_${currentSchool}.pdf`);
+});
+
+// Attendance PDF for a date
+const downloadAttendancePDFBtn = document.getElementById("downloadAttendancePDF");
+downloadAttendancePDFBtn.addEventListener("click", () => {
+  const date = dateInput.value;
+  if (!date) {
+    alert("Select a date first.");
+    return;
+  }
+  const doc = new jsPDF();
+  autoTable(doc, {
+    head: [["#", "Adm#", "Name", "Status"]],
+    body: students.map((stu, idx) => [
+      idx + 1, stu.adm, stu.name, attendanceData[date]?.[stu.adm] || "P"
+    ])
+  });
+  doc.save(`Attendance_${currentSchool}_${date}.pdf`);
+});
+
+// Download Analytics PDF (export table)
+const downloadAnalyticsBtn = document.getElementById("downloadAnalytics");
+downloadAnalyticsBtn.addEventListener("click", () => {
+  const doc = new jsPDF();
+  autoTable({ html: "#analyticsTable", startY: 20, doc });
+  doc.save(`Analytics_${currentSchool}.pdf`);
+});
+
+// Download Register PDF
+downloadRegisterBtn.addEventListener("click", () => {
+  if (!registerMonthInput.value) {
+    alert("Select a month first.");
+    return;
+  }
+  const doc = new jsPDF();
+  autoTable({ html: "#registerTable", startY: 20, doc });
+  doc.save(`Register_${currentSchool}_${registerMonthInput.value}.pdf`);
+});
+
+// Share (Web Share API)
+const shareRegistrationBtn = document.getElementById("shareRegistration");
+shareRegistrationBtn.addEventListener("click", () => {
+  if (!navigator.share) {
+    alert("Web Share API not supported.");
+    return;
+  }
+  const data = students.map(stu => ({
+    adm: stu.adm,
+    name: stu.name,
+    parentName: stu.parentName,
+    contact: stu.contact,
+    occupation: stu.occupation,
+    address: stu.address,
+    fine: stu.fine,
+    status: stu.status
+  }));
+  navigator.share({
+    title: `Registration Data - ${currentSchool}`,
+    text: JSON.stringify(data, null, 2)
+  });
+});
+
+const shareAttendanceSummaryBtn = document.getElementById("shareAttendanceSummary");
+shareAttendanceSummaryBtn.addEventListener("click", () => {
+  if (!navigator.share) {
+    alert("Web Share API not supported.");
+    return;
+  }
+  const date = dateInput.value;
+  if (!date) {
+    alert("Select a date first.");
+    return;
+  }
+  const data = students.map(stu => ({
+    adm: stu.adm,
+    name: stu.name,
+    status: attendanceData[date]?.[stu.adm] || "P"
+  }));
+  navigator.share({
+    title: `Attendance Data - ${currentSchool} - ${date}`,
+    text: JSON.stringify(data, null, 2)
+  });
+});
+
+const shareAnalyticsBtn = document.getElementById("shareAnalytics");
+shareAnalyticsBtn.addEventListener("click", () => {
+  if (!navigator.share) {
+    alert("Web Share API not supported.");
+    return;
+  }
+  let filteredStudents = [...students];
+  const target = analyticsTargetSelect.value;
+  const section = analyticsSectionSelect.value;
+  const type = analyticsTypeSelect.value;
+
+  // apply same filtering logic as generateAnalytics...
+  if (target === "section" && section) {
+    filteredStudents = filteredStudents.filter(stu => stu.section === section);
+  }
+
+  // gather date range
+  let dates = Object.keys(attendanceData);
+  if (type === "date") {
+    dates = dates.filter(d => d === analyticsDateInput.value);
+  } else if (type === "month") {
+    const [y, m] = analyticsMonthInput.value.split("-");
+    dates = dates.filter(d => {
+      const dt = new Date(d);
+      return dt.getFullYear() === +y && dt.getMonth() + 1 === +m;
+    });
+  } else if (type === "semester") {
+    const start = semesterStartInput.value;
+    const end = semesterEndInput.value;
+    dates = dates.filter(d => d >= start && d <= end);
+  } else if (type === "year") {
+    const y = +yearStartInput.value;
+    dates = dates.filter(d => new Date(d).getFullYear() === y);
+  }
+
+  const analyticsStats = filteredStudents.map(stu => {
+    const stat = { adm: stu.adm, name: stu.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+    dates.forEach(d => {
+      const status = attendanceData[d]?.[stu.adm] || "P";
+      stat[status]++;
+    });
+    stat.total = stat.P + stat.Lt + stat.HD + stat.A + stat.L;
+    stat.perc  = stat.total > 0 ? ((stat.P + stat.Lt + stat.HD) / stat.total * 100).toFixed(2) : "0.00";
+    stat.outstanding = stu.fine;
+    stat.status = stat.perc >= eligibilityPct ? "Eligible" : "Debarred";
+    return stat;
+  });
+
+  navigator.share({
+    title: `Analytics Data - ${currentSchool}`,
+    text: JSON.stringify(analyticsStats, null, 2)
+  });
+});
+
+// ----------------------
+// ANIMATED COUNTERS (DASHBOARD)
+// ----------------------
+const countersContainer = document.getElementById("countersContainer");
+
+function updateCounters() {
+  if (!countersContainer) return;
+  countersContainer.innerHTML = "";
+
+  const totalStudents = students.length;
+  const presentToday = (() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!attendanceData[today]) return 0;
+    return Object.values(attendanceData[today]).filter(s => s !== "A").length;
+  })();
+  const absentToday = totalStudents - presentToday;
+  const pendingFine = students.reduce((sum, stu) => sum + (stu.fine || 0), 0);
+
+  const stats = [
+    { label: "Total Students", number: totalStudents },
+    { label: "Present Today", number: presentToday },
+    { label: "Absent Today", number: absentToday },
+    { label: "Total Outstanding (PKR)", number: pendingFine }
+  ];
+
+  stats.forEach(st => {
+    const card = document.createElement("div");
+    card.className = "counter-card card";
+    card.innerHTML = `
+      <div class="card-number">${st.number}</div>
+      <div class="card-label">${st.label}</div>`;
+    countersContainer.appendChild(card);
+  });
+}
+
+// ----------------------
+// RESET VIEWS (HIDE ALL SECTIONS UNTIL SETUP COMPLETED)
+// ----------------------
+function resetViews() {
+  // Hide all main sections initially
+  [
+    document.getElementById("financial-settings"),
+    document.getElementById("animatedCounters"),
+    document.getElementById("student-registration"),
+    document.getElementById("attendance-section"),
+    document.getElementById("analytics-section"),
+    document.getElementById("register-section")
+  ].forEach(sec => sec.classList.add("hidden"));
+}
+
+// ----------------------
+// FINANCIAL SETTINGS (Fines & Eligibility)
+// ----------------------
+const fineAbsentInput    = document.getElementById("fineAbsent");
+const fineLateInput      = document.getElementById("fineLate");
+const fineLeaveInput     = document.getElementById("fineLeave");
+const fineHalfDayInput   = document.getElementById("fineHalfDay");
+const eligibilityPctInput= document.getElementById("eligibilityPct");
+const saveSettingsBtn    = document.getElementById("saveSettings");
+
+// Load existing fine rates & eligibility
+(async () => {
+  const storedFineRates = await idbGet("fineRates");
+  const storedEligPct   = await idbGet("eligibilityPct");
+  if (storedFineRates) {
+    fineRates = storedFineRates;
+  }
+  if (storedEligPct !== undefined) {
+    eligibilityPct = storedEligPct;
+  }
+  // Populate inputs
+  if (fineAbsentInput)    fineAbsentInput.value    = fineRates.A;
+  if (fineLateInput)      fineLateInput.value      = fineRates.Lt;
+  if (fineLeaveInput)     fineLeaveInput.value     = fineRates.L;
+  if (fineHalfDayInput)   fineHalfDayInput.value   = fineRates.HD;
+  if (eligibilityPctInput)eligibilityPctInput.value= eligibilityPct;
+})();
+
+saveSettingsBtn.addEventListener("click", async () => {
+  fineRates.A  = +fineAbsentInput.value;
+  fineRates.Lt = +fineLateInput.value;
+  fineRates.L  = +fineLeaveInput.value;
+  fineRates.HD = +fineHalfDayInput.value;
+  eligibilityPct = +eligibilityPctInput.value;
+
+  await idbSet("fineRates", fineRates);
+  await idbSet("eligibilityPct", eligibilityPct);
+  await syncToFirebase();
+  alert("Financial settings saved.");
+});
+
+// ----------------------
+// PAYMENT MODAL (Record Payment Against Admission #)
+// ----------------------
+const paymentModal      = document.getElementById("paymentModal");
+const paymentModalClose = document.getElementById("paymentModalClose");
+const paymentAmountInput= document.getElementById("paymentAmount");
+const savePaymentBtn    = document.getElementById("savePayment");
+const cancelPaymentBtn  = document.getElementById("cancelPayment");
+let currentPaymentAdm   = null;
+
+function openPaymentModal(adm) {
+  currentPaymentAdm = adm;
+  document.getElementById("payAdm").textContent = adm;
+  paymentModal.classList.remove("hidden");
+}
+
+paymentModalClose.addEventListener("click", () => {
+  paymentModal.classList.add("hidden");
+});
+
+cancelPaymentBtn.addEventListener("click", () => {
+  paymentModal.classList.add("hidden");
+});
+
+savePaymentBtn.addEventListener("click", async () => {
+  const amount = +paymentAmountInput.value;
+  if (!amount || amount <= 0) {
+    alert("Enter a valid amount.");
+    return;
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  if (!paymentsData[currentPaymentAdm]) {
+    paymentsData[currentPaymentAdm] = [];
+  }
+  paymentsData[currentPaymentAdm].push({ date, amount });
+
+  // Deduct from student's fine
+  const stuIdx = students.findIndex(s => s.adm === currentPaymentAdm);
+  if (stuIdx >= 0) {
+    students[stuIdx].fine = Math.max(0, students[stuIdx].fine - amount);
+  }
+
+  paymentsDataBySchool[currentSchool] = paymentsData;
+  studentsBySchool[currentSchool]     = students;
+  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+
+  renderStudents();
+  updateCounters();
+  paymentModal.classList.add("hidden");
+  paymentAmountInput.value = "";
+});
+
+// ----------------------
+// ATTACH PAYMENT BUTTONS TO STUDENT ROWS
+// ----------------------
+function attachPaymentButtons() {
+  document.querySelectorAll(".pay-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const adm = +btn.dataset.adm;
+      openPaymentModal(adm);
+    });
+  });
+}
+
+// ----------------------
+// INITIAL SETUP CALL (ensure modals & UI are configured on load)
+// ----------------------
+(async () => {
+  // Final call to load setup on page load (original code might have this)
+  if (typeof loadSetup === "function") {
+    await loadSetup();
+  }
+
+  // Ensure counters container is horizontally scrollable
   if (countersContainer) {
     countersContainer.style.display = "flex";
     countersContainer.style.overflowX = "auto";
     countersContainer.style.whiteSpace = "nowrap";
   }
-}
-
-// ----------------------
-// Initialize login & import on page load
-// ----------------------
-window.addEventListener("load", () => {
-  setupLogin();
-  importInitialDataIfEmpty();
-});
+})();
