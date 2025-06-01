@@ -1,6 +1,7 @@
 // auth.js
+
 import { auth, database } from "./firebase-config.js";
-import { ref as dbRef, set as dbSet, get as dbGet } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { ref as dbRef, get as dbGet } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -9,78 +10,86 @@ import {
   updateProfile,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-const emailInput       = document.getElementById("emailInput");
-const passwordInput    = document.getElementById("passwordInput");
-const authButton       = document.getElementById("authButton");
-const toggleAuth       = document.getElementById("toggleAuth");
-const formTitle        = document.getElementById("form-title");
+const emailInput             = document.getElementById("emailInput");
+const passwordInput          = document.getElementById("passwordInput");
+const authButton             = document.getElementById("authButton");
+const toggleAuthSpan         = document.getElementById("toggleAuth");
+const formTitle              = document.getElementById("form-title");
 
-const signupExtra         = document.getElementById("signup-extra");
-const roleSelect          = document.getElementById("roleSelect");
-const displayNameInput    = document.getElementById("displayNameInput");
-const schoolRegisterSelect= document.getElementById("schoolRegisterSelect");
-const classRegisterSelect = document.getElementById("classRegisterSelect");
-const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
+const signupExtra            = document.getElementById("signup-extra");
+const roleSelect             = document.getElementById("roleSelect");
+const displayNameInput       = document.getElementById("displayNameInput");
+const schoolRegisterSelect   = document.getElementById("schoolRegisterSelect");
+const classRegisterSelect    = document.getElementById("classRegisterSelect");
+const sectionRegisterSelect  = document.getElementById("sectionRegisterSelect");
 
-const authContainer = document.getElementById("auth-container");
-const mainApp       = document.getElementById("main-app");
-const logoutBtn     = document.getElementById("logoutBtn");
+const authContainer          = document.getElementById("auth-container");
+const mainApp                = document.getElementById("main-app");
+const logoutBtn              = document.getElementById("logoutBtn");
 
+let isLoginMode = true;
 let schoolsList = [];
 
-// Load schools from Firebase
+// 1. Load schools array from Firebase → appData/schools
 async function loadSchools() {
-  const snap = await dbGet(dbRef(database, "appData/schools"));
-  if (snap.exists()) {
-    schoolsList = snap.val();
-  } else {
+  try {
+    const snap = await dbGet(dbRef(database, "appData/schools"));
+    if (snap.exists()) {
+      schoolsList = snap.val();
+    } else {
+      schoolsList = [];
+    }
+  } catch (err) {
+    console.error("Error fetching schools:", err);
     schoolsList = [];
   }
+
+  // Populate the dropdown
   schoolRegisterSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   schoolsList.forEach(s => {
-    schoolRegisterSelect.innerHTML += `<option value="${s}">${s}</option>`;
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    schoolRegisterSelect.appendChild(opt);
   });
-  const schoolSelect = document.getElementById("schoolSelect");
-  if (schoolSelect) {
-    schoolSelect.innerHTML =
-      '<option disabled selected>-- Select School --</option>' +
-      schoolsList.map(s => `<option value="${s}">${s}</option>`).join("");
-  }
 }
 loadSchools();
 
-let isLoginMode = true;
+// 2. Toggle between Login and Sign Up forms
 function toggleAuthMode() {
-  if (isLoginMode) {
+  isLoginMode = !isLoginMode;
+  if (!isLoginMode) {
+    // Switch to Sign Up
     formTitle.textContent = "Sign Up for Attendance App";
     authButton.textContent = "Sign Up";
     signupExtra.classList.remove("hidden");
-    toggleAuth.innerHTML = `Already have an account? <span id="toggleAuth">Login</span>`;
+    // repopulate schools each time signup is shown
+    loadSchools();
+    toggleAuthSpan.textContent = "Already have an account? Login";
   } else {
+    // Switch to Login
     formTitle.textContent = "Login to Attendance App";
     authButton.textContent = "Login";
     signupExtra.classList.add("hidden");
-    toggleAuth.innerHTML = `Don't have an account? <span id="toggleAuth">Sign Up</span>`;
+    toggleAuthSpan.textContent = "Don't have an account? Sign Up";
   }
-  isLoginMode = !isLoginMode;
-}
-
-toggleAuth.addEventListener("click", () => {
-  emailInput.value = "";
-  passwordInput.value = "";
-  displayNameInput.value = "";
-  roleSelect.value = "";
-  schoolRegisterSelect.value = "";
+  // Reset inputs
+  emailInput.value          = "";
+  passwordInput.value       = "";
+  displayNameInput.value    = "";
+  roleSelect.value          = "";
+  schoolRegisterSelect.value= "";
   classRegisterSelect.value = "";
-  sectionRegisterSelect.value = "";
+  sectionRegisterSelect.value="";
   classRegisterSelect.classList.add("hidden");
   sectionRegisterSelect.classList.add("hidden");
-  toggleAuthMode();
-});
+}
 
+toggleAuthSpan.addEventListener("click", toggleAuthMode);
+
+// 3. Show/hide Class & Section selects when Role = teacher
 roleSelect.addEventListener("change", () => {
-  const role = roleSelect.value;
-  if (role === "teacher") {
+  if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
     sectionRegisterSelect.classList.remove("hidden");
   } else {
@@ -89,6 +98,7 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
+// 4. Handle Login / Sign Up button click
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -102,22 +112,22 @@ authButton.addEventListener("click", async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      alert("Login فیل ہوا: " + err.message);
+      alert("Login نامنظور: " + err.message);
     }
   } else {
     // SIGNUP
     const displayName = displayNameInput.value.trim();
     const role        = roleSelect.value;
     const school      = schoolRegisterSelect.value;
-    const cls         = role === "teacher" ? classRegisterSelect.value : null;
-    const sec         = role === "teacher" ? sectionRegisterSelect.value : null;
+    const cls         = role === "teacher" ? classRegisterSelect.value : "";
+    const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
 
     if (!displayName || !role || !school) {
-      alert("براہِ کرم اپنی تفصیلات مکمل کریں (Name, Role, School)۔");
+      alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
       return;
     }
     if (role === "teacher" && (!cls || !sec)) {
-      alert("Teacher منتخب کرنے پر Class اور Section دونوں منتخب کریں۔");
+      alert("Teacher رول کے لیے Class اور Section دونوں منتخب کریں۔");
       return;
     }
 
@@ -125,46 +135,54 @@ authButton.addEventListener("click", async () => {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCred.user, { displayName });
       const uid = userCred.user.uid;
-      await dbSet(dbRef(database, `users/${uid}`), {
-        displayName, email, role, school, class: cls || "", section: sec || ""
+      // Save profile under /users/{uid} in Realtime Database
+      await dbGet(dbRef(database, `users/${uid}`)); // ensure path exists
+      await dbRef(database, `users/${uid}`);
+      const userRef = dbRef(database, `users/${uid}`);
+      await dbSet(userRef, {
+        displayName,
+        email,
+        role,
+        school,
+        class: cls,
+        section: sec
       });
-      alert("Sign Up کامیاب۔ اب Login کریں۔");
+      alert("Sign Up کامیاب! براہِ کرم لاگ ان کریں۔");
       toggleAuthMode();
-      emailInput.value = "";
-      passwordInput.value = "";
-      displayNameInput.value = "";
-      roleSelect.value = "";
-      schoolRegisterSelect.value = "";
-      classRegisterSelect.value = "";
-      sectionRegisterSelect.value = "";
-      classRegisterSelect.classList.add("hidden");
-      sectionRegisterSelect.classList.add("hidden");
     } catch (err) {
-      alert("Sign Up فیل ہوا: " + err.message);
+      alert("Sign Up ناکام: " + err.message);
     }
   }
 });
 
+// 5. Monitor Auth state changes
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     authContainer.classList.add("hidden");
     mainApp.classList.remove("hidden");
     const uid = user.uid;
-    const snap = await dbGet(dbRef(database, `users/${uid}`));
-    if (snap.exists()) {
-      const profile = snap.val();
-      window.currentUserProfile = {
-        uid,
-        displayName: profile.displayName,
-        email: profile.email,
-        role: profile.role,
-        school: profile.school,
-        class: profile.class,
-        section: profile.section
-      };
-      document.dispatchEvent(new Event("userLoggedIn"));
-    } else {
-      alert("User profile نہ ملا، دوبارہ Login کریں۔");
+    try {
+      const snap = await dbGet(dbRef(database, `users/${uid}`));
+      if (snap.exists()) {
+        const profile = snap.val();
+        window.currentUserProfile = {
+          uid,
+          displayName: profile.displayName,
+          email: profile.email,
+          role: profile.role,
+          school: profile.school,
+          class: profile.class || "",
+          section: profile.section || ""
+        };
+        document.dispatchEvent(new Event("userLoggedIn"));
+      } else {
+        // پروفائل نہ ملا → force logout
+        alert("User profile نہ ملا، دوبارہ Login کریں۔");
+        await signOut(auth);
+      }
+    } catch (err) {
+      console.error("Error reading user profile:", err);
+      alert("پروفائل پڑھنے میں مسئلہ، دوبارہ کوشش کریں۔");
       await signOut(auth);
     }
   } else {
@@ -174,6 +192,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// 6. Logout بٹن فنکشن
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
