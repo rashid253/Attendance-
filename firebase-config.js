@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebas
 import { getAuth }        from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { getDatabase }    from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// 2. اپنا Firebase Console سے ملا Configuration Paste کریں
+// 2. Firebase Console سے حاصل کردہ Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
