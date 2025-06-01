@@ -13,9 +13,10 @@ import {
   onAuthStateChanged,
   signOut,
   updateProfile,
+  deleteUser
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// DOM elements کے ریفرنسز
+// DOM elements
 const emailInput            = document.getElementById("emailInput");
 const passwordInput         = document.getElementById("passwordInput");
 const authButton            = document.getElementById("authButton");
@@ -36,29 +37,28 @@ const logoutBtn             = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1) /appData/schools پر سبسکرائب کریں
+// 1) /appData/schools پر سبسکرائب کریں تاکہ dropdown اپڈیٹ ہو
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(
     schoolsRef,
     (snapshot) => {
       schoolsList = snapshot.exists() ? snapshot.val() : [];
-      console.log("DEBUG: Loaded schools from DB:", schoolsList);
       if (!isLoginMode) {
         populateSchoolDropdown();
       }
     },
     (error) => {
-      console.error("DEBUG: onValue error for appData/schools:", error);
+      console.error("onValue error for appData/schools:", error);
     }
   );
 }
 
-// 2) Populate the School dropdown
+// 2) Signup فارم میں اسکولز ڈالیں
 function populateSchoolDropdown() {
   schoolRegisterSelect.innerHTML =
     '<option disabled selected>-- Select School (for principal/teacher) --</option>';
-  if (Array.isArray(schoolsList) && schoolsList.length > 0) {
+  if (Array.isArray(schoolsList)) {
     schoolsList.forEach((s) => {
       const opt = document.createElement("option");
       opt.value = s;
@@ -68,7 +68,7 @@ function populateSchoolDropdown() {
   }
 }
 
-// 3) Toggle between Login and Sign Up
+// 3) Login ↔ SignUp موڈ ٹوگل
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
@@ -83,7 +83,7 @@ function toggleAuthMode() {
     signupExtra.classList.add("hidden");
     toggleAuthSpan.textContent = "Don't have an account? Sign Up";
   }
-  // Reset fields
+  // فیلڈز ری سیٹ کریں
   emailInput.value           = "";
   passwordInput.value        = "";
   displayNameInput.value     = "";
@@ -96,7 +96,7 @@ function toggleAuthMode() {
 }
 toggleAuthSpan.addEventListener("click", toggleAuthMode);
 
-// 4) Role selected کرنے پر Class & Section دکھائیں
+// 4) Role منتخب ہونے پر Class & Section دکھائیں
 roleSelect.addEventListener("change", () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -107,11 +107,10 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
-// 5) Handle Login / Sign Up بٹن
+// 5) Handle Login / SignUp بٹن
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
   const password = passwordInput.value.trim();
-  console.log("Attempting:", isLoginMode ? "Login" : "Sign Up", email);
 
   if (!email || !password) {
     alert("Email اور Password دونوں ضروری ہیں۔");
@@ -122,9 +121,7 @@ authButton.addEventListener("click", async () => {
     // ─── LOGIN ───
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login successful:", email);
     } catch (err) {
-      console.error("Login error:", err);
       alert("Login نامنظور: " + err.message);
     }
   } else {
@@ -135,8 +132,6 @@ authButton.addEventListener("click", async () => {
     const cls         = role === "teacher" ? classRegisterSelect.value : "";
     const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
 
-    console.log("Signing up", email, displayName, role, school);
-
     if (!displayName || !role || !school) {
       alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
       return;
@@ -146,26 +141,18 @@ authButton.addEventListener("click", async () => {
       return;
     }
 
+    let createdUser = null;
     try {
-      // 1) Auth میں نیا user بنائیں
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      console.log(
-        "Auth createUserWithEmailAndPassword successful:",
-        userCred.user.uid
-      );
+      // 1) Auth میں user بنائیں
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      createdUser = userCred.user;
 
       // 2) displayName update کریں
-      await updateProfile(userCred.user, { displayName });
-      console.log("updateProfile successful");
+      await updateProfile(createdUser, { displayName });
 
-      // 3) DB میں profile لکھیں (اب Rules allow کر رہی ہوں گی)
-      const uid = userCred.user.uid;
-      const userRef = dbRef(database, `users/${uid}`);
-      await dbSet(userRef, {
+      // 3) DB میں /users/{uid} پر profile لکھیں
+      const uid = createdUser.uid;
+      await dbSet(dbRef(database, `users/${uid}`), {
         displayName,
         email,
         role,
@@ -173,16 +160,19 @@ authButton.addEventListener("click", async () => {
         class: cls,
         section: sec,
       });
-      console.log("dbSet(/users/uid) successful");
 
-      // 4) اب signOut کریں تاکہ onAuthStateChanged صحیح طریقے سے چل سکے
+      // 4) Sign out کریں تاکہ دوبارہ login کرنا پڑے
       await signOut(auth);
-      console.log("Signed out after signup");
 
       alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
       toggleAuthMode();
     } catch (err) {
-      console.error("Signup error:", err);
+      // اگر db write یا کسی مرحلے پر فیل ہو تو Auth user حذف کریں
+      if (createdUser) {
+        try {
+          await deleteUser(createdUser);
+        } catch {}
+      }
       alert("Sign Up ناکام: " + err.message);
     }
   }
@@ -194,6 +184,7 @@ onAuthStateChanged(auth, async (user) => {
     try {
       const snap = await dbGet(dbRef(database, `users/${user.uid}`));
       if (snap.exists()) {
+        // Profile ملا، main app دکھائیں
         const profile = snap.val();
         window.currentUserProfile = {
           uid: user.uid,
@@ -208,10 +199,10 @@ onAuthStateChanged(auth, async (user) => {
         mainApp.classList.remove("hidden");
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
+        // اگر DB میں profile نہیں ملا تو sign out کریں
         await signOut(auth);
       }
-    } catch (err) {
-      console.error("Error reading user profile:", err);
+    } catch {
       await signOut(auth);
     }
   } else {
@@ -225,9 +216,7 @@ onAuthStateChanged(auth, async (user) => {
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
-  } catch (err) {
-    console.error("Logout میں مسئلہ:", err);
-  }
+  } catch {}
 });
 
 // 8) آغاز میں /appData/schools پر سبسکرائب کریں
