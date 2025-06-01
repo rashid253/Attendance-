@@ -78,7 +78,7 @@ document.addEventListener("userLoggedIn", async () => {
   await renderSetupUI();
 });
 
-// School dropdown اور list بنائیں
+// Populate School dropdown اور list
 function populateSchoolDropdown() {
   schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach((s) => {
@@ -161,7 +161,6 @@ async function renderSetupUI() {
   renderSchoolList();
 
   if (profile.role === "admin") {
-    // Admin کے لیے: نئے اسکول کا انپٹ اور select دونوں دکھائیں
     schoolInput.classList.remove("hidden");
     schoolSelect.classList.remove("hidden");
     classSelect.disabled   = false;
@@ -183,7 +182,6 @@ async function renderSetupUI() {
     }
   }
   else if (profile.role === "principal") {
-    // Principal کے لیے: صرف fixed school
     const mySchool = profile.school;
     currentSchool  = mySchool;
     teacherClass   = null;
@@ -199,7 +197,6 @@ async function renderSetupUI() {
     hideMainSections();
   }
   else if (profile.role === "teacher") {
-    // Teacher کے لیے: fixed school, class, section
     const mySchool  = profile.school;
     const myClass   = profile.class;
     const mySection = profile.section;
@@ -210,74 +207,71 @@ async function renderSetupUI() {
 
     setupText.textContent = `${mySchool} 🏫 | Class: ${myClass} | Section: ${mySection}`;
     setupForm.classList.add("hidden");
-    setupDisplay.classList.remove("hidden");
+   	setupDisplay.classList.remove("hidden");
     showMainSections();
   }
 }
 
 saveSetupBtn.addEventListener("click", async (e) => {
-  e.preventDefault();
-  const profile = window.currentUserProfile;
+ 	e.preventDefault();
+  	const profile = window.currentUserProfile;
 
-  if (profile.role === "admin") {
-    // اگر نیا اسکول لکھنا ہے
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        studentsBySchool[newSchool]       = [];
-        attendanceDataBySchool[newSchool] = {};
-        paymentsDataBySchool[newSchool]   = {};
-        lastAdmNoBySchool[newSchool]      = 0;
-      }
-      schoolInput.value = "";
-      await syncAppDataToFirebase();
-      populateSchoolDropdown();
-      renderSchoolList();
-      return;
-    }
-    // اگر پہلے سے موجود اسکول select کرنا ہے
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
-      return;
-    }
-    currentSchool   = selSchool;
-    teacherClass    = selClass;
-    teacherSection  = selSection;
-    await syncAppDataToFirebase();
-    setupText.textContent = `${selSchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
-    setupForm.classList.add("hidden");
-    setupDisplay.classList.remove("hidden");
-    showMainSections();
-  }
-  else if (profile.role === "principal") {
-    // Principal: fixed school, صرف class اور section select کریں
-    const mySchool   = profile.school;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selClass || !selSection) {
-      alert("Please select a class and section.");
-      return;
-    }
-    currentSchool   = mySchool;
-    teacherClass    = selClass;
-    teacherSection  = selSection;
-    await syncAppDataToFirebase();
-    setupText.textContent = `${mySchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
-    setupForm.classList.add("hidden");
-    setupDisplay.classList.remove("hidden");
-    showMainSections();
-  }
+  	if (profile.role === "admin") {
+    	const newSchool = schoolInput.value.trim();
+    	if (newSchool) {
+      	if (!schools.includes(newSchool)) {
+        	schools.push(newSchool);
+        	studentsBySchool[newSchool]       = [];
+        	attendanceDataBySchool[newSchool] = {};
+        	paymentsDataBySchool[newSchool]   = {};
+        	lastAdmNoBySchool[newSchool]      = 0;
+      	}
+      	schoolInput.value = "";
+      	await syncAppDataToFirebase();
+      	populateSchoolDropdown();
+      	renderSchoolList();
+      	return;
+    	}
+    	const selSchool = schoolSelect.value;
+    	const selClass  = classSelect.value;
+    	const selSection= sectionSelect.value;
+    	if (!selSchool || !selClass || !selSection) {
+      	alert("Please select a school, class, and section.");
+      	return;
+    	}
+    	currentSchool  = selSchool;
+    	teacherClass   = selClass;
+    	teacherSection = selSection;
+    	await syncAppDataToFirebase();
+    	setupText.textContent = `${selSchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
+    	setupForm.classList.add("hidden");
+    	setupDisplay.classList.remove("hidden");
+    	showMainSections();
+  	}
+  	else if (profile.role === "principal") {
+    	const mySchool   = profile.school;
+    	const selClass   = classSelect.value;
+    	const selSection = sectionSelect.value;
+    	if (!selClass || !selSection) {
+      	alert("Please select a class and section.");
+      	return;
+    	}
+    	currentSchool  = mySchool;
+    	teacherClass   = selClass;
+    	teacherSection = selSection;
+    	await syncAppDataToFirebase();
+    	setupText.textContent = `${mySchool} 🏫 | Class: ${selClass} | Section: ${selSection}`;
+    	setupForm.classList.add("hidden");
+    	setupDisplay.classList.remove("hidden");
+    	showMainSections();
+  	}
 });
 
 editSetupBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  setupForm.classList.remove("hidden");
-  setupDisplay.classList.add("hidden");
-  hideMainSections();
+ 	e.preventDefault();
+  	setupForm.classList.remove("hidden");
+ 	 setupDisplay.classList.add("hidden");
+  	hideMainSections();
 });
 
 export async function syncAppDataToFirebase() {
