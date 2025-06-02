@@ -3,14 +3,14 @@
 // ---------------------------------------------
 // 1. IMPORTS & INITIALIZATION
 // ---------------------------------------------
-// اب صرف firebase-config.js سے auth اور database امپورٹ کریں
+// Firebase configuration and utility functions are imported from firebase-config.js
 import {
   auth,
   database,
   dbRef,
   dbSet,
-  dbOnValue,
   dbGet,
+  dbOnValue,
   dbPush,
   dbChild,
   dbRemove
@@ -24,7 +24,7 @@ import {
   updateProfile
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// idb-keyval کے IIFE سے IndexedDB ہیلپرز
+// IndexedDB helper (idb-keyval IIFE)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 // ---------------------------------------------
@@ -46,7 +46,6 @@ let currentSchool          = null;
 let teacherClass           = null;
 let teacherSection         = null;
 
-// اس کے بعد جس اسکول پر کام کرنا ہے، وہ سکول خصوصی ریفرنسز
 let students       = [];
 let attendanceData = {};
 let paymentsData   = {};
@@ -56,10 +55,9 @@ let currentProfile = null;
 // ---------------------------------------------
 // 4. AUTHENTICATION / SIGNUP-LOGIN TOGGLE
 // ---------------------------------------------
-// آسانی کے لیے ایک فنکشن جو element ID لوٹائے
 const $ = (id) => document.getElementById(id);
 
-// DOM عناصر: Auth form
+// Auth form elements
 const authContainer         = $("auth-container");
 const mainApp               = $("main-app");
 const emailInput            = $("emailInput");
@@ -74,7 +72,6 @@ const schoolRegisterSelect  = $("schoolRegisterSelect");
 const classRegisterSelect   = $("classRegisterSelect");
 const sectionRegisterSelect = $("sectionRegisterSelect");
 
-// Login/Sign-up مڈل کرنے کی منطق
 let isLoginMode = true;
 toggleAuth.addEventListener("click", () => {
   isLoginMode = !isLoginMode;
@@ -91,7 +88,6 @@ toggleAuth.addEventListener("click", () => {
   }
 });
 
-// Role کے انتخاب پر Teacher کے لیے class/section دکھائیں یا چھپائیں
 roleSelect.onchange = () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -102,7 +98,6 @@ roleSelect.onchange = () => {
   }
 };
 
-// Auth button: Login یا Sign-up کا عمل
 authButton.addEventListener("click", async () => {
   const email = emailInput.value.trim();
   const pass  = passwordInput.value.trim();
@@ -116,7 +111,7 @@ authButton.addEventListener("click", async () => {
     // ------ LOGIN ------
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged آگے کی منطق سنبھال لے گا
+      // onAuthStateChanged will handle next steps
     } catch (err) {
       console.error("Login error:", err);
       alert("Login failed: " + err.message);
@@ -144,10 +139,8 @@ authButton.addEventListener("click", async () => {
 
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-      // Display name update کریں
       await updateProfile(userCred.user, { displayName });
 
-      // Realtime Database میں /users/$uid پر پروفائل محفوظ کریں
       const uid = userCred.user.uid;
       const profileData = {
         displayName,
@@ -158,7 +151,6 @@ authButton.addEventListener("click", async () => {
       };
       await dbSet(dbRef(database, `users/${uid}`), profileData);
 
-      // فیلڈز صاف کر کے واپس login موڈ کریں
       displayNameInput.value        = "";
       roleSelect.value              = "-- Select Role --";
       schoolRegisterSelect.value    = "-- Select School --";
@@ -185,10 +177,8 @@ onAuthStateChanged(auth, async (user) => {
     authContainer.classList.add("hidden");
     mainApp.classList.remove("hidden");
 
-    // صارف کا UID
     const uid = user.uid;
     try {
-      // /users/$uid سے پروفائل حاصل کریں
       const profSnap = await dbGet(dbRef(database, `users/${uid}`));
       if (profSnap.exists()) {
         currentProfile = profSnap.val();
@@ -207,14 +197,12 @@ onAuthStateChanged(auth, async (user) => {
       console.error("Error fetching user profile:", err);
     }
 
-    // Teacher کے لیے fields override کریں
     if (currentProfile.role === "teacher") {
       currentSchool  = currentProfile.school;
       teacherClass   = currentProfile.class;
       teacherSection = currentProfile.section;
     }
 
-    // Firebase سے appData لوڈ کریں → IndexedDB میں سیٹ کریں
     try {
       const appSnap = await dbGet(appDataRef);
       if (appSnap.exists()) {
@@ -371,7 +359,7 @@ async function loadSetup() {
     classSelectElm.value   = teacherClass;
     sectionSelectElm.value = teacherSection;
 
-    setupTextElm.innerText = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+    setupTextElm.innerText = `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
     hide(setupForm);
     show(setupDisplay);
 
@@ -408,13 +396,11 @@ function renderSchoolList() {
         schools[idx] = newName.trim();
         await idbSet("schools", schools);
 
-        // Firebase پر نام بدل دیں
         const snap = await dbGet(dbRef(database, "appData/schools"));
         let remoteSchools = snap.val() || [];
         remoteSchools = remoteSchools.map(s => (s === oldName ? newName : s));
         await dbSet(dbRef(database, "appData/schools"), remoteSchools);
 
-        // باقی ڈیٹا بھی rename کریں
         studentsBySchool[newName]       = studentsBySchool[oldName] || [];
         delete studentsBySchool[oldName];
         attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
@@ -478,7 +464,6 @@ saveSetupBtn.onclick = async (e) => {
       schools.push(newSchool);
       await idbSet("schools", schools);
 
-      // Firebase پر بھی add کریں
       const snap = await dbGet(dbRef(database, "appData/schools"));
       let remoteSchools = snap.val() || [];
       if (!remoteSchools.includes(newSchool)) {
@@ -551,7 +536,7 @@ const fineLateInputElm       = $("fineLate");
 const fineLeaveInputElm      = $("fineLeave");
 const fineHalfDayInputElm    = $("fineHalfDay");
 const eligibilityPctInputElm = $("eligibilityPct");
-const saveSettings           = $("saveSettings");
+const saveSettingsBtn        = $("saveSettings");
 const financialSection       = $("financial-settings");
 
 const settingsCard = document.createElement("div");
@@ -587,7 +572,7 @@ function showFinancialForm() {
   hide(settingsCard, editSettings);
   show(
     fineAbsentInputElm, fineLateInputElm, fineLeaveInputElm,
-    fineHalfDayInputElm, eligibilityPctInputElm, saveSettings
+    fineHalfDayInputElm, eligibilityPctInputElm, saveSettingsBtn
   );
 }
 
@@ -602,12 +587,12 @@ function showFinancialCard() {
     </div>`;
   hide(
     fineAbsentInputElm, fineLateInputElm, fineLeaveInputElm,
-    fineHalfDayInputElm, eligibilityPctInputElm, saveSettings
+    fineHalfDayInputElm, eligibilityPctInputElm, saveSettingsBtn
   );
   show(settingsCard, editSettings);
 }
 
-saveSettings.onclick = async () => {
+saveSettingsBtn.onclick = async () => {
   fineRates = {
     A: Number(fineAbsentInputElm.value) || 0,
     Lt: Number(fineLateInputElm.value) || 0,
@@ -1098,7 +1083,7 @@ saveRegistrationBtn.onclick = async () => {
 
 editRegistrationBtn.onclick = () => {
   show(addStudentBtn, selectAllStudentsCb, editSelectedBtn, deleteSelectedBtn, saveRegistrationBtn);
-  hide(editRegistrationBtn, shareRegistrationBtn, downloadRegistrationBtn);
+  hide(editRegistrationBtn, $("shareRegistration"), downloadRegistrationBtn);
   renderStudents();
   updateCounters();
 };
@@ -1184,7 +1169,13 @@ function renderAttendanceTable(date) {
       btn.innerText = code;
       if (attendanceData[date][stu.adm] === code) {
         btn.classList.add("selected");
-        btn.style.background = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" }[code];
+        btn.style.background = {
+          P: "var(--success)",
+          A: "var(--danger)",
+          Lt: "var(--warning)",
+          HD: "#FF9800",
+          L: "var(--info)"
+        }[code];
         btn.style.color = "#fff";
       }
       btn.onclick = () => {
@@ -1193,7 +1184,13 @@ function renderAttendanceTable(date) {
           b.style = "";
         });
         btn.classList.add("selected");
-        btn.style.background = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" }[code];
+        btn.style.background = {
+          P: "var(--success)",
+          A: "var(--danger)",
+          Lt: "var(--warning)",
+          HD: "#FF9800",
+          L: "var(--info)"
+        }[code];
         btn.style.color = "#fff";
       };
       btnsDiv.appendChild(btn);
@@ -1663,3 +1660,4 @@ resetDataBtn.onclick = async () => {
 // ---------------------------------------------
 // 18. PAGE LOAD
 // ---------------------------------------------
+// All initialization is triggered by onAuthStateChanged above
