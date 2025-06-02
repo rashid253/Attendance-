@@ -4,8 +4,8 @@ import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
   onValue,
-  get as dbGet,
-  set as dbSet
+  set as dbSet,
+  get as dbGet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
@@ -16,7 +16,9 @@ import {
   deleteUser
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+// --------------------
 // DOM elements
+// --------------------
 const emailInput            = document.getElementById("emailInput");
 const passwordInput         = document.getElementById("passwordInput");
 const authButton            = document.getElementById("authButton");
@@ -37,7 +39,9 @@ const logoutBtn             = document.getElementById("logoutBtn");
 let isLoginMode = true;
 let schoolsList = [];
 
-// 1) /appData/schools پر سبسکرائب کریں تاکہ dropdown اپڈیٹ ہو
+// --------------------
+// 1) Subscribe to /appData/schools for dropdown
+// --------------------
 function subscribeSchools() {
   const schoolsRef = dbRef(database, "appData/schools");
   onValue(
@@ -54,7 +58,9 @@ function subscribeSchools() {
   );
 }
 
-// 2) Signup فارم میں اسکولز ڈالیں
+// --------------------
+// 2) Populate school dropdown in signup
+// --------------------
 function populateSchoolDropdown() {
   schoolRegisterSelect.innerHTML =
     '<option disabled selected>-- Select School (for principal/teacher) --</option>';
@@ -68,7 +74,9 @@ function populateSchoolDropdown() {
   }
 }
 
-// 3) Login ↔ SignUp موڈ ٹوگل
+// --------------------
+// 3) Toggle between Login and SignUp modes
+// --------------------
 function toggleAuthMode() {
   isLoginMode = !isLoginMode;
   if (!isLoginMode) {
@@ -83,7 +91,7 @@ function toggleAuthMode() {
     signupExtra.classList.add("hidden");
     toggleAuthSpan.textContent = "Don't have an account? Sign Up";
   }
-  // فیلڈز ری سیٹ کریں
+  // Clear fields
   emailInput.value           = "";
   passwordInput.value        = "";
   displayNameInput.value     = "";
@@ -96,7 +104,9 @@ function toggleAuthMode() {
 }
 toggleAuthSpan.addEventListener("click", toggleAuthMode);
 
-// 4) Role منتخب ہونے پر Class & Section دکھائیں
+// --------------------
+// 4) Show/hide Class & Section based on Role
+// --------------------
 roleSelect.addEventListener("change", () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -107,7 +117,9 @@ roleSelect.addEventListener("change", () => {
   }
 });
 
-// 5) Handle Login / SignUp بٹن
+// --------------------
+// 5) Handle Login / SignUp button click
+// --------------------
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -143,15 +155,25 @@ authButton.addEventListener("click", async () => {
 
     let createdUser = null;
     try {
-      // 1) Auth میں user بنائیں
+      // (1) Create user in Auth
+      console.log("Attempting SignUp:", email, displayName, role, school, cls, sec);
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       createdUser = userCred.user;
+      console.log("✓ createUserWithEmailAndPassword UID:", createdUser.uid);
 
-      // 2) displayName update کریں
+      // (2) Update displayName in Auth profile
       await updateProfile(createdUser, { displayName });
+      console.log(
+        "✓ updateProfile succeeded, auth.currentUser.uid:",
+        auth.currentUser.uid
+      );
 
-      // 3) DB میں /users/{uid} پر profile لکھیں
+      // (3) Wait a moment to ensure Auth context is set
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // (4) Write profile to Realtime Database
       const uid = createdUser.uid;
+      console.log("→ Attempting dbSet at /users/" + uid);
       await dbSet(dbRef(database, `users/${uid}`), {
         displayName,
         email,
@@ -160,31 +182,38 @@ authButton.addEventListener("click", async () => {
         class: cls,
         section: sec,
       });
+      console.log("✓ dbSet succeeded for /users/" + uid);
 
-      // 4) Sign out کریں تاکہ دوبارہ login کرنا پڑے
+      // (5) Sign out after successful signup
       await signOut(auth);
+      console.log("✓ Signed out after signup");
 
       alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
       toggleAuthMode();
     } catch (err) {
-      // اگر db write یا کسی مرحلے پر فیل ہو تو Auth user حذف کریں
+      console.error("✖ Signup error:", err);
       if (createdUser) {
         try {
           await deleteUser(createdUser);
-        } catch {}
+          console.log("→ Deleted Auth user due to DB write failure");
+        } catch (delErr) {
+          console.error("⚠ Error deleting user after failed DB write:", delErr);
+        }
       }
       alert("Sign Up ناکام: " + err.message);
     }
   }
 });
 
-// 6) Monitor Auth state changes
+// --------------------
+// 6) Monitor Auth state and show/hide main app
+// --------------------
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     try {
       const snap = await dbGet(dbRef(database, `users/${user.uid}`));
       if (snap.exists()) {
-        // Profile ملا، main app دکھائیں
+        // Profile exists in DB, show main app
         const profile = snap.val();
         window.currentUserProfile = {
           uid: user.uid,
@@ -199,7 +228,7 @@ onAuthStateChanged(auth, async (user) => {
         mainApp.classList.remove("hidden");
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // اگر DB میں profile نہیں ملا تو sign out کریں
+        // If profile missing in DB, sign out
         await signOut(auth);
       }
     } catch {
@@ -212,12 +241,16 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// 7) Logout بٹن
+// --------------------
+// 7) Logout button
+// --------------------
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
   } catch {}
 });
 
-// 8) آغاز میں /appData/schools پر سبسکرائب کریں
+// --------------------
+// 8) Initialize school subscription
+// --------------------
 subscribeSchools();
