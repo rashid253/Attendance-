@@ -25,21 +25,28 @@
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    /* آپ کے پہلے سے موجود اسٹائلز (بالکل ویسے کے ویسے) */
+    /* ===========================
+       Common Styles
+       =========================== */
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
-    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
-    .btn { margin-top: 0.5em; }
+    .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; background: #fafafa; }
+    .btn { padding: 0.5em 1em; margin: 0.25em; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-sm { font-size: 0.9em; padding: 0.3em 0.6em; }
+    .btn-primary { background: #2196F3; color: #fff; }
+    .btn-danger { background: #E53935; color: #fff; }
     .row-inline > * { margin-right: 0.5em; margin-bottom: 0.5em; }
-    #analyticsFilterBtn { float: right; background: none; border: none; cursor: pointer; font-size: 1.2em; color: #555; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 1.5em; border-radius: 6px; width: 90%; max-width: 400px; position: relative; }
-    .modal-close { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 1.2em; }
-    .table-wrapper { overflow-x: auto; margin-top: 1em; }
-    .table-actions { margin-top: 0.5em; }
-    .counter-card .card-number { font-size: 2rem; color: #2196F3; }
+    .setup-container { max-width: 600px; margin: 2em auto; }
+    .setup-header { display: flex; justify-content: space-between; align-items: center; }
+    .setup-header h2 { margin: 0; }
+    .info-card { padding: 1em; margin-top: 1em; background: #f0f8ff; border-left: 4px solid #2196F3; border-radius: 4px; }
+    .input-group { display: flex; align-items: center; margin-top: 1em; }
+    .input-group input, .input-group select { flex: 1; padding: 0.5em; border: 1px solid #aaa; border-radius: 4px; }
+    .input-group button { margin-left: 0.5em; }
+    .school-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5em; border-bottom: 1px solid #ddd; }
+    .school-item:last-child { border-bottom: none; }
 
-    /* --- نیا: لاگ ان/سائن اپ فارم اسٹائل --- */
+    /* --- Login/Signup Styles --- */
     #auth-container {
       max-width: 360px;
       margin: 2em auto;
@@ -49,7 +56,9 @@
       background: #fafafa;
     }
     #auth-container h2 { margin-bottom: 1em; text-align: center; }
-    #auth-container input { width: 100%; padding: 0.5em; margin-bottom: 0.75em; border: 1px solid #aaa; border-radius: 4px; }
+    #auth-container input, #auth-container select {
+      width: 100%; padding: 0.5em; margin-bottom: 0.75em; border: 1px solid #aaa; border-radius: 4px;
+    }
     #auth-container button { width: 100%; padding: 0.6em; border: none; background: #2196F3; color: #fff; border-radius: 4px; cursor: pointer; }
     #auth-container button:hover { background: #1976D2; }
     #auth-switch { margin-top: 1em; text-align: center; }
@@ -59,7 +68,7 @@
 <body>
 
   <!-- ==============================
-       0. LOGIN / SIGNUP فارم (وہی جیسا پہلے تھا)
+       0. LOGIN / SIGNUP فارم
        ============================== -->
   <div id="auth-container">
     <h2 id="form-title">Login to Attendance App</h2>
@@ -76,7 +85,7 @@
       <input type="text" id="displayNameInput" placeholder="Full Name" />
       <select id="schoolRegisterSelect">
         <option disabled selected>-- Select School (for principal/teacher) --</option>
-        <!-- Options JavaScript سے fill ہوں گی -->
+        <!-- Populated by setup.js -->
       </select>
       <select id="classRegisterSelect" class="hidden">
         <option disabled selected>-- Select Class (for teacher) --</option>
@@ -104,44 +113,51 @@
   <div id="main-app" class="hidden">
     <header class="app-header">
       <h1><i class="fas fa-school"></i> Attendance Management</h1>
-      <div class="header-buttons">
-        <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-        <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
-        <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
-        <input type="file" id="restoreFile" accept=".json" hidden />
-        <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
-      </div>
+      <button id="logoutBtn" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </header>
 
-    <!-- 1. SETUP -->
-    <section id="teacher-setup">
-      <h2><i class="fas fa-cog"></i> Setup</h2>
-      <div id="setupForm" class="row-inline">
-        <input id="schoolInput" placeholder="New School Name" />
-        <select id="schoolSelect">
-          <option disabled selected>-- Select School --</option>
-        </select>
-        <select id="teacherClassSelect">
-          <option disabled selected>-- Select Class --</option>
-          <option>Play Group</option><option>Nursery</option><option>KG</option>
-          <option>Class One</option><option>Class Two</option><option>Class Three</option>
-          <option>Class Four</option><option>Class Five</option><option>Class Six</option>
-          <option>Class Seven</option><option>Class Eight</option><option>Class Nine</option>
-          <option>Class Ten</option>
-        </select>
-        <select id="teacherSectionSelect">
-          <option disabled selected>-- Select Section --</option>
-          <option>A</option><option>B</option><option>C</option>
-        </select>
-        <button id="saveSetup" class="no-print"><i class="fas fa-save"></i> Save</button>
+    <!-- ==============================
+         SETUP SECTION
+         ============================== -->
+    <section id="teacher-setup" class="setup-container">
+      <div class="setup-header">
+        <h2><i class="fas fa-cog"></i> Setup</h2>
       </div>
-      <div id="schoolList" class="row-inline" style="flex-direction: column; margin-top:1em;"></div>
-      <div id="setupDisplay" class="hidden">
-        <h3><i class="fas fa-school no-print"></i> <span id="setupText"></span></h3>
-        <button id="editSetup" class="no-print"><i class="fas fa-edit"></i> Edit</button>
+      <!-- Admin: Add / Delete Schools -->
+      <div id="admin-setup" class="hidden">
+        <div class="input-group">
+          <input id="schoolInput" placeholder="New School Name" />
+          <button id="saveSetup" class="btn btn-primary">Add</button>
+        </div>
+        <div class="input-group" style="margin-top: 1em;">
+          <select id="schoolSelect">
+            <option disabled selected>-- Select School to Delete --</option>
+            <!-- Populated by setup.js -->
+          </select>
+          <button id="deleteSetup" class="btn btn-danger">Delete</button>
+        </div>
+        <div id="schoolList" style="margin-top: 1em;"></div>
+      </div>
+
+      <!-- Principal: Read-only -->
+      <div id="principal-setup" class="hidden">
+        <div class="info-card" id="principal-info">
+          <!-- Filled by setup.js -->
+        </div>
+      </div>
+
+      <!-- Teacher: Read-only with class/section -->
+      <div id="teacher-setup-info" class="hidden">
+        <div class="info-card" id="teacher-info">
+          <!-- Filled by setup.js -->
+        </div>
       </div>
     </section>
 
+    <!-- ==============================
+         REST OF APP (kept hidden for brevity)
+         ============================== -->
+    <!-- (Remaining sections remain unchanged) -->
     <!-- 2. FINANCIAL SETTINGS -->
     <section id="financial-settings">
       <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
