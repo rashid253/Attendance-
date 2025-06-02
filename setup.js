@@ -21,10 +21,10 @@ const schoolListDiv      = document.getElementById("schoolList");
 const principalInfoDiv   = document.getElementById("principal-info");
 const teacherInfoDiv     = document.getElementById("teacher-info");
 
-// Shared signup dropdowns (populated here for signups)
-const signupSchoolSelect = document.getElementById("schoolRegisterSelect");
-const classRegisterSelect   = document.getElementById("classRegisterSelect");
-const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
+// Signup dropdowns need populating too
+const signupSchoolSelect   = document.getElementById("schoolRegisterSelect");
+const classRegisterSelect  = document.getElementById("classRegisterSelect");
+const sectionRegisterSelect= document.getElementById("sectionRegisterSelect");
 
 let schools = [];
 let currentProfile = null;
@@ -43,7 +43,7 @@ function loadSchools() {
   });
 }
 
-// 2) Render list of schools with delete buttons (for Admin)
+// 2) Render list of schools with delete buttons (Admin)
 function renderSchoolList() {
   schoolListDiv.innerHTML = "";
   schools.forEach((s, idx) => {
@@ -77,9 +77,9 @@ function populateAdminDropdown() {
   });
 }
 
-// 4) Populate signup dropdown for principals/teachers
+// 4) Populate signup school dropdown
 function populateSignupDropdown() {
-  signupSchoolSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
+  signupSchoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
@@ -121,7 +121,7 @@ deleteSetupBtn.addEventListener("click", async () => {
     await dbSet(dbRef(database, "appData/schools"), updated);
     alert("اسکول حذف ہو گیا!");
   } catch (err) {
-    console.error("Error deleting school via dropdown:", err);
+    console.error("Error deleting school:", err);
     alert("کچھ غلط ہوا: " + err.message);
   }
 });
@@ -133,7 +133,7 @@ function refreshUserView() {
 
   const { role, school, class: cls, section } = currentProfile;
 
-  // Hide all sub-sections initially
+  // Hide all sub-sections
   adminSetupDiv.classList.add("hidden");
   principalSetupDiv.classList.add("hidden");
   teacherSetupInfoDiv.classList.add("hidden");
@@ -144,9 +144,7 @@ function refreshUserView() {
   }
   else if (role === "principal") {
     // Show Principal's read-only info
-    principalInfoDiv.innerHTML = `
-      <p><strong>آپ کا اسکول:</strong> ${school}</p>
-    `;
+    principalInfoDiv.innerHTML = `<p><strong>آپ کا اسکول:</strong> ${school}</p>`;
     principalSetupDiv.classList.remove("hidden");
   }
   else if (role === "teacher") {
@@ -165,7 +163,7 @@ document.addEventListener("userLoggedIn", () => {
   refreshUserView();
 });
 
-// 9) In case user already logged in when this script loads
+// 9) In case user already logged in on load
 if (window.currentUserProfile) {
   refreshUserView();
 }
