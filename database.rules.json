@@ -1,0 +1,54 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "appData": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "schools": {
+        ".read": true,
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "studentsBySchool": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "attendanceDataBySchool": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "paymentsDataBySchool": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "lastAdmNoBySchool": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "fineRates": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "eligibilityPct": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "currentSchool": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "teacherClass": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "teacherSection": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      }
+    }
+  }
+}
