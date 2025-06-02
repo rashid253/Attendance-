@@ -1,26 +1,22 @@
-// app.js (Updated: Original logic retained, plus fixes for missing/misbehaving parts)
-// -------------------------------------------------------------------------------------------------
-
-// Helper for document.getElementById
-const $ = (id) => document.getElementById(id);
+// app.js
 
 // ---------------------------------------------
 // 1. IMPORTS & INITIALIZATION
 // ---------------------------------------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+// اب صرف firebase-config.js سے auth اور database امپورٹ کریں
 import {
-  getDatabase,
-  ref as dbRef,
-  set as dbSet,
-  onValue,
-  get as dbGet,
-  push as dbPush,
-  child as dbChild,
-  remove as dbRemove
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+  auth,
+  database,
+  dbRef,
+  dbSet,
+  dbOnValue,
+  dbGet,
+  dbPush,
+  dbChild,
+  dbRemove
+} from "./firebase-config.js";
 
 import {
-  getAuth,
   onAuthStateChanged,
   signOut,
   createUserWithEmailAndPassword,
@@ -28,79 +24,74 @@ import {
   updateProfile
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
+// idb-keyval کے IIFE سے IndexedDB ہیلپرز
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 // ---------------------------------------------
-// 2. FIREBASE CONFIG & REFS
+// 2. FIREBASE REFERENCES
 // ---------------------------------------------
-import { auth, database } from "./firebase-config.js";
-import { ref as dbRef }       from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-// `appDataRef` اسی طرح بنائیں:
 const appDataRef = dbRef(database, "appData");
+
 // ---------------------------------------------
-// 3. GLOBAL STATE (per-school data & app variables)
+// 3. GLOBAL STATE VARIABLES
 // ---------------------------------------------
-let studentsBySchool       = {}; // { schoolName: [ {...student}, ... ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: status, ... } } }
-let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date, amount }, ... ] } }
-let lastAdmNoBySchool      = {}; // { schoolName: lastAdmissionNumber }
+let studentsBySchool       = {};
+let attendanceDataBySchool = {};
+let paymentsDataBySchool   = {};
+let lastAdmNoBySchool      = {};
+let fineRates              = { A: 50, Lt: 20, L: 10, HD: 30 };
+let eligibilityPct         = 75;
+let schools                = [];
+let currentSchool          = null;
+let teacherClass           = null;
+let teacherSection         = null;
 
-let fineRates      = { A: 50, Lt: 20, L: 10, HD: 30 }; // default fines
-let eligibilityPct = 75; // default eligibility percentage
-let schools        = []; // array of school names
-
-// For setup state
-let currentSchool    = null; // selected school name
-let teacherClass     = null; // e.g. "Class Eight"
-let teacherSection   = null; // e.g. "A"
-
-// Active-school mirrored references
-let students       = [];    // reference to studentsBySchool[currentSchool]
-let attendanceData = {};    // reference to attendanceDataBySchool[currentSchool]
-let paymentsData   = {};    // reference to paymentsDataBySchool[currentSchool]
-let lastAdmNo      = 0;     // reference to lastAdmNoBySchool[currentSchool]
-
-// These will be set after login
+// اس کے بعد جس اسکول پر کام کرنا ہے، وہ سکول خصوصی ریفرنسز
+let students       = [];
+let attendanceData = {};
+let paymentsData   = {};
+let lastAdmNo      = 0;
 let currentProfile = null;
 
 // ---------------------------------------------
 // 4. AUTHENTICATION / SIGNUP-LOGIN TOGGLE
 // ---------------------------------------------
-// DOM elements for auth
-const authContainer       = $("auth-container");
-const mainApp             = $("main-app");
-const emailInput          = $("emailInput");
-const passwordInput       = $("passwordInput");
-const authButton          = $("authButton");
-const formTitle           = $("form-title");
-const toggleAuth          = $("toggleAuth");
-const signupExtra         = $("signup-extra");
-const roleSelect          = $("roleSelect");
-const displayNameInput    = $("displayNameInput");
-const schoolRegisterSelect= $("schoolRegisterSelect");
-const classRegisterSelect = $("classRegisterSelect");
+// آسانی کے لیے ایک فنکشن جو element ID لوٹائے
+const $ = (id) => document.getElementById(id);
+
+// DOM عناصر: Auth form
+const authContainer         = $("auth-container");
+const mainApp               = $("main-app");
+const emailInput            = $("emailInput");
+const passwordInput         = $("passwordInput");
+const authButton            = $("authButton");
+const formTitle             = $("form-title");
+const toggleAuth            = $("toggleAuth");
+const signupExtra           = $("signup-extra");
+const roleSelect            = $("roleSelect");
+const displayNameInput      = $("displayNameInput");
+const schoolRegisterSelect  = $("schoolRegisterSelect");
+const classRegisterSelect   = $("classRegisterSelect");
 const sectionRegisterSelect = $("sectionRegisterSelect");
 
-// Toggle between login and sign-up
+// Login/Sign-up مڈل کرنے کی منطق
 let isLoginMode = true;
 toggleAuth.addEventListener("click", () => {
   isLoginMode = !isLoginMode;
   if (isLoginMode) {
-    formTitle.innerText = "Login to Attendance App";
-    authButton.innerText = "Login";
-    toggleAuth.innerText  = "Don't have an account? Sign Up";
+    formTitle.innerText    = "Login to Attendance App";
+    authButton.innerText   = "Login";
+    toggleAuth.innerText   = "Don't have an account? Sign Up";
     signupExtra.classList.add("hidden");
   } else {
-    formTitle.innerText = "Sign Up for Attendance App";
-    authButton.innerText = "Sign Up";
-    toggleAuth.innerText  = "Already have an account? Login";
+    formTitle.innerText    = "Sign Up for Attendance App";
+    authButton.innerText   = "Sign Up";
+    toggleAuth.innerText   = "Already have an account? Login";
     signupExtra.classList.remove("hidden");
   }
 });
 
-// Role select change: show/hide class & section for teacher
+// Role کے انتخاب پر Teacher کے لیے class/section دکھائیں یا چھپائیں
 roleSelect.onchange = () => {
   if (roleSelect.value === "teacher") {
     classRegisterSelect.classList.remove("hidden");
@@ -111,7 +102,7 @@ roleSelect.onchange = () => {
   }
 };
 
-// Auth button click: login or sign-up logic
+// Auth button: Login یا Sign-up کا عمل
 authButton.addEventListener("click", async () => {
   const email = emailInput.value.trim();
   const pass  = passwordInput.value.trim();
@@ -125,7 +116,7 @@ authButton.addEventListener("click", async () => {
     // ------ LOGIN ------
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle rest
+      // onAuthStateChanged آگے کی منطق سنبھال لے گا
     } catch (err) {
       console.error("Login error:", err);
       alert("Login failed: " + err.message);
@@ -153,10 +144,10 @@ authButton.addEventListener("click", async () => {
 
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-      // Update display name
+      // Display name update کریں
       await updateProfile(userCred.user, { displayName });
 
-      // Save profile in Realtime DB under /users/$uid
+      // Realtime Database میں /users/$uid پر پروفائل محفوظ کریں
       const uid = userCred.user.uid;
       const profileData = {
         displayName,
@@ -167,17 +158,17 @@ authButton.addEventListener("click", async () => {
       };
       await dbSet(dbRef(database, `users/${uid}`), profileData);
 
-      // Clear fields & switch to login mode
-      displayNameInput.value = "";
-      roleSelect.value       = "-- Select Role --";
-      schoolRegisterSelect.value = "-- Select School --";
-      classRegisterSelect.value  = "-- Select Class --";
-      sectionRegisterSelect.value= "-- Select Section --";
+      // فیلڈز صاف کر کے واپس login موڈ کریں
+      displayNameInput.value        = "";
+      roleSelect.value              = "-- Select Role --";
+      schoolRegisterSelect.value    = "-- Select School --";
+      classRegisterSelect.value     = "-- Select Class --";
+      sectionRegisterSelect.value   = "-- Select Section --";
 
       isLoginMode = true;
-      formTitle.innerText = "Login to Attendance App";
-      authButton.innerText = "Login";
-      toggleAuth.innerText  = "Don't have an account? Sign Up";
+      formTitle.innerText    = "Login to Attendance App";
+      authButton.innerText   = "Login";
+      toggleAuth.innerText   = "Don't have an account? Sign Up";
       signupExtra.classList.add("hidden");
     } catch (err) {
       console.error("Signup error:", err);
@@ -191,33 +182,39 @@ authButton.addEventListener("click", async () => {
 // ---------------------------------------------
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    // Hide auth container, show main app
     authContainer.classList.add("hidden");
     mainApp.classList.remove("hidden");
 
-    // Fetch user profile from DB
+    // صارف کا UID
     const uid = user.uid;
     try {
+      // /users/$uid سے پروفائل حاصل کریں
       const profSnap = await dbGet(dbRef(database, `users/${uid}`));
       if (profSnap.exists()) {
         currentProfile = profSnap.val();
         currentProfile.uid = uid;
       } else {
-        // fallback
-        currentProfile = { role: "teacher", displayName: user.displayName, school: "", class: "", section: "", uid };
+        currentProfile = {
+          role: "teacher",
+          displayName: user.displayName,
+          school: "",
+          class: "",
+          section: "",
+          uid
+        };
       }
     } catch (err) {
       console.error("Error fetching user profile:", err);
     }
 
-    // If teacher, override setup with their school/class/section
+    // Teacher کے لیے fields override کریں
     if (currentProfile.role === "teacher") {
       currentSchool  = currentProfile.school;
       teacherClass   = currentProfile.class;
       teacherSection = currentProfile.section;
     }
 
-    // Load all data from Firebase under /appData
+    // Firebase سے appData لوڈ کریں → IndexedDB میں سیٹ کریں
     try {
       const appSnap = await dbGet(appDataRef);
       if (appSnap.exists()) {
@@ -237,16 +234,13 @@ onAuthStateChanged(auth, async (user) => {
       console.error("Error loading appData from Firebase:", err);
     }
 
-    // Ensure IndexedDB has latest
     await ensureSchoolData(currentSchool);
     await initLocalState();
 
-    // Fire setup & initial renders
     loadSetup();
     renderStudents();
     updateCounters();
   } else {
-    // No user → show auth container
     mainApp.classList.add("hidden");
     authContainer.classList.remove("hidden");
   }
@@ -255,16 +249,13 @@ onAuthStateChanged(auth, async (user) => {
 // ---------------------------------------------
 // 6. LOGOUT
 // ---------------------------------------------
-const logoutBtn = $("logoutBtn");
-logoutBtn.onclick = async () => {
+$("logoutBtn").onclick = async () => {
   await signOut(auth);
 };
 
 // ---------------------------------------------
-// 7. UTILITY FUNCTIONS & DATA INIT
+// 7. UTILITY FUNCTIONS & DATA INITIALIZATION
 // ---------------------------------------------
-
-// Ensure data structure exists for a given school
 async function ensureSchoolData(school) {
   if (!school) return;
   if (!studentsBySchool[school]) {
@@ -285,7 +276,6 @@ async function ensureSchoolData(school) {
   }
 }
 
-// Initialize state from IndexedDB (use defaults if missing)
 async function initLocalState() {
   studentsBySchool       = (await idbGet("studentsBySchool"))       || studentsBySchool;
   attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || attendanceDataBySchool;
@@ -307,7 +297,6 @@ async function initLocalState() {
   }
 }
 
-// Sync entire appData back to Firebase
 async function syncToFirebase() {
   const payload = {
     studentsBySchool,
@@ -329,7 +318,6 @@ async function syncToFirebase() {
   }
 }
 
-// Generate new Admission Number, incrementing lastAdmNo
 async function genAdmNo() {
   lastAdmNo++;
   lastAdmNoBySchool[currentSchool] = lastAdmNo;
@@ -338,7 +326,6 @@ async function genAdmNo() {
   return String(lastAdmNo).padStart(4, "0");
 }
 
-// Hide/Show utility
 function hide(...els) {
   els.forEach(e => e && e.classList.add("hidden"));
 }
@@ -349,54 +336,49 @@ function show(...els) {
 // ---------------------------------------------
 // 8. SETUP SECTION
 // ---------------------------------------------
-const setupForm      = $("setupForm");
-const setupDisplay   = $("setupDisplay");
-const schoolInput    = $("schoolInput");
-const schoolSelect   = $("schoolSelect");
-const classSelect    = $("teacherClassSelect");
-const sectionSelect  = $("teacherSectionSelect");
-const setupText      = $("setupText");
-const saveSetupBtn   = $("saveSetup");
-const editSetupBtn   = $("editSetup");
-const schoolListDiv  = $("schoolList");
+const setupForm        = $("setupForm");
+const setupDisplay     = $("setupDisplay");
+const schoolInput      = $("schoolInput");
+const schoolSelectElm  = $("schoolSelect");
+const classSelectElm   = $("teacherClassSelect");
+const sectionSelectElm = $("teacherSectionSelect");
+const setupTextElm     = $("setupText");
+const saveSetupBtn     = $("saveSetup");
+const editSetupBtn     = $("editSetup");
+const schoolListDiv    = $("schoolList");
 
-// Populate & render setup state
 async function loadSetup() {
   schools        = (await idbGet("schools"))       || schools;
   currentSchool  = (await idbGet("currentSchool")) || currentSchool;
   teacherClass   = (await idbGet("teacherClass"))  || teacherClass;
   teacherSection = (await idbGet("teacherSection"))|| teacherSection;
 
-  // Populate dropdown
-  schoolSelect.innerHTML = [
+  schoolSelectElm.innerHTML = [
     '<option disabled selected>-- Select School --</option>',
     ...schools.map(s => `<option value="${s}">${s}</option>`)
   ].join("");
-  if (currentSchool) schoolSelect.value = currentSchool;
+  if (currentSchool) schoolSelectElm.value = currentSchool;
 
   renderSchoolList();
 
   if (currentSchool && teacherClass && teacherSection) {
-    // Setup is complete
     await ensureSchoolData(currentSchool);
     students       = studentsBySchool[currentSchool];
     attendanceData = attendanceDataBySchool[currentSchool];
     paymentsData   = paymentsDataBySchool[currentSchool];
     lastAdmNo      = lastAdmNoBySchool[currentSchool] || 0;
 
-    classSelect.value   = teacherClass;
-    sectionSelect.value = teacherSection;
+    classSelectElm.value   = teacherClass;
+    sectionSelectElm.value = teacherSection;
 
-    setupText.innerText = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
+    setupTextElm.innerText = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
     hide(setupForm);
     show(setupDisplay);
 
-    // Show main sections
     resetViews();
     renderStudents();
     updateCounters();
   } else {
-    // Setup incomplete: hide everything else
     show(setupForm);
     hide(setupDisplay);
     resetViews();
@@ -416,43 +398,48 @@ function renderSchoolList() {
       </div>`;
     schoolListDiv.appendChild(row);
   });
-  // Attach handlers
+
   document.querySelectorAll(".edit-school").forEach(btn => {
     btn.onclick = async () => {
-      const idx = +btn.dataset.idx;
+      const idx    = +btn.dataset.idx;
       const newName = prompt("Edit School Name:", schools[idx]);
       if (newName?.trim()) {
         const oldName = schools[idx];
         schools[idx] = newName.trim();
         await idbSet("schools", schools);
 
-        // Rename all data under oldName → newName in-memory & IDB
-        studentsBySchool[newName] = studentsBySchool[oldName] || [];
-        delete studentsBySchool[oldName];
-        await idbSet("studentsBySchool", studentsBySchool);
+        // Firebase پر نام بدل دیں
+        const snap = await dbGet(dbRef(database, "appData/schools"));
+        let remoteSchools = snap.val() || [];
+        remoteSchools = remoteSchools.map(s => (s === oldName ? newName : s));
+        await dbSet(dbRef(database, "appData/schools"), remoteSchools);
 
+        // باقی ڈیٹا بھی rename کریں
+        studentsBySchool[newName]       = studentsBySchool[oldName] || [];
+        delete studentsBySchool[oldName];
         attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
         delete attendanceDataBySchool[oldName];
-        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-
-        paymentsDataBySchool[newName] = paymentsDataBySchool[oldName] || {};
+        paymentsDataBySchool[newName]   = paymentsDataBySchool[oldName] || {};
         delete paymentsDataBySchool[oldName];
-        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-
-        lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName] || 0;
+        lastAdmNoBySchool[newName]      = lastAdmNoBySchool[oldName] || 0;
         delete lastAdmNoBySchool[oldName];
-        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
 
         if (currentSchool === oldName) {
           currentSchool = newName;
           await idbSet("currentSchool", currentSchool);
         }
 
+        await idbSet("studentsBySchool", studentsBySchool);
+        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
         await syncToFirebase();
+
         await loadSetup();
       }
     };
   });
+
   document.querySelectorAll(".delete-school").forEach(btn => {
     btn.onclick = async () => {
       const idx = +btn.dataset.idx;
@@ -462,20 +449,17 @@ function renderSchoolList() {
 
       delete studentsBySchool[removed];
       await idbSet("studentsBySchool", studentsBySchool);
-
       delete attendanceDataBySchool[removed];
       await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-
       delete paymentsDataBySchool[removed];
       await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-
       delete lastAdmNoBySchool[removed];
       await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
 
       if (currentSchool === removed) {
-        currentSchool = null;
-        teacherClass   = null;
-        teacherSection = null;
+        currentSchool   = null;
+        teacherClass    = null;
+        teacherSection  = null;
         await idbSet("currentSchool", null);
         await idbSet("teacherClass", null);
         await idbSet("teacherSection", null);
@@ -493,14 +477,21 @@ saveSetupBtn.onclick = async (e) => {
     if (!schools.includes(newSchool)) {
       schools.push(newSchool);
       await idbSet("schools", schools);
-      await syncToFirebase();
+
+      // Firebase پر بھی add کریں
+      const snap = await dbGet(dbRef(database, "appData/schools"));
+      let remoteSchools = snap.val() || [];
+      if (!remoteSchools.includes(newSchool)) {
+        remoteSchools.push(newSchool);
+        await dbSet(dbRef(database, "appData/schools"), remoteSchools);
+      }
     }
     schoolInput.value = "";
     return loadSetup();
   }
-  const selSchool  = schoolSelect.value;
-  const selClass   = classSelect.value;
-  const selSection = sectionSelect.value;
+  const selSchool  = schoolSelectElm.value;
+  const selClass   = classSelectElm.value;
+  const selSection = sectionSelectElm.value;
   if (!selSchool || !selClass || !selSection) {
     alert("Please select a school, class, and section.");
     return;
@@ -511,7 +502,11 @@ saveSetupBtn.onclick = async (e) => {
   await idbSet("currentSchool", currentSchool);
   await idbSet("teacherClass", teacherClass);
   await idbSet("teacherSection", teacherSection);
-  await syncToFirebase();
+
+  await dbSet(dbRef(database, "appData/currentSchool"), currentSchool);
+  await dbSet(dbRef(database, "appData/teacherClass"), teacherClass);
+  await dbSet(dbRef(database, "appData/teacherSection"), teacherSection);
+
   loadSetup();
 };
 
@@ -522,11 +517,10 @@ editSetupBtn.onclick = (e) => {
   resetViews();
 };
 
-// Initialize setup on page load
 window.addEventListener("DOMContentLoaded", loadSetup);
 
 // ---------------------------------------------
-// 9. VIEW MANAGEMENT (Hide/Show Sections)
+// 9. VIEW MANAGEMENT (Hide/Show Other Sections)
 // ---------------------------------------------
 function resetViews() {
   const setupDone = !!(currentSchool && teacherClass && teacherSection);
@@ -560,7 +554,6 @@ const eligibilityPctInputElm = $("eligibilityPct");
 const saveSettings           = $("saveSettings");
 const financialSection       = $("financial-settings");
 
-// Create a card container & Edit button
 const settingsCard = document.createElement("div");
 settingsCard.id    = "settingsCard";
 settingsCard.className = "card hidden";
@@ -571,14 +564,25 @@ editSettings.innerText = "Edit Settings";
 financialSection.appendChild(settingsCard);
 financialSection.appendChild(editSettings);
 
-// Populate initial input values
-fineAbsentInputElm.value     = fineRates.A;
-fineLateInputElm.value       = fineRates.Lt;
-fineLeaveInputElm.value      = fineRates.L;
-fineHalfDayInputElm.value    = fineRates.HD;
-eligibilityPctInputElm.value = eligibilityPct;
+async function loadFinancialSettings() {
+  const fr = await idbGet("fineRates");
+  const ep = await idbGet("eligibilityPct");
+  if (fr) { fineRates = fr; }
+  if (ep !== undefined) { eligibilityPct = ep; }
 
-// Show card or form based on existing data
+  fineAbsentInputElm.value     = fineRates.A;
+  fineLateInputElm.value       = fineRates.Lt;
+  fineLeaveInputElm.value      = fineRates.L;
+  fineHalfDayInputElm.value    = fineRates.HD;
+  eligibilityPctInputElm.value = eligibilityPct;
+
+  if (fineRates && eligibilityPct !== undefined) {
+    showFinancialCard();
+  } else {
+    showFinancialForm();
+  }
+}
+
 function showFinancialForm() {
   hide(settingsCard, editSettings);
   show(
@@ -586,6 +590,7 @@ function showFinancialForm() {
     fineHalfDayInputElm, eligibilityPctInputElm, saveSettings
   );
 }
+
 function showFinancialCard() {
   settingsCard.innerHTML = `
     <div class="card-content">
@@ -602,25 +607,6 @@ function showFinancialCard() {
   show(settingsCard, editSettings);
 }
 
-// On load, if values exist, show card; else show form
-(async () => {
-  const fr = await idbGet("fineRates");
-  const ep = await idbGet("eligibilityPct");
-  if (fr) { fineRates = fr; }
-  if (ep !== undefined) { eligibilityPct = ep; }
-  if (fineRates && eligibilityPct !== undefined) {
-    showFinancialCard();
-  } else {
-    showFinancialForm();
-  }
-  // Repopulate inputs
-  fineAbsentInputElm.value     = fineRates.A;
-  fineLateInputElm.value       = fineRates.Lt;
-  fineLeaveInputElm.value      = fineRates.L;
-  fineHalfDayInputElm.value    = fineRates.HD;
-  eligibilityPctInputElm.value = eligibilityPct;
-})();
-
 saveSettings.onclick = async () => {
   fineRates = {
     A: Number(fineAbsentInputElm.value) || 0,
@@ -636,8 +622,8 @@ saveSettings.onclick = async () => {
 
   showFinancialCard();
 };
+
 editSettings.onclick = () => {
-  // Repopulate inputs from current values
   fineAbsentInputElm.value     = fineRates.A;
   fineLateInputElm.value       = fineRates.Lt;
   fineLeaveInputElm.value      = fineRates.L;
@@ -645,6 +631,8 @@ editSettings.onclick = () => {
   eligibilityPctInputElm.value = eligibilityPct;
   showFinancialForm();
 };
+
+loadFinancialSettings();
 
 // ---------------------------------------------
 // 11. ANIMATED COUNTERS SECTION
@@ -693,10 +681,9 @@ function animateCounters() {
 }
 
 function updateCounters() {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
 
-  // Filter students
   const sectionStudents = students.filter(s => s.cls === cl && s.sec === sec);
   const classStudents   = students.filter(s => s.cls === cl);
 
@@ -704,7 +691,6 @@ function updateCounters() {
   classCountSpan.dataset.target   = classStudents.length;
   schoolCountSpan.dataset.target  = students.length;
 
-  // Attendance summary for section
   let totalP=0, totalA=0, totalLt=0, totalHD=0, totalL=0;
   Object.entries(attendanceData).forEach(([date, rec]) => {
     sectionStudents.forEach(s => {
@@ -723,7 +709,6 @@ function updateCounters() {
   });
   attendanceCountSpan.dataset.target = totalP + totalA + totalLt + totalHD + totalL;
 
-  // Eligible, Debarred, Outstanding for section
   let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
   sectionStudents.forEach(s => {
     let p=0,a=0,lt=0,hd=0,l=0,totalDays=0;
@@ -754,17 +739,16 @@ function updateCounters() {
   animateCounters();
 }
 
-// Card click handlers
 $("card-section").onclick = () => {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
   const list = students.filter(s => s.cls===cl && s.sec===sec)
                        .map((s,i)=>`${i+1}. Adm#: ${s.adm}  ${s.name}`)
                        .join("\n");
   alert(`Class ${cl} Section ${sec}:\n\n${list||"No students."}`);
 };
 $("card-class").onclick = () => {
-  const cl = classSelect.value;
+  const cl = classSelectElm.value;
   const list = students.filter(s => s.cls===cl)
                        .map((s,i)=>`${i+1}. Adm#: ${s.adm}  ${s.name}`)
                        .join("\n");
@@ -782,8 +766,8 @@ $("card-school").onclick = () => {
   alert(`School Overview:\n\n${details||"No students."}`);
 };
 $("card-attendance").onclick = () => {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
   let counts = { P:0, A:0, Lt:0, HD:0, L:0 };
   Object.values(attendanceData).forEach(rec => {
     students.filter(s=>s.cls===cl && s.sec===sec).forEach(s => {
@@ -810,8 +794,8 @@ $("card-attendance").onclick = () => {
   );
 };
 $("card-eligible").onclick = () => {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
   const list = students.filter(s => s.cls===cl && s.sec===sec).filter(s => {
     let p=0,a=0,lt=0,hd=0,l=0,totalDays=0;
     Object.values(attendanceData).forEach(rec => {
@@ -835,8 +819,8 @@ $("card-eligible").onclick = () => {
   alert(`Eligible Students:\n\n${list||"None."}`);
 };
 $("card-debarred").onclick = () => {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
   const list = students.filter(s => s.cls===cl && s.sec===sec).filter(s => {
     let p=0,a=0,lt=0,hd=0,l=0,totalDays=0;
     Object.values(attendanceData).forEach(rec => {
@@ -860,10 +844,10 @@ $("card-debarred").onclick = () => {
   alert(`Debarred Students:\n\n${list||"None."}`);
 };
 $("card-outstanding").onclick = () => {
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
   const list = students.filter(s => s.cls===cl && s.sec===sec).filter(s => {
-    let a=0,lt=0,hd=0,l=0;
+    let a=0, lt=0, hd=0, l=0;
     Object.values(attendanceData).forEach(rec => {
       if(rec[s.adm]) {
         switch(rec[s.adm]) {
@@ -915,7 +899,6 @@ const saveRegistrationBtn   = $("saveRegistration");
 const editRegistrationBtn   = $("editRegistration");
 const downloadRegistrationBtn = $("downloadRegistrationPDF");
 
-// Add Student or Update if in edit mode
 let editingStudentIndex = null;
 
 addStudentBtn.onclick = async () => {
@@ -924,16 +907,15 @@ addStudentBtn.onclick = async () => {
   const c   = parentContactInput.value.trim();
   const o   = parentOccupationInput.value.trim();
   const a   = parentAddressInput.value.trim();
-  const cl  = classSelect.value;
-  const sec = sectionSelect.value;
+  const cl  = classSelectElm.value;
+  const sec = sectionSelectElm.value;
 
   if (!n || !p || !/^\d{7,15}$/.test(c)) {
-    alert("Please enter valid Name, Parent Name, and Contact (7–15 digits).");
+    alert("Enter valid Name, Parent Name, and Contact (7–15 digits).");
     return;
   }
 
   if (editingStudentIndex !== null) {
-    // Update existing
     const s = students[editingStudentIndex];
     s.name       = n;
     s.parentName = p;
@@ -949,7 +931,6 @@ addStudentBtn.onclick = async () => {
     return;
   }
 
-  // New student
   const adm = await genAdmNo();
   const newStu = {
     adm,
@@ -968,7 +949,6 @@ addStudentBtn.onclick = async () => {
   await idbSet("studentsBySchool", studentsBySchool);
   await syncToFirebase();
 
-  // Clear inputs
   studentNameInput.value      = "";
   parentNameInput.value       = "";
   parentContactInput.value    = "";
@@ -983,13 +963,12 @@ function renderStudents() {
   studentsBody.innerHTML = "";
   let idxCount = 0;
   students.forEach((s, i) => {
-    if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return;
+    if (s.cls !== classSelectElm.value || s.sec !== sectionSelectElm.value) return;
     idxCount++;
-    // Compute fine & status dynamically
     let a=0, lt=0, hd=0, l=0;
     Object.values(attendanceData).forEach(rec => {
       if (rec[s.adm]) {
-        switch(rec[s.adm]) {
+        switch (rec[s.adm]) {
           case "A": a++; break;
           case "Lt": lt++; break;
           case "HD": hd++; break;
@@ -1028,7 +1007,6 @@ function renderStudents() {
     studentsBody.appendChild(tr);
   });
 
-  // Select All logic
   selectAllStudentsCb.checked = false;
   selectAllStudentsCb.onchange = () => {
     document.querySelectorAll(".stuCheckbox").forEach(cb => cb.checked = selectAllStudentsCb.checked);
@@ -1046,8 +1024,6 @@ function renderStudents() {
   });
 
   toggleStudentActions();
-
-  // Edit / Delete button states
   editSelectedBtn.disabled   = true;
   deleteSelectedBtn.disabled = true;
 
@@ -1138,12 +1114,12 @@ const savePaymentBtn       = $("savePayment");
 const cancelPaymentBtn     = $("cancelPayment");
 
 function openPaymentModal(adm) {
-  payAdmSpan.innerText = adm;
-  paymentAmountInput.value = "";
+  payAdmSpan.innerText      = adm;
+  paymentAmountInput.value  = "";
   show(paymentModal);
 }
 paymentModalCloseBtn.onclick = () => hide(paymentModal);
-cancelPaymentBtn.onclick = () => hide(paymentModal);
+cancelPaymentBtn.onclick    = () => hide(paymentModal);
 
 savePaymentBtn.onclick = async () => {
   const adm = payAdmSpan.innerText;
@@ -1174,9 +1150,6 @@ const resetAttendanceBtn  = $("resetAttendance");
 const downloadAttendanceBtn = $("downloadAttendancePDF");
 const shareAttendanceSummaryBtn = $("shareAttendanceSummary");
 
-const statusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
-const statusColors = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" };
-
 loadAttendanceBtn.onclick = () => {
   const date = dateInputElm.value;
   if (!date) {
@@ -1195,7 +1168,7 @@ function renderAttendanceTable(date) {
     attendanceData[date] = {};
   }
 
-  students.filter(s => s.cls===classSelect.value && s.sec===sectionSelect.value)
+  students.filter(s => s.cls===classSelectElm.value && s.sec===sectionSelectElm.value)
           .forEach((stu,i) => {
     const row = document.createElement("div");
     row.className = "attendance-row";
@@ -1205,13 +1178,13 @@ function renderAttendanceTable(date) {
 
     const btnsDiv = document.createElement("div");
     btnsDiv.className = "attendance-buttons";
-    Object.keys(statusNames).forEach(code => {
+    ["P","A","Lt","HD","L"].forEach(code => {
       const btn = document.createElement("button");
       btn.className = "att-btn";
       btn.innerText = code;
       if (attendanceData[date][stu.adm] === code) {
         btn.classList.add("selected");
-        btn.style.background = statusColors[code];
+        btn.style.background = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" }[code];
         btn.style.color = "#fff";
       }
       btn.onclick = () => {
@@ -1220,7 +1193,7 @@ function renderAttendanceTable(date) {
           b.style = "";
         });
         btn.classList.add("selected");
-        btn.style.background = statusColors[code];
+        btn.style.background = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" }[code];
         btn.style.color = "#fff";
       };
       btnsDiv.appendChild(btn);
@@ -1235,7 +1208,7 @@ function renderAttendanceTable(date) {
 saveAttendanceBtn.onclick = async () => {
   const date = dateInputElm.value;
   if (!date) return;
-  students.filter(s => s.cls===classSelect.value && s.sec===sectionSelect.value)
+  students.filter(s => s.cls===classSelectElm.value && s.sec===sectionSelectElm.value)
     .forEach((s,i) => {
       const selBtn = attendanceBodyDiv.children[i].querySelector(".att-btn.selected");
       attendanceData[date][s.adm] = selBtn ? selBtn.innerText : "A";
@@ -1267,7 +1240,7 @@ function calculateAttendanceSummary(date) {
     <tr>
       <th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th>
     </tr>`;
-  students.filter(s => s.cls===classSelect.value && s.sec===sectionSelect.value)
+  students.filter(s => s.cls===classSelectElm.value && s.sec===sectionSelectElm.value)
     .forEach((s,i) => {
       const code = attendanceData[date][s.adm] || "A";
       tbl.innerHTML += `
@@ -1275,7 +1248,9 @@ function calculateAttendanceSummary(date) {
           <td>${i+1}</td>
           <td>${s.adm}</td>
           <td>${s.name}</td>
-          <td>${statusNames[code]}</td>
+          <td>${
+            { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" }[code]
+          }</td>
           <td><i class="fas fa-share-alt share-individual" data-adm="${s.adm}"></i></td>
         </tr>`;
     });
@@ -1286,7 +1261,9 @@ function calculateAttendanceSummary(date) {
       const adm = ic.dataset.adm;
       const st  = students.find(x => x.adm === adm);
       const date = dateInputElm.value;
-      const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm] || "A"]} on ${date}.`;
+      const msg = `Dear Parent, your child (Adm#: ${adm}) was ${
+        { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" }[attendanceData[date][adm] || "A"]
+      } on ${date}.`;
       window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, "_blank");
     };
   });
@@ -1301,20 +1278,22 @@ downloadAttendanceBtn.onclick = () => {
   const w = doc.internal.pageSize.getWidth();
   doc.setFontSize(18); doc.text("Attendance Report", 14, 16);
   doc.setFontSize(10); doc.text(`Date: ${date}`, w - 14, 16, { align: "right" });
-  doc.setFontSize(12); doc.text(setupText.innerText, 14, 24);
+  doc.setFontSize(12); doc.text($("setupText").innerText, 14, 24);
   doc.autoTable({ startY: 30, html: "#attendanceSummaryTable" });
   const fileName = `attendance_${date}.pdf`;
   doc.save(fileName);
 };
 
 shareAttendanceSummaryBtn.onclick = () => {
-  const cl   = classSelect.value;
-  const sec  = sectionSelect.value;
+  const cl   = classSelectElm.value;
+  const sec  = sectionSelectElm.value;
   const date = dateInputElm.value;
   let msg = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}\n\n`;
   students.filter(s=>s.cls===cl && s.sec===sec).forEach((s,i) => {
     const code = attendanceData[date][s.adm] || "A";
-    msg += `${i+1}. Adm#: ${s.adm} – ${statusNames[code]}\n`;
+    msg += `${i+1}. Adm#: ${s.adm} – ${
+      { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" }[code]
+    }\n`;
   });
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
 };
@@ -1442,7 +1421,6 @@ function generateAnalytics(target, section, type) {
     return;
   }
 
-  // Build stats per student
   const analyticsStats = filteredStudents.map(stu => {
     const stat = { adm: stu.adm, name: stu.name, P:0, A:0, Lt:0, HD:0, L:0 };
     dates.forEach(d => {
@@ -1451,7 +1429,6 @@ function generateAnalytics(target, section, type) {
     });
     stat.total = stat.P + stat.Lt + stat.HD + stat.A + stat.L;
     stat.perc = stat.total ? ((stat.P + stat.Lt + stat.HD)/stat.total*100).toFixed(2) : "0.00";
-    // Recompute outstanding fine for this student
     let a=0, lt=0, hd=0, l=0;
     Object.values(attendanceData).forEach(rec => {
       if (rec[stu.adm]) {
@@ -1470,7 +1447,6 @@ function generateAnalytics(target, section, type) {
     return stat;
   });
 
-  // Build table header & body
   analyticsTableHeadRow.innerHTML = [
     "#","Adm#","Name","P","A","Lt","HD","L","Total","%","Outstanding","Status"
   ].map(h=>`<th>${h}</th>`).join("");
@@ -1497,7 +1473,6 @@ function generateAnalytics(target, section, type) {
   graphsDiv.classList.remove("hidden");
   resetAnalyticsBtn.classList.remove("hidden");
 
-  // Bar Chart for % Attendance
   if (barChartInstance) barChartInstance.destroy();
   const barCtx = document.getElementById("barChart").getContext("2d");
   barChartInstance = new Chart(barCtx, {
@@ -1517,7 +1492,6 @@ function generateAnalytics(target, section, type) {
     }
   });
 
-  // Pie Chart for Totals (P vs A vs Lt vs HD vs L)
   if (pieChartInstance) pieChartInstance.destroy();
   const pieCtx = document.getElementById("pieChart").getContext("2d");
   const totalP  = analyticsStats.reduce((sum,st)=>sum+st.P, 0);
@@ -1577,13 +1551,11 @@ function renderRegister(monthVal) {
   const [year, month] = monthVal.split("-");
   const daysInMonth = new Date(+year, +month, 0).getDate();
 
-  // Build Header: “Name | Adm# | 1 | 2 | …”
   registerHeaderRow.innerHTML = `<th>Name</th><th>Adm#</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     registerHeaderRow.innerHTML += `<th>${d}</th>`;
   }
 
-  // Build Body
   registerBody.innerHTML = "";
   students.forEach((s,i) => {
     const tr = document.createElement("tr");
@@ -1618,7 +1590,7 @@ downloadRegisterBtn.onclick = () => {
 
 shareRegisterBtn.onclick = () => {
   const msg = `Attendance Register for ${registerMonthInput.value}:\n\nPlease check your school’s portal.`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank`);
 };
 
 // ---------------------------------------------
@@ -1635,7 +1607,6 @@ restoreFileInput.onchange = async (e) => {
   try {
     const txt = await file.text();
     const backup = JSON.parse(txt);
-    // Individually restore each field if present
     if (backup.studentsBySchool)       studentsBySchool       = backup.studentsBySchool;
     if (backup.attendanceDataBySchool) attendanceDataBySchool = backup.attendanceDataBySchool;
     if (backup.paymentsDataBySchool)   paymentsDataBySchool   = backup.paymentsDataBySchool;
@@ -1647,7 +1618,6 @@ restoreFileInput.onchange = async (e) => {
     if (backup.teacherClass)           teacherClass           = backup.teacherClass;
     if (backup.teacherSection)         teacherSection         = backup.teacherSection;
 
-    // Write to IDB
     await idbSet("studentsBySchool", studentsBySchool);
     await idbSet("attendanceDataBySchool", attendanceDataBySchool);
     await idbSet("paymentsDataBySchool", paymentsDataBySchool);
@@ -1691,5 +1661,5 @@ resetDataBtn.onclick = async () => {
 };
 
 // ---------------------------------------------
-// 18. PAGE LOAD (Nothing more to initialize here)
+// 18. PAGE LOAD
 // ---------------------------------------------
