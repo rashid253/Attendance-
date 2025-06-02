@@ -4,7 +4,6 @@ import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
   set as dbSet,
-  get as dbGet,
   onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
@@ -118,7 +117,24 @@ roleSelect.addEventListener("change", () => {
 });
 
 // --------------------
-// 5) Handle Login / SignUp button click
+// 5) Signup helper: wait for Auth state change to newly created user
+// --------------------
+function waitForAuthUid(targetUid) {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.uid === targetUid) {
+        unsubscribe();
+        resolve(user);
+      }
+    }, (err) => {
+      unsubscribe();
+      reject(err);
+    });
+  });
+}
+
+// --------------------
+// 6) Handle Login / SignUp button click
 // --------------------
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
@@ -164,8 +180,10 @@ authButton.addEventListener("click", async () => {
       await updateProfile(createdUser, { displayName });
       console.log("✓ updateProfile succeeded for UID:", createdUser.uid);
 
-      // (3) Write profile to Realtime Database using createdUser.uid
-      //     (onAuthStateChanged won't auto sign out now—even if profile isn't found yet)
+      // (3) Wait for Auth to reflect new user state
+      await waitForAuthUid(createdUser.uid);
+
+      // (4) Write profile to Realtime Database
       const uid = createdUser.uid;
       console.log("→ Attempting dbSet at /users/" + uid);
       await dbSet(dbRef(database, `users/${uid}`), {
@@ -178,7 +196,7 @@ authButton.addEventListener("click", async () => {
       });
       console.log("✓ dbSet succeeded for /users/" + uid);
 
-      // (4) Sign out after successful signup
+      // (5) Sign out after successful signup
       await signOut(auth);
       console.log("✓ Signed out after signup");
 
@@ -200,12 +218,8 @@ authButton.addEventListener("click", async () => {
 });
 
 // --------------------
-// 6) Monitor Auth state and show/hide main app
+// 7) Monitor Auth state and show/hide main app
 // --------------------
-
-// Note: We remove the "auto sign-out if profile missing" logic.
-//       Instead, if no profile exists, just stay on login screen.
-
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     try {
@@ -246,7 +260,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --------------------
-// 7) Logout button
+// 8) Logout button
 // --------------------
 logoutBtn.addEventListener("click", async () => {
   try {
@@ -255,6 +269,6 @@ logoutBtn.addEventListener("click", async () => {
 });
 
 // --------------------
-// 8) Initialize school subscription
+// 9) Initialize school subscription
 // --------------------
 subscribeSchools();
