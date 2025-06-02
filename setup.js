@@ -7,75 +7,68 @@ import {
   onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// --------------------
 // DOM elements
-// --------------------
-const setupSection       = document.getElementById("teacher-setup");
+const adminSetupDiv       = document.getElementById("admin-setup");
+const principalSetupDiv   = document.getElementById("principal-setup");
+const teacherSetupInfoDiv = document.getElementById("teacher-setup-info");
+
 const schoolInput        = document.getElementById("schoolInput");
-const schoolSelect       = document.getElementById("schoolSelect");
 const saveSetupBtn       = document.getElementById("saveSetup");
+const schoolSelect       = document.getElementById("schoolSelect");
+const deleteSetupBtn     = document.getElementById("deleteSetup");
 const schoolListDiv      = document.getElementById("schoolList");
 
-// We'll reuse the same dropdown for signup in auth.js:
-const signupDropdown     = document.getElementById("schoolRegisterSelect");
+const principalInfoDiv   = document.getElementById("principal-info");
+const teacherInfoDiv     = document.getElementById("teacher-info");
+
+// Shared signup dropdowns (populated here for signups)
+const signupSchoolSelect = document.getElementById("schoolRegisterSelect");
 const classRegisterSelect   = document.getElementById("classRegisterSelect");
 const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
 
-// Track current list of schools
 let schools = [];
-let isAdmin = false;
+let currentProfile = null;
 
-// --------------------
-// 1) Load existing schools from Realtime Database
-// --------------------
+// 1) Load schools from Realtime Database
 function loadSchools() {
   const ref = dbRef(database, "appData/schools");
   onValue(ref, snapshot => {
     schools = snapshot.exists() ? snapshot.val() : [];
-    renderSchools();
-    if (isAdmin) populateAdminDropdown();
+    renderSchoolList();
+    populateAdminDropdown();
     populateSignupDropdown();
+    refreshUserView();
   }, error => {
     console.error("onValue error for appData/schools:", error);
   });
 }
 
-// --------------------
-// 2) Render schools list in setupSection
-// --------------------
-function renderSchools() {
+// 2) Render list of schools with delete buttons (for Admin)
+function renderSchoolList() {
   schoolListDiv.innerHTML = "";
   schools.forEach((s, idx) => {
     const itemDiv = document.createElement("div");
-    itemDiv.textContent = s;
     itemDiv.classList.add("school-item");
-    // If admin, add a delete button next to each school
-    if (isAdmin) {
-      const delBtn = document.createElement("button");
-      delBtn.textContent = "Delete";
-      delBtn.classList.add("btn", "btn-sm");
-      delBtn.style.marginLeft = "0.5em";
-      delBtn.addEventListener("click", async () => {
-        // Remove this school from array and write back
-        const updated = schools.filter((_, i) => i !== idx);
-        try {
-          await dbSet(dbRef(database, "appData/schools"), updated);
-        } catch (err) {
-          console.error("Error deleting school:", err);
-          alert("کچھ غلط ہوا: " + err.message);
-        }
-      });
-      itemDiv.appendChild(delBtn);
-    }
+    itemDiv.innerHTML = `
+      <span>${s}</span>
+      <button class="btn btn-sm btn-danger" data-index="${idx}">Delete</button>
+    `;
+    itemDiv.querySelector("button").addEventListener("click", async () => {
+      const updated = schools.filter((_, i) => i !== idx);
+      try {
+        await dbSet(dbRef(database, "appData/schools"), updated);
+      } catch (err) {
+        console.error("Error deleting school:", err);
+        alert("کچھ غلط ہوا: " + err.message);
+      }
+    });
     schoolListDiv.appendChild(itemDiv);
   });
 }
 
-// --------------------
-// 3) Populate admin's "schoolSelect" dropdown
-// --------------------
+// 3) Populate Admin's delete dropdown
 function populateAdminDropdown() {
-  schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
+  schoolSelect.innerHTML = '<option disabled selected>-- Select School to Delete --</option>';
   schools.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
@@ -84,112 +77,98 @@ function populateAdminDropdown() {
   });
 }
 
-// --------------------
-// 4) Populate Signup dropdown for principals/teachers
-// --------------------
+// 4) Populate signup dropdown for principals/teachers
 function populateSignupDropdown() {
-  signupDropdown.innerHTML =
-    '<option disabled selected>-- Select School (for principal/teacher) --</option>';
+  signupSchoolSelect.innerHTML = '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   schools.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
     opt.textContent = s;
-    signupDropdown.appendChild(opt);
+    signupSchoolSelect.appendChild(opt);
   });
 }
 
-// --------------------
-// 5) Handle adding a new school (Admin only)
-// --------------------
+// 5) Add new school (Admin)
 saveSetupBtn.addEventListener("click", async () => {
   const newSchool = schoolInput.value.trim();
   if (!newSchool) {
     alert("براہِ کرم اسکول کا نام درج کریں!");
     return;
   }
-  // Prevent duplicate names
   if (schools.includes(newSchool)) {
     alert("یہ اسکول پہلے ہی موجود ہے۔");
     return;
   }
-  const updatedSchools = [...schools, newSchool];
   try {
-    await dbSet(dbRef(database, "appData/schools"), updatedSchools);
+    await dbSet(dbRef(database, "appData/schools"), [...schools, newSchool]);
     schoolInput.value = "";
     alert("اسکول شامل ہو گیا!");
   } catch (err) {
-    console.error("Error writing schools:", err);
+    console.error("Error adding school:", err);
     alert("کچھ غلط ہوا: " + err.message);
   }
 });
 
-// --------------------
-// 6) Show principal's view (read-only school)
-// --------------------
-function showPrincipalSetup(school) {
-  // Hide admin-only inputs
-  schoolInput.parentElement.classList.add("hidden");
-  schoolSelect.parentElement.classList.add("hidden");
-  saveSetupBtn.classList.add("hidden");
-  // Display principal's assigned school
-  const infoDiv = document.createElement("div");
-  infoDiv.innerHTML = `<strong>آپ کا اسکول:</strong> ${school}`;
-  infoDiv.classList.add("card");
-  setupSection.appendChild(infoDiv);
-}
-
-// --------------------
-// 7) Show teacher's view (read-only school, class, section)
-// --------------------
-function showTeacherSetup(school, cls, sec) {
-  // Hide admin-only inputs
-  schoolInput.parentElement.classList.add("hidden");
-  schoolSelect.parentElement.classList.add("hidden");
-  saveSetupBtn.classList.add("hidden");
-  // Hide principal sign-up dropdown inside setup (if any)
-  // Display teacher's assigned school, class & section
-  const infoDiv = document.createElement("div");
-  infoDiv.innerHTML =
-    `<strong>آپ کا اسکول:</strong> ${school}<br>` +
-    `<strong>آپ کی کلاس:</strong> ${cls}<br>` +
-    `<strong>آپ کا سیکشن:</strong> ${sec}`;
-  infoDiv.classList.add("card");
-  setupSection.appendChild(infoDiv);
-}
-
-// --------------------
-// 8) Initialize setup section based on user role
-// --------------------
-function initSetup() {
-  const profile = window.currentUserProfile;
-  if (!profile) return;
-  const role = profile.role;
-  if (role === "admin") {
-    isAdmin = true;
-    // Ensure inputs are visible
-    schoolInput.parentElement.classList.remove("hidden");
-    schoolSelect.parentElement.classList.remove("hidden");
-    saveSetupBtn.classList.remove("hidden");
-    renderSchools();
-    populateAdminDropdown();
-  } else if (role === "principal") {
-    showPrincipalSetup(profile.school);
-  } else if (role === "teacher") {
-    showTeacherSetup(profile.school, profile.class, profile.section);
+// 6) Delete selected school (Admin)
+deleteSetupBtn.addEventListener("click", async () => {
+  const selected = schoolSelect.value;
+  if (!selected) {
+    alert("براہِ کرم حذف کرنے کے لیے اسکول منتخب کریں۔");
+    return;
   }
-  loadSchools();
+  const updated = schools.filter(s => s !== selected);
+  try {
+    await dbSet(dbRef(database, "appData/schools"), updated);
+    alert("اسکول حذف ہو گیا!");
+  } catch (err) {
+    console.error("Error deleting school via dropdown:", err);
+    alert("کچھ غلط ہوا: " + err.message);
+  }
+});
+
+// 7) Show/Hide setup UI based on role
+function refreshUserView() {
+  currentProfile = window.currentUserProfile;
+  if (!currentProfile) return;
+
+  const { role, school, class: cls, section } = currentProfile;
+
+  // Hide all sub-sections initially
+  adminSetupDiv.classList.add("hidden");
+  principalSetupDiv.classList.add("hidden");
+  teacherSetupInfoDiv.classList.add("hidden");
+
+  if (role === "admin") {
+    // Show Admin UI
+    adminSetupDiv.classList.remove("hidden");
+  }
+  else if (role === "principal") {
+    // Show Principal's read-only info
+    principalInfoDiv.innerHTML = `
+      <p><strong>آپ کا اسکول:</strong> ${school}</p>
+    `;
+    principalSetupDiv.classList.remove("hidden");
+  }
+  else if (role === "teacher") {
+    // Show Teacher's read-only info
+    teacherInfoDiv.innerHTML = `
+      <p><strong>آپ کا اسکول:</strong> ${school}</p>
+      <p><strong>آپ کی کلاس:</strong> ${cls}</p>
+      <p><strong>آپ کا سیکشن:</strong> ${section}</p>
+    `;
+    teacherSetupInfoDiv.classList.remove("hidden");
+  }
 }
 
-// --------------------
-// 9) Listen for userLoggedIn event (fired by auth.js after login)
-// --------------------
-document.addEventListener("userLoggedIn", initSetup);
+// 8) Listen for login event from auth.js
+document.addEventListener("userLoggedIn", () => {
+  refreshUserView();
+});
 
-// --------------------
-// 10) Immediately subscribe to schools in case Admin already logged in
-// --------------------
+// 9) In case user already logged in when this script loads
 if (window.currentUserProfile) {
-  initSetup();
-} else {
-  loadSchools();
+  refreshUserView();
 }
+
+// Initialize loading of schools
+loadSchools();
