@@ -25,7 +25,6 @@
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    /* آپ کے پہلے سے موجود اسٹائلز (بالکل ویسے کے ویسے) */
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
@@ -39,7 +38,7 @@
     .table-actions { margin-top: 0.5em; }
     .counter-card .card-number { font-size: 2rem; color: #2196F3; }
 
-    /* --- نیا: لاگ ان/سائن اپ فارم اسٹائل --- */
+    /* --- AUTH FORM STYLES --- */
     #auth-container {
       max-width: 360px;
       margin: 2em auto;
@@ -49,8 +48,12 @@
       background: #fafafa;
     }
     #auth-container h2 { margin-bottom: 1em; text-align: center; }
-    #auth-container input { width: 100%; padding: 0.5em; margin-bottom: 0.75em; border: 1px solid #aaa; border-radius: 4px; }
-    #auth-container button { width: 100%; padding: 0.6em; border: none; background: #2196F3; color: #fff; border-radius: 4px; cursor: pointer; }
+    #auth-container input, #auth-container select {
+      width: 100%; padding: 0.5em; margin-bottom: 0.75em; border: 1px solid #aaa; border-radius: 4px;
+    }
+    #auth-container button {
+      width: 100%; padding: 0.6em; border: none; background: #2196F3; color: #fff; border-radius: 4px; cursor: pointer;
+    }
     #auth-container button:hover { background: #1976D2; }
     #auth-switch { margin-top: 1em; text-align: center; }
     #auth-switch span { color: #2196F3; cursor: pointer; }
@@ -59,7 +62,7 @@
 <body>
 
   <!-- ==============================
-       0. LOGIN / SIGNUP فارم (وہی جیسا پہلے تھا)
+       0. LOGIN / SIGNUP FORM
        ============================== -->
   <div id="auth-container">
     <h2 id="form-title">Login to Attendance App</h2>
@@ -76,7 +79,6 @@
       <input type="text" id="displayNameInput" placeholder="Full Name" />
       <select id="schoolRegisterSelect">
         <option disabled selected>-- Select School (for principal/teacher) --</option>
-        <!-- Options JavaScript سے fill ہوں گی -->
       </select>
       <select id="classRegisterSelect" class="hidden">
         <option disabled selected>-- Select Class (for teacher) --</option>
@@ -105,15 +107,15 @@
     <header class="app-header">
       <h1><i class="fas fa-school"></i> Attendance Management</h1>
       <div class="header-buttons">
-        <button id="logoutBtn" class="btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-        <button id="chooseBackupFolder" class="btn"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
-        <button id="restoreData" class="btn"><i class="fas fa-upload"></i> Restore Backup</button>
+        <button id="logoutBtn" class="btn no-print"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        <button id="chooseBackupFolder" class="btn no-print"><i class="fas fa-folder-open"></i> Select Backup Folder</button>
+        <button id="restoreData" class="btn no-print"><i class="fas fa-upload"></i> Restore Backup</button>
         <input type="file" id="restoreFile" accept=".json" hidden />
-        <button id="resetData" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Factory Reset</button>
+        <button id="resetData" class="btn btn-danger no-print"><i class="fas fa-trash-alt"></i> Factory Reset</button>
       </div>
     </header>
 
-    <!-- 1. SETUP -->
+    <!-- 2. SETUP SECTION -->
     <section id="teacher-setup">
       <h2><i class="fas fa-cog"></i> Setup</h2>
       <div id="setupForm" class="row-inline">
@@ -142,7 +144,7 @@
       </div>
     </section>
 
-    <!-- 2. FINANCIAL SETTINGS -->
+    <!-- 3. FINANCIAL SETTINGS -->
     <section id="financial-settings">
       <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
       <div id="financialForm" class="row-inline">
@@ -155,12 +157,12 @@
       </div>
     </section>
 
-    <!-- 3. COUNTERS -->
+    <!-- 4. COUNTERS -->
     <section id="animatedCounters">
       <div id="countersContainer" class="scroll-row"></div>
     </section>
 
-    <!-- 4. STUDENT REGISTRATION -->
+    <!-- 5. STUDENT REGISTRATION -->
     <section id="student-registration">
       <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
       <div class="row-inline">
@@ -195,7 +197,7 @@
       </div>
     </section>
 
-    <!-- 5. MARK ATTENDANCE -->
+    <!-- 6. MARK ATTENDANCE -->
     <section id="attendance-section">
       <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
       <div class="row-inline">
@@ -212,7 +214,7 @@
       </div>
     </section>
 
-    <!-- 6. ANALYTICS -->
+    <!-- 7. ANALYTICS -->
     <section id="analytics-section">
       <h2>
         <i class="fas fa-chart-bar"></i> Analytics
@@ -262,7 +264,7 @@
       </div>
     </section>
 
-    <!-- 7. ATTENDANCE REGISTER -->
+    <!-- 8. ATTENDANCE REGISTER -->
     <section id="register-section">
       <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
       <div class="row-inline">
@@ -289,9 +291,9 @@
         <span id="paymentModalClose" class="modal-close">&times;</span>
         <h3>Payment for Adm# <span id="payAdm"></span></h3>
         <label>Amount (PKR): <input id="paymentAmount" type="number"/></label>
-        <div class="modal-actions" style="margin-top:1em;">
-          <button id="savePayment" class="btn btn-primary no-print"><i class="fas fa-check"></i> Save</button>
-          <button id="cancelPayment" class="btn btn-danger no-print"><i class="fas fa-times"></i> Cancel</button>
+        <div class="modal-actions">
+          <button id="savePayment" class="no-print"><i class="fas fa-check"></i> Save</button>
+          <button id="cancelPayment" class="no-print"><i class="fas fa-times"></i> Cancel</button>
         </div>
       </div>
     </div>
@@ -301,7 +303,7 @@
       <div class="modal-content">
         <span id="analyticsFilterClose" class="modal-close">&times;</span>
         <h3>Filter Reports</h3>
-        <form id="analyticsFilterForm" style="margin-top:1em;">
+        <form id="analyticsFilterForm">
           <label><input type="checkbox" value="registered" checked> Registered Students</label><br>
           <label><input type="checkbox" value="attendance"> Attendance Records</label><br>
           <label><input type="checkbox" value="fine"> Fine Incurred</label><br>
@@ -309,21 +311,34 @@
           <label><input type="checkbox" value="debarred"> Debarred</label><br>
           <label><input type="checkbox" value="eligible"> Eligible</label><br>
           <label><input type="checkbox" value="all"> All Students</label>
-          <fieldset style="margin-top:1em;">
+          <fieldset>
             <legend>Download Mode</legend>
             <label><input type="radio" name="downloadMode" value="combined" checked> Combined PDF</label><br>
             <label><input type="radio" name="downloadMode" value="individual"> Individual PDFs</label>
           </fieldset>
-          <button type="button" id="applyAnalyticsFilter" class="btn btn-primary no-print" style="margin-top:1em;">Apply Filter</button>
+          <button type="button" id="applyAnalyticsFilter" class="btn no-print">Apply Filter</button>
         </form>
       </div>
     </div>
+
+    <!-- Load modules in order: firebase-config.js, auth.js, setup.js, app.js -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="auth.js"></script>
+    <script type="module" src="setup.js"></script>
+    <script type="module" src="app.js"></script>
+
+    <!-- Register service worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('service-worker.js', { type: 'module' })
+            .then(reg => console.log('Service Worker registered as module:', reg))
+            .catch(err => console.error('SW registration failed:', err));
+        });
+      }
+    </script>
   </div>
 
-  <!-- Load modules in order: first firebase-config.js, پھر auth.js, پھر setup.js، پھر app.js -->
-  <script type="module" src="firebase-config.js"></script>
-  <script type="module" src="auth.js"></script>
-  <script type="module" src="setup.js"></script>
-  <script type="module" src="app.js"></script>
 </body>
 </html>
