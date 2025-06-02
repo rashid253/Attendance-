@@ -4,6 +4,7 @@ import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
   set as dbSet,
+  get as dbGet,
   onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
@@ -117,24 +118,7 @@ roleSelect.addEventListener("change", () => {
 });
 
 // --------------------
-// 5) Signup helper: wait for Auth state change to newly created user
-// --------------------
-function waitForAuthUid(targetUid) {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && user.uid === targetUid) {
-        unsubscribe();
-        resolve(user);
-      }
-    }, (err) => {
-      unsubscribe();
-      reject(err);
-    });
-  });
-}
-
-// --------------------
-// 6) Handle Login / SignUp button click
+// 5) Handle Login / SignUp button click
 // --------------------
 authButton.addEventListener("click", async () => {
   const email    = emailInput.value.trim();
@@ -147,9 +131,12 @@ authButton.addEventListener("click", async () => {
 
   if (isLoginMode) {
     // ─── LOGIN ───
+    console.log("Attempting login with:", email);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      console.log("✓ signInWithEmailAndPassword resolved");
     } catch (err) {
+      console.error("✖ signIn error:", err);
       alert("Login نامنظور: " + err.message);
     }
   } else {
@@ -180,10 +167,7 @@ authButton.addEventListener("click", async () => {
       await updateProfile(createdUser, { displayName });
       console.log("✓ updateProfile succeeded for UID:", createdUser.uid);
 
-      // (3) Wait for Auth to reflect new user state
-      await waitForAuthUid(createdUser.uid);
-
-      // (4) Write profile to Realtime Database
+      // (3) Write profile to Realtime Database
       const uid = createdUser.uid;
       console.log("→ Attempting dbSet at /users/" + uid);
       await dbSet(dbRef(database, `users/${uid}`), {
@@ -196,7 +180,7 @@ authButton.addEventListener("click", async () => {
       });
       console.log("✓ dbSet succeeded for /users/" + uid);
 
-      // (5) Sign out after successful signup
+      // (4) Sign out after successful signup
       await signOut(auth);
       console.log("✓ Signed out after signup");
 
@@ -218,14 +202,15 @@ authButton.addEventListener("click", async () => {
 });
 
 // --------------------
-// 7) Monitor Auth state and show/hide main app
+// 6) Monitor Auth state and show/hide main app
 // --------------------
 onAuthStateChanged(auth, async (user) => {
+  console.log("onAuthStateChanged fired; user =", user);
   if (user) {
     try {
       const snap = await dbGet(dbRef(database, `users/${user.uid}`));
       if (snap.exists()) {
-        // Profile exists in DB, show main app
+        console.log("✓ DB profile found for UID:", user.uid);
         const profile = snap.val();
         window.currentUserProfile = {
           uid: user.uid,
@@ -238,29 +223,26 @@ onAuthStateChanged(auth, async (user) => {
         };
         authContainer.classList.add("hidden");
         mainApp.classList.remove("hidden");
-        document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // No DB profile found—remain on login/signup screen
-        window.currentUserProfile = null;
+        console.warn("! DB profile missing for UID:", user.uid);
         authContainer.classList.remove("hidden");
         mainApp.classList.add("hidden");
       }
-    } catch {
-      // On any DB error, stay on login/signup
-      window.currentUserProfile = null;
+    } catch (dbErr) {
+      console.error("✖ DB read error:", dbErr);
       authContainer.classList.remove("hidden");
       mainApp.classList.add("hidden");
     }
   } else {
-    // No user logged in
-    window.currentUserProfile = null;
+    console.log("No user logged in");
     authContainer.classList.remove("hidden");
     mainApp.classList.add("hidden");
+    window.currentUserProfile = null;
   }
 });
 
 // --------------------
-// 8) Logout button
+// 7) Logout button
 // --------------------
 logoutBtn.addEventListener("click", async () => {
   try {
@@ -269,6 +251,6 @@ logoutBtn.addEventListener("click", async () => {
 });
 
 // --------------------
-// 9) Initialize school subscription
+// 8) Initialize school subscription
 // --------------------
 subscribeSchools();
