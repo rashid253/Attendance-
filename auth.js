@@ -3,9 +3,8 @@
 import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
-  onValue,
   set as dbSet,
-  get as dbGet
+  onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   createUserWithEmailAndPassword,
@@ -156,22 +155,15 @@ authButton.addEventListener("click", async () => {
     let createdUser = null;
     try {
       // (1) Create user in Auth
-      console.log("Attempting SignUp:", email, displayName, role, school, cls, sec);
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       createdUser = userCred.user;
       console.log("✓ createUserWithEmailAndPassword UID:", createdUser.uid);
 
       // (2) Update displayName in Auth profile
       await updateProfile(createdUser, { displayName });
-      console.log(
-        "✓ updateProfile succeeded, auth.currentUser.uid:",
-        auth.currentUser.uid
-      );
+      console.log("✓ updateProfile succeeded for UID:", createdUser.uid);
 
-      // (3) Wait a moment to ensure Auth context is set
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // (4) Write profile to Realtime Database
+      // (3) Write profile to Realtime Database using createdUser.uid
       const uid = createdUser.uid;
       console.log("→ Attempting dbSet at /users/" + uid);
       await dbSet(dbRef(database, `users/${uid}`), {
@@ -180,11 +172,11 @@ authButton.addEventListener("click", async () => {
         role,
         school,
         class: cls,
-        section: sec,
+        section: sec
       });
       console.log("✓ dbSet succeeded for /users/" + uid);
 
-      // (5) Sign out after successful signup
+      // (4) Sign out after successful signup
       await signOut(auth);
       console.log("✓ Signed out after signup");
 
