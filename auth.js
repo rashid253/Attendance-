@@ -4,6 +4,7 @@ import { auth, database } from "./firebase-config.js";
 import {
   ref as dbRef,
   set as dbSet,
+  get as dbGet,
   onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
@@ -164,6 +165,7 @@ authButton.addEventListener("click", async () => {
       console.log("✓ updateProfile succeeded for UID:", createdUser.uid);
 
       // (3) Write profile to Realtime Database using createdUser.uid
+      //     (onAuthStateChanged won't auto sign out now—even if profile isn't found yet)
       const uid = createdUser.uid;
       console.log("→ Attempting dbSet at /users/" + uid);
       await dbSet(dbRef(database, `users/${uid}`), {
@@ -200,6 +202,10 @@ authButton.addEventListener("click", async () => {
 // --------------------
 // 6) Monitor Auth state and show/hide main app
 // --------------------
+
+// Note: We remove the "auto sign-out if profile missing" logic.
+//       Instead, if no profile exists, just stay on login screen.
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     try {
@@ -220,16 +226,22 @@ onAuthStateChanged(auth, async (user) => {
         mainApp.classList.remove("hidden");
         document.dispatchEvent(new Event("userLoggedIn"));
       } else {
-        // If profile missing in DB, sign out
-        await signOut(auth);
+        // No DB profile found—remain on login/signup screen
+        window.currentUserProfile = null;
+        authContainer.classList.remove("hidden");
+        mainApp.classList.add("hidden");
       }
     } catch {
-      await signOut(auth);
+      // On any DB error, stay on login/signup
+      window.currentUserProfile = null;
+      authContainer.classList.remove("hidden");
+      mainApp.classList.add("hidden");
     }
   } else {
+    // No user logged in
+    window.currentUserProfile = null;
     authContainer.classList.remove("hidden");
     mainApp.classList.add("hidden");
-    window.currentUserProfile = null;
   }
 });
 
