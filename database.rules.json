@@ -1,12 +1,6 @@
 {
   "rules": {
-    "appData": {
-      ".read": true,
-      ".write": true
-    },
-    "users": {
-      ".read": false,
-      ".write": false
-    }
+    ".read": true,
+    ".write": true
   }
 }
