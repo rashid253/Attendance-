@@ -1,256 +1,314 @@
 // auth.js
+// -------
+// Handles signup, login, logout, and role-based UI toggling.
 
-import { auth, database } from "./firebase-config.js";
 import {
-  ref as dbRef,
-  set as dbSet,
-  get as dbGet,
-  onValue
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+  auth,
+  usersRef,
+  schoolsRef,
+  classesRef
+} from "./firebase-config.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut,
-  updateProfile,
-  deleteUser
+  signOut
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  set as dbSet,
+  push as dbPush,
+  child as dbChild,
+  get as dbGet,
+  onValue
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// --------------------
-// DOM elements
-// --------------------
-const emailInput            = document.getElementById("emailInput");
-const passwordInput         = document.getElementById("passwordInput");
-const authButton            = document.getElementById("authButton");
-const toggleAuthSpan        = document.getElementById("toggleAuth");
-const formTitle             = document.getElementById("form-title");
+// DOM Elements
+const authModal       = document.getElementById("auth-modal");
+const modalClose      = document.getElementById("auth-modal-close");
+const showLoginBtn    = document.getElementById("show-login");
+const showSignupBtn   = document.getElementById("show-signup");
+const loginForm       = document.getElementById("login-form");
+const signupForm      = document.getElementById("signup-form");
+const loginEmail      = document.getElementById("login-email");
+const loginPassword   = document.getElementById("login-password");
+const loginError      = document.getElementById("login-error");
+const signupName      = document.getElementById("signup-name");
+const signupEmail     = document.getElementById("signup-email");
+const signupPassword  = document.getElementById("signup-password");
+const signupRole      = document.getElementById("signup-role");
+const signupSchoolInp = document.getElementById("signup-school");
+const signupClassInp  = document.getElementById("signup-class");
+const signupError     = document.getElementById("signup-error");
+const signupSchoolSec = document.getElementById("signup-school-section");
+const signupClassSec  = document.getElementById("signup-class-section");
 
-const signupExtra           = document.getElementById("signup-extra");
-const roleSelect            = document.getElementById("roleSelect");
-const displayNameInput      = document.getElementById("displayNameInput");
-const schoolRegisterSelect  = document.getElementById("schoolRegisterSelect");
-const classRegisterSelect   = document.getElementById("classRegisterSelect");
-const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
+const mainContent     = document.getElementById("main-content");
+const logoutBtn       = document.getElementById("logoutBtn");
+const welcomeUserSpan = document.getElementById("welcome-user");
 
-const authContainer         = document.getElementById("auth-container");
-const mainApp               = document.getElementById("main-app");
-const logoutBtn             = document.getElementById("logoutBtn");
+// Role-based sections
+const adminSetup      = document.getElementById("admin-setup");
+const principalDash   = document.getElementById("principal-dashboard");
+const teacherDash     = document.getElementById("teacher-dashboard");
 
-let isLoginMode = true;
-let schoolsList = [];
+// HOW IT WORKS:
+// 1. On page load, show the auth modal if no user is signed in.
+// 2. In signup form, if role="admin", show only name/email/password.
+//    If role="principal", show school dropdown (populated from /schools).
+//    If role="teacher", show school + class inputs.
+// 3. On signup submit: create user, then write to /users/{uid} with { name, role, schoolId, className }.
+//    - Admin: no schoolId or className.
+//    - Principal: schoolId = existing or newly created.
+//    - Teacher: schoolId + className.
+// 4. On login submit: sign in. onAuthStateChanged then calls setupUI(user).
+// 5. setupUI fetches /users/{uid}, reads role, toggles UI accordingly.
 
-// --------------------
-// 1) Subscribe to /appData/schools for dropdown
-// --------------------
-function subscribeSchools() {
-  const schoolsRef = dbRef(database, "appData/schools");
-  onValue(
-    schoolsRef,
-    (snapshot) => {
-      schoolsList = snapshot.exists() ? snapshot.val() : [];
-      if (!isLoginMode) {
-        populateSchoolDropdown();
-      }
-    },
-    (error) => {
-      console.error("onValue error for appData/schools:", error);
-    }
-  );
-}
+// Show login form
+showLoginBtn.addEventListener("click", () => {
+  signupForm.classList.add("hidden");
+  loginForm.classList.remove("hidden");
+  loginError.textContent = "";
+});
 
-// --------------------
-// 2) Populate school dropdown in signup
-// --------------------
-function populateSchoolDropdown() {
-  schoolRegisterSelect.innerHTML =
-    '<option disabled selected>-- Select School (for principal/teacher) --</option>';
-  if (Array.isArray(schoolsList)) {
-    schoolsList.forEach((s) => {
+// Show signup form
+showSignupBtn.addEventListener("click", () => {
+  loginForm.classList.add("hidden");
+  signupForm.classList.remove("hidden");
+  signupError.textContent = "";
+});
+
+// Close modal
+modalClose.addEventListener("click", () => {
+  authModal.classList.add("hidden");
+});
+
+// Role selection in signup: show/hide extra fields
+signupRole.addEventListener("change", () => {
+  const role = signupRole.value;
+  if (role === "admin") {
+    signupSchoolSec.classList.add("hidden");
+    signupClassSec.classList.add("hidden");
+  } else if (role === "principal") {
+    signupSchoolSec.classList.remove("hidden");
+    signupClassSec.classList.add("hidden");
+    populateSchoolDropdown(signupSchoolInp);
+  } else if (role === "teacher") {
+    signupSchoolSec.classList.remove("hidden");
+    signupClassSec.classList.remove("hidden");
+    populateSchoolDropdown(signupSchoolInp);
+  }
+});
+
+// Populate dropdown for existing schools
+async function populateSchoolDropdown(selectElement) {
+  const snapshot = await dbGet(schoolsRef);
+  selectElement.innerHTML = "<option disabled selected>Select School</option>";
+  if (snapshot.exists()) {
+    snapshot.forEach(childSnap => {
+      const schoolId = childSnap.key;
+      const { name } = childSnap.val();
       const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      schoolRegisterSelect.appendChild(opt);
+      opt.value = schoolId;
+      opt.textContent = name;
+      selectElement.appendChild(opt);
     });
   }
 }
 
-// --------------------
-// 3) Toggle between Login and SignUp modes
-// --------------------
-function toggleAuthMode() {
-  isLoginMode = !isLoginMode;
-  if (!isLoginMode) {
-    formTitle.textContent      = "Sign Up for Attendance App";
-    authButton.textContent     = "Sign Up";
-    signupExtra.classList.remove("hidden");
-    toggleAuthSpan.textContent = "Already have an account? Login";
-    populateSchoolDropdown();
-  } else {
-    formTitle.textContent      = "Login to Attendance App";
-    authButton.textContent     = "Login";
-    signupExtra.classList.add("hidden");
-    toggleAuthSpan.textContent = "Don't have an account? Sign Up";
+// SIGNUP SUBMISSION
+signupForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  signupError.textContent = "";
+  const name      = signupName.value.trim();
+  const email     = signupEmail.value.trim();
+  const password  = signupPassword.value.trim();
+  const role      = signupRole.value;
+  const schoolId  = signupSchoolInp.value || null;
+  const className = signupClassInp.value.trim() || null;
+
+  if (!name || !email || !password || !role) {
+    signupError.textContent = "All required fields must be filled.";
+    return;
   }
-  // Clear fields
-  emailInput.value           = "";
-  passwordInput.value        = "";
-  displayNameInput.value     = "";
-  roleSelect.value           = "";
-  schoolRegisterSelect.value = "";
-  classRegisterSelect.value  = "";
-  sectionRegisterSelect.value= "";
-  classRegisterSelect.classList.add("hidden");
-  sectionRegisterSelect.classList.add("hidden");
-}
-toggleAuthSpan.addEventListener("click", toggleAuthMode);
-
-// --------------------
-// 4) Show/hide Class & Section based on Role
-// --------------------
-roleSelect.addEventListener("change", () => {
-  if (roleSelect.value === "teacher") {
-    classRegisterSelect.classList.remove("hidden");
-    sectionRegisterSelect.classList.remove("hidden");
-  } else {
-    classRegisterSelect.classList.add("hidden");
-    sectionRegisterSelect.classList.add("hidden");
+  if (role === "principal" && !schoolId) {
+    signupError.textContent = "Principal must select an existing school.";
+    return;
   }
-});
-
-// --------------------
-// 5) Handle Login / SignUp button click
-// --------------------
-authButton.addEventListener("click", async () => {
-  const email    = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-
-  if (!email || !password) {
-    alert("Email اور Password دونوں ضروری ہیں۔");
+  if (role === "teacher" && (!schoolId || !className)) {
+    signupError.textContent = "Teacher must select school and enter class (e.g. 10-A).";
     return;
   }
 
-  if (isLoginMode) {
-    // ─── LOGIN ───
-    console.log("Attempting login with:", email);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("✓ signInWithEmailAndPassword resolved");
-    } catch (err) {
-      console.error("✖ signIn error:", err);
-      alert("Login نامنظور: " + err.message);
-    }
-  } else {
-    // ─── SIGNUP ───
-    const displayName = displayNameInput.value.trim();
-    const role        = roleSelect.value;
-    const school      = schoolRegisterSelect.value;
-    const cls         = role === "teacher" ? classRegisterSelect.value : "";
-    const sec         = role === "teacher" ? sectionRegisterSelect.value : "";
-
-    if (!displayName || !role || !school) {
-      alert("براہِ کرم اپنا نام، رول اور اسکول منتخب کریں۔");
-      return;
-    }
-    if (role === "teacher" && (!cls || !sec)) {
-      alert("Teacher رول کے لیے Class اور Section دونوں منتخب کریں۔");
-      return;
-    }
-
-    let createdUser = null;
-    try {
-      // (1) Create user in Auth
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      createdUser = userCred.user;
-      console.log("✓ createUserWithEmailAndPassword UID:", createdUser.uid);
-
-      // (2) Update displayName in Auth profile
-      await updateProfile(createdUser, { displayName });
-      console.log("✓ updateProfile succeeded for UID:", createdUser.uid);
-
-      // (3) Write profile to Realtime Database
-      const uid = createdUser.uid;
-      console.log("→ Attempting dbSet at /users/" + uid);
-      await dbSet(dbRef(database, `users/${uid}`), {
-        displayName,
-        email,
-        role,
-        school,
-        class: cls,
-        section: sec
-      });
-      console.log("✓ dbSet succeeded for /users/" + uid);
-
-      // (4) Sign out after successful signup
-      await signOut(auth);
-      console.log("✓ Signed out after signup");
-
-      alert("Sign Up کامیاب! براہِ کرم دوبارہ لاگ ان کریں۔");
-      toggleAuthMode();
-    } catch (err) {
-      console.error("✖ Signup error:", err);
-      if (createdUser) {
-        try {
-          await deleteUser(createdUser);
-          console.log("→ Deleted Auth user due to DB write failure");
-        } catch (delErr) {
-          console.error("⚠ Error deleting user after failed DB write:", delErr);
-        }
-      }
-      alert("Sign Up ناکام: " + err.message);
-    }
-  }
-});
-
-// --------------------
-// 6) Monitor Auth state and show/hide main app
-// --------------------
-onAuthStateChanged(auth, async (user) => {
-  console.log("onAuthStateChanged fired; user =", user);
-  if (user) {
-    try {
-      const snap = await dbGet(dbRef(database, `users/${user.uid}`));
-      if (snap.exists()) {
-        console.log("✓ DB profile found for UID:", user.uid);
-        const profile = snap.val();
-        window.currentUserProfile = {
-          uid: user.uid,
-          displayName: profile.displayName,
-          email: profile.email,
-          role: profile.role,
-          school: profile.school,
-          class: profile.class || "",
-          section: profile.section || "",
-        };
-        authContainer.classList.add("hidden");
-        mainApp.classList.remove("hidden");
-      } else {
-        console.warn("! DB profile missing for UID:", user.uid);
-        authContainer.classList.remove("hidden");
-        mainApp.classList.add("hidden");
-      }
-    } catch (dbErr) {
-      console.error("✖ DB read error:", dbErr);
-      authContainer.classList.remove("hidden");
-      mainApp.classList.add("hidden");
-    }
-  } else {
-    console.log("No user logged in");
-    authContainer.classList.remove("hidden");
-    mainApp.classList.add("hidden");
-    window.currentUserProfile = null;
-  }
-});
-
-// --------------------
-// 7) Logout button
-// --------------------
-logoutBtn.addEventListener("click", async () => {
   try {
-    await signOut(auth);
-  } catch {}
+    // Create user in Firebase Auth
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+
+    // If admin: create a new school entry as well
+    let assignedSchoolId = schoolId;
+    if (role === "admin") {
+      // Create unique school ID by pushing to /schools
+      const newSchoolRef = dbPush(schoolsRef);
+      await dbSet(newSchoolRef, { name: `${name}'s School` });
+      assignedSchoolId = newSchoolRef.key;
+    }
+
+    // Write user profile in Realtime Database under /users/{uid}
+    await dbSet(dbChild(usersRef, user.uid), {
+      name,
+      role,
+      schoolId: assignedSchoolId,
+      className: role === "teacher" ? className : null
+    });
+
+    // After signup, automatically sign in and close modal
+    authModal.classList.add("hidden");
+    signupForm.reset();
+  } catch (err) {
+    signupError.textContent = err.message;
+  }
 });
 
-// --------------------
-// 8) Initialize school subscription
-// --------------------
-subscribeSchools();
+// LOGIN SUBMISSION
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.textContent = "";
+  const email    = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+  if (!email || !password) {
+    loginError.textContent = "Enter email and password.";
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    loginForm.reset();
+    authModal.classList.add("hidden");
+  } catch (err) {
+    loginError.textContent = err.message;
+  }
+});
+
+// LOGOUT
+logoutBtn.addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+// AUTH STATE CHANGE: toggle UI
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // Hide modal, show main content
+    authModal.classList.add("hidden");
+    mainContent.classList.remove("hidden");
+
+    // Fetch user profile from /users/{uid}
+    const snapshot = await dbGet(dbChild(usersRef, user.uid));
+    if (!snapshot.exists()) {
+      // If no profile, force logout
+      await signOut(auth);
+      return;
+    }
+    const { name, role, schoolId, className } = snapshot.val();
+    welcomeUserSpan.textContent = `Hello, ${name} (${role.charAt(0).toUpperCase() + role.slice(1)})`;
+
+    // Toggle role-based sections
+    adminSetup.classList.add("hidden");
+    principalDash.classList.add("hidden");
+    teacherDash.classList.add("hidden");
+    document.getElementById("financial-settings").classList.add("hidden");
+    document.getElementById("animatedCounters").classList.add("hidden");
+    document.getElementById("student-registration").classList.add("hidden");
+    document.getElementById("attendance-section").classList.add("hidden");
+    document.getElementById("analytics-section").classList.add("hidden");
+    document.getElementById("register-section").classList.add("hidden");
+
+    if (role === "admin") {
+      // Show admin setup UI
+      adminSetup.classList.remove("hidden");
+      // Load existing schools
+      loadSchoolList();
+    } else if (role === "principal") {
+      principalDash.classList.remove("hidden");
+      // Populate dropdown of schools (should include only the assigned schoolId)
+      const opt = document.createElement("option");
+      const schoolSnap = await dbGet(dbChild(schoolsRef, schoolId));
+      opt.value = schoolId;
+      opt.textContent = schoolSnap.val().name;
+      document.getElementById("principal-school-select").appendChild(opt);
+      // Once loaded, principal can click “Load Classes” to see classes under that school
+    } else if (role === "teacher") {
+      teacherDash.classList.remove("hidden");
+      // Show teacher’s school and class
+      const schoolSnap = await dbGet(dbChild(schoolsRef, schoolId));
+      document.getElementById("teacher-school-name").textContent = schoolSnap.val().name;
+      document.getElementById("teacher-class-name").textContent = className;
+      // Show teacher’s relevant sections: financial, counters, registration, attendance, analytics, register
+      document.getElementById("financial-settings").classList.remove("hidden");
+      document.getElementById("animatedCounters").classList.remove("hidden");
+      document.getElementById("student-registration").classList.remove("hidden");
+      document.getElementById("attendance-section").classList.remove("hidden");
+      document.getElementById("analytics-section").classList.remove("hidden");
+      document.getElementById("register-section").classList.remove("hidden");
+    }
+  } else {
+    // No user: show auth modal
+    mainContent.classList.add("hidden");
+    authModal.classList.remove("hidden");
+    loginForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
+    // Clear any role-based dropdowns
+    document.getElementById("principal-school-select").innerHTML = `<option disabled selected>-- Select School --</option>`;
+  }
+});
+
+// LOAD EXISTING SCHOOLS FOR ADMIN LIST
+async function loadSchoolList() {
+  const ul = document.getElementById("schools-ul");
+  ul.innerHTML = "";
+  const snapshot = await dbGet(schoolsRef);
+  if (snapshot.exists()) {
+    snapshot.forEach(childSnap => {
+      const schoolId = childSnap.key;
+      const { name } = childSnap.val();
+      const li = document.createElement("li");
+      li.textContent = name + " ";
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "Delete";
+      removeBtn.classList.add("btn", "no-print");
+      removeBtn.style.marginLeft = "1em";
+      removeBtn.addEventListener("click", async () => {
+        await dbSet(dbChild(schoolsRef, schoolId), null);
+        loadSchoolList();
+      });
+      li.appendChild(removeBtn);
+      ul.appendChild(li);
+    });
+  }
+}
+
+// CREATE NEW SCHOOL (Admin)
+document.getElementById("create-school-btn").addEventListener("click", async () => {
+  const name = document.getElementById("newSchoolName").value.trim();
+  if (!name) return;
+  const newRef = dbPush(schoolsRef);
+  await dbSet(newRef, { name });
+  document.getElementById("newSchoolName").value = "";
+  loadSchoolList();
+});
+
+// PRINCIPAL: LOAD CLASSES FOR SELECTED SCHOOL
+document.getElementById("load-classes-btn").addEventListener("click", async () => {
+  const schoolId = document.getElementById("principal-school-select").value;
+  if (!schoolId) return;
+  const classesSnap = await dbGet(dbChild(classesRef, schoolId));
+  const classesList = document.getElementById("classes-ul");
+  classesList.innerHTML = "";
+  if (classesSnap.exists()) {
+    classesSnap.forEach(childSnap => {
+      const className = childSnap.key;
+      const { sections } = childSnap.val();
+      const li = document.createElement("li");
+      li.textContent = `Class ${className} → Sections: ${sections.join(", ")}`;
+      classesList.appendChild(li);
+    });
+  }
+  document.getElementById("classes-list").classList.remove("hidden");
+});
