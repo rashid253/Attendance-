@@ -1,7 +1,3 @@
-// firebase.json
-// -------------
-// Hosting configuration
-
 {
   "hosting": {
     "public": "public",
