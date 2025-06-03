@@ -1,6 +1,6 @@
 // firebase-config.js
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
   ref,
@@ -10,8 +10,8 @@ import {
   push,
   child,
   remove
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
@@ -28,6 +28,7 @@ const app      = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth     = getAuth(app);
 
+// We alias Firebase Realtime-DB functions to shorter names:
 const dbRef     = ref;
 const dbSet     = set;
 const dbGet     = get;
