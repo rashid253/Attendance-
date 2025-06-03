@@ -1,7 +1,4 @@
 // setup.js
-// -------------------------------------------------------------------------------------------
-// This file populates “appData/schools” and also drives the “Setup” panel (Admin / Principal / Teacher).
-// It also fills the <select id="schoolRegisterSelect"> dropdown for principal/teacher signup.
 
 import { database } from "./firebase-config.js";
 import {
@@ -11,66 +8,74 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // --------------------
-// 1) DOM elements (must match index.html exactly)
+// DOM elements
 // --------------------
-const setupSection          = document.getElementById("teacher-setup");
-const schoolInput           = document.getElementById("schoolInput");
-const schoolSelect          = document.getElementById("schoolSelect");
-const saveSetupBtn          = document.getElementById("saveSetup");
-const schoolListDiv         = document.getElementById("schoolList");
+const setupSection       = document.getElementById("teacher-setup");
+const schoolInput        = document.getElementById("schoolInput");
+const schoolSelect       = document.getElementById("schoolSelect");
+const saveSetupBtn       = document.getElementById("saveSetup");
+const schoolListDiv      = document.getElementById("schoolList");
 
-// Reuse these for populating the Sign-Up form in auth.js:
-const signupDropdown        = document.getElementById("schoolRegisterSelect");
+// We'll reuse the same dropdown for signup in auth.js:
+const signupDropdown     = document.getElementById("schoolRegisterSelect");
 const classRegisterSelect   = document.getElementById("classRegisterSelect");
 const sectionRegisterSelect = document.getElementById("sectionRegisterSelect");
 
-// --------------------
-// 2) Track current list of schools
-// --------------------
+// Track current list of schools
 let schools = [];
 let isAdmin = false;
 
 // --------------------
-// 3) Load existing schools from Realtime Database
+// 1) Load existing schools from Realtime Database
 // --------------------
 function loadSchools() {
   const ref = dbRef(database, "appData/schools");
   onValue(ref, snapshot => {
-    if (!snapshot.exists()) {
-      schools = [];
-    } else {
-      schools = snapshot.val();
-    }
+    schools = snapshot.exists() ? snapshot.val() : [];
     renderSchools();
+    if (isAdmin) populateAdminDropdown();
     populateSignupDropdown();
-    populateAdminDropdown();
+  }, error => {
+    console.error("onValue error for appData/schools:", error);
   });
 }
 
 // --------------------
-// 4) Render “Schools List” (for Admin to see all schools)
+// 2) Render schools list in setupSection
 // --------------------
 function renderSchools() {
   schoolListDiv.innerHTML = "";
-  schools.forEach(s => {
+  schools.forEach((s, idx) => {
     const itemDiv = document.createElement("div");
-    itemDiv.classList.add("card");
     itemDiv.textContent = s;
+    itemDiv.classList.add("school-item");
+    // If admin, add a delete button next to each school
+    if (isAdmin) {
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.classList.add("btn", "btn-sm");
+      delBtn.style.marginLeft = "0.5em";
+      delBtn.addEventListener("click", async () => {
+        // Remove this school from array and write back
+        const updated = schools.filter((_, i) => i !== idx);
+        try {
+          await dbSet(dbRef(database, "appData/schools"), updated);
+        } catch (err) {
+          console.error("Error deleting school:", err);
+          alert("کچھ غلط ہوا: " + err.message);
+        }
+      });
+      itemDiv.appendChild(delBtn);
+    }
     schoolListDiv.appendChild(itemDiv);
   });
 }
 
 // --------------------
-// 5) Populate “Admin” dropdown (in case Admin wants to edit an existing school)
+// 3) Populate admin's "schoolSelect" dropdown
 // --------------------
 function populateAdminDropdown() {
-  // Only show if Admin is logged in
-  if (!isAdmin) {
-    schoolSelect.parentElement.classList.add("hidden");
-    return;
-  }
-  schoolSelect.parentElement.classList.remove("hidden");
-  schoolSelect.innerHTML = `<option disabled selected>-- Select School to Edit --</option>`;
+  schoolSelect.innerHTML = '<option disabled selected>-- Select School --</option>';
   schools.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
@@ -80,12 +85,11 @@ function populateAdminDropdown() {
 }
 
 // --------------------
-// 6) Populate “Sign‐Up” dropdown (for Principal/Teacher)
+// 4) Populate Signup dropdown for principals/teachers
 // --------------------
 function populateSignupDropdown() {
-  signupDropdown.classList.remove("hidden");
   signupDropdown.innerHTML =
-    `<option disabled selected>-- Select School (for principal/teacher) --</option>`;
+    '<option disabled selected>-- Select School (for principal/teacher) --</option>';
   schools.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
@@ -95,7 +99,7 @@ function populateSignupDropdown() {
 }
 
 // --------------------
-// 7) Handle “Save” button click (only Admin can add a new school)
+// 5) Handle adding a new school (Admin only)
 // --------------------
 saveSetupBtn.addEventListener("click", async () => {
   const newSchool = schoolInput.value.trim();
@@ -103,6 +107,7 @@ saveSetupBtn.addEventListener("click", async () => {
     alert("براہِ کرم اسکول کا نام درج کریں!");
     return;
   }
+  // Prevent duplicate names
   if (schools.includes(newSchool)) {
     alert("یہ اسکول پہلے ہی موجود ہے۔");
     return;
@@ -113,56 +118,55 @@ saveSetupBtn.addEventListener("click", async () => {
     schoolInput.value = "";
     alert("اسکول شامل ہو گیا!");
   } catch (err) {
-    console.error("Error adding school:", err);
-    alert("اسکول شامل کرنے میں خرابی: " + err.message);
+    console.error("Error writing schools:", err);
+    alert("کچھ غلط ہوا: " + err.message);
   }
 });
 
 // --------------------
-// 8) Show/hide UI based on “role”
+// 6) Show principal's view (read-only school)
 // --------------------
 function showPrincipalSetup(school) {
-  // If Principal, hide Admin fields & show a card with their assigned school
+  // Hide admin-only inputs
   schoolInput.parentElement.classList.add("hidden");
   schoolSelect.parentElement.classList.add("hidden");
   saveSetupBtn.classList.add("hidden");
-
+  // Display principal's assigned school
   const infoDiv = document.createElement("div");
-  infoDiv.classList.add("card");
   infoDiv.innerHTML = `<strong>آپ کا اسکول:</strong> ${school}`;
+  infoDiv.classList.add("card");
   setupSection.appendChild(infoDiv);
 }
 
+// --------------------
+// 7) Show teacher's view (read-only school, class, section)
+// --------------------
 function showTeacherSetup(school, cls, sec) {
-  // If Teacher, hide Admin fields & show a card with their assigned school, class & section
+  // Hide admin-only inputs
   schoolInput.parentElement.classList.add("hidden");
   schoolSelect.parentElement.classList.add("hidden");
   saveSetupBtn.classList.add("hidden");
-
+  // Hide principal sign-up dropdown inside setup (if any)
+  // Display teacher's assigned school, class & section
   const infoDiv = document.createElement("div");
-  infoDiv.classList.add("card");
   infoDiv.innerHTML =
     `<strong>آپ کا اسکول:</strong> ${school}<br>` +
     `<strong>آپ کی کلاس:</strong> ${cls}<br>` +
     `<strong>آپ کا سیکشن:</strong> ${sec}`;
+  infoDiv.classList.add("card");
   setupSection.appendChild(infoDiv);
 }
 
 // --------------------
-// 9) When user logs in (event from auth.js), configure the Setup panel
+// 8) Initialize setup section based on user role
 // --------------------
 function initSetup() {
   const profile = window.currentUserProfile;
   if (!profile) return;
-
-  // Clear out any previously appended infoDiv
-  setupSection.querySelectorAll(".card").forEach(el => el.remove());
-  isAdmin = false;
-
   const role = profile.role;
   if (role === "admin") {
     isAdmin = true;
-    // Show Admin inputs
+    // Ensure inputs are visible
     schoolInput.parentElement.classList.remove("hidden");
     schoolSelect.parentElement.classList.remove("hidden");
     saveSetupBtn.classList.remove("hidden");
@@ -173,14 +177,17 @@ function initSetup() {
   } else if (role === "teacher") {
     showTeacherSetup(profile.school, profile.class, profile.section);
   }
-  // Always re-load schools (so dropdowns stay fresh)
   loadSchools();
 }
 
 // --------------------
-// 10) Listen for “userLoggedIn” (fired by auth.js) and/or load schools immediately if already logged in
+// 9) Listen for userLoggedIn event (fired by auth.js after login)
 // --------------------
 document.addEventListener("userLoggedIn", initSetup);
+
+// --------------------
+// 10) Immediately subscribe to schools in case Admin already logged in
+// --------------------
 if (window.currentUserProfile) {
   initSetup();
 } else {
