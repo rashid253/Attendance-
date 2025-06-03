@@ -1,28 +1,27 @@
 // firebase-config.js
-// ------------------
-// Initialize Firebase and export references
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getDatabase, ref as dbRef } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// Your web app's Firebase configuration (replace with actual config)
+// اپنی Firebase پروجیکٹ کی تفصیلات یہاں درج کریں:
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-export const database = getDatabase(firebaseApp);
-export const auth = getAuth(firebaseApp);
-export const usersRef = dbRef(database, "users");          // /users/{uid} → { name, role, schoolId, className }
-export const schoolsRef = dbRef(database, "schools");      // /schools/{schoolId} → { name }
-export const classesRef = dbRef(database, "classes");      // /classes/{schoolId}/{className} → { sections: [ "A", "B", ... ] }
-export const appDataRef = dbRef(database, "appData");      // /appData/{uid} → { studentsByUser, attendanceByUser, paymentsByUser, lastAdmByUser, fineRates, eligibilityPct }
+// Firebase ایپ initialize کریں
+const app = initializeApp(firebaseConfig);
+
+// Authentication کے لیے instance بنائیں
+const auth = getAuth(app);
+
+// Realtime Database کے لیے instance بنائیں
+const database = getDatabase(app);
+
+export { auth, database };
