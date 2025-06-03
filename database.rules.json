@@ -1,53 +1,29 @@
+// database.rules.json
+// -------------------
 {
   "rules": {
     "users": {
       "$uid": {
-        ".read":  "auth != null && auth.uid === $uid",
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
       }
     },
-    "appData": {
+    "schools": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
-      "schools": {
-        ".read": true,
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "studentsBySchool": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "attendanceDataBySchool": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "paymentsDataBySchool": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "lastAdmNoBySchool": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "fineRates": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "eligibilityPct": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "currentSchool": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "teacherClass": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
-      },
-      "teacherSection": {
-        ".read": "auth != null",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "classes": {
+      "$schoolId": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() in ['admin','principal'] " +
+                 "|| " +
+                 "(auth != null && root.child('users').child(auth.uid).child('role').val() === 'teacher' && data.child('className').val() === root.child('users').child(auth.uid).child('className').val())",
+        ".write": "root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'principal'"
+      }
+    },
+    "appData": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
       }
     }
   }
