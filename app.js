@@ -1,1080 +1,534 @@
-// app.js (Complete and Updated for Auth + Role-Based Access)
-// -------------------------------------------------------------------------------------------
+// app.js
+// ------
+// Main application logic: student registration, attendance, analytics, etc.
+// Assumes user is authenticated and role-based UI is already toggled by auth.js.
 
-// 1. IMPORTS & INITIALIZATION FOR AUTH & DATABASE
-import { auth, database } from "./firebase-config.js";
 import {
+  database,
+  appDataRef
+} from "./firebase-config.js";
+import {
+  getDatabase,
   ref as dbRef,
   set as dbSet,
+  onValue,
+  child as dbChild,
   get as dbGet,
-  onValue
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// IndexedDB helpers (idb-keyval)
+// IndexedDB (idb-keyval) helpers
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Reference to Firebase node for entire appData
-const appDataRef = dbRef(database, "appData");
+// State variables (scoped per authenticated user)
+let studentsByUser       = {}; // { uid: [ { ... } ] }
+let attendanceByUser     = {}; // { uid: { "YYYY-MM-DD": { adm: status } } }
+let paymentsByUser       = {}; // { uid: { adm: [ { date, amount } ] } }
+let lastAdmByUser        = {}; // { uid: last admission number }
+let fineRates            = { A:50, Lt:20, L:10, HD:30 };
+let eligibilityPct       = 75;
+let students             = [];
+let attendanceData       = {};
+let paymentsData         = {};
+let lastAdmNo            = 0;
+let currentUserId        = null;
 
-// 2. GLOBAL STATE (PER-SCHOOL & APP STATE VARIABLES)
-let studentsBySchool       = {};
-let attendanceDataBySchool = {};
-let paymentsDataBySchool   = {};
-let lastAdmNoBySchool      = {};
-let fineRates              = { A:50, Lt:20, L:10, HD:30 };
-let eligibilityPct         = 75;
-let schools                = [];
+// UI Elements
+const loginSection      = document.getElementById("login-section");
+const logoutBtn         = document.getElementById("logoutBtn");
+const mainContent       = document.getElementById("main-content");
 
-// These three will be set by setup.js (or overwritten if teacher)
-let currentSchool    = null;
-let teacherClass     = null;
-let teacherSection   = null;
+const financialSection  = document.getElementById("financial-settings");
+const countersSection   = document.getElementById("animatedCounters");
+const registrationSection = document.getElementById("student-registration");
+const attendanceSection = document.getElementById("attendance-section");
+const analyticsSection  = document.getElementById("analytics-section");
+const registerSection   = document.getElementById("register-section");
 
-// Active-school derived vars
-let students       = [];
-let attendanceData = {};
-let paymentsData   = {};
-let lastAdmNo      = 0;
+// Called by auth.js after authentication and role-based UI toggling
+export async function initAppForUser(uid) {
+  currentUserId = uid;
 
-// 3. ON USER LOGIN & SETUP COMPLETE → INITIALIZE DATA
-document.addEventListener("userLoggedIn", async () => {
-  try {
-    const appDataSnap = await dbGet(appDataRef);
-    if (appDataSnap.exists()) {
-      const appData = appDataSnap.val();
-      studentsBySchool       = appData.studentsBySchool       || {};
-      attendanceDataBySchool = appData.attendanceDataBySchool || {};
-      paymentsDataBySchool   = appData.paymentsDataBySchool   || {};
-      lastAdmNoBySchool      = appData.lastAdmNoBySchool      || {};
-      fineRates              = appData.fineRates              || fineRates;
-      eligibilityPct         = appData.eligibilityPct         || eligibilityPct;
-      schools                = appData.schools                || [];
-      currentSchool          = appData.currentSchool          || null;
-      teacherClass           = appData.teacherClass           || null;
-      teacherSection         = appData.teacherSection         || null;
-    }
-  } catch (err) {
-    console.error("Error fetching appData from Firebase:", err);
+  // Load from IndexedDB
+  studentsByUser   = (await idbGet("studentsByUser"))   || {};
+  attendanceByUser = (await idbGet("attendanceByUser")) || {};
+  paymentsByUser   = (await idbGet("paymentsByUser"))   || {};
+  lastAdmByUser    = (await idbGet("lastAdmByUser"))    || {};
+  fineRates        = (await idbGet("fineRates"))        || fineRates;
+  eligibilityPct   = (await idbGet("eligibilityPct"))   || eligibilityPct;
+
+  // Ensure data structure for this user
+  await ensureUserData(currentUserId);
+
+  students       = studentsByUser[currentUserId];
+  attendanceData = attendanceByUser[currentUserId];
+  paymentsData   = paymentsByUser[currentUserId];
+  lastAdmNo      = lastAdmByUser[currentUserId];
+
+  // Sync to Firebase
+  await syncToFirebase();
+
+  // Render initial UI (students list, counters, etc.)
+  renderStudents();
+  updateCounters();
+  bindUIEvents();
+}
+
+// Ensure user data exists
+async function ensureUserData(uid) {
+  if (!uid) return;
+  if (!studentsByUser[uid]) {
+    studentsByUser[uid] = [];
+    await idbSet("studentsByUser", studentsByUser);
   }
-
-  const profile = window.currentUserProfile;
-  if (profile && profile.role === "teacher") {
-    currentSchool  = profile.school;
-    teacherClass   = profile.class;
-    teacherSection = profile.section;
+  if (!attendanceByUser[uid]) {
+    attendanceByUser[uid] = {};
+    await idbSet("attendanceByUser", attendanceByUser);
   }
-
-  if (currentSchool && teacherClass && teacherSection) {
-    await ensureSchoolData(currentSchool);
-
-    students       = studentsBySchool[currentSchool];
-    attendanceData = attendanceDataBySchool[currentSchool];
-    paymentsData   = paymentsDataBySchool[currentSchool];
-    lastAdmNo      = lastAdmNoBySchool[currentSchool] || 0;
-
-    await initLocalState();
-
-    resetViews();
-    renderStudents();
-    updateCounters();
+  if (!paymentsByUser[uid]) {
+    paymentsByUser[uid] = {};
+    await idbSet("paymentsByUser", paymentsByUser);
   }
-});
-
-// 4. ENSURE DATA STRUCTURES EXIST FOR A GIVEN SCHOOL
-async function ensureSchoolData(school) {
-  if (!school) return;
-  if (!studentsBySchool[school]) {
-    studentsBySchool[school] = [];
-    await idbSet("studentsBySchool", studentsBySchool);
-  }
-  if (!attendanceDataBySchool[school]) {
-    attendanceDataBySchool[school] = {};
-    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-  }
-  if (!paymentsDataBySchool[school]) {
-    paymentsDataBySchool[school] = {};
-    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-  }
-  if (lastAdmNoBySchool[school] === undefined) {
-    lastAdmNoBySchool[school] = 0;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  if (lastAdmByUser[uid] === undefined) {
+    lastAdmByUser[uid] = 0;
+    await idbSet("lastAdmByUser", lastAdmByUser);
   }
 }
 
-// 5. INITIALIZE LOCAL STATE FROM IndexedDB
-async function initLocalState() {
-  studentsBySchool       = (await idbGet("studentsBySchool"))       || studentsBySchool;
-  attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || attendanceDataBySchool;
-  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || paymentsDataBySchool;
-  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || lastAdmNoBySchool;
-  fineRates              = (await idbGet("fineRates"))              || fineRates;
-  eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
-  schools                = (await idbGet("schools"))                || schools;
-  currentSchool          = (await idbGet("currentSchool"))          || currentSchool;
-  teacherClass           = (await idbGet("teacherClass"))           || teacherClass;
-  teacherSection         = (await idbGet("teacherSection"))         || teacherSection;
-
-  if (currentSchool) {
-    await ensureSchoolData(currentSchool);
-    students       = studentsBySchool[currentSchool];
-    attendanceData = attendanceDataBySchool[currentSchool];
-    paymentsData   = paymentsDataBySchool[currentSchool];
-    lastAdmNo      = lastAdmNoBySchool[currentSchool] || 0;
-  }
-}
-
-// 6. SYNC ENTIRE appData BACK TO FIREBASE
+// Sync local state to Firebase
 async function syncToFirebase() {
   const payload = {
-    studentsBySchool,
-    attendanceDataBySchool,
-    paymentsDataBySchool,
-    lastAdmNoBySchool,
+    studentsByUser,
+    attendanceByUser,
+    paymentsByUser,
+    lastAdmByUser,
     fineRates,
-    eligibilityPct,
-    schools,
-    currentSchool,
-    teacherClass,
-    teacherSection,
+    eligibilityPct
   };
   try {
-    await dbSet(appDataRef, payload);
+    await dbSet(dbChild(appDataRef, currentUserId), payload);
     console.log("✅ Synced data to Firebase");
   } catch (err) {
     console.error("Firebase sync failed:", err);
   }
 }
 
-// ----------------------------------------------------------
-// 7. REST OF YOUR ORIGINAL app.js CODE (Student Registration,
-//    Attendance, Analytics, Counters, Payments, etc.)
-//    – وہیں paste کر دیں جہاں پہلے تھا
-// ----------------------------------------------------------
-
-// Example: STUDENT REGISTRATION
-const studentNameInput      = document.getElementById("studentName");
-const parentNameInput       = document.getElementById("parentName");
-const parentContactInput    = document.getElementById("parentContact");
-const parentOccupationInput = document.getElementById("parentOccupation");
-const parentAddressInput    = document.getElementById("parentAddress");
-const addStudentBtn         = document.getElementById("addStudent");
-
-addStudentBtn.addEventListener("click", async () => {
-  const name       = studentNameInput.value.trim();
-  const parentName = parentNameInput.value.trim();
-  const contact    = parentContactInput.value.trim();
-  const occupation = parentOccupationInput.value.trim();
-  const address    = parentAddressInput.value.trim();
-
-  if (!name) {
-    alert("Student name is required.");
-    return;
-  }
-
-  lastAdmNo += 1;
-  lastAdmNoBySchool[currentSchool] = lastAdmNo;
-
-  const newStudent = {
-    adm: lastAdmNo,
-    name,
-    parentName,
-    contact,
-    occupation,
-    address,
-    fine: 0,
-    status: "Registered"
-  };
-
-  students.push(newStudent);
-  studentsBySchool[currentSchool] = students;
-
-  await idbSet("studentsBySchool", studentsBySchool);
-  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
+// Generate new admission number
+async function genAdmNo() {
+  lastAdmNo++;
+  lastAdmByUser[currentUserId] = lastAdmNo;
+  await idbSet("lastAdmByUser", lastAdmByUser);
   await syncToFirebase();
+  return String(lastAdmNo).padStart(4, "0");
+}
 
-  renderStudents();
-  updateCounters();
-
-  studentNameInput.value      = "";
-  parentNameInput.value       = "";
-  parentContactInput.value    = "";
-  parentOccupationInput.value = "";
-  parentAddressInput.value    = "";
-});
-
+// RENDER STUDENTS TABLE
 function renderStudents() {
   const studentsBody = document.getElementById("studentsBody");
-  if (!studentsBody) return;
   studentsBody.innerHTML = "";
+  let idx = 0;
+  students.forEach((s, i) => {
+    idx++;
+    // Compute attendance stats
+    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+    Object.values(attendanceData).forEach(dayRec => {
+      if (dayRec[s.adm]) stats[dayRec[s.adm]]++;
+    });
+    const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+    const fine  = stats.A * fineRates.A + stats.Lt * fineRates.Lt + stats.L * fineRates.L + stats.HD * fineRates.HD;
+    const paid  = (paymentsData[s.adm] || []).reduce((a, p) => a + p.amount, 0);
+    const out   = fine - paid;
+    const pct   = total ? (stats.P / total) * 100 : 0;
+    const status = (out > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
 
-  students.forEach((stu, index) => {
     const tr = document.createElement("tr");
+    tr.dataset.index = i;
     tr.innerHTML = `
-      <td><input type="checkbox" class="stuCheckbox" data-index="${index}" /></td>
-      <td>${index + 1}</td>
-      <td>${stu.name}</td>
-      <td>${stu.adm}</td>
-      <td>${stu.parentName}</td>
-      <td>${stu.contact}</td>
-      <td>${stu.occupation}</td>
-      <td>${stu.address}</td>
-      <td>${stu.fine}</td>
-      <td>${stu.status}</td>
-      <td>
-        <button class="edit-stu btn" data-index="${index}"><i class="fas fa-edit"></i></button>
-        <button class="delete-stu btn" data-index="${index}"><i class="fas fa-trash-alt"></i></button>
-      </td>`;
+      <td><input type="checkbox" class="sel" /></td>
+      <td>${idx}</td>
+      <td>${s.name}</td>
+      <td>${s.adm}</td>
+      <td>${s.parent}</td>
+      <td>${s.contact}</td>
+      <td>${s.occupation}</td>
+      <td>${s.address}</td>
+      <td>PKR ${out}</td>
+      <td>${status}</td>
+      <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+    `;
     studentsBody.appendChild(tr);
   });
-
-  const selectAll = document.getElementById("selectAllStudents");
-  if (selectAll) {
-    selectAll.checked = false;
-    selectAll.addEventListener("change", () => {
-      document.querySelectorAll(".stuCheckbox").forEach(cb => {
-        cb.checked = selectAll.checked;
-      });
-      toggleStudentActions();
-    });
-  }
-
-  document.querySelectorAll(".stuCheckbox").forEach(cb => {
-    cb.addEventListener("change", toggleStudentActions);
-  });
-  toggleStudentActions();
-
-  document.querySelectorAll(".edit-stu").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const idx = +btn.dataset.index;
-      enterEditMode(idx);
-    });
-  });
-
-  document.querySelectorAll(".delete-stu").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const idx = +btn.dataset.index;
-      if (confirm(`Delete student ${students[idx].name}?`)) {
-        students.splice(idx, 1);
-        studentsBySchool[currentSchool]       = students;
-        await idbSet("studentsBySchool", studentsBySchool);
-        await syncToFirebase();
-        renderStudents();
-        updateCounters();
-      }
-    });
+  document.getElementById("selectAllStudents").checked = false;
+  toggleRegistrationButtons();
+  document.querySelectorAll(".add-payment-btn").forEach(b => {
+    b.onclick = () => openPaymentModal(b.dataset.adm);
   });
 }
 
-function toggleStudentActions() {
-  const checked = document.querySelectorAll(".stuCheckbox:checked").length;
-  document.getElementById("editSelected").disabled   = checked !== 1;
-  document.getElementById("deleteSelected").disabled = checked === 0;
+// UPDATE COUNTERS (e.g., total students, total present, etc.)
+function updateCounters() {
+  const container = document.getElementById("countersContainer");
+  container.innerHTML = "";
+  const totalStudents = students.length;
+  const totalPresent = Object.values(attendanceData).reduce((acc, dayRec) => {
+    return acc + Object.values(dayRec).filter(status => status === "P").length;
+  }, 0);
+  const totalAbsent = Object.values(attendanceData).reduce((acc, dayRec) => {
+    return acc + Object.values(dayRec).filter(status => status === "A").length;
+  }, 0);
+
+  const cards = [
+    { label: "Students", number: totalStudents },
+    { label: "Present Records", number: totalPresent },
+    { label: "Absent Records", number: totalAbsent }
+  ];
+  cards.forEach(c => {
+    const div = document.createElement("div");
+    div.classList.add("counter-card", "card");
+    div.innerHTML = `<div class="card-number">${c.number}</div><div>${c.label}</div>`;
+    container.appendChild(div);
+  });
 }
 
-const editSelectedBtn = document.getElementById("editSelected");
-const doneEditingBtn  = document.getElementById("doneEditing");
-
-editSelectedBtn.addEventListener("click", () => {
-  const checkedBoxes = document.querySelectorAll(".stuCheckbox:checked");
-  if (checkedBoxes.length !== 1) return;
-  const idx = +checkedBoxes[0].dataset.index;
-  enterEditMode(idx);
-});
-
-doneEditingBtn.addEventListener("click", async () => {
-  const idx = +doneEditingBtn.dataset.index;
-  const name       = studentNameInput.value.trim();
-  const parentName = parentNameInput.value.trim();
-  const contact    = parentContactInput.value.trim();
-  const occupation = parentOccupationInput.value.trim();
-  const address    = parentAddressInput.value.trim();
-
-  if (!name) {
-    alert("Student name is required.");
-    return;
-  }
-
-  const stu = students[idx];
-  stu.name       = name;
-  stu.parentName = parentName;
-  stu.contact    = contact;
-  stu.occupation = occupation;
-  stu.address    = address;
-
-  studentsBySchool[currentSchool] = students;
-  await idbSet("studentsBySchool", studentsBySchool);
-  await syncToFirebase();
-
-  exitEditMode();
-  renderStudents();
-  updateCounters();
-});
-
-function enterEditMode(index) {
-  const stu = students[index];
-  studentNameInput.value      = stu.name;
-  parentNameInput.value       = stu.parentName;
-  parentContactInput.value    = stu.contact;
-  parentOccupationInput.value = stu.occupation;
-  parentAddressInput.value    = stu.address;
-
-  addStudentBtn.classList.add("hidden");
-  editSelectedBtn.classList.add("hidden");
-  doneEditingBtn.classList.remove("hidden");
-  doneEditingBtn.dataset.index = index;
-}
-
-function exitEditMode() {
-  studentNameInput.value      = "";
-  parentNameInput.value       = "";
-  parentContactInput.value    = "";
-  parentOccupationInput.value = "";
-  parentAddressInput.value    = "";
-
-  addStudentBtn.classList.remove("hidden");
-  editSelectedBtn.classList.remove("hidden");
-  doneEditingBtn.classList.add("hidden");
-  doneEditingBtn.dataset.index = "";
-}
-
-const deleteSelectedBtn = document.getElementById("deleteSelected");
-deleteSelectedBtn.addEventListener("click", async () => {
-  const checkedBoxes = document.querySelectorAll(".stuCheckbox:checked");
-  if (checkedBoxes.length === 0) return;
-
-  if (!confirm(`Delete ${checkedBoxes.length} selected student(s)?`)) return;
-  const indices = Array.from(checkedBoxes).map(cb => +cb.dataset.index).sort((a,b)=>b-a);
-  for (const idx of indices) {
-    students.splice(idx, 1);
-  }
-  studentsBySchool[currentSchool] = students;
-  await idbSet("studentsBySchool", studentsBySchool);
-  await syncToFirebase();
-  renderStudents();
-  updateCounters();
-});
-
-const saveRegistrationBtn = document.getElementById("saveRegistration");
-saveRegistrationBtn.addEventListener("click", async () => {
-  await idbSet("studentsBySchool", studentsBySchool);
-  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-  await syncToFirebase();
-  alert("Registration saved successfully.");
-});
-
-const restoreFileInput = document.getElementById("restoreFile");
-const restoreDataBtn   = document.getElementById("restoreData");
-restoreDataBtn.addEventListener("click", () => restoreFileInput.click());
-
-restoreFileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try {
-    const backup = JSON.parse(text);
-    if (!backup.studentsBySchool) throw new Error("Invalid backup format.");
-    studentsBySchool       = backup.studentsBySchool;
-    attendanceDataBySchool = backup.attendanceDataBySchool;
-    paymentsDataBySchool   = backup.paymentsDataBySchool;
-    lastAdmNoBySchool      = backup.lastAdmNoBySchool;
-    fineRates              = backup.fineRates;
-    eligibilityPct         = backup.eligibilityPct;
-    schools                = backup.schools;
-    currentSchool          = backup.currentSchool;
-    teacherClass           = backup.teacherClass;
-    teacherSection         = backup.teacherSection;
-
-    await idbSet("studentsBySchool", studentsBySchool);
-    await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-    await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+// BIND UI EVENTS FOR STUDENT REGISTRATION, ATTENDANCE, ETC.
+function bindUIEvents() {
+  // FINANCIAL SETTINGS
+  document.getElementById("saveSettings").onclick = async () => {
+    fineRates.A  = Number(document.getElementById("fineAbsent").value)  || fineRates.A;
+    fineRates.Lt = Number(document.getElementById("fineLate").value)    || fineRates.Lt;
+    fineRates.L  = Number(document.getElementById("fineLeave").value)   || fineRates.L;
+    fineRates.HD = Number(document.getElementById("fineHalfDay").value) || fineRates.HD;
+    eligibilityPct = Number(document.getElementById("eligibilityPct").value) || eligibilityPct;
     await idbSet("fineRates", fineRates);
     await idbSet("eligibilityPct", eligibilityPct);
-    await idbSet("schools", schools);
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-
     await syncToFirebase();
-    alert("Data restored from backup. Please reload the page.");
-    location.reload();
-  } catch (err) {
-    alert("Failed to restore backup: " + err.message);
-  }
-});
+    alert("Settings saved.");
+  };
 
-const resetDataBtn = document.getElementById("resetData");
-resetDataBtn.addEventListener("click", async () => {
-  if (!confirm("Factory reset will delete ALL data for this school. Continue?")) return;
-  students = [];
-  attendanceData = {};
-  paymentsData = {};
-  lastAdmNo = 0;
+  // STUDENT REGISTRATION: Add new student
+  document.getElementById("addStudent").onclick = async () => {
+    const name      = document.getElementById("studentName").value.trim();
+    const parent    = document.getElementById("parentName").value.trim();
+    const contact   = document.getElementById("parentContact").value.trim();
+    const occupation= document.getElementById("parentOccupation").value.trim();
+    const address   = document.getElementById("parentAddress").value.trim();
+    if (!name || !parent) return;
+    const adm = await genAdmNo();
+    const newStudent = { name, adm, parent, contact, occupation, address };
+    students.push(newStudent);
+    studentsByUser[currentUserId] = students;
+    await idbSet("studentsByUser", studentsByUser);
+    await syncToFirebase();
+    renderStudents();
+    document.getElementById("studentName").value = "";
+    document.getElementById("parentName").value = "";
+    document.getElementById("parentContact").value = "";
+    document.getElementById("parentOccupation").value = "";
+    document.getElementById("parentAddress").value = "";
+  };
 
-  studentsBySchool[currentSchool]       = [];
-  attendanceDataBySchool[currentSchool] = {};
-  paymentsDataBySchool[currentSchool]   = {};
-  lastAdmNoBySchool[currentSchool]      = 0;
-
-  await idbSet("studentsBySchool", studentsBySchool);
-  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-  await syncToFirebase();
-  renderStudents();
-  updateCounters();
-  resetViews();
-});
-
-const dateInput      = document.getElementById("dateInput");
-const loadAttendanceBtn = document.getElementById("loadAttendance");
-const attendanceBody = document.getElementById("attendanceBody");
-const attendanceSummary = document.getElementById("attendanceSummary");
-const saveAttendanceBtn = document.getElementById("saveAttendance");
-const resetAttendanceBtn = document.getElementById("resetAttendance");
-
-loadAttendanceBtn.addEventListener("click", () => {
-  const date = dateInput.value;
-  if (!date) {
-    alert("Select a date first.");
-    return;
-  }
-  renderAttendanceTable(date);
-});
-
-function renderAttendanceTable(date) {
-  attendanceBody.innerHTML = "";
-  attendanceSummary.classList.add("hidden");
-  saveAttendanceBtn.classList.add("hidden");
-  resetAttendanceBtn.classList.add("hidden");
-
-  if (!attendanceData[date]) {
-    attendanceData[date] = {};
-  }
-
-  const table = document.createElement("table");
-  table.classList.add("table");
-  const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>#</th><th>Adm#</th><th>Name</th><th>Status</th></tr>";
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  students.forEach((stu, idx) => {
-    const status = attendanceData[date][stu.adm] || "P";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${stu.adm}</td>
-      <td>${stu.name}</td>
-      <td>
-        <select class="att-select" data-adm="${stu.adm}">
-          <option value="P" ${status === "P" ? "selected" : ""}>P</option>
-          <option value="A" ${status === "A" ? "selected" : ""}>A</option>
-          <option value="Lt" ${status === "Lt" ? "selected" : ""}>Lt</option>
-          <option value="HD" ${status === "HD" ? "selected" : ""}>HD</option>
-          <option value="L" ${status === "L" ? "selected" : ""}>L</option>
-        </select>
-      </td>`;
-    tbody.appendChild(tr);
+  // SELECT ALL STUDENTS checkbox
+  document.getElementById("selectAllStudents").addEventListener("change", (e) => {
+    const checked = e.target.checked;
+    document.querySelectorAll("#studentsBody .sel").forEach(cb => {
+      cb.checked = checked;
+    });
+    toggleRegistrationButtons();
   });
-  table.appendChild(tbody);
-  attendanceBody.appendChild(table);
 
-  saveAttendanceBtn.classList.remove("hidden");
-  resetAttendanceBtn.classList.remove("hidden");
+  // STUDENT checkboxes → toggle Edit/Delete buttons
+  document.getElementById("studentsBody").addEventListener("change", () => {
+    toggleRegistrationButtons();
+  });
+
+  // DELETE SELECTED STUDENTS
+  document.getElementById("deleteSelected").onclick = async () => {
+    const checkedBoxes = Array.from(document.querySelectorAll("#studentsBody .sel"))
+      .filter(cb => cb.checked);
+    if (!checkedBoxes.length) return;
+    const confirmed = confirm(`Delete ${checkedBoxes.length} selected student(s)?`);
+    if (!confirmed) return;
+    // Remove in descending index order
+    const indices = checkedBoxes.map(cb => Number(cb.closest("tr").dataset.index));
+    indices.sort((a, b) => b - a);
+    indices.forEach(i => students.splice(i, 1));
+    studentsByUser[currentUserId] = students;
+    await idbSet("studentsByUser", studentsByUser);
+    await syncToFirebase();
+    renderStudents();
+  };
+
+  // ATTENDANCE: Load attendance for selected date
+  document.getElementById("loadAttendance").onclick = () => {
+    const date = document.getElementById("dateInput").value;
+    if (!date) return;
+    loadAttendanceForDate(date);
+  };
+
+  // STUDENT PAYMENT MODAL
+  document.getElementById("paymentModalClose").onclick = () => {
+    document.getElementById("paymentModal").classList.add("hidden");
+  };
+  document.getElementById("cancelPayment").onclick = () => {
+    document.getElementById("paymentModal").classList.add("hidden");
+  };
+  document.getElementById("savePayment").onclick = async () => {
+    const adm = document.getElementById("payAdm").textContent;
+    const amount = Number(document.getElementById("paymentAmount").value);
+    if (!amount) return;
+    if (!paymentsData[adm]) paymentsData[adm] = [];
+    paymentsData[adm].push({ date: new Date().toISOString().split("T")[0], amount });
+    paymentsByUser[currentUserId] = paymentsData;
+    await idbSet("paymentsByUser", paymentsByUser);
+    await syncToFirebase();
+    document.getElementById("paymentModal").classList.add("hidden");
+    renderStudents();
+  };
+
+  // ATTENDANCE → Save attendance
+  document.getElementById("saveAttendance").onclick = async () => {
+    const date = document.getElementById("dateInput").value;
+    if (!date) return;
+    await idbSet("attendanceByUser", attendanceByUser);
+    await syncToFirebase();
+    document.getElementById("saveAttendance").classList.add("hidden");
+    document.getElementById("resetAttendance").classList.add("hidden");
+    document.getElementById("shareAttendanceSummary").classList.remove("hidden");
+    document.getElementById("downloadAttendancePDF").classList.remove("hidden");
+    renderStudents();
+    updateCounters();
+  };
+
+  // ATTENDANCE → Reset attendance inputs
+  document.getElementById("resetAttendance").onclick = () => {
+    const checkboxes = document.querySelectorAll(".att-checkbox");
+    checkboxes.forEach(cb => {
+      cb.checked = false;
+      cb.closest("td").querySelector("select").value = "";
+    });
+    document.getElementById("attendanceSummary").classList.add("hidden");
+    document.getElementById("saveAttendance").classList.add("hidden");
+    document.getElementById("resetAttendance").classList.add("hidden");
+    document.getElementById("shareAttendanceSummary").classList.add("hidden");
+    document.getElementById("downloadAttendancePDF").classList.add("hidden");
+  };
+
+  // ANALYTICS → Load analytics
+  document.getElementById("loadAnalytics").onclick = () => {
+    loadAnalytics();
+  };
+
+  // REGISTER → Load monthly register
+  document.getElementById("loadRegister").onclick = () => {
+    const month = document.getElementById("registerMonth").value;
+    if (!month) return;
+    loadMonthlyRegister(month);
+  };
 }
 
-saveAttendanceBtn.addEventListener("click", async () => {
-  const date = dateInput.value;
-  document.querySelectorAll(".att-select").forEach(sel => {
-    const adm = sel.dataset.adm;
-    attendanceData[date][adm] = sel.value;
+// Toggle Edit/Delete buttons in student registration
+function toggleRegistrationButtons() {
+  const checkedCount = document.querySelectorAll("#studentsBody .sel:checked").length;
+  document.getElementById("editSelected").disabled = checkedCount !== 1;
+  document.getElementById("deleteSelected").disabled = checkedCount === 0;
+}
+
+// Load attendance form for a given date
+function loadAttendanceForDate(date) {
+  // Build table with student names and dropdowns for status
+  const container = document.getElementById("attendanceBody");
+  container.innerHTML = "";
+  const table = document.createElement("table");
+  table.classList.add("table-wrapper");
+  const thead = document.createElement("thead");
+  thead.innerHTML = `<tr><th>Name</th><th>Adm#</th><th>Status</th></tr>`;
+  const tbody = document.createElement("tbody");
+  students.forEach(s => {
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td");
+    tdName.textContent = s.name;
+    const tdAdm = document.createElement("td");
+    tdAdm.textContent = s.adm;
+    const tdStatus = document.createElement("td");
+    const select = document.createElement("select");
+    select.innerHTML = `
+      <option value="" disabled selected>--</option>
+      <option value="P">Present</option>
+      <option value="A">Absent</option>
+      <option value="Lt">Late</option>
+      <option value="HD">Half-Day</option>
+      <option value="L">Leave</option>
+    `;
+    select.value = (attendanceData[date] || {})[s.adm] || "";
+    select.addEventListener("change", (e) => {
+      if (!attendanceData[date]) attendanceData[date] = {};
+      attendanceData[date][s.adm] = e.target.value;
+      attendanceByUser[currentUserId] = attendanceData;
+      document.getElementById("saveAttendance").classList.remove("hidden");
+      document.getElementById("resetAttendance").classList.remove("hidden");
+      updateAttendanceSummary(date);
+    });
+    tdStatus.appendChild(select);
+    tr.appendChild(tdName);
+    tr.appendChild(tdAdm);
+    tr.appendChild(tdStatus);
+    tbody.appendChild(tr);
   });
-  attendanceDataBySchool[currentSchool] = attendanceData;
-  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-  await syncToFirebase();
-  alert("Attendance saved for " + date);
-  calculateSummary(date);
-});
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  container.appendChild(table);
+  updateAttendanceSummary(date);
+}
 
-resetAttendanceBtn.addEventListener("click", () => {
-  const date = dateInput.value;
-  if (attendanceData[date]) {
-    delete attendanceData[date];
-    attendanceDataBySchool[currentSchool] = attendanceData;
-    idbSet("attendanceDataBySchool", attendanceDataBySchool);
-    syncToFirebase();
-    renderAttendanceTable(date);
-  }
-});
-
-function calculateSummary(date) {
-  const summaryBox = attendanceSummary;
-  summaryBox.innerHTML = "";
-  const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
-  students.forEach(stu => {
-    const status = attendanceData[date][stu.adm] || "P";
-    stats[status]++;
-  });
-  const total   = students.length;
-  const present = stats.P + stats.Lt + stats.HD;
-  const perc    = ((present / total) * 100).toFixed(2);
-
+// Update attendance summary box
+function updateAttendanceSummary(date) {
+  const summaryBox = document.getElementById("attendanceSummary");
+  const dayRec = attendanceData[date] || {};
+  const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+  Object.values(dayRec).forEach(status => stats[status]++);
   summaryBox.innerHTML = `
-    <p>Total Students: ${total}</p>
-    <p>Present: ${stats.P}</p>
-    <p>Late: ${stats.Lt}</p>
-    <p>Half Day: ${stats.HD}</p>
-    <p>Absent: ${stats.A}</p>
-    <p>Leave: ${stats.L}</p>
-    <p>Attendance %: ${perc}%</p>`;
+    <div><strong>Date:</strong> ${date}</div>
+    <div>Present: ${stats.P}</div>
+    <div>Absent: ${stats.A}</div>
+    <div>Late: ${stats.Lt}</div>
+    <div>Half-Day: ${stats.HD}</div>
+    <div>Leave: ${stats.L}</div>
+  `;
   summaryBox.classList.remove("hidden");
 }
 
-const analyticsTargetSelect    = document.getElementById("analyticsTarget");
-const analyticsSectionSelect   = document.getElementById("analyticsSectionSelect");
-const analyticsTypeSelect      = document.getElementById("analyticsType");
-const analyticsDateInput       = document.getElementById("analyticsDate");
-const analyticsMonthInput      = document.getElementById("analyticsMonth");
-const semesterStartInput       = document.getElementById("semesterStart");
-const semesterEndInput         = document.getElementById("semesterEnd");
-const yearStartInput           = document.getElementById("yearStart");
-const analyticsSearchInput     = document.getElementById("analyticsSearch");
-const loadAnalyticsBtn         = document.getElementById("loadAnalytics");
-const resetAnalyticsBtn        = document.getElementById("resetAnalytics");
-const analyticsContainer       = document.getElementById("analyticsContainer");
-const analyticsBody            = document.getElementById("analyticsBody");
-const analyticsTableHeadRow    = document.querySelector("#analyticsTable thead tr");
-const graphsDiv                = document.getElementById("graphs");
-let barChartInstance           = null;
-let pieChartInstance           = null;
+// Open payment modal for a given admission number
+function openPaymentModal(adm) {
+  document.getElementById("payAdm").textContent = adm;
+  document.getElementById("paymentAmount").value = "";
+  document.getElementById("paymentModal").classList.remove("hidden");
+}
 
-analyticsTargetSelect.addEventListener("change", () => {
-  analyticsSectionSelect.classList.add("hidden");
-  analyticsTypeSelect.disabled = false;
-  analyticsDateInput.classList.add("hidden");
-  analyticsMonthInput.classList.add("hidden");
-  semesterStartInput.classList.add("hidden");
-  semesterEndInput.classList.add("hidden");
-  yearStartInput.classList.add("hidden");
-  analyticsSearchInput.classList.add("hidden");
+// LOAD ANALYTICS (simplified: show attendance % per student)
+function loadAnalytics() {
+  const target = document.getElementById("analyticsTarget").value;
+  if (!target) return;
+  const container = document.getElementById("analyticsContainer");
+  const tbody = document.getElementById("analyticsBody");
+  const thead = document.querySelector("#analyticsTable thead tr");
+  thead.innerHTML = "";
+  tbody.innerHTML = "";
 
-  const target = analyticsTargetSelect.value;
-  if (target === "section") {
-    analyticsSectionSelect.classList.remove("hidden");
-  }
-});
-
-analyticsTypeSelect.addEventListener("change", () => {
-  analyticsDateInput.classList.add("hidden");
-  analyticsMonthInput.classList.add("hidden");
-  semesterStartInput.classList.add("hidden");
-  semesterEndInput.classList.add("hidden");
-  yearStartInput.classList.add("hidden");
-  analyticsSearchInput.classList.add("hidden");
-
-  const type = analyticsTypeSelect.value;
-  switch (type) {
-    case "date":
-      analyticsDateInput.classList.remove("hidden");
-      break;
-    case "month":
-      analyticsMonthInput.classList.remove("hidden");
-      break;
-    case "semester":
-      semesterStartInput.classList.remove("hidden");
-      semesterEndInput.classList.remove("hidden");
-      break;
-    case "year":
-      yearStartInput.classList.remove("hidden");
-      analyticsSearchInput.classList.remove("hidden");
-      break;
-  }
-});
-
-loadAnalyticsBtn.addEventListener("click", () => {
-  const target  = analyticsTargetSelect.value;
-  const section = analyticsSectionSelect.value;
-  const type    = analyticsTypeSelect.value;
-  if (!target || !type) {
-    alert("Please select report target and period.");
-    return;
-  }
-  generateAnalytics(target, section, type);
-});
-
-resetAnalyticsBtn.addEventListener("click", () => {
-  analyticsTargetSelect.value       = "";
-  analyticsSectionSelect.value      = "";
-  analyticsSectionSelect.classList.add("hidden");
-  analyticsTypeSelect.value         = "";
-  analyticsTypeSelect.disabled      = true;
-  analyticsDateInput.value          = "";
-  analyticsMonthInput.value         = "";
-  semesterStartInput.value          = "";
-  semesterEndInput.value            = "";
-  yearStartInput.value              = "";
-  analyticsSearchInput.value        = "";
-  analyticsContainer.classList.add("hidden");
-  graphsDiv.classList.add("hidden");
-  resetAnalyticsBtn.classList.add("hidden");
-});
-
-function generateAnalytics(target, section, type) {
-  let filteredStudents = [...students];
-  if (target === "section" && section) {
-    filteredStudents = filteredStudents.filter(stu => stu.section === section);
-  }
-
-  let dates = Object.keys(attendanceData);
-  if (type === "date") {
-    const selDate = analyticsDateInput.value;
-    dates = dates.filter(d => d === selDate);
-  } else if (type === "month") {
-    const [year, month] = analyticsMonthInput.value.split("-");
-    dates = dates.filter(d => {
-      const dt = new Date(d);
-      return dt.getFullYear() === +year && dt.getMonth() + 1 === +month;
+  if (target === "student") {
+    // Columns: Adm#, Name, Present %, Absent %, Fine, Status
+    ["Adm#", "Name", "Present %", "Absent %", "Fine (PKR)", "Status"].forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      thead.appendChild(th);
     });
-  } else if (type === "semester") {
-    const start = semesterStartInput.value;
-    const end   = semesterEndInput.value;
-    dates = dates.filter(d => d >= start && d <= end);
-  } else if (type === "year") {
-    const year = +yearStartInput.value;
-    dates = dates.filter(d => new Date(d).getFullYear() === year);
-  }
-
-  const analyticsStats = filteredStudents.map(stu => {
-    const stat = { adm: stu.adm, name: stu.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
-    dates.forEach(d => {
-      const status = attendanceData[d]?.[stu.adm] || "P";
-      stat[status]++;
+    students.forEach(s => {
+      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
+      Object.values(attendanceData).forEach(dayRec => {
+        if (dayRec[s.adm]) stats[dayRec[s.adm]]++;
+      });
+      const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+      const pctPresent = total ? ((stats.P / total) * 100).toFixed(1) : "0.0";
+      const pctAbsent  = total ? ((stats.A / total) * 100).toFixed(1) : "0.0";
+      const fine  = stats.A * fineRates.A + stats.Lt * fineRates.Lt + stats.L * fineRates.L + stats.HD * fineRates.HD;
+      const paid  = (paymentsData[s.adm] || []).reduce((a, p) => a + p.amount, 0);
+      const out   = fine - paid;
+      const status = (out > 0 || (total && (stats.P / total)*100 < eligibilityPct)) ? "Debarred" : "Eligible";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${s.adm}</td>
+        <td>${s.name}</td>
+        <td>${pctPresent}%</td>
+        <td>${pctAbsent}%</td>
+        <td>PKR ${out}</td>
+        <td>${status}</td>
+      `;
+      tbody.appendChild(tr);
     });
-    stat.total = stat.P + stat.Lt + stat.HD + stat.A + stat.L;
-    stat.perc  = stat.total > 0 ? ((stat.P + stat.Lt + stat.HD) / stat.total * 100).toFixed(2) : "0.00";
-    stat.outstanding = stu.fine;
-    stat.status = stat.perc >= eligibilityPct ? "Eligible" : "Debarred";
-    return stat;
-  });
-
-  analyticsTableHeadRow.innerHTML = [
-    "#", "Adm#", "Name", "P", "A", "Lt", "HD", "L", "Total", "%", "Outstanding", "Status"
-  ].map(h => `<th>${h}</th>`).join("");
-
-  analyticsBody.innerHTML = "";
-  analyticsStats.forEach((st, idx) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td>${st.adm}</td>
-      <td>${st.name}</td>
-      <td>${st.P}</td>
-      <td>${st.A}</td>
-      <td>${st.Lt}</td>
-      <td>${st.HD}</td>
-      <td>${st.L}</td>
-      <td>${st.total}</td>
-      <td>${st.perc}%</td>
-      <td>${st.outstanding}</td>
-      <td>${st.status}</td>`;
-    analyticsBody.appendChild(tr);
-  });
-
-  analyticsContainer.classList.remove("hidden");
-  graphsDiv.classList.remove("hidden");
-  resetAnalyticsBtn.classList.remove("hidden");
-
-  if (barChartInstance) {
-    barChartInstance.destroy();
+    container.classList.remove("hidden");
+    document.getElementById("graphs").classList.remove("hidden");
+    plotCharts();
+    document.getElementById("analyticsActions").classList.remove("hidden");
   }
-  const barCtx = document.getElementById("barChart").getContext("2d");
-  barChartInstance = new Chart(barCtx, {
+  // Implement other target types ("class", "section") similarly if needed
+}
+
+// PLOT BARCHART & PIECHART FOR STUDENT ATTENDANCE SUMMARY
+function plotCharts() {
+  // For simplicity: Bar chart of top 5 students by present count
+  const ctxBar = document.getElementById("barChart").getContext("2d");
+  const sorted = [...students].sort((a, b) => {
+    const statsA = { P:0 }, statsB = { P:0 };
+    Object.values(attendanceData).forEach(dayRec => {
+      if (dayRec[a.adm] === "P") statsA.P++;
+      if (dayRec[b.adm] === "P") statsB.P++;
+    });
+    return statsB.P - statsA.P;
+  }).slice(0, 5);
+  const labels = sorted.map(s => s.name);
+  const data = sorted.map(s => {
+    let count = 0;
+    Object.values(attendanceData).forEach(dayRec => {
+      if (dayRec[s.adm] === "P") count++;
+    });
+    return count;
+  });
+  new Chart(ctxBar, {
     type: "bar",
-    data: {
-      labels: analyticsStats.map(st => st.adm),
-      datasets: [{
-        label: "% Attendance",
-        data: analyticsStats.map(st => +st.perc),
-        backgroundColor: null
-      }]
-    },
-    options: {
-      scales: { y: { beginAtZero: true, max: 100 } }
-    }
+    data: { labels, datasets: [{ label: "Present Count", data }] },
+    options: { responsive: true, maintainAspectRatio: false }
   });
 
-  if (pieChartInstance) {
-    pieChartInstance.destroy();
-  }
-  const pieCtx = document.getElementById("pieChart").getContext("2d");
-  const totalP   = analyticsStats.reduce((sum, st) => sum + st.P, 0);
-  const totalA   = analyticsStats.reduce((sum, st) => sum + st.A, 0);
-  const totalLt  = analyticsStats.reduce((sum, st) => sum + st.Lt, 0);
-  const totalHD  = analyticsStats.reduce((sum, st) => sum + st.HD, 0);
-  const totalL   = analyticsStats.reduce((sum, st) => sum + st.L, 0);
-  pieChartInstance = new Chart(pieCtx, {
+  // Pie chart: overall present vs absent counts
+  const ctxPie = document.getElementById("pieChart").getContext("2d");
+  let presentTotal = 0, absentTotal = 0;
+  Object.values(attendanceData).forEach(dayRec => {
+    Object.values(dayRec).forEach(status => {
+      if (status === "P") presentTotal++;
+      else if (status === "A") absentTotal++;
+    });
+  });
+  new Chart(ctxPie, {
     type: "pie",
     data: {
-      labels: ["Present", "Absent", "Late", "Half-Day", "Leave"],
-      datasets: [{ data: [totalP, totalA, totalLt, totalHD, totalL] }]
-    }
+      labels: ["Present", "Absent"],
+      datasets: [{ data: [presentTotal, absentTotal] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
-const registerMonthInput   = document.getElementById("registerMonth");
-const loadRegisterBtn      = document.getElementById("loadRegister");
-const registerTableWrapper = document.getElementById("registerTableWrapper");
-const registerHeaderRow    = document.getElementById("registerHeader");
-const registerBody         = document.getElementById("registerBody");
-const changeRegisterBtn    = document.getElementById("changeRegister");
-const saveRegisterBtn      = document.getElementById("saveRegister");
-const downloadRegisterBtn  = document.getElementById("downloadRegister");
-const shareRegisterBtn     = document.getElementById("shareRegister");
-
-loadRegisterBtn.addEventListener("click", () => {
-  const monthVal = registerMonthInput.value;
-  if (!monthVal) {
-    alert("Select a month first.");
-    return;
+// LOAD MONTHLY REGISTER (shows each student’s daily status for the month)
+function loadMonthlyRegister(month) {
+  const [year, mon] = month.split("-");
+  const daysInMonth = new Date(year, Number(mon), 0).getDate();
+  const headerRow = document.getElementById("registerHeader");
+  headerRow.innerHTML = "<th>Adm#</th><th>Name</th>";
+  for (let d = 1; d <= daysInMonth; d++) {
+    const th = document.createElement("th");
+    th.textContent = d;
+    headerRow.appendChild(th);
   }
-  renderRegister(monthVal);
-});
-
-function renderRegister(monthVal) {
-  const [year, month] = monthVal.split("-");
-  const daysInMonth = new Date(+year, +month, 0).getDate();
-  const headerHTML = ["Name", "Adm#"].concat(
-    Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString())
-  ).map(h => `<th>${h}</th>`).join("");
-  registerHeaderRow.innerHTML = headerHTML;
-
-  registerBody.innerHTML = "";
-  students.forEach(stu => {
+  const tbody = document.getElementById("registerBody");
+  tbody.innerHTML = "";
+  students.forEach(s => {
     const tr = document.createElement("tr");
-    let rowHTML = `<td>${stu.name}</td><td>${stu.adm}</td>`;
+    const tdAdm = document.createElement("td");
+    tdAdm.textContent = s.adm;
+    const tdName = document.createElement("td");
+    tdName.textContent = s.name;
+    tr.appendChild(tdAdm);
+    tr.appendChild(tdName);
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${month.padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
-      const status = attendanceData[dateStr]?.[stu.adm] || "";
-      rowHTML += `<td>${status}</td>`;
+      const dateStr = `${year}-${mon.padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const status = (attendanceData[dateStr] || {})[s.adm] || "";
+      const td = document.createElement("td");
+      td.textContent = status;
+      tr.appendChild(td);
     }
-    tr.innerHTML = rowHTML;
-    registerBody.appendChild(tr);
+    tbody.appendChild(tr);
   });
-
-  registerTableWrapper.classList.remove("hidden");
-  changeRegisterBtn.classList.remove("hidden");
-  saveRegisterBtn.classList.remove("hidden");
-  shareRegisterBtn.classList.remove("hidden");
+  document.getElementById("registerTableWrapper").classList.remove("hidden");
+  document.getElementById("changeRegister").classList.remove("hidden");
+  document.getElementById("saveRegister").classList.remove("hidden");
 }
 
-changeRegisterBtn.addEventListener("click", () => {
-  registerMonthInput.value = "";
-  registerTableWrapper.classList.add("hidden");
-  changeRegisterBtn.classList.add("hidden");
-  saveRegisterBtn.classList.add("hidden");
-  shareRegisterBtn.classList.add("hidden");
-});
-
-saveRegisterBtn.addEventListener("click", async () => {
-  await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-  await syncToFirebase();
-  alert("Attendance register saved.");
-});
-
-const { jsPDF } = window.jspdf;
-const autoTable = window.jspdf?.autoTable;
-
-const downloadRegistrationPDFBtn = document.getElementById("downloadRegistrationPDF");
-downloadRegistrationPDFBtn.addEventListener("click", () => {
-  const doc = new jsPDF();
-  autoTable(doc, {
-    head: [["#", "Adm#", "Name", "Parent", "Contact", "Occupation", "Address", "Fine", "Status"]],
-    body: students.map((stu, idx) => [
-      idx + 1, stu.adm, stu.name, stu.parentName, stu.contact, stu.occupation, stu.address, stu.fine, stu.status
-    ])
-  });
-  doc.save(`Registration_${currentSchool}.pdf`);
-});
-
-const downloadAttendancePDFBtn = document.getElementById("downloadAttendancePDF");
-downloadAttendancePDFBtn.addEventListener("click", () => {
-  const date = dateInput.value;
-  if (!date) {
-    alert("Select a date first.");
-    return;
-  }
-  const doc = new jsPDF();
-  autoTable(doc, {
-    head: [["#", "Adm#", "Name", "Status"]],
-    body: students.map((stu, idx) => [
-      idx + 1, stu.adm, stu.name, attendanceData[date]?.[stu.adm] || "P"
-    ])
-  });
-  doc.save(`Attendance_${currentSchool}_${date}.pdf`);
-});
-
-const downloadAnalyticsBtn = document.getElementById("downloadAnalytics");
-downloadAnalyticsBtn.addEventListener("click", () => {
-  const doc = new jsPDF();
-  autoTable({ html: "#analyticsTable", startY: 20, doc });
-  doc.save(`Analytics_${currentSchool}.pdf`);
-});
-
-downloadRegisterBtn.addEventListener("click", () => {
-  if (!registerMonthInput.value) {
-    alert("Select a month first.");
-    return;
-  }
-  const doc = new jsPDF();
-  autoTable({ html: "#registerTable", startY: 20, doc });
-  doc.save(`Register_${currentSchool}_${registerMonthInput.value}.pdf`);
-});
-
-const shareRegistrationBtn = document.getElementById("shareRegistration");
-shareRegistrationBtn.addEventListener("click", () => {
-  if (!navigator.share) {
-    alert("Web Share API not supported.");
-    return;
-  }
-  const data = students.map(stu => ({
-    adm: stu.adm,
-    name: stu.name,
-    parentName: stu.parentName,
-    contact: stu.contact,
-    occupation: stu.occupation,
-    address: stu.address,
-    fine: stu.fine,
-    status: stu.status
-  }));
-  navigator.share({
-    title: `Registration Data - ${currentSchool}`,
-    text: JSON.stringify(data, null, 2)
-  });
-});
-
-const shareAttendanceSummaryBtn = document.getElementById("shareAttendanceSummary");
-shareAttendanceSummaryBtn.addEventListener("click", () => {
-  if (!navigator.share) {
-    alert("Web Share API not supported.");
-    return;
-  }
-  const date = dateInput.value;
-  if (!date) {
-    alert("Select a date first.");
-    return;
-  }
-  const data = students.map(stu => ({
-    adm: stu.adm,
-    name: stu.name,
-    status: attendanceData[date]?.[stu.adm] || "P"
-  }));
-  navigator.share({
-    title: `Attendance Data - ${currentSchool} - ${date}`,
-    text: JSON.stringify(data, null, 2)
-  });
-});
-
-const shareAnalyticsBtn = document.getElementById("shareAnalytics");
-shareAnalyticsBtn.addEventListener("click", () => {
-  if (!navigator.share) {
-    alert("Web Share API not supported.");
-    return;
-  }
-  let filteredStudents = [...students];
-  const target = analyticsTargetSelect.value;
-  const section = analyticsSectionSelect.value;
-  const type = analyticsTypeSelect.value;
-
-  if (target === "section" && section) {
-    filteredStudents = filteredStudents.filter(stu => stu.section === section);
-  }
-
-  let dates = Object.keys(attendanceData);
-  if (type === "date") {
-    dates = dates.filter(d => d === analyticsDateInput.value);
-  } else if (type === "month") {
-    const [y, m] = analyticsMonthInput.value.split("-");
-    dates = dates.filter(d => {
-      const dt = new Date(d);
-      return dt.getFullYear() === +y && dt.getMonth() + 1 === +m;
-    });
-  } else if (type === "semester") {
-    const start = semesterStartInput.value;
-    const end = semesterEndInput.value;
-    dates = dates.filter(d => d >= start && d <= end);
-  } else if (type === "year") {
-    const y = +yearStartInput.value;
-    dates = dates.filter(d => new Date(d).getFullYear() === y);
-  }
-
-  const analyticsStats = filteredStudents.map(stu => {
-    const stat = { adm: stu.adm, name: stu.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
-    dates.forEach(d => {
-      const status = attendanceData[d]?.[stu.adm] || "P";
-      stat[status]++;
-    });
-    stat.total = stat.P + stat.Lt + stat.HD + stat.A + stat.L;
-    stat.perc  = stat.total > 0 ? ((stat.P + stat.Lt + stat.HD) / stat.total * 100).toFixed(2) : "0.00";
-    stat.outstanding = stu.fine;
-    stat.status = stat.perc >= eligibilityPct ? "Eligible" : "Debarred";
-    return stat;
-  });
-
-  navigator.share({
-    title: `Analytics Data - ${currentSchool}`,
-    text: JSON.stringify(analyticsStats, null, 2)
-  });
-});
-
-const countersContainer = document.getElementById("countersContainer");
-
-function updateCounters() {
-  if (!countersContainer) return;
-  countersContainer.innerHTML = "";
-
-  const totalStudents = students.length;
-  const presentToday = (() => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (!attendanceData[today]) return 0;
-    return Object.values(attendanceData[today]).filter(s => s !== "A").length;
-  })();
-  const absentToday = totalStudents - presentToday;
-  const pendingFine = students.reduce((sum, stu) => sum + (stu.fine || 0), 0);
-
-  const stats = [
-    { label: "Total Students", number: totalStudents },
-    { label: "Present Today", number: presentToday },
-    { label: "Absent Today", number: absentToday },
-    { label: "Total Outstanding (PKR)", number: pendingFine }
-  ];
-
-  stats.forEach(st => {
-    const card = document.createElement("div");
-    card.className = "counter-card card";
-    card.innerHTML = `
-      <div class="card-number">${st.number}</div>
-      <div class="card-label">${st.label}</div>`;
-    countersContainer.appendChild(card);
-  });
-}
-
-function resetViews() {
-  [
-    document.getElementById("financial-settings"),
-    document.getElementById("animatedCounters"),
-    document.getElementById("student-registration"),
-    document.getElementById("attendance-section"),
-    document.getElementById("analytics-section"),
-    document.getElementById("register-section")
-  ].forEach(sec => sec.classList.add("hidden"));
-}
-
-const fineAbsentInput    = document.getElementById("fineAbsent");
-const fineLateInput      = document.getElementById("fineLate");
-const fineLeaveInput     = document.getElementById("fineLeave");
-const fineHalfDayInput   = document.getElementById("fineHalfDay");
-const eligibilityPctInput= document.getElementById("eligibilityPct");
-const saveSettingsBtn    = document.getElementById("saveSettings");
-
-(async () => {
-  const storedFineRates = await idbGet("fineRates");
-  const storedEligPct   = await idbGet("eligibilityPct");
-  if (storedFineRates) {
-    fineRates = storedFineRates;
-  }
-  if (storedEligPct !== undefined) {
-    eligibilityPct = storedEligPct;
-  }
-  if (fineAbsentInput)    fineAbsentInput.value    = fineRates.A;
-  if (fineLateInput)      fineLateInput.value      = fineRates.Lt;
-  if (fineLeaveInput)     fineLeaveInput.value     = fineRates.L;
-  if (fineHalfDayInput)   fineHalfDayInput.value   = fineRates.HD;
-  if (eligibilityPctInput)eligibilityPctInput.value= eligibilityPct;
-})();
-
-saveSettingsBtn.addEventListener("click", async () => {
-  fineRates.A  = +fineAbsentInput.value;
-  fineRates.Lt = +fineLateInput.value;
-  fineRates.L  = +fineLeaveInput.value;
-  fineRates.HD = +fineHalfDayInput.value;
-  eligibilityPct = +eligibilityPctInput.value;
-
-  await idbSet("fineRates", fineRates);
-  await idbSet("eligibilityPct", eligibilityPct);
-  await syncToFirebase();
-  alert("Financial settings saved.");
-});
-
-const paymentModal      = document.getElementById("paymentModal");
-const paymentModalClose = document.getElementById("paymentModalClose");
-const paymentAmountInput= document.getElementById("paymentAmount");
-const savePaymentBtn    = document.getElementById("savePayment");
-const cancelPaymentBtn  = document.getElementById("cancelPayment");
-let currentPaymentAdm   = null;
-
-function openPaymentModal(adm) {
-  currentPaymentAdm = adm;
-  document.getElementById("payAdm").textContent = adm;
-  paymentModal.classList.remove("hidden");
-}
-
-paymentModalClose.addEventListener("click", () => {
-  paymentModal.classList.add("hidden");
-});
-
-cancelPaymentBtn.addEventListener("click", () => {
-  paymentModal.classList.add("hidden");
-});
-
-savePaymentBtn.addEventListener("click", async () => {
-  const amount = +paymentAmountInput.value;
-  if (!amount || amount <= 0) {
-    alert("Enter a valid amount.");
-    return;
-  }
-  const date = new Date().toISOString().slice(0, 10);
-  if (!paymentsData[currentPaymentAdm]) {
-    paymentsData[currentPaymentAdm] = [];
-  }
-  paymentsData[currentPaymentAdm].push({ date, amount });
-
-  const stuIdx = students.findIndex(s => s.adm === currentPaymentAdm);
-  if (stuIdx >= 0) {
-    students[stuIdx].fine = Math.max(0, students[stuIdx].fine - amount);
-  }
-
-  paymentsDataBySchool[currentSchool] = paymentsData;
-  studentsBySchool[currentSchool]     = students;
-  await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-  await idbSet("studentsBySchool", studentsBySchool);
-  await syncToFirebase();
-
-  renderStudents();
-  updateCounters();
-  paymentModal.classList.add("hidden");
-  paymentAmountInput.value = "";
-});
-
-function attachPaymentButtons() {
-  document.querySelectorAll(".pay-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const adm = +btn.dataset.adm;
-      openPaymentModal(adm);
-    });
-  });
-}
-
-(async () => {
-  if (typeof loadSetup === "function") {
-    await loadSetup();
-  }
-
-  if (countersContainer) {
-    countersContainer.style.display = "flex";
-    countersContainer.style.overflowX = "auto";
-    countersContainer.style.whiteSpace = "nowrap";
-  }
-})();
+// EXPORT initAppForUser to be called in auth.js
