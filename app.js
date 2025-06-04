@@ -12,21 +12,13 @@ import {
 // IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// Firebase configuration (replace with your actual config)
-const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
-};
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-const appDataRef = dbRef(database, "appData");
+// // --------------------------------------------
+// app.js کے Top میں یہ دو Import شامل کریں:
+// --------------------------------------------
+import { auth, database, dbRef, dbSet, dbGet, dbOnValue, dbPush, dbChild, dbRemove }
+  from "./firebase-config.js";
 
+import "./setup.js"; // صرف import کرنے سے setup.js میں جو بھی DOMOnLoad وغیرہ ہے وہ چل جائے گا
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
