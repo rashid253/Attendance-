@@ -278,7 +278,14 @@
     </div>
   </div>
 
-  <!-- Load your main script as an ES module -->
+  <!-- --------------- -->
+  <!--  ES Modules Load  -->
+  <!-- --------------- -->
+
+  <!-- 1) Load firebase-config.js as ES module -->
+  <script type="module" src="./firebase-config.js"></script>
+
+  <!-- 2) Load your main script (app.js) as ES module; setup logic is already inside app.js -->
   <script type="module" src="app.js"></script>
 
   <!-- Register service worker as a module -->
