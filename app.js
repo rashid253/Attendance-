@@ -874,31 +874,60 @@ window.addEventListener("DOMContentLoaded", async () => {
   };
   
 // ----------------------------------------------
-// FIX: Student Registration Download & Share
-// ----------------------------------------------
+// // ────────────────────────────────────────────────────────────
+// FIXED: Student Registration → Share & Download (PDF/Share)
+// Place this block before your “Payment Modal” section.
+// ────────────────────────────────────────────────────────────
+
+// 1. SHARE BUTTON HANDLER
+//    (Opens WhatsApp with a prefilled text of all registered students)
+shareRegistrationBtn.onclick = () => {
+  // Compose header (bold style via asterisks for WhatsApp)
+  const header = `*Student Registration List*\n${setupText.textContent}\n\n`;
+
+  // Build a simple line‐by‐line listing: “1. Adm#: 1001  Name: Ali  Parent: Ahmed”
+  const lines = students
+    .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
+    .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Parent: ${s.parent}`);
+
+  // Open WhatsApp share URL in a new tab/window
+  const whatsappURL =
+    "https://wa.me/?text=" + encodeURIComponent(header + lines.join("\n"));
+  window.open(whatsappURL, "_blank");
+};
+
+// 2. DOWNLOAD BUTTON HANDLER
+//    (Generates a PDF—with jsPDF + autoTable—then saves it and invokes sharePdf)
 downloadRegistrationBtn.onclick = async () => {
-  // 1. Create a new PDF document
+  // 2.1 Create a new jsPDF instance (portrait, pt, A4)
   const doc = new jspdf.jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const today = new Date().toISOString().split("T")[0];
+  const today     = new Date().toISOString().split("T")[0]; // e.g., "2025-06-04"
 
-  // 2. Header: Title + Date + School/Class/Section
+  // 2.2 Header: Title, Date, and School/Class/Section info
   doc.setFontSize(18);
   doc.text("Student Registration List", 14, 20);
+
   doc.setFontSize(10);
   doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
+
   doc.setFontSize(12);
-  // Assuming setupText contains something like "MySchool 🏫 | Class: 10 | Section: A"
+  // setupText is the <div> that shows “MySchool | Class: X | Section: Y”
   doc.text(setupText.textContent, 14, 36);
 
-  // 3. Build a temporary HTML table in memory (not attached to DOM)
+  // 2.3 Build a temporary in‐memory HTML table (not appended to DOM)
   const tempTable = document.createElement("table");
   tempTable.innerHTML = `
     <tr>
-      <th>#</th><th>Adm#</th><th>Name</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th>
+      <th>#</th>
+      <th>Adm#</th>
+      <th>Name</th>
+      <th>Parent</th>
+      <th>Contact</th>
+      <th>Occupation</th>
+      <th>Address</th>
     </tr>
     ${
-      // `students` is the current array of student‐objects for this school
       students
         .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
         .map((s, i) => `
@@ -915,30 +944,23 @@ downloadRegistrationBtn.onclick = async () => {
     }
   `;
 
-  // 4. Use jsPDF‐autoTable to render that table into the PDF
-  doc.autoTable({ startY:  fifty   /* e.g. 50 */, html: tempTable, styles: { fontSize: 10 } });
+  // 2.4 Convert that HTML table into a PDF table using autoTable
+  //     Set startY to  Fifty (50) so the table sits below header text
+  doc.autoTable({
+    startY:  Fifty,    // Replace Fifty with 50 (or any numeric value) if it’s not defined
+    html: tempTable,
+    styles: { fontSize: 10 }
+  });
 
-  // 5. Save and (optionally) invoke the share helper
+  // 2.5 Save the PDF with a descriptive filename
   const fileName = `students_${classSelect.value}_${sectionSelect.value}_${today}.pdf`;
   const blob     = doc.output("blob");
   doc.save(fileName);
 
-  // 6. If the device supports Web Share, share the PDF
+  // 2.6 Invoke sharePdf() so mobile users see the native “Share” sheet
+  //     (If sharePdf is already defined elsewhere, it will trigger the OS share dialog)
   await sharePdf(blob, fileName, "Student Registration List");
 };
-
-shareRegistrationBtn.onclick = () => {
-  // Prepare a simple text list for sharing (e.g., via WhatsApp)
-  const header = `*Student Registration List*\n${setupText.textContent}`;
-  const lines = students
-    .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
-    .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Parent: ${s.parent}`);
-
-  // Open WhatsApp share link
-  window.open(
-    `https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`,
-    "_blank"
-  );
 };
   // ----------------------
   // 5. PAYMENT MODAL SECTION
