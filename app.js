@@ -872,7 +872,64 @@ window.addEventListener("DOMContentLoaded", async () => {
     renderStudents();
     updateCounters();
   };
+  
+// Share button handler (WhatsApp)
+shareRegistrationBtn.onclick = () => {
+  const header = `*Student Registration List*\n${setupText.textContent}\n\n`;
+  const lines = students
+    .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
+    .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Parent: ${s.parent}`);
+  const whatsappURL = "https://wa.me/?text=" + encodeURIComponent(header + lines.join("\n"));
+  window.open(whatsappURL, "_blank");
+};
 
+// Download button handler (PDF + native share)
+downloadRegistrationBtn.onclick = async () => {
+  const doc = new jspdf.jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const today = new Date().toISOString().split("T")[0];
+
+  doc.setFontSize(18);
+  doc.text("Student Registration List", 14, 20);
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
+  doc.setFontSize(12);
+  doc.text(setupText.textContent, 14, 36);
+
+  const tempTable = document.createElement("table");
+  tempTable.innerHTML = `
+    <tr>
+      <th>#</th><th>Adm#</th><th>Name</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th>
+    </tr>
+    ${
+      students
+        .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
+        .map((s, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${s.adm}</td>
+            <td>${s.name}</td>
+            <td>${s.parent}</td>
+            <td>${s.contact}</td>
+            <td>${s.occupation}</td>
+            <td>${s.address}</td>
+          </tr>
+        `).join("")
+    }
+  `;
+
+  doc.autoTable({
+    startY: 50,
+    html: tempTable,
+    styles: { fontSize: 10 }
+  });
+
+  const fileName = `students_${classSelect.value}_${sectionSelect.value}_${today}.pdf`;
+  const blob = doc.output("blob");
+  doc.save(fileName);
+
+  await sharePdf(blob, fileName, "Student Registration List");
+};
   // ----------------------
   // 5. PAYMENT MODAL SECTION
   // ----------------------
