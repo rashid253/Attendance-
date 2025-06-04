@@ -873,7 +873,92 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateCounters();
   };
 
-  // ----------------------
+  // // ────────────────────────────────────────────────────────────
+// FIXED: Student Registration → Share & Download (PDF/Share)
+// Place this block right after editRegistrationBtn.onclick (and before your “Payment Modal” section).
+// ────────────────────────────────────────────────────────────
+
+// 1. SHARE BUTTON HANDLER
+//    (Opens WhatsApp with a prefilled text of all registered students)
+shareRegistrationBtn.onclick = () => {
+  // Compose header (bold via asterisks for WhatsApp)
+  const header = `*Student Registration List*\n${setupText.textContent}\n\n`;
+
+  // Build a simple line‐by‐line listing: “1. Adm#: 1001  Name: Ali  Parent: Ahmed”
+  const lines = students
+    .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
+    .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Parent: ${s.parent}`);
+
+  // Open WhatsApp share URL in a new tab/window
+  const whatsappURL = "https://wa.me/?text=" + encodeURIComponent(header + lines.join("\n"));
+  window.open(whatsappURL, "_blank");
+};
+
+// 2. DOWNLOAD BUTTON HANDLER
+//    (Generates a PDF—with jsPDF + autoTable—then saves it and invokes sharePdf)
+downloadRegistrationBtn.onclick = async () => {
+  // 2.1 Create a new jsPDF instance (portrait, pt, A4)
+  const doc = new jspdf.jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const today     = new Date().toISOString().split("T")[0]; // e.g., "2025-06-04"
+
+  // 2.2 Header: Title, Date, and School/Class/Section info
+  doc.setFontSize(18);
+  doc.text("Student Registration List", 14, 20);
+
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
+
+  doc.setFontSize(12);
+  // setupText is the <div> that shows “MySchool | Class: X | Section: Y”
+  doc.text(setupText.textContent, 14, 36);
+
+  // 2.3 Build a temporary in‐memory HTML table (not appended to DOM)
+  const tempTable = document.createElement("table");
+  tempTable.innerHTML = `
+    <tr>
+      <th>#</th>
+      <th>Adm#</th>
+      <th>Name</th>
+      <th>Parent</th>
+      <th>Contact</th>
+      <th>Occupation</th>
+      <th>Address</th>
+    </tr>
+    ${
+      students
+        .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
+        .map((s, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${s.adm}</td>
+            <td>${s.name}</td>
+            <td>${s.parent}</td>
+            <td>${s.contact}</td>
+            <td>${s.occupation}</td>
+            <td>${s.address}</td>
+          </tr>
+        `).join("")
+    }
+  `;
+
+  // 2.4 Convert that HTML table into a PDF table using autoTable
+  //     startY: 50 to place the table below the header
+  doc.autoTable({
+    startY: 50,
+    html: tempTable,
+    styles: { fontSize: 10 }
+  });
+
+  // 2.5 Save the PDF with a descriptive filename
+  const fileName = `students_${classSelect.value}_${sectionSelect.value}_${today}.pdf`;
+  const blob     = doc.output("blob");
+  doc.save(fileName);
+
+  // 2.6 Invoke sharePdf() so mobile users see the native “Share” sheet
+  //     (If sharePdf is defined, this will trigger the OS share dialog)
+  await sharePdf(blob, fileName, "Student Registration List");
+};---------------------
   // 5. PAYMENT MODAL SECTION
   // ----------------------
   const paymentModal         = $("paymentModal");
