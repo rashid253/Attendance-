@@ -958,7 +958,7 @@ downloadRegistrationBtn.onclick = async () => {
   // 2.6 Invoke sharePdf() so mobile users see the native “Share” sheet
   //     (If sharePdf is defined, this will trigger the OS share dialog)
   await sharePdf(blob, fileName, "Student Registration List");
-};---------------------
+
   // 5. PAYMENT MODAL SECTION
   // ----------------------
   const paymentModal         = $("paymentModal");
