@@ -1,26 +1,22 @@
 // firebase-config.js
 // ------------------
-// Initializes Firebase (Auth + Realtime Database) using the same config
-// that was previously embedded in app.js. Exports `auth` and `db` so that
-// other modules (auth.js, app.js, setup.js) can import these and avoid
-// re-declaring the config inline.
+// Initializes Firebase (Auth + Realtime Database).
+// Export `auth` and `db` for use in other modules.
 
 // 1. Import Firebase core and products
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// 2. Paste the exact firebaseConfig object from your original app.js
-//    (Replace if these values ever change in your Firebase Console)
+// 2. Your Firebase project’s configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
-  authDomain: "attandace-management.firebaseapp.com",
-  projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
-  messagingSenderId: "222685278846",
-  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com"
+  apiKey: "AIzaSyXXXXXX-abcdefghijklmnopqrstuvwxyz",
+  authDomain: "your-project-id.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef123456",
+  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com"
 };
 
 // 3. Initialize the Firebase App
