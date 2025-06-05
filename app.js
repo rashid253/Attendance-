@@ -13,7 +13,7 @@ import {
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 // Firebase configuration (replace with your actual config)
-import { firebaseConfig } from "./firebaseConfig.js";
+import { firebaseConfig } from "./firebase-config.js";
 // ----------------------
 // Local application state (per-school mappings)
 // ----------------------
