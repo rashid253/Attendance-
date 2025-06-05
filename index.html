@@ -5,33 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Management</title>
 
-  <!-- PWA & Meta (unchanged) -->
+  <!-- PWA & Meta -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2196F3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Attendance Mgmt" />
 
-  <!-- Font Awesome (HTTPS) -->
+  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   />
 
-  <!-- idb-keyval (IIFE) -->
+  <!-- idb-keyval -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
-  <!-- jsPDF + AutoTable (IIFE) -->
+  <!-- jsPDF + AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Chart.js (IIFE) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    /* Hide everything except the Setup section until “setupDone” */
     @media print { .no-print { display: none !important; } }
     .hidden { display: none; }
     .card { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 4px; }
@@ -57,40 +56,34 @@
   </style>
 </head>
 <body>
-  <!-- ── HEADER ── -->
+  <!-- HEADER -->
   <header class="app-header">
     <h1>
       <i class="fas fa-school"></i>
       Attendance Management
     </h1>
     <div class="header-buttons">
-      <!-- Logout (added for updated app.js) -->
       <button id="logoutBtn" class="btn no-print">
         <i class="fas fa-sign-out-alt"></i> Logout
       </button>
-      <!-- Select Backup Folder (existing) -->
       <button id="chooseBackupFolder" class="btn no-print">
         <i class="fas fa-folder-open"></i> Select Backup Folder
       </button>
-      <!-- Factory Reset (existing) -->
       <button id="resetData" class="btn btn-danger no-print">
         <i class="fas fa-trash-alt"></i> Factory Reset
       </button>
     </div>
   </header>
 
-  <!-- ── 1. SETUP SECTION ── -->
-  <!-- IDs here must match setup.js exactly -->
+  <!-- 1. SETUP SECTION -->
   <section id="teacher-setup">
     <h2><i class="fas fa-cog"></i> Setup</h2>
 
-    <!-- 1a. Admin “Create New School” (hidden until role=admin) -->
     <div id="admin-create-school" class="row-inline hidden">
       <input id="schoolInput" placeholder="New School Name" />
       <button id="createSchoolBtn"><i class="fas fa-plus-circle"></i> Create School</button>
     </div>
 
-    <!-- 1b. School / Class / Section dropdowns (common to all roles) -->
     <div id="schoolSelectSection" class="row-inline">
       <select id="schoolSelect">
         <option disabled selected>-- Select School --</option>
@@ -113,7 +106,6 @@
       <button id="saveSetupBtn" class="no-print"><i class="fas fa-save"></i> Save Setup</button>
     </div>
 
-    <!-- 1c. After saving, show chosen school/class/section -->
     <div id="setupDisplay" class="hidden">
       <h3>
         <i class="fas fa-school"></i>
@@ -122,11 +114,10 @@
       <button id="editSetupBtn" class="no-print"><i class="fas fa-edit"></i> Edit Setup</button>
     </div>
 
-    <!-- 1d. Admin-only: List of all schools (Edit/Delete) -->
     <div id="schoolListContainer" class="row-inline hidden"></div>
   </section>
 
-  <!-- ── 2. FINANCIAL SETTINGS ── -->
+  <!-- 2. FINANCIAL SETTINGS -->
   <section id="financial-settings">
     <h2><i class="fas fa-wallet"></i> Fines & Eligibility</h2>
     <div id="financialForm" class="row-inline">
@@ -139,12 +130,12 @@
     </div>
   </section>
 
-  <!-- ── 3. COUNTERS (dynamic via JS) ── -->
+  <!-- 3. COUNTERS -->
   <section id="animatedCounters">
     <div id="countersContainer" class="scroll-row"></div>
   </section>
 
-  <!-- ── 4. STUDENT REGISTRATION ── -->
+  <!-- 4. STUDENT REGISTRATION -->
   <section id="student-registration">
     <h2><i class="fas fa-user-graduate"></i> Student Registration</h2>
     <div class="row-inline">
@@ -179,7 +170,7 @@
     </div>
   </section>
 
-  <!-- ── 5. MARK ATTENDANCE ── -->
+  <!-- 5. MARK ATTENDANCE -->
   <section id="attendance-section">
     <h2><i class="fas fa-calendar-check"></i> Mark Attendance</h2>
     <div class="row-inline">
@@ -196,7 +187,7 @@
     </div>
   </section>
 
-  <!-- ── 6. ANALYTICS ── -->
+  <!-- 6. ANALYTICS -->
   <section id="analytics-section">
     <h2>
       <i class="fas fa-chart-bar"></i> Analytics
@@ -246,7 +237,7 @@
     </div>
   </section>
 
-  <!-- ── 7. ATTENDANCE REGISTER ── -->
+  <!-- 7. ATTENDANCE REGISTER -->
   <section id="register-section">
     <h2><i class="fas fa-book-open"></i> Attendance Register</h2>
     <div class="row-inline">
@@ -267,7 +258,7 @@
     </div>
   </section>
 
-  <!-- ── 8. PAYMENT MODAL ── -->
+  <!-- 8. PAYMENT MODAL -->
   <div id="paymentModal" class="modal hidden">
     <div class="modal-content">
       <span id="paymentModalClose" class="modal-close">&times;</span>
@@ -280,7 +271,7 @@
     </div>
   </div>
 
-  <!-- ── 9. ANALYTICS FILTER MODAL ── -->
+  <!-- 9. ANALYTICS FILTER MODAL -->
   <div id="analyticsFilterModal" class="modal hidden">
     <div class="modal-content">
       <span id="analyticsFilterClose" class="modal-close">&times;</span>
@@ -305,19 +296,19 @@
     </div>
   </div>
 
-  <!-- ── 10. LOAD JAVASCRIPT MODULES ── -->
+  <!-- 10. LOAD JAVASCRIPT MODULES -->
   <!-- 10a. Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
 
-  <!-- 10b. Our modules in correct order -->
+  <!-- 10b. Our modules -->
   <script type="module" src="firebase-config.js"></script>
   <script type="module" src="auth.js"></script>
   <script type="module" src="setup.js"></script>
   <script type="module" src="app.js"></script>
 
-  <!-- ── 11. SERVICE WORKER ── -->
+  <!-- 11. SERVICE WORKER -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
