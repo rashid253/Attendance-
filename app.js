@@ -1,19 +1,17 @@
 // app.js
 // ------
 // Updated main application file.
-// This version replaces inline Firebase initialization with imports from firebase-config.js,
-// adds role-based authentication & “Setup” gating (via auth.js and setup.js), and namespaces
-// all Firebase reads/writes under `appData/${currentSchool}`. It preserves your existing IndexedDB
-// logic, UI event handlers, and PDF/chart code, but defers most actions until after “setupDone”.
+// This version enforces role-based “Setup” gating, so nothing runs until:
+//   1) The user is authenticated with a valid custom‐claim role (admin/principal/teacher), and
+//   2) They have completed the “Setup” (i.e. chosen a school/class/section that matches their role).
+//
+// Once “setupDone” fires, we initialize the rest of your existing features (student registration, attendance, analytics, etc.),
+// ensuring that every read/write to Firebase is namespaced under `appData/${currentSchool}` so data is siloed per school.
 
-// ───────────────────────────────────────────────────────────────
-// 1) IMPORT FIREBASE & AUTH HELPERS
-// ───────────────────────────────────────────────────────────────
 import { auth, db } from "./firebase-config.js";
 import { getCurrentUserRole, onUserStateChanged, logout } from "./auth.js";
 
-// Load the setup module (it handles “Create/Select School → Save Setup” and fires “setupDone”)
-// on DOMContentLoaded. Do not remove this import.
+// Load the “Setup” module (it handles “Create/Select School → Save Setup” and fires “setupDone”)
 import "./setup.js";
 
 import {
@@ -24,37 +22,32 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 // IndexedDB helpers via idb-keyval (loaded as IIFE in index.html)
-// ---------------------------------------------------------------
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
 // ───────────────────────────────────────────────────────────────
-// 2) GLOBAL STATE (per‐school mappings & settings)
+// GLOBAL STATE (per‐school mappings & settings)
 // ───────────────────────────────────────────────────────────────
 
-// These hold mappings for every school, loaded from IndexedDB at startup.
-let studentsBySchool       = {}; // { schoolName: [ { name, adm, parentName, contact, occupation, address, cls, sec, fine, status } ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/"Lt"/"HD"/"L" } } }
-let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
-let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
+let currentSchool    = null;
+let teacherClass     = null;
+let teacherSection   = null;
 
-// These apply per‐school but shared across roles:
+let studentsBySchool       = {};
+let attendanceDataBySchool = {};
+let paymentsDataBySchool   = {};
+let lastAdmNoBySchool      = {};
+
 let fineRates    = { A: 50, Lt: 20, L: 10, HD: 30 };
 let eligibilityPct = 75;
 
-// “schools” array & currently-selected setup (persisted in IndexedDB too)
-let schools = [];            // [ "Alpha School", "Beta Academy", … ]
-let currentSchool  = null;   // e.g. "Alpha School"
-let teacherClass   = null;   // e.g. "Class Ten"
-let teacherSection = null;   // e.g. "B"
-
-// These variables point to the “current school” data once setup is done:
-let students       = [];     // references studentsBySchool[currentSchool]
-let attendanceData = {};     // references attendanceDataBySchool[currentSchool]
-let paymentsData   = {};     // references paymentsDataBySchool[currentSchool]
-let lastAdmNo      = 0;      // references lastAdmNoBySchool[currentSchool]
+let schoolsList            = [];
+let students               = [];
+let attendanceData         = {};
+let paymentsData           = {};
+let lastAdmNo              = 0;
 
 // ───────────────────────────────────────────────────────────────
-// 3) HELPER: Ensure data structures exist for a given school in IndexedDB
+// HELPER: Ensure data structures exist for a given school in IndexedDB
 // ───────────────────────────────────────────────────────────────
 async function ensureSchoolData(school) {
   if (!school) return;
@@ -77,8 +70,7 @@ async function ensureSchoolData(school) {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 4) INITIALIZE STATE FROM INDEXEDDB
-//    (Loads all per‐school mappings, plus global settings, before setup.)
+// INITIALIZE STATE FROM INDEXEDDB
 // ───────────────────────────────────────────────────────────────
 async function initLocalState() {
   studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
@@ -87,16 +79,13 @@ async function initLocalState() {
   lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || {};
   fineRates              = (await idbGet("fineRates"))              || fineRates;
   eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
-  schools                = (await idbGet("schools"))                || [];
+  schoolsList            = (await idbGet("schools"))                || [];
   currentSchool          = (await idbGet("currentSchool"))          || null;
   teacherClass           = (await idbGet("teacherClass"))           || null;
   teacherSection         = (await idbGet("teacherSection"))         || null;
 
   if (currentSchool) {
-    // Ensure that the “currentSchool” data structures exist
     await ensureSchoolData(currentSchool);
-
-    // Point the per‐current‐school references:
     students       = studentsBySchool[currentSchool];
     attendanceData = attendanceDataBySchool[currentSchool];
     paymentsData   = paymentsDataBySchool[currentSchool];
@@ -105,11 +94,10 @@ async function initLocalState() {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 5) SYNC LOCAL STATE TO FIREBASE (under `appData/${currentSchool}`)
+// SYNC LOCAL STATE TO FIREBASE (under `appData/${currentSchool}`)
 // ───────────────────────────────────────────────────────────────
 async function syncToFirebase() {
-  if (!currentSchool) return; // nothing to sync if setup isn't done
-  // Construct a school-specific payload:
+  if (!currentSchool) return;
   const payload = {
     students:       studentsBySchool[currentSchool]       || [],
     attendance:     attendanceDataBySchool[currentSchool] || {},
@@ -129,7 +117,7 @@ async function syncToFirebase() {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 6) OCTAL: UTILITY FOR SHARING PDF VIA WEB SHARE API
+// UTILITY: SHARE PDF VIA WEB SHARE API
 // ───────────────────────────────────────────────────────────────
 async function sharePdf(blob, fileName, title) {
   if (
@@ -145,13 +133,10 @@ async function sharePdf(blob, fileName, title) {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 7) AUTHENTICATION GATING
-//    If not signed in, redirect to login.html.
-//    If signed in but no “role” claim, log out.
+// AUTHENTICATION GATING
 // ───────────────────────────────────────────────────────────────
 onUserStateChanged(async (user) => {
   if (!user) {
-    // Not signed in → redirect
     window.location.href = "login.html";
     return;
   }
@@ -160,25 +145,18 @@ onUserStateChanged(async (user) => {
     alert("Your account has no role assigned. Contact the administrator.");
     await logout();
   }
-  // Otherwise, do nothing. We wait for “setupDone” before proceeding.
 });
 
 // ───────────────────────────────────────────────────────────────
-// 8) “setupDone” EVENT LISTENER: Triggered by setup.js once user has chosen
-//    a valid (school, class, section) matching their role.
-//    At this point, we can load local data, attach UI handlers, and un‐hide sections.
+// “setupDone” EVENT LISTENER
 // ───────────────────────────────────────────────────────────────
 window.addEventListener("setupDone", async () => {
-  // 8a) Reload “currentSchool / teacherClass / teacherSection” from IndexedDB,
-  // because setup.js saved them into IndexedDB already.
   currentSchool  = await idbGet("currentSchool");
   teacherClass   = await idbGet("teacherClass");
   teacherSection = await idbGet("teacherSection");
 
-  // 8b) Initialize local state (populate studentsBySchool, etc.)
   await initLocalState();
 
-  // 8c) Unhide all the major sections that were hidden by default in index.html
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   show(
     document.getElementById("financial-settings"),
@@ -187,15 +165,12 @@ window.addEventListener("setupDone", async () => {
     document.getElementById("attendance-section"),
     document.getElementById("analytics-section"),
     document.getElementById("register-section")
-    // …add any other sections you have that were hidden initially…
   );
 
-  // 8d) Render initial UI: counters, student table, etc.
   renderCounters();
   renderStudents();
   attachRealtimeListeners();
 
-  // 8e) Optionally: Show an “Admin Panel” button if user is admin:
   const role = await getCurrentUserRole();
   if (role === "admin") {
     const adminBtn = document.getElementById("adminPanelBtn");
@@ -204,13 +179,8 @@ window.addEventListener("setupDone", async () => {
 });
 
 // ───────────────────────────────────────────────────────────────
-// 9) UTILITIES: RENDERING & REAL-TIME LISTENERS
-//    These functions run after setup is done.
+// ATTACH REAL-TIME FIREBASE LISTENERS
 // ───────────────────────────────────────────────────────────────
-
-// 9a) Attach real-time Firebase listeners for the current school so that
-//     any external changes (e.g., Admin updates from another client) immediately
-//     update local IndexedDB and UI.
 function attachRealtimeListeners() {
   if (!currentSchool) return;
   const schoolKey = encodeURIComponent(currentSchool);
@@ -220,21 +190,18 @@ function attachRealtimeListeners() {
     if (!snapshot.exists()) return;
     const data = snapshot.val();
 
-    // Extract children from payload:
     const incomingStudents   = data.students   || [];
     const incomingAttendance = data.attendance || {};
     const incomingPayments   = data.payments   || {};
     const incomingMeta       = data.meta       || {};
 
-    // Update local variables:
-    studentsBySchool[currentSchool]      = incomingStudents;
+    studentsBySchool[currentSchool]       = incomingStudents;
     attendanceDataBySchool[currentSchool] = incomingAttendance;
     paymentsDataBySchool[currentSchool]   = incomingPayments;
     lastAdmNoBySchool[currentSchool]      = incomingMeta.lastAdmNo || 0;
     fineRates    = incomingMeta.fineRates    || fineRates;
     eligibilityPct = incomingMeta.eligibilityPct || eligibilityPct;
 
-    // Persist to IndexedDB:
     await idbSet("studentsBySchool",       studentsBySchool);
     await idbSet("attendanceDataBySchool", attendanceDataBySchool);
     await idbSet("paymentsDataBySchool",   paymentsDataBySchool);
@@ -242,7 +209,6 @@ function attachRealtimeListeners() {
     await idbSet("fineRates",              fineRates);
     await idbSet("eligibilityPct",         eligibilityPct);
 
-    // Update per‐school references & re‐render:
     students       = studentsBySchool[currentSchool];
     attendanceData = attendanceDataBySchool[currentSchool];
     paymentsData   = paymentsDataBySchool[currentSchool];
@@ -253,16 +219,16 @@ function attachRealtimeListeners() {
   });
 }
 
-// 9b) Render dashboard counters (e.g., total students, present today, etc.)
+// ───────────────────────────────────────────────────────────────
+// RENDER DASHBOARD COUNTERS
+// ───────────────────────────────────────────────────────────────
 function renderCounters() {
   const container = document.getElementById("countersContainer");
   if (!container) return;
-  container.innerHTML = ""; // clear existing
+  container.innerHTML = "";
 
-  // Example counters: total registered, present today, absent, fine owed, eligible, debarred
   const totalStudents = students.filter(s => s.cls === teacherClass && s.sec === teacherSection).length;
 
-  // Count today's attendance (if any)
   const today = new Date().toISOString().slice(0, 10);
   let present = 0, absent = 0, late = 0, halfDay = 0, leave = 0;
   if (attendanceData[today]) {
@@ -277,7 +243,6 @@ function renderCounters() {
     });
   }
 
-  // Total fine owed by all students in this class/section:
   let totalFine = 0;
   students
     .filter(s => s.cls === teacherClass && s.sec === teacherSection)
@@ -295,7 +260,6 @@ function renderCounters() {
       totalFine += Math.max(0, fineTotal - paid);
     });
 
-  // Eligible & Debarred counts:
   let eligibleCount = 0, debarredCount = 0;
   students
     .filter(s => s.cls === teacherClass && s.sec === teacherSection)
@@ -320,7 +284,6 @@ function renderCounters() {
       if (outstanding > 0 || pct < eligibilityPct) debarredCount++;
     });
 
-  // Helper to create a counter card:
   const makeCard = (title, number) => {
     const card = document.createElement("div");
     card.className = "counter-card card";
@@ -336,13 +299,14 @@ function renderCounters() {
   container.appendChild(makeCard("Debarred", debarredCount));
 }
 
-// 9c) Render the “Student Registration” table
+// ───────────────────────────────────────────────────────────────
+// RENDER THE “STUDENT REGISTRATION” TABLE
+// ───────────────────────────────────────────────────────────────
 function renderStudents() {
   const tbody = document.getElementById("studentsBody");
   if (!tbody) return;
-  tbody.innerHTML = ""; // clear existing
+  tbody.innerHTML = "";
 
-  // Filter students for this class & section
   const filtered = students.filter(s => s.cls === teacherClass && s.sec === teacherSection);
 
   filtered.forEach((stu, i) => {
@@ -366,7 +330,6 @@ function renderStudents() {
     tbody.appendChild(tr);
   });
 
-  // Attach per‐row event handlers:
   document.querySelectorAll(".edit-single").forEach(btn => {
     btn.onclick = () => {
       const adm = btn.dataset.adm;
@@ -377,7 +340,6 @@ function renderStudents() {
     btn.onclick = async () => {
       const adm = btn.dataset.adm;
       if (!confirm(`Delete student Adm#: ${adm}?`)) return;
-      // Remove from local array:
       const idx = students.findIndex(s => s.adm === adm);
       if (idx > -1) {
         students.splice(idx, 1);
@@ -395,15 +357,14 @@ function renderStudents() {
 }
 
 // ───────────────────────────────────────────────────────────────
-// 10) EVENT HANDLERS & UI LOGIC (run after setupDone)
-//     We wrap these in a function to be sure they run only once
+// EVENT HANDLERS & UI LOGIC (run after setupDone)
 // ───────────────────────────────────────────────────────────────
 function registerUIEventHandlers() {
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
   const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
   const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
 
-  // 10a) Financial Settings: read & save fineRates, eligibilityPct
+  // 10a) Financial Settings
   const fineAbsentInput   = $("fineAbsent");
   const fineLateInput     = $("fineLate");
   const fineLeaveInput    = $("fineLeave");
@@ -411,7 +372,6 @@ function registerUIEventHandlers() {
   const eligibilityInput  = $("eligibilityPct");
   const saveSettingsBtn   = $("saveSettings");
 
-  // Populate inputs with current values:
   if (fineRates) {
     fineAbsentInput.value   = fineRates.A;
     fineLateInput.value     = fineRates.Lt;
@@ -435,7 +395,7 @@ function registerUIEventHandlers() {
     renderCounters();
   };
 
-  // 10b) Student Registration: add, edit, delete, bulk actions
+  // 10b) Student Registration
   const studentNameInput     = $("studentName");
   const parentNameInput      = $("parentName");
   const parentContactInput   = $("parentContact");
@@ -450,11 +410,9 @@ function registerUIEventHandlers() {
   const downloadRegistrationBtn = $("downloadRegistrationPDF");
   const selectAllCheckbox    = $("selectAllStudents");
 
-  // State for “bulk edit” vs “view”:
   let bulkEditing = false;
   let originalStudentsSnapshot = [];
 
-  // Generate new Admission No. (per school)
   async function genAdmNo() {
     lastAdmNo++;
     lastAdmNoBySchool[currentSchool] = lastAdmNo;
@@ -463,7 +421,6 @@ function registerUIEventHandlers() {
     return String(lastAdmNo).padStart(4, "0");
   }
 
-  // Add a new student
   addStudentBtn.onclick = async () => {
     const name       = studentNameInput.value.trim();
     const parentName = parentNameInput.value.trim();
@@ -493,7 +450,6 @@ function registerUIEventHandlers() {
     await syncToFirebase();
     renderStudents();
     renderCounters();
-    // Clear inputs:
     studentNameInput.value     = "";
     parentNameInput.value      = "";
     parentContactInput.value   = "";
@@ -501,11 +457,9 @@ function registerUIEventHandlers() {
     addressInput.value         = "";
   };
 
-  // Single‐student edit flow
   function startEditStudent(adm) {
     const stu = students.find(s => s.adm === adm);
     if (!stu) return;
-    // Pre-fill inputs:
     studentNameInput.value     = stu.name;
     parentNameInput.value      = stu.parentName;
     parentContactInput.value   = stu.contact;
@@ -528,7 +482,6 @@ function registerUIEventHandlers() {
       await syncToFirebase();
       renderStudents();
       renderCounters();
-      // Cleanup:
       studentNameInput.value     = "";
       parentNameInput.value      = "";
       parentContactInput.value   = "";
@@ -539,7 +492,6 @@ function registerUIEventHandlers() {
     };
   }
 
-  // Bulk selection
   selectAllCheckbox.onclick = () => {
     const checked = selectAllCheckbox.checked;
     document.querySelectorAll(".select-student").forEach(chk => {
@@ -557,7 +509,6 @@ function registerUIEventHandlers() {
     }
   });
 
-  // Bulk delete
   deleteSelectedBtn.onclick = async () => {
     if (!confirm("Delete selected students?")) return;
     const toDelete = Array.from(document.querySelectorAll(".select-student"))
@@ -574,13 +525,9 @@ function registerUIEventHandlers() {
     deleteSelectedBtn.disabled = true;
   };
 
-  // Bulk edit (enables inline editing; simplified for brevity)
   editSelectedBtn.onclick = () => {
     bulkEditing = true;
     originalStudentsSnapshot = JSON.parse(JSON.stringify(students));
-    // Example approach: convert each table cell to <input> for name/contact, etc.
-    // For brevity, we skip the detailed implementation here.
-    // After editing, user clicks “Done” → finish bulk edit mode.
     editSelectedBtn.classList.add("hidden");
     editRegistrationBtn.classList.remove("hidden");
   };
@@ -588,7 +535,6 @@ function registerUIEventHandlers() {
   editRegistrationBtn.onclick = async () => {
     if (!bulkEditing) return;
     bulkEditing = false;
-    // Assume we have updated `students` array based on edited inputs
     studentsBySchool[currentSchool] = students;
     await idbSet("studentsBySchool", studentsBySchool);
     await syncToFirebase();
@@ -598,7 +544,6 @@ function registerUIEventHandlers() {
     editSelectedBtn.classList.remove("hidden");
   };
 
-  // Share / Download Registration as PDF
   downloadRegistrationBtn.onclick = async () => {
     const doc = new jspdf.jsPDF({ unit: "pt", format: "a4" });
     const w = doc.internal.pageSize.getWidth();
@@ -720,7 +665,6 @@ function registerUIEventHandlers() {
     await syncToFirebase();
     console.log("✅ Attendance data synced to Firebase");
 
-    // Build summary table
     attendanceSummaryDiv.innerHTML = `<h3>Attendance Report: ${date}</h3>`;
     const tbl = document.createElement("table");
     tbl.id = "attendanceSummaryTable";
@@ -743,7 +687,6 @@ function registerUIEventHandlers() {
       });
     attendanceSummaryDiv.appendChild(tbl);
 
-    // Attach share‐individual event handlers
     attendanceSummaryDiv.querySelectorAll(".share-individual").forEach(ic => {
       ic.onclick = () => {
         const adm = ic.dataset.adm;
@@ -826,12 +769,11 @@ function registerUIEventHandlers() {
   };
 
   let analyticsFilterOptions = ["all"];
-  let analyticsDownloadMode  = "combined"; // or "individual"
+  let analyticsDownloadMode  = "combined";
   let lastAnalyticsStats     = [];
   let lastAnalyticsRange     = { from: null, to: null };
   let lastAnalyticsShare     = "";
 
-  // Show/hide sub-controls based on “-- Report For --” dropdown
   analyticsTarget.onchange = () => {
     const val = analyticsTarget.value;
     if (val === "class") {
@@ -853,7 +795,6 @@ function registerUIEventHandlers() {
     }
   };
 
-  // Show/hide date/month/semester/year inputs based on “Period” dropdown
   analyticsType.onchange = () => {
     analyticsDateInput.classList.add("hidden");
     analyticsMonthInput.classList.add("hidden");
@@ -872,25 +813,23 @@ function registerUIEventHandlers() {
     }
   };
 
-  // Load analytics when “Load” is clicked
   loadAnalyticsBtn.onclick = async () => {
     const reportFor = analyticsTarget.value;
     if (!reportFor) { alert("Select Report For"); return; }
 
-    // Determine the filter range
     let fromDate = null, toDate = null;
     const type = analyticsType.value;
     if (type === "date") {
       fromDate = toDate = analyticsDateInput.value;
     } else if (type === "month") {
-      const m = analyticsMonthInput.value; // “YYYY-MM”
+      const m = analyticsMonthInput.value;
       if (!m) { alert("Select Month"); return; }
       fromDate = `${m}-01`;
       const daysInMonth = new Date(Number(m.split("-")[0]), Number(m.split("-")[1]), 0).getDate();
       toDate   = `${m}-${String(daysInMonth).padStart(2, "0")}`;
     } else if (type === "semester") {
-      const s = semesterStartInput.value; // “YYYY-MM”
-      const e = semesterEndInput.value;   // “YYYY-MM”
+      const s = semesterStartInput.value;
+      const e = semesterEndInput.value;
       if (!s || !e) { alert("Select Semester Range"); return; }
       fromDate = `${s}-01`;
       const [ey, em] = e.split("-");
@@ -906,7 +845,6 @@ function registerUIEventHandlers() {
       return;
     }
 
-    // Build list of date‐strings between fromDate & toDate inclusive
     const start = new Date(fromDate);
     const end   = new Date(toDate);
     if (start > end) { alert("Invalid date range."); return; }
@@ -917,7 +855,6 @@ function registerUIEventHandlers() {
     }
     if (!dateKeys.length) { alert("No attendance data in range."); return; }
 
-    // Determine target subset (class/section/student)
     const cl  = teacherClass;
     const sec = teacherSection;
     const filterList = students.filter(s => {
@@ -929,7 +866,6 @@ function registerUIEventHandlers() {
 
     if (!filterList.length) { alert("No matching records."); return; }
 
-    // Build analytics rows:
     const stats = filterList.map((s, i) => {
       let presentCount = 0, absentCount = 0, lateCount = 0, hdCount = 0, leaveCount = 0;
       dateKeys.forEach(date => {
@@ -969,11 +905,9 @@ function registerUIEventHandlers() {
       };
     });
 
-    // Store for download/share
     lastAnalyticsStats = stats;
     lastAnalyticsRange = { from: fromDate, to: toDate };
 
-    // Render HTML table
     analyticsContainer.classList.remove("hidden");
     instructionsDiv.classList.add("hidden");
     graphsDiv.classList.remove("hidden");
@@ -1006,10 +940,8 @@ function registerUIEventHandlers() {
       tblBody.appendChild(row);
     });
 
-    // Render charts using Chart.js
     renderAnalyticsCharts(stats);
 
-    // Prepare share text
     const header = `Analytics: ${currentSchool} | Class ${teacherClass} Section ${teacherSection} (${fromDate} to ${toDate})`;
     const lines = stats.map(st => (
       `${st.sr}. ${st.name} (Adm#: ${st.adm}) → %: ${st.attendancePct}, Fine: ${st.outstanding}, Eligible: ${st.eligible}`
@@ -1017,7 +949,6 @@ function registerUIEventHandlers() {
     lastAnalyticsShare = `${header}\n\n${lines.join("\n")}`;
   };
 
-  // Download analytics as PDF
   downloadAnalyticsBtn.onclick = async () => {
     if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
     const doc = new jspdf.jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
@@ -1049,13 +980,11 @@ function registerUIEventHandlers() {
   const registerBodyTbody    = $("registerBody");
 
   loadRegisterBtn.onclick = () => {
-    const m = $("registerMonth").value; // “YYYY-MM”
+    const m = $("registerMonth").value;
     if (!m) { alert("Pick month"); return; }
-    // Gather date-keys for that month:
     const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + "-")).sort();
     if (!dateKeys.length) { alert("No attendance marked this month."); return; }
 
-    // Build table header
     registerHeaderRow.innerHTML = `<th>#</th><th>Adm#</th><th>Name</th>` +
       dateKeys.map(k => `<th>${k.split("-")[2]}</th>`).join("");
     registerBodyTbody.innerHTML = "";
@@ -1064,7 +993,7 @@ function registerUIEventHandlers() {
       .filter(s => s.cls === teacherClass && s.sec === teacherSection)
       .forEach((s, i) => {
         let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-        dateKeys.forEach(key => {
+        dateKeys.forEach((key, idx) => {
           const c = (attendanceData[key] && attendanceData[key][s.adm]) || "";
           const color = c === "P" ? "var(--success)"
                        : c === "Lt" ? "var(--warning)"
@@ -1079,7 +1008,6 @@ function registerUIEventHandlers() {
         registerBodyTbody.appendChild(tr);
       });
 
-    // Make cells clickable to toggle status
     document.querySelectorAll(".reg-cell").forEach(cell => {
       cell.onclick = () => {
         const span = cell.querySelector(".status-text");
@@ -1150,52 +1078,45 @@ function registerUIEventHandlers() {
     window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank`);
   };
 
-  // 10g) Reset Data / Backup (if you have those sections)
-  const chooseBackupFolderBtn = $("chooseBackupFolder");
-  const restoreDataBtn        = $("restoreData");
-  const resetDataBtn          = $("resetData");
-
-  chooseBackupFolderBtn && chooseBackupFolderBtn.onclick = async () => {
+  // 10g) Reset / Restore Data
+  $("chooseBackupFolder")?.addEventListener("click", async () => {
     alert("Backup folder selection not implemented in web version.");
-  };
-  restoreDataBtn && restoreDataBtn.onclick = async () => {
+  });
+  $("restoreData")?.addEventListener("click", async () => {
     if (!confirm("Restore all data from IndexedDB?")) return;
     await initLocalState();
     renderStudents();
     renderCounters();
     alert("Data restored from local storage.");
-  };
-  resetDataBtn && resetDataBtn.onclick = async () => {
+  });
+  $("resetData")?.addEventListener("click", async () => {
     if (!confirm("Factory reset all data? This cannot be undone.")) return;
     await idbClear();
-    // Clear in-memory as well:
     studentsBySchool = {};
     attendanceDataBySchool = {};
     paymentsDataBySchool = {};
     lastAdmNoBySchool = {};
     fineRates = { A:50, Lt:20, L:10, HD:30 };
     eligibilityPct = 75;
-    schools = [];
+    schoolsList = [];
     currentSchool = null;
     teacherClass = null;
     teacherSection = null;
-    // Reload page to force new setup:
     window.location.reload();
-  };
+  });
 }
 
 // ───────────────────────────────────────────────────────────────
-// 11) ONCE “setupDone” FIRES FOR THE FIRST TIME, REGISTER ALL UI HANDLERS
+// REGISTER UI HANDLERS AFTER “setupDone”
 // ───────────────────────────────────────────────────────────────
 window.addEventListener("setupDone", () => {
-  // Delay registration slightly to ensure DOM elements exist
   setTimeout(() => {
     registerUIEventHandlers();
   }, 100);
 });
 
 // ───────────────────────────────────────────────────────────────
-// 12) OPTIONAL: LOGOUT BUTTON (in header) ALWAYS ENABLED
+// LOGOUT BUTTON
 // ───────────────────────────────────────────────────────────────
 document.getElementById("logoutBtn")?.addEventListener("click", async () => {
   await logout();
@@ -1203,10 +1124,9 @@ document.getElementById("logoutBtn")?.addEventListener("click", async () => {
 });
 
 // ───────────────────────────────────────────────────────────────
-// 13) CHART RENDERING FOR ANALYTICS (using Chart.js)
+// CHART RENDERING FOR ANALYTICS
 // ───────────────────────────────────────────────────────────────
 function renderAnalyticsCharts(stats) {
-  // Destroy existing charts if any
   if (window.barChart) {
     window.barChart.destroy();
     window.pieChart.destroy();
@@ -1215,51 +1135,64 @@ function renderAnalyticsCharts(stats) {
   const presentData = stats.map(s => s.present);
   const absentData  = stats.map(s => s.absent);
 
-  // Bar Chart for Present/Absent
-  window.barChart = new Chart(barChartCanvas.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Present",
-          data: presentData,
-          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--success").trim()
-        },
-        {
-          label: "Absent",
-          data: absentData,
-          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--danger").trim()
+  window.barChart = new Chart(
+    document.getElementById("barChart").getContext("2d"),
+    {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Present",
+            data: presentData,
+            backgroundColor: getComputedStyle(document.documentElement)
+              .getPropertyValue("--success")
+              .trim()
+          },
+          {
+            label: "Absent",
+            data: absentData,
+            backgroundColor: getComputedStyle(document.documentElement)
+              .getPropertyValue("--danger")
+              .trim()
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
         }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true }
       }
     }
-  });
+  );
 
-  // Pie Chart for Eligibility (% Eligible vs Debarred)
   const eligibleCount = stats.filter(s => s.eligible === "Yes").length;
   const debarredCount = stats.filter(s => s.eligible === "No").length;
-  window.pieChart = new Chart(pieChartCanvas.getContext("2d"), {
-    type: "pie",
-    data: {
-      labels: ["Eligible", "Debarred"],
-      datasets: [
-        {
-          data: [eligibleCount, debarredCount],
-          backgroundColor: [
-            getComputedStyle(document.documentElement).getPropertyValue("--success").trim(),
-            getComputedStyle(document.documentElement).getPropertyValue("--danger").trim()
-          ]
-        }
-      ]
-    },
-    options: {
-      responsive: true
+
+  window.pieChart = new Chart(
+    document.getElementById("pieChart").getContext("2d"),
+    {
+      type: "pie",
+      data: {
+        labels: ["Eligible", "Debarred"],
+        datasets: [
+          {
+            data: [eligibleCount, debarredCount],
+            backgroundColor: [
+              getComputedStyle(document.documentElement)
+                .getPropertyValue("--success")
+                .trim(),
+              getComputedStyle(document.documentElement)
+                .getPropertyValue("--danger")
+                .trim()
+            ]
+          }
+        ]
+      },
+      options: {
+        responsive: true
+      }
     }
-  });
+  );
 }
