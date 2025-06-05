@@ -1,76 +1,106 @@
 // service-worker.js
+// -----------------
+// A simple Service Worker for offline support and asset caching. It
+// pre-caches the core application shell (HTML, CSS, JS, and key static assets),
+// and serves them from cache when offline. Adjust CACHE_NAME and URLs as needed.
 
-const CACHE_VERSION = 'v3';
-const CACHE_NAME = `attendance-app-${CACHE_VERSION}`;
-const PRECACHE = [
-  '/',               // serves index.html
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+const CACHE_NAME = "attendance-app-v1";
+const FILES_TO_CACHE = [
+  "/",                  // The root HTML (index.html)
+  "/index.html",
+  "/login.html",
+  "/style.css",
+  "/firebase-config.js",
+  "/auth.js",
+  "/setup.js",
+  "/app.js",
+  "/manifest.json",
+
+  // Firebase SDKs
+  "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js",
+  "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js",
+  "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js",
+
+  // IIFE libraries
+  "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js",
+  "https://cdn.jsdelivr.net/npm/chart.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+// Install event: Pre-cache core files
+self.addEventListener("install", (event) => {
+  console.log("[Service Worker] Install");
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log("[Service Worker] Pre-caching assets");
+      return cache.addAll(FILES_TO_CACHE);
+    })
   );
+  self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME)
-            .map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  const url  = new URL(req.url);
-
-  // 1) Handle HTML navigations (user typing URL, link clicks, pull-to-refresh)
-  if (req.mode === 'navigate' ||
-      (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
-    e.respondWith(
-      fetch(req)
-        .then(res => {
-          // update cached shell for next offline
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(req, copy));
-          return res;
+// Activate event: Clean up old caches if CACHE_NAME changes
+self.addEventListener("activate", (event) => {
+  console.log("[Service Worker] Activate");
+  event.waitUntil(
+    caches.keys().then((keyList) => {
+      return Promise.all(
+        keyList.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log("[Service Worker] Removing old cache:", key);
+            return caches.delete(key);
+          }
         })
-        .catch(() => caches.match('/offline.html'))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch event: Serve cached assets or fetch from network
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") {
+    return;
+  }
+
+  const requestURL = new URL(event.request.url);
+  // For same-origin navigation requests, serve index.html (offline fallback)
+  if (requestURL.origin === location.origin && requestURL.pathname === "/") {
+    event.respondWith(
+      caches.match("/index.html").then((response) => response || fetch(event.request))
     );
     return;
   }
 
-  // 2) For same-origin static assets: cache-first, then network, then offline.html
-  if (req.method === 'GET' && url.origin === location.origin) {
-    e.respondWith(
-      caches.match(req).then(cached => {
-        if (cached) return cached;
-        return fetch(req)
-          .then(res => {
-            if (!res.ok) throw new Error('Network error');
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(req, copy));
-            return res;
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      // Return cached response if found
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      // Otherwise fetch from network and cache the result
+      return caches.open(CACHE_NAME).then((cache) => {
+        return fetch(event.request)
+          .then((networkResponse) => {
+            // If valid response, clone and put in cache
+            if (
+              networkResponse &&
+              networkResponse.status === 200 &&
+              networkResponse.type === "basic"
+            ) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
           })
-          .catch(() => caches.match('/offline.html'));
-      })
-    );
-  }
-});
-
-// Optional: skipWaiting via postMessage
-self.addEventListener('message', e => {
-  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+          .catch(() => {
+            // If network fails and request is for an HTML page, serve offline fallback
+            if (event.request.headers.get("accept").includes("text/html")) {
+              return caches.match("/index.html");
+            }
+          });
+      });
+    })
+  );
 });
