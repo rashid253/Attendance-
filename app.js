@@ -20,8 +20,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
-  // … your existing Firebase config …
+  apiKey: "AIzaSyDUMMY_API_KEY_1234567890abcdef",
+  authDomain: "my-attendance-app.firebaseapp.com",
+  databaseURL: "https://my-attendance-app-default-rtdb.firebaseio.com",
+  projectId: "my-attendance-app",
+  storageBucket: "my-attendance-app.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef1234567890"
 };
+
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
@@ -1413,8 +1420,8 @@ HOD Signature: ______________
 };
 
 shareAnalyticsBtn.onclick = () => {
-  if (!lastAnalyticsShare) { alert("Load analytics first"); return; }
-  window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
+  if (!lastAnalyticsShare) { alert("Load analytics first); return; }
+  window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
 };
 
 // FILTER MODAL
@@ -1473,28 +1480,6 @@ loadRegisterBtn.onclick = () => {
     const tr = document.createElement("tr");
     tr.innerHTML = row;
     registerBodyTbody.appendChild(tr);
-  });
-
-  document.querySelectorAll(".reg-cell").forEach(cell => {
-    cell.onclick = () => {
-      const span = cell.querySelector(".status-text");
-      const codes = ["", "P", "Lt", "HD", "L", "A"];
-      const idx = (codes.indexOf(span.textContent) + 1) % codes.length;
-      const c = codes[idx];
-      span.textContent = c;
-      if (!c) {
-        cell.style.background = "";
-        cell.style.color = "";
-      } else {
-        const col = c === "P" ? "var(--success)"
-                  : c === "Lt" ? "var(--warning)"
-                  : c === "HD" ? "#FF9800"
-                  : c === "L" ? "var(--info)"
-                  : "var(--danger)";
-        cell.style.background = col;
-        cell.style.color = "#fff";
-      }
-    };
   });
 
   registerTableWrapper.classList.remove("hidden");
@@ -1699,9 +1684,6 @@ async function sharePdf(blob, fileName, title) {
 // =======================
 // 19) INITIAL SETUP ON PAGE LOAD (UNAFFECTED BY AUTH)
 // =======================
-// Note: actual show/hide is done after auth in initializeAfterAuth()
-// But we can pre-setup UI elements here:
-
 document.addEventListener("DOMContentLoaded", () => {
   setupCounters();
   loadFinancialSettings();
