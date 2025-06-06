@@ -1,310 +1,150 @@
 /* style.css */
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   1. RESET & BASE
-   ───────────────────────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Global Resets */
+body {
   margin: 0;
-  padding: 0;
-}
-
-html, body {
-  font-family: Arial, sans-serif;
-  font-size: 16px;
-  background-color: #f5f5f5;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f5f5f5;
   color: #333;
-  height: 100%;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+h1, h2, h3 {
+  margin-bottom: 0.5em;
 }
 
-button {
+/* Layout */
+.app-header {
+  background: #2196F3;
+  color: white;
+  padding: 1em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.header-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+section {
+  background: white;
+  margin: 1em;
+  padding: 1em;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 0.5em 1em;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   2. TYPOGRAPHY & UTILITY CLASSES
-   ───────────────────────────────────────────────────────────────────────────── */
-h1, h2, h3, h4, h5, h6 {
-  color: #222;
-  margin-bottom: 0.5rem;
+.btn-danger {
+  background: #f44336;
 }
 
-h1 {
-  font-size: 2rem;
+.btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
-h2 {
-  font-size: 1.75rem;
-}
-
-h3 {
-  font-size: 1.5rem;
-}
-
-p {
-  margin-bottom: 1rem;
-  line-height: 1.6;
+.no-print {
+  display: inline-block;
 }
 
 .hidden {
   display: none !important;
 }
 
-.no-print {
-  print-media: none;
-}
-
-.row-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   3. LAYOUT: HEADER & CONTAINERS
-   ───────────────────────────────────────────────────────────────────────────── */
-.app-header {
-  background-color: #2196F3;
-  color: #fff;
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.app-header h1 {
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-}
-
-.app-header h1 i {
-  margin-right: 0.5rem;
-}
-
-.header-buttons > button {
-  background-color: #ffffff;
-  border: none;
-  color: #2196F3;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  margin-left: 0.5rem;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  transition: background-color 0.2s ease;
-}
-
-.header-buttons > button:hover {
-  background-color: #e3f2fd;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-}
-
-section {
-  background-color: #fff;
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.5rem;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-section h2 {
-  display: flex;
-  align-items: center;
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-}
-
-section h2 i {
-  margin-right: 0.5rem;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   4. FORM ELEMENTS & BUTTONS
-   ───────────────────────────────────────────────────────────────────────────── */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="date"],
-input[type="month"],
-select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  width: 100%;
-  max-width: 200px;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="month"]:focus,
-select:focus {
-  outline: none;
-  border-color: #2196F3;
-  box-shadow: 0 0 2px rgba(33, 150, 243, 0.5);
-}
-
-button {
-  background-color: #2196F3;
-  border: none;
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  transition: background-color 0.2s ease;
-}
-
-button:hover {
-  background-color: #1976d2;
-}
-
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   5. TABLES & DATA DISPLAY
-   ───────────────────────────────────────────────────────────────────────────── */
-.table-wrapper {
-  overflow-x: auto;
-  margin-top: 0.5rem;
-  max-height: 400px;
-}
-
+/* Tables */
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 1em;
 }
 
-table th,
-table td {
-  padding: 0.5rem;
-  border: 1px solid #e0e0e0;
+th, td {
+  padding: 0.5em;
+  border: 1px solid #ccc;
   text-align: left;
-  font-size: 0.9rem;
 }
 
-table th {
-  background-color: #f0f0f0;
+th {
+  background: #e0e0e0;
 }
 
-table tr:nth-child(even) {
-  background-color: #fafafa;
+/* Form Elements */
+input, select, textarea {
+  padding: 0.5em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin: 0.3em;
+}
+
+/* Utility Classes */
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 .table-actions {
-  margin-top: 0.5rem;
+  margin-top: 1em;
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5em;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   6. CARDS & COUNTERS
-   ───────────────────────────────────────────────────────────────────────────── */
 .scroll-row {
   display: flex;
   overflow-x: auto;
-  gap: 1rem;
-  padding-bottom: 0.5rem;
+  gap: 1em;
+  padding: 1em 0;
 }
 
-.counter-card {
-  min-width: 150px;
-  flex: 0 0 auto;
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  padding: 1rem;
-  text-align: center;
-}
-
-.counter-card .card-number {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2196F3;
-  margin-bottom: 0.25rem;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   7. ATTENDANCE ROWS & BUTTONS
-   ───────────────────────────────────────────────────────────────────────────── */
-.attendance-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.attendance-header {
-  font-weight: 500;
-}
-
-.attendance-buttons .att-btn {
-  background-color: #f5f5f5;
+/* Card */
+.card {
   border: 1px solid #ccc;
   border-radius: 4px;
-  margin-right: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
+  padding: 1em;
+  background: #fafafa;
 }
 
-.attendance-buttons .att-btn:hover {
-  background-color: #e3e3e3;
-}
-
-.attendance-buttons .att-btn.selected {
-  color: #fff;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   8. MODALS (PAYMENT & FILTER)
-   ───────────────────────────────────────────────────────────────────────────── */
+/* Modal */
 .modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  display: none;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
 .modal-content {
-  background-color: #fff;
-  padding: 1.5rem;
+  background: white;
+  padding: 1.5em;
   border-radius: 6px;
   width: 90%;
   max-width: 400px;
@@ -313,84 +153,37 @@ table tr:nth-child(even) {
 
 .modal-close {
   position: absolute;
-  top: 8px;
-  right: 12px;
-  font-size: 1.2rem;
+  top: 10px;
+  right: 14px;
   cursor: pointer;
-  color: #555;
+  font-size: 1.2em;
+  color: #666;
 }
 
 .modal-actions {
-  margin-top: 1rem;
+  margin-top: 1em;
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 1em;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   9. ANALYTICS: CHARTS & FILTERS
-   ───────────────────────────────────────────────────────────────────────────── */
-#analyticsContainer {
-  margin-top: 1rem;
-}
-
+/* Analytics Graphs */
 #graphs {
+  margin-top: 1em;
   display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2em;
 }
 
-#graphs canvas {
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
+/* Counter Card */
+.counter-card {
+  flex: 1 0 200px;
+  padding: 1em;
+  background: #e3f2fd;
   border-radius: 6px;
-  padding: 0.5rem;
-  width: 100%;
-  max-width: 500px;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
- 10. ATTENDANCE REGISTER STYLING
-   ───────────────────────────────────────────────────────────────────────────── */
-#registerTable th,
-#registerTable td {
-  text-align: center;
-  vertical-align: middle;
-  font-size: 0.85rem;
-}
-
-#registerTable td {
-  height: 32px;
-  cursor: pointer;
-}
-
-#registerTable td .status-text {
-  display: inline-block;
-  width: 100%;
   text-align: center;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
- 11. MEDIA QUERIES (RESPONSIVENESS)
-   ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .row-inline {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  button, input, select {
-    width: 100% !important;
-    max-width: none !important;
-  }
-
-  .counter-card {
-    min-width: 120px;
-  }
-
-  #graphs {
-    flex-direction: column;
-    align-items: center;
-  }
+.counter-card .card-number {
+  font-size: 2rem;
+  color: #2196F3;
 }
