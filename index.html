@@ -52,16 +52,16 @@
       <input id="regEmail" type="email" placeholder="Email" required />
       <input id="regPassword" type="password" placeholder="Password" required />
       <select id="regRole" required>
-        <option disabled selected>-- Select Role --</option>
+        <option disabled selected value="">-- Select Role --</option>
         <option value="admin">Admin</option>
         <option value="principal">Principal</option>
         <option value="teacher">Teacher</option>
       </select>
       <select id="regSchool" style="display: none;">
-        <option disabled selected>-- Select School --</option>
+        <option disabled selected value="">-- Select School --</option>
       </select>
       <select id="regClass" style="display: none;">
-        <option disabled selected>-- Select Class --</option>
+        <option disabled selected value="">-- Select Class --</option>
         <option>Play Group</option><option>Nursery</option><option>KG</option>
         <option>Class One</option><option>Class Two</option><option>Class Three</option>
         <option>Class Four</option><option>Class Five</option><option>Class Six</option>
@@ -69,7 +69,7 @@
         <option>Class Ten</option>
       </select>
       <select id="regSection" style="display: none;">
-        <option disabled selected>-- Select Section --</option>
+        <option disabled selected value="">-- Select Section --</option>
         <option>A</option><option>B</option><option>C</option>
       </select>
       <button type="submit" class="btn">Register</button>
@@ -97,10 +97,10 @@
       <div id="setupForm" class="row-inline">
         <input id="schoolInput" placeholder="New School Name" />
         <select id="schoolSelect">
-          <option disabled selected>-- Select School --</option>
+          <option disabled selected value="">-- Select School --</option>
         </select>
         <select id="teacherClassSelect">
-          <option disabled selected>-- Select Class --</option>
+          <option disabled selected value="">-- Select Class --</option>
           <option>Play Group</option><option>Nursery</option><option>KG</option>
           <option>Class One</option><option>Class Two</option><option>Class Three</option>
           <option>Class Four</option><option>Class Five</option><option>Class Six</option>
@@ -108,7 +108,7 @@
           <option>Class Ten</option>
         </select>
         <select id="teacherSectionSelect">
-          <option disabled selected>-- Select Section --</option>
+          <option disabled selected value="">-- Select Section --</option>
           <option>A</option><option>B</option><option>C</option>
         </select>
         <button id="saveSetup" class="no-print btn"><i class="fas fa-save"></i> Save</button>
@@ -198,17 +198,17 @@
       </h2>
       <div class="row-inline">
         <select id="analyticsTarget">
-          <option disabled selected>-- Report For --</option>
+          <option disabled selected value="">-- Report For --</option>
           <option value="class">Class</option>
           <option value="section">Section</option>
           <option value="student">Student</option>
         </select>
         <select id="analyticsSectionSelect" class="hidden">
-          <option disabled selected>-- Section --</option>
+          <option disabled selected value="">-- Section --</option>
           <option>A</option><option>B</option><option>C</option>
         </select>
         <select id="analyticsType" disabled>
-          <option disabled selected>-- Period --</option>
+          <option disabled selected value="">-- Period --</option>
           <option value="date">Date</option>
           <option value="month">Month</option>
           <option value="semester">Semester</option>
@@ -303,7 +303,7 @@
         window.addEventListener('load', () => {
           navigator.serviceWorker
             .register('service-worker.js', { type: 'module' })
-            .then(reg => console.log('Service Worker registered as module:', reg))
+            .then(reg => console.log('Service Worker registered:', reg))
             .catch(err => console.error('SW registration failed:', err));
         });
       }
