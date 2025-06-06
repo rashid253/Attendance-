@@ -1,106 +1,73 @@
 // service-worker.js
-// -----------------
-// A simple Service Worker for offline support and asset caching. It
-// pre-caches the core application shell (HTML, CSS, JS, and key static assets),
-// and serves them from cache when offline. Adjust CACHE_NAME and URLs as needed.
 
-const CACHE_NAME = "attendance-app-v1";
-const FILES_TO_CACHE = [
-  "/",                  // The root HTML (index.html)
-  "/index.html",
-  "/login.html",
+const CACHE_NAME = "attendance-app-cache-v1";
+const ASSETS_TO_CACHE = [
+  "/",                     // index.html
+  "/index.html",           // if served explicitly
   "/style.css",
-  "/firebase-config.js",
-  "/auth.js",
-  "/setup.js",
   "/app.js",
   "/manifest.json",
-
-  // Firebase SDKs
-  "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js",
-  "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js",
-  "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js",
-
-  // IIFE libraries
+  "/favicon.ico",
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
   "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js",
-  "https://cdn.jsdelivr.net/npm/chart.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  "https://cdn.jsdelivr.net/npm/chart.js"
 ];
 
-// Install event: Pre-cache core files
-self.addEventListener("install", (event) => {
-  console.log("[Service Worker] Install");
+self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("[Service Worker] Pre-caching assets");
-      return cache.addAll(FILES_TO_CACHE);
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// Activate event: Clean up old caches if CACHE_NAME changes
-self.addEventListener("activate", (event) => {
-  console.log("[Service Worker] Activate");
+self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then((keyList) => {
-      return Promise.all(
-        keyList.map((key) => {
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
           if (key !== CACHE_NAME) {
-            console.log("[Service Worker] Removing old cache:", key);
             return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Fetch event: Serve cached assets or fetch from network
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
-    return;
-  }
-
-  const requestURL = new URL(event.request.url);
-  // For same-origin navigation requests, serve index.html (offline fallback)
-  if (requestURL.origin === location.origin && requestURL.pathname === "/") {
-    event.respondWith(
-      caches.match("/index.html").then((response) => response || fetch(event.request))
-    );
-    return;
-  }
+self.addEventListener("fetch", event => {
+  const { request } = event;
+  // Only handle GET requests
+  if (request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Return cached response if found
+    caches.match(request).then(cachedResponse => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      // Otherwise fetch from network and cache the result
-      return caches.open(CACHE_NAME).then((cache) => {
-        return fetch(event.request)
-          .then((networkResponse) => {
-            // If valid response, clone and put in cache
-            if (
-              networkResponse &&
-              networkResponse.status === 200 &&
-              networkResponse.type === "basic"
-            ) {
-              cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            // If network fails and request is for an HTML page, serve offline fallback
-            if (event.request.headers.get("accept").includes("text/html")) {
-              return caches.match("/index.html");
-            }
-          });
-      });
+      return fetch(request)
+        .then(networkResponse => {
+          // Only cache same-origin requests
+          if (
+            networkResponse.status === 200 &&
+            request.url.startsWith(self.location.origin)
+          ) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // If offline and asset not in cache, optionally return a fallback here
+          // e.g., return caches.match("/offline.html");
+          return new Response("", { status: 503, statusText: "Service Unavailable" });
+        });
     })
   );
 });
