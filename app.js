@@ -1420,7 +1420,10 @@ HOD Signature: ______________
 };
 
 shareAnalyticsBtn.onclick = () => {
-  if (!lastAnalyticsShare) { alert("Load analytics first); return; }
+  if (!lastAnalyticsShare) { 
+    alert("Load analytics first"); 
+    return; 
+  }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
 };
 
