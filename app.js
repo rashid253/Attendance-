@@ -1424,7 +1424,7 @@ shareAnalyticsBtn.onclick = () => {
     alert("Load analytics first"); 
     return; 
   }
-  window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank`);
+  window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
 };
 
 // FILTER MODAL
