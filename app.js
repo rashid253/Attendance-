@@ -20,7 +20,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDUMMY_API_KEY_1234567890abcdef",
+  apiKey: "YOUR_FIREBASE_API_KEY", // ← Replace with your actual API key
   authDomain: "my-attendance-app.firebaseapp.com",
   databaseURL: "https://my-attendance-app-default-rtdb.firebaseio.com",
   projectId: "my-attendance-app",
@@ -1358,37 +1358,10 @@ downloadAnalyticsBtn.onclick = async () => {
     await sharePdf(blob, fileName, "Attendance Analytics");
   } else {
     // Individual PDFs
-    const lines = lastAnalyticsStats.map((st, i) => {
-      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
-      return `
-Student: ${st.name} (Adm#: ${st.adm})
-Present: ${st.P}
-Absent: ${st.A}
-Late: ${st.Lt}
-Half-Day: ${st.HD}
-Leave: ${st.L}
-Total Days: ${st.total}
-% Present: ${pct}%
-Outstanding Fine: PKR ${st.outstanding}
-
-Fine Rates:
-Absent: PKR ${fineRates.A}
-Late: PKR ${fineRates.Lt}
-Leave: PKR ${fineRates.L}
-Half-Day: PKR ${fineRates.HD}
-
-Eligibility %: ${eligibilityPct}%
-
-HOD Signature: ______________
-
-`;
-    });
-
-    let yPos = 16;
-    doc.setFontSize(14);
     lastAnalyticsStats.forEach((st, i) => {
       if (i !== 0) doc.addPage();
       const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
+      doc.setFontSize(14);
       doc.text(`Attendance Receipt`, 14, 16);
       doc.setFontSize(12);
       doc.text(`Student: ${st.name} (Adm#: ${st.adm})`, 14, 26);
@@ -1409,7 +1382,7 @@ HOD Signature: ______________
       doc.text(`Eligibility %: ${eligibilityPct}%`, 14, 158);
 
       doc.text(`HOD Signature: ______________`, 14, 180);
-      doc.text(`Generated on ${new Date().toISOString().split("T")[0]}`, 14, 200);
+      doc.text(`Generated on ${today}`, 14, 200);
     });
 
     const fileName = `analytics_individual_${lastAnalyticsRange.from}_to_${lastAnalyticsRange.to}.pdf`;
@@ -1425,23 +1398,6 @@ shareAnalyticsBtn.onclick = () => {
     return; 
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
-};
-
-// FILTER MODAL
-const analyticsFilterModal = document.getElementById("analyticsFilterModal");
-const analyticsFilterClose = document.getElementById("analyticsFilterClose");
-const applyAnalyticsFilterBtn = document.getElementById("applyAnalyticsFilter");
-
-document.getElementById("analyticsFilterBtn").onclick = () => analyticsFilterModal.classList.remove("hidden");
-analyticsFilterClose.onclick = () => analyticsFilterModal.classList.add("hidden");
-
-applyAnalyticsFilterBtn.onclick = () => {
-  const form = document.getElementById("analyticsFilterForm");
-  const opts = Array.from(form.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.value);
-  analyticsFilterOptions = opts.length ? opts : ["all"];
-  const mode = form.querySelector("input[name=downloadMode]:checked").value;
-  analyticsDownloadMode = mode;
-  analyticsFilterModal.classList.add("hidden");
 };
 
 // =======================
@@ -1554,108 +1510,10 @@ function bindRegisterActions() {
 }
 
 // =======================
-// 16) BACKUP, RESTORE & RESET
+// 16) (Backup/Restore/Reset Removed)
 // =======================
-let backupHandle = null;
-const chooseBackupFolderBtn = document.getElementById("chooseBackupFolder");
-const restoreDataBtn         = document.getElementById("restoreData");
-const restoreFileInput       = document.getElementById("restoreFile");
-const resetDataBtn           = document.getElementById("resetData");
-
-chooseBackupFolderBtn.onclick = async () => {
-  try {
-    backupHandle = await window.showDirectoryPicker();
-    alert("Backup folder selected.");
-  } catch (err) {
-    console.error(err);
-    alert("Folder selection canceled or not supported.");
-  }
-};
-
-setInterval(async () => {
-  if (!backupHandle) return;
-  try {
-    const backupData = {
-      studentsBySchool,
-      attendanceDataBySchool,
-      paymentsDataBySchool,
-      lastAdmNoBySchool,
-      fineRates,
-      eligibilityPct,
-      schools,
-      currentSchool,
-      teacherClass,
-      teacherSection,
-    };
-    const now = new Date();
-    const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}-${String(now.getMinutes()).padStart(2,"0")}.json`;
-    const fileHandle = await backupHandle.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(backupData));
-    await writable.close();
-  } catch (err) {
-    console.error("Auto-backup failed:", err);
-  }
-}, 600000); // every 10 minutes
-
-restoreDataBtn.onclick = () => restoreFileInput.click();
-
-restoreFileInput.onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    studentsBySchool       = data.studentsBySchool       || {};
-    attendanceDataBySchool = data.attendanceDataBySchool || {};
-    paymentsDataBySchool   = data.paymentsDataBySchool   || {};
-    lastAdmNoBySchool      = data.lastAdmNoBySchool      || {};
-    fineRates              = data.fineRates              || { A:50, Lt:20, L:10, HD:30 };
-    eligibilityPct         = data.eligibilityPct         || 75;
-    schools                = data.schools                || [];
-    currentSchool          = data.currentSchool          || null;
-    teacherClass           = data.teacherClass           || null;
-    teacherSection         = data.teacherSection         || null;
-
-    await Promise.all([
-      idbSet("studentsBySchool", studentsBySchool),
-      idbSet("attendanceDataBySchool", attendanceDataBySchool),
-      idbSet("paymentsDataBySchool", paymentsDataBySchool),
-      idbSet("lastAdmNoBySchool", lastAdmNoBySchool),
-      idbSet("fineRates", fineRates),
-      idbSet("eligibilityPct", eligibilityPct),
-      idbSet("schools", schools),
-      idbSet("currentSchool", currentSchool),
-      idbSet("teacherClass", teacherClass),
-      idbSet("teacherSection", teacherSection),
-    ]);
-    await syncToFirebase();
-    await loadSetup();
-    alert("Data restored successfully.");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to restore data. File may be invalid.");
-  }
-  restoreFileInput.value = "";
-};
-
-resetDataBtn.onclick = async () => {
-  if (!confirm("Factory reset will delete ALL data locally and in Firebase. Continue?")) return;
-  await idbClear();
-  studentsBySchool       = {};
-  attendanceDataBySchool = {};
-  paymentsDataBySchool   = {};
-  lastAdmNoBySchool      = {};
-  fineRates              = { A:50, Lt:20, L:10, HD:30 };
-  eligibilityPct         = 75;
-  schools                = [];
-  currentSchool          = null;
-  teacherClass           = null;
-  teacherSection         = null;
-  await syncToFirebase();
-  await loadSetup();
-  alert("Factory reset completed.");
-};
+// The previous implementation referenced IDs that didn't exist in the HTML,
+// causing uncaught TypeError. Those sections have been removed.
 
 // =======================
 // 17) UTILITY: Generate Admission Number
