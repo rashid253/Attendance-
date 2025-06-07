@@ -8,7 +8,7 @@ import {
   getDatabase,
   ref as dbRef,
   set as dbSet,
-  get as dbGet,
+  get as dbGet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   getAuth,
@@ -39,32 +39,25 @@ const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 // =======================
 // 2) GLOBAL STATE FOR AUTH
 // =======================
-let currentUser = null;    // Firebase user
-let userProfile = null;    // /users/{uid} data
+let currentUser = null;
+let userProfile = null;
 
 // =======================
 // 3) APPLICATION DATA STRUCTURES
 // =======================
-
-// Per-school state mappings
 let studentsBySchool = {};
 let attendanceDataBySchool = {};
 let paymentsDataBySchool = {};
 let lastAdmNoBySchool = {};
 
-// Default fine rates and eligibility %
 let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
 let eligibilityPct = 75;
 
-// List of all school names
 let schools = [];
-
-// Currently selected school/class/section
 let currentSchool = null;
 let teacherClass = null;
 let teacherSection = null;
 
-// Active pointers for the selected school
 let students = [];
 let attendanceData = {};
 let paymentsData = {};
@@ -134,7 +127,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const password = loginPassword.value;
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will proceed
     } catch (err) {
       alert("Login failed: " + err.message);
     }
@@ -220,13 +212,13 @@ async function loadAllSchoolsInto(selectElement) {
 function populateClassDropdown(classSelect) {
   const classOptions = [
     "Play Group", "Nursery", "KG",
-    "Class One","Class Two","Class Three",
-    "Class Four","Class Five","Class Six",
-    "Class Seven","Class Eight","Class Nine",
+    "Class One", "Class Two", "Class Three",
+    "Class Four", "Class Five", "Class Six",
+    "Class Seven", "Class Eight", "Class Nine",
     "Class Ten"
   ];
   classSelect.innerHTML = `<option disabled selected>-- Select Class --</option>`;
-  classOptions.forEach(c => {
+  classOptions.forEach((c) => {
     const opt = document.createElement("option");
     opt.value = c;
     opt.textContent = c;
@@ -238,7 +230,6 @@ function populateClassDropdown(classSelect) {
 // 6) INITIALIZATION AFTER AUTH
 // =======================
 async function initializeAfterAuth() {
-  // Role-based UI adjustments
   const setupSection = document.getElementById("teacher-setup");
   const schoolInput = document.getElementById("schoolInput");
   const schoolSelect = document.getElementById("schoolSelect");
@@ -246,19 +237,17 @@ async function initializeAfterAuth() {
   if (userProfile.role === "admin") {
     setupSection.style.display = "block";
     schoolInput.style.display = "inline-block";
-  }
-  else if (userProfile.role === "principal") {
+  } else if (userProfile.role === "principal") {
     setupSection.style.display = "block";
     schoolInput.style.display = "none";
     schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
-    Object.keys(userProfile.assignedSchools || {}).forEach(sch => {
+    Object.keys(userProfile.assignedSchools || {}).forEach((sch) => {
       const opt = document.createElement("option");
       opt.value = sch;
       opt.textContent = sch;
       schoolSelect.appendChild(opt);
     });
-  }
-  else if (userProfile.role === "teacher") {
+  } else if (userProfile.role === "teacher") {
     setupSection.style.display = "none";
     const assignedSchool = userProfile.assignedSchool;
     const assignedClass = userProfile.assignedClass;
@@ -272,7 +261,6 @@ async function initializeAfterAuth() {
     await loadSetup();
   }
 
-  // Continue with normal app initialization
   if (userProfile.role !== "teacher") {
     await initLocalState();
     resetViews();
@@ -284,23 +272,23 @@ async function initializeAfterAuth() {
 // 7) LOCAL STATE & FIREBASE SYNC
 // =======================
 async function initLocalState() {
-  studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
+  studentsBySchool = (await idbGet("studentsBySchool")) || {};
   attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
-  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || {};
-  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || {};
-  fineRates              = (await idbGet("fineRates"))              || fineRates;
-  eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
-  schools                = (await idbGet("schools"))                || [];
-  currentSchool          = (await idbGet("currentSchool"))          || null;
-  teacherClass           = (await idbGet("teacherClass"))           || null;
-  teacherSection         = (await idbGet("teacherSection"))         || null;
+  paymentsDataBySchool = (await idbGet("paymentsDataBySchool")) || {};
+  lastAdmNoBySchool = (await idbGet("lastAdmNoBySchool")) || {};
+  fineRates = (await idbGet("fineRates")) || fineRates;
+  eligibilityPct = (await idbGet("eligibilityPct")) || eligibilityPct;
+  schools = (await idbGet("schools")) || [];
+  currentSchool = (await idbGet("currentSchool")) || null;
+  teacherClass = (await idbGet("teacherClass")) || null;
+  teacherSection = (await idbGet("teacherSection")) || null;
 
   if (currentSchool) {
     await ensureSchoolData(currentSchool);
-    students       = studentsBySchool[currentSchool];
+    students = studentsBySchool[currentSchool];
     attendanceData = attendanceDataBySchool[currentSchool];
-    paymentsData   = paymentsDataBySchool[currentSchool];
-    lastAdmNo      = lastAdmNoBySchool[currentSchool];
+    paymentsData = paymentsDataBySchool[currentSchool];
+    lastAdmNo = lastAdmNoBySchool[currentSchool];
   }
 }
 
@@ -335,7 +323,7 @@ async function syncToFirebase() {
     schools,
     currentSchool,
     teacherClass,
-    teacherSection,
+    teacherSection
   };
   try {
     await dbSet(dbRef(database, "appData"), payload);
@@ -357,14 +345,14 @@ function resetViews() {
     "analytics-section",
     "register-section"
   ];
-  sections.forEach(id => document.getElementById(id).classList.add("hidden"));
+  sections.forEach((id) => document.getElementById(id).classList.add("hidden"));
 }
 
 async function loadSetup() {
-  const savedSchools       = (await idbGet("schools"))       || [];
+  const savedSchools = (await idbGet("schools")) || [];
   const savedCurrentSchool = (await idbGet("currentSchool")) || null;
-  const savedClass         = (await idbGet("teacherClass"))  || null;
-  const savedSection       = (await idbGet("teacherSection"))|| null;
+  const savedClass = (await idbGet("teacherClass")) || null;
+  const savedSection = (await idbGet("teacherSection")) || null;
 
   schools = savedSchools;
   currentSchool = savedCurrentSchool;
@@ -374,11 +362,10 @@ async function loadSetup() {
   const schoolSelect = document.getElementById("schoolSelect");
   const schoolInput = document.getElementById("schoolInput");
 
-  // Role-based: Admin sees input; Principal sees dropdown of assigned; Teacher already set
   if (userProfile.role === "admin") {
     schoolInput.style.display = "inline-block";
     schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
-    schools.forEach(sch => {
+    schools.forEach((sch) => {
       const opt = document.createElement("option");
       opt.value = sch;
       opt.textContent = sch;
@@ -386,17 +373,16 @@ async function loadSetup() {
     });
   } else if (userProfile.role === "principal") {
     schoolInput.style.display = "none";
-    // Dropdown already populated in initializeAfterAuth
   }
 
   renderSchoolList();
 
   if (currentSchool && teacherClass && teacherSection) {
     await ensureSchoolData(currentSchool);
-    students       = studentsBySchool[currentSchool];
+    students = studentsBySchool[currentSchool];
     attendanceData = attendanceDataBySchool[currentSchool];
-    paymentsData   = paymentsDataBySchool[currentSchool];
-    lastAdmNo      = lastAdmNoBySchool[currentSchool];
+    paymentsData = paymentsDataBySchool[currentSchool];
+    lastAdmNo = lastAdmNoBySchool[currentSchool];
 
     document.getElementById("setupText").textContent =
       `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
@@ -404,7 +390,6 @@ async function loadSetup() {
     document.getElementById("setupDisplay").classList.remove("hidden");
 
     resetViews();
-    // show other sections
     document.getElementById("financial-settings").classList.remove("hidden");
     document.getElementById("animatedCounters").classList.remove("hidden");
     document.getElementById("student-registration").classList.remove("hidden");
@@ -438,7 +423,6 @@ function renderSchoolList() {
           alert("School name already exists.");
           return;
         }
-        // Rename in arrays and mappings
         schools[idx] = newName;
         studentsBySchool[newName] = studentsBySchool[sch] || [];
         attendanceDataBySchool[newName] = attendanceDataBySchool[sch] || {};
@@ -510,15 +494,15 @@ saveSetupBtn.onclick = async (e) => {
     loadSetup();
     return;
   }
-  const selSchool  = schoolSelect.value;
-  const selClass   = classSelect.value;
+  const selSchool = schoolSelect.value;
+  const selClass = classSelect.value;
   const selSection = sectionSelect.value;
   if (!selSchool || !selClass || !selSection) {
     alert("Please select a school, class, and section.");
     return;
   }
-  currentSchool  = selSchool;
-  teacherClass   = selClass;
+  currentSchool = selSchool;
+  teacherClass = selClass;
   teacherSection = selSection;
   await idbSet("currentSchool", currentSchool);
   await idbSet("teacherClass", teacherClass);
@@ -538,20 +522,20 @@ editSetupBtn.onclick = (e) => {
 // =======================
 // 9) FINANCIAL SETTINGS LOGIC
 // =======================
-const fineAbsentInput     = document.getElementById("fineAbsent");
-const fineLateInput       = document.getElementById("fineLate");
-const fineLeaveInput      = document.getElementById("fineLeave");
-const fineHalfDayInput    = document.getElementById("fineHalfDay");
+const fineAbsentInput = document.getElementById("fineAbsent");
+const fineLateInput = document.getElementById("fineLate");
+const fineLeaveInput = document.getElementById("fineLeave");
+const fineHalfDayInput = document.getElementById("fineHalfDay");
 const eligibilityPctInput = document.getElementById("eligibilityPct");
-const saveSettingsBtn     = document.getElementById("saveSettings");
-const settingsCard        = document.createElement("div");
-const editSettingsBtn     = document.createElement("button");
+const saveSettingsBtn = document.getElementById("saveSettings");
+const settingsCard = document.createElement("div");
+const editSettingsBtn = document.createElement("button");
 
 function loadFinancialSettings() {
-  fineAbsentInput.value     = fineRates.A;
-  fineLateInput.value       = fineRates.Lt;
-  fineLeaveInput.value      = fineRates.L;
-  fineHalfDayInput.value    = fineRates.HD;
+  fineAbsentInput.value = fineRates.A;
+  fineLateInput.value = fineRates.Lt;
+  fineLeaveInput.value = fineRates.L;
+  fineHalfDayInput.value = fineRates.HD;
   eligibilityPctInput.value = eligibilityPct;
   settingsCard.id = "settingsCard";
   editSettingsBtn.id = "editSettings";
@@ -570,8 +554,8 @@ saveSettingsBtn.onclick = async () => {
   fineRates = {
     A: Number(fineAbsentInput.value) || 0,
     Lt: Number(fineLateInput.value) || 0,
-    L:  Number(fineLeaveInput.value) || 0,
-    HD: Number(fineHalfDayInput.value) || 0,
+    L: Number(fineLeaveInput.value) || 0,
+    HD: Number(fineHalfDayInput.value) || 0
   };
   eligibilityPct = Number(eligibilityPctInput.value) || 0;
   await idbSet("fineRates", fineRates);
@@ -621,7 +605,7 @@ function setupCounters() {
 }
 
 function animateCounters() {
-  document.querySelectorAll(".card-number span").forEach(span => {
+  document.querySelectorAll(".card-number span").forEach((span) => {
     const target = +span.dataset.target;
     let count = 0;
     const step = Math.max(1, target / 100);
@@ -634,38 +618,52 @@ function animateCounters() {
 }
 
 function updateCounters() {
-  const cl  = teacherClass;
+  const cl = teacherClass;
   const sec = teacherSection;
 
   const sectionCountSpan = document.getElementById("sectionCount");
-  const classCountSpan   = document.getElementById("classCount");
-  const schoolCountSpan  = document.getElementById("schoolCount");
+  const classCountSpan = document.getElementById("classCount");
+  const schoolCountSpan = document.getElementById("schoolCount");
   const attendanceCountSpan = document.getElementById("attendanceCount");
-  const eligibleCountSpan   = document.getElementById("eligibleCount");
-  const debarredCountSpan   = document.getElementById("debarredCount");
-  const outstandingCountSpan= document.getElementById("outstandingCount");
+  const eligibleCountSpan = document.getElementById("eligibleCount");
+  const debarredCountSpan = document.getElementById("debarredCount");
+  const outstandingCountSpan = document.getElementById("outstandingCount");
 
-  const sectionStudents = students.filter(s => s.cls === cl && s.sec === sec);
+  const sectionStudents = students.filter((s) => s.cls === cl && s.sec === sec);
   sectionCountSpan.dataset.target = sectionStudents.length;
 
-  const classStudents = students.filter(s => s.cls === cl);
+  const classStudents = students.filter((s) => s.cls === cl);
   classCountSpan.dataset.target = classStudents.length;
 
   schoolCountSpan.dataset.target = students.length;
 
-  let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
+  let totalP = 0,
+    totalA = 0,
+    totalLt = 0,
+    totalHD = 0,
+    totalL = 0;
   Object.entries(attendanceData).forEach(([date, rec]) => {
-    sectionStudents.forEach(s => {
+    sectionStudents.forEach((s) => {
       const code = rec[s.adm];
       if (!code) {
         totalA++;
       } else {
         switch (code) {
-          case "P": totalP++; break;
-          case "A": totalA++; break;
-          case "Lt": totalLt++; break;
-          case "HD": totalHD++; break;
-          case "L": totalL++; break;
+          case "P":
+            totalP++;
+            break;
+          case "A":
+            totalA++;
+            break;
+          case "Lt":
+            totalLt++;
+            break;
+          case "HD":
+            totalHD++;
+            break;
+          case "L":
+            totalL++;
+            break;
         }
       }
     });
@@ -673,19 +671,36 @@ function updateCounters() {
   const attendanceTotal = totalP + totalA + totalLt + totalHD + totalL;
   attendanceCountSpan.dataset.target = attendanceTotal;
 
-  let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
-  students.forEach(s => {
+  let eligibleCount = 0,
+    debarredCount = 0,
+    outstandingCount = 0;
+  students.forEach((s) => {
     if (s.cls !== cl || s.sec !== sec) return;
-    let p=0, a=0, lt=0, hd=0, l=0, totalDays=0;
-    Object.values(attendanceData).forEach(rec => {
+    let p = 0,
+      a = 0,
+      lt = 0,
+      hd = 0,
+      l = 0,
+      totalDays = 0;
+    Object.values(attendanceData).forEach((rec) => {
       if (rec[s.adm]) {
         totalDays++;
         switch (rec[s.adm]) {
-          case "P": p++; break;
-          case "A": a++; break;
-          case "Lt": lt++; break;
-          case "HD": hd++; break;
-          case "L": l++; break;
+          case "P":
+            p++;
+            break;
+          case "A":
+            a++;
+            break;
+          case "Lt":
+            lt++;
+            break;
+          case "HD":
+            hd++;
+            break;
+          case "L":
+            l++;
+            break;
         }
       }
     });
@@ -693,14 +708,14 @@ function updateCounters() {
     const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
     const outstanding = fineTotal - paid;
     const pct = totalDays ? (p / totalDays) * 100 : 0;
-    const status = (outstanding > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
+    const status = outstanding > 0 || pct < eligibilityPct ? "Debarred" : "Eligible";
 
     if (status === "Eligible") eligibleCount++;
     else debarredCount++;
     if (outstanding > 0) outstandingCount++;
   });
-  eligibleCountSpan.dataset.target    = eligibleCount;
-  debarredCountSpan.dataset.target    = debarredCount;
+  eligibleCountSpan.dataset.target = eligibleCount;
+  debarredCountSpan.dataset.target = debarredCount;
   outstandingCountSpan.dataset.target = outstandingCount;
 
   animateCounters();
@@ -722,28 +737,43 @@ const downloadRegistrationPDFBtn = document.getElementById("downloadRegistration
 
 addStudentBtn.onclick = async (e) => {
   e.preventDefault();
-  const n   = document.getElementById("studentName").value.trim();
-  const p   = document.getElementById("parentName").value.trim();
-  const c   = document.getElementById("parentContact").value.trim();
-  const o   = document.getElementById("parentOccupation").value.trim();
-  const a   = document.getElementById("parentAddress").value.trim();
-  const cl  = teacherClass;
+  const n = document.getElementById("studentName").value.trim();
+  const p = document.getElementById("parentName").value.trim();
+  const c = document.getElementById("parentContact").value.trim();
+  const o = document.getElementById("parentOccupation").value.trim();
+  const a = document.getElementById("parentAddress").value.trim();
+  const cl = teacherClass;
   const sec = teacherSection;
-  if (!n || !p || !c || !o || !a) { alert("All fields required"); return; }
-  if (!/^\d{7,15}$/.test(c)) { alert("Contact must be 7–15 digits"); return; }
+  if (!n || !p || !c || !o || !a) {
+    alert("All fields required");
+    return;
+  }
+  if (!/^\d{7,15}$/.test(c)) {
+    alert("Contact must be 7–15 digits");
+    return;
+  }
   const adm = await genAdmNo();
-  students.push({ name: n, adm, parent: p, contact: c, occupation: o, address: a, cls: cl, sec });
+  students.push({
+    name: n,
+    adm,
+    parent: p,
+    contact: c,
+    occupation: o,
+    address: a,
+    cls: cl,
+    sec
+  });
   studentsBySchool[currentSchool] = students;
   await idbSet("studentsBySchool", studentsBySchool);
   await syncToFirebase();
   renderStudents();
   updateCounters();
 
-  document.getElementById("studentName").value      = "";
-  document.getElementById("parentName").value       = "";
-  document.getElementById("parentContact").value    = "";
+  document.getElementById("studentName").value = "";
+  document.getElementById("parentName").value = "";
+  document.getElementById("parentContact").value = "";
   document.getElementById("parentOccupation").value = "";
-  document.getElementById("parentAddress").value    = "";
+  document.getElementById("parentAddress").value = "";
 };
 
 function renderStudents() {
@@ -752,19 +782,25 @@ function renderStudents() {
   students.forEach((s, i) => {
     if (s.cls !== teacherClass || s.sec !== teacherSection) return;
     idx++;
-    const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-    Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
+    const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+    Object.values(attendanceData).forEach((rec) => {
+      if (rec[s.adm]) stats[rec[s.adm]]++;
+    });
     const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-    const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-    const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount, 0);
-    const out   = fine - paid;
-    const pct   = total ? (stats.P/total)*100 : 0;
-    const status = (out > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
+    const fine =
+      stats.A * fineRates.A +
+      stats.Lt * fineRates.Lt +
+      stats.L * fineRates.L +
+      stats.HD * fineRates.HD;
+    const paid = (paymentsData[s.adm] || []).reduce((a, p) => a + p.amount, 0);
+    const out = fine - paid;
+    const pct = total ? (stats.P / total) * 100 : 0;
+    const status = out > 0 || pct < eligibilityPct ? "Debarred" : "Eligible";
 
     const tr = document.createElement("tr");
     tr.dataset.index = i;
     tr.innerHTML = `
-      <td><input type="checkbox" class="sel"></td>
+      <td><input type="checkbox" class="sel" /></td>
       <td>${idx}</td>
       <td>${s.name}</td>
       <td>${s.adm}</td>
@@ -780,7 +816,7 @@ function renderStudents() {
   });
   selectAllStudents.checked = false;
   toggleButtons();
-  document.querySelectorAll(".add-payment-btn").forEach(b => {
+  document.querySelectorAll(".add-payment-btn").forEach((b) => {
     b.onclick = () => openPaymentModal(b.dataset.adm);
   });
 }
@@ -791,25 +827,27 @@ function toggleButtons() {
   deleteSelectedBtn.disabled = !anyChecked;
 }
 
-studentsBody.addEventListener("change", e => {
+studentsBody.addEventListener("change", (e) => {
   if (e.target.classList.contains("sel")) toggleButtons();
 });
 
 selectAllStudents.onclick = () => {
-  document.querySelectorAll(".sel").forEach(c => c.checked = selectAllStudents.checked);
+  document
+    .querySelectorAll(".sel")
+    .forEach((c) => (c.checked = selectAllStudents.checked));
   toggleButtons();
 };
 
 editSelectedBtn.onclick = () => {
-  document.querySelectorAll(".sel:checked").forEach(cb => {
+  document.querySelectorAll(".sel:checked").forEach((cb) => {
     const tr = cb.closest("tr");
     const i = Number(tr.dataset.index);
     const s = students[i];
-    tr.cells[2].innerHTML = `<input value="${s.name}">`;
-    tr.cells[4].innerHTML = `<input value="${s.parent}">`;
-    tr.cells[5].innerHTML = `<input value="${s.contact}">`;
-    tr.cells[6].innerHTML = `<input value="${s.occupation}">`;
-    tr.cells[7].innerHTML = `<input value="${s.address}">`;
+    tr.cells[2].innerHTML = `<input value="${s.name}" />`;
+    tr.cells[4].innerHTML = `<input value="${s.parent}" />`;
+    tr.cells[5].innerHTML = `<input value="${s.contact}" />`;
+    tr.cells[6].innerHTML = `<input value="${s.occupation}" />`;
+    tr.cells[7].innerHTML = `<input value="${s.address}" />`;
   });
   editSelectedBtn.classList.add("hidden");
   deleteSelectedBtn.classList.add("hidden");
@@ -817,15 +855,15 @@ editSelectedBtn.onclick = () => {
 };
 
 doneEditingBtn.onclick = async () => {
-  document.querySelectorAll(".sel:checked").forEach(cb => {
+  document.querySelectorAll(".sel:checked").forEach((cb) => {
     const tr = cb.closest("tr");
     const i = Number(tr.dataset.index);
     const inputs = tr.querySelectorAll("input");
-    students[i].name       = inputs[0].value.trim();
-    students[i].parent     = inputs[1].value.trim();
-    students[i].contact    = inputs[2].value.trim();
+    students[i].name = inputs[0].value.trim();
+    students[i].parent = inputs[1].value.trim();
+    students[i].contact = inputs[2].value.trim();
     students[i].occupation = inputs[3].value.trim();
-    students[i].address    = inputs[4].value.trim();
+    students[i].address = inputs[4].value.trim();
   });
   studentsBySchool[currentSchool] = students;
   await idbSet("studentsBySchool", studentsBySchool);
@@ -839,8 +877,9 @@ doneEditingBtn.onclick = async () => {
 
 deleteSelectedBtn.onclick = async () => {
   if (!confirm("Delete selected students?")) return;
-  const toDelete = Array.from(document.querySelectorAll(".sel:checked")).map(cb => Number(cb.closest("tr").dataset.index));
-  // Remove by filtering
+  const toDelete = Array.from(
+    document.querySelectorAll(".sel:checked")
+  ).map((cb) => Number(cb.closest("tr").dataset.index));
   students = students.filter((_, idx) => !toDelete.includes(idx));
   studentsBySchool[currentSchool] = students;
   await idbSet("studentsBySchool", studentsBySchool);
@@ -870,39 +909,62 @@ editRegistrationBtn.onclick = () => {
 shareRegistrationBtn.onclick = () => {
   const header = `Student Registration List\n${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
   const lines = students
-    .filter(s => s.cls === teacherClass && s.sec === teacherSection)
-    .map((s, i) => `${i+1}. Adm#: ${s.adm} Name: ${s.name} Parent: ${s.parent}`);
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`, "_blank");
+    .filter((s) => s.cls === teacherClass && s.sec === teacherSection)
+    .map(
+      (s, i) =>
+        `${i + 1}. Adm#: ${s.adm} Name: ${s.name} Parent: ${s.parent}`
+    );
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`,
+    "_blank"
+  );
 };
 
 downloadRegistrationPDFBtn.onclick = () => {
   const doc = new jspdf.jsPDF();
   const w = doc.internal.pageSize.getWidth();
   const today = new Date().toISOString().split("T")[0];
-  doc.setFontSize(18); doc.text("Student Registration List", 14, 16);
-  doc.setFontSize(10); doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
-  doc.setFontSize(12); doc.text(`${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`, 14, 24);
+  doc.setFontSize(18);
+  doc.text("Student Registration List", 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
+  doc.setFontSize(12);
+  doc.text(
+    `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`,
+    14,
+    24
+  );
 
-  // Build temp table
   const tempTable = document.createElement("table");
   tempTable.innerHTML = `
     <thead>
-      <tr><th>#</th><th>Adm#</th><th>Name</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th></tr>
+      <tr>
+        <th>#</th>
+        <th>Adm#</th>
+        <th>Name</th>
+        <th>Parent</th>
+        <th>Contact</th>
+        <th>Occupation</th>
+        <th>Address</th>
+      </tr>
     </thead>
     <tbody>
       ${students
-        .filter(s => s.cls === teacherClass && s.sec === teacherSection)
-        .map((s, i) => `
-          <tr>
-            <td>${i+1}</td>
-            <td>${s.adm}</td>
-            <td>${s.name}</td>
-            <td>${s.parent}</td>
-            <td>${s.contact}</td>
-            <td>${s.occupation}</td>
-            <td>${s.address}</td>
-          </tr>
-        `).join("")}
+        .filter((s) => s.cls === teacherClass && s.sec === teacherSection)
+        .map(
+          (s, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${s.adm}</td>
+          <td>${s.name}</td>
+          <td>${s.parent}</td>
+          <td>${s.contact}</td>
+          <td>${s.occupation}</td>
+          <td>${s.address}</td>
+        </tr>
+      `
+        )
+        .join("")}
     </tbody>`;
   tempTable.id = "tempStudentsTable";
   document.body.appendChild(tempTable);
@@ -959,29 +1021,32 @@ const downloadAttendancePDFBtn = document.getElementById("downloadAttendancePDF"
 const shareAttendanceBtn = document.getElementById("shareAttendanceSummary");
 const dateInput = document.getElementById("dateInput");
 
-const statusNames  = { P:"Present", A:"Absent", Lt:"Late", HD:"Half-Day", L:"Leave" };
-const statusColors = { P:"var(--success)", A:"var(--danger)", Lt:"var(--warning)", HD:"#FF9800", L:"var(--info)" };
+const statusNames = { P: "Present", A: "Absent", Lt: "Late", HD: "Half-Day", L: "Leave" };
+const statusColors = { P: "var(--success)", A: "var(--danger)", Lt: "var(--warning)", HD: "#FF9800", L: "var(--info)" };
 
 loadAttendanceBtn.onclick = () => {
   attendanceBodyDiv.innerHTML = "";
   attendanceSummaryDiv.innerHTML = "";
-  const cl  = teacherClass;
+  const cl = teacherClass;
   const sec = teacherSection;
 
-  students.filter(stu => stu.cls === cl && stu.sec === sec).forEach((stu, i) => {
+  students.filter((stu) => stu.cls === cl && stu.sec === sec).forEach((stu, i) => {
     const row = document.createElement("div");
     const headerDiv = document.createElement("div");
-    const btnsDiv   = document.createElement("div");
-    row.className       = "attendance-row";
+    const btnsDiv = document.createElement("div");
+    row.className = "attendance-row";
     headerDiv.className = "attendance-header";
-    btnsDiv.className   = "attendance-buttons";
+    btnsDiv.className = "attendance-buttons";
     headerDiv.textContent = `${i + 1}. ${stu.name} (${stu.adm})`;
-    Object.keys(statusNames).forEach(code => {
+    Object.keys(statusNames).forEach((code) => {
       const btn = document.createElement("button");
       btn.className = "att-btn";
       btn.textContent = code;
       btn.onclick = () => {
-        btnsDiv.querySelectorAll(".att-btn").forEach(b => { b.classList.remove("selected"); b.style = ""; });
+        btnsDiv.querySelectorAll(".att-btn").forEach((b) => {
+          b.classList.remove("selected");
+          b.style = "";
+        });
         btn.classList.add("selected");
         btn.style.background = statusColors[code];
         btn.style.color = "#fff";
@@ -1001,11 +1066,14 @@ loadAttendanceBtn.onclick = () => {
 
 saveAttendanceBtn.onclick = async () => {
   const date = dateInput.value;
-  if (!date) { alert("Pick date"); return; }
+  if (!date) {
+    alert("Pick date");
+    return;
+  }
   attendanceData[date] = {};
-  const cl  = teacherClass;
+  const cl = teacherClass;
   const sec = teacherSection;
-  students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
+  students.filter((s) => s.cls === cl && s.sec === sec).forEach((s, i) => {
     const selBtn = attendanceBodyDiv.children[i].querySelector(".att-btn.selected");
     attendanceData[date][s.adm] = selBtn ? selBtn.textContent : "A";
   });
@@ -1020,7 +1088,7 @@ saveAttendanceBtn.onclick = async () => {
     <tr>
       <th>Sr#</th><th>Adm#</th><th>Name</th><th>Status</th><th>Share</th>
     </tr>`;
-  students.filter(s => s.cls === cl && s.sec === sec).forEach((s, i) => {
+  students.filter((s) => s.cls === cl && s.sec === sec).forEach((s, i) => {
     const code = attendanceData[date][s.adm];
     tbl.innerHTML += `
       <tr>
@@ -1032,10 +1100,10 @@ saveAttendanceBtn.onclick = async () => {
       </tr>`;
   });
   attendanceSummaryDiv.appendChild(tbl);
-  attendanceSummaryDiv.querySelectorAll(".share-individual").forEach(ic => {
+  attendanceSummaryDiv.querySelectorAll(".share-individual").forEach((ic) => {
     ic.onclick = () => {
       const adm = ic.dataset.adm;
-      const st = students.find(x => x.adm === adm);
+      const st = students.find((x) => x.adm === adm);
       const msg = `Dear Parent, your child (Adm#: ${adm}) was ${statusNames[attendanceData[date][adm]]} on ${date}.`;
       window.open(`https://wa.me/${st.contact}?text=${encodeURIComponent(msg)}`, "_blank");
     };
@@ -1063,9 +1131,16 @@ downloadAttendancePDFBtn.onclick = async () => {
   const doc = new jspdf.jsPDF();
   const w = doc.internal.pageSize.getWidth();
   const today = new Date().toISOString().split("T")[0];
-  doc.setFontSize(18); doc.text("Attendance Report", 14, 16);
-  doc.setFontSize(10); doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
-  doc.setFontSize(12); doc.text(`${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`, 14, 24);
+  doc.setFontSize(18);
+  doc.text("Attendance Report", 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, w - 14, 16, { align: "right" });
+  doc.setFontSize(12);
+  doc.text(
+    `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`,
+    14,
+    24
+  );
   doc.autoTable({ startY: 30, html: "#attendanceSummaryTable" });
   const fileName = `attendance_${dateInput.value}.pdf`;
   const blob = doc.output("blob");
@@ -1074,37 +1149,44 @@ downloadAttendancePDFBtn.onclick = async () => {
 };
 
 shareAttendanceBtn.onclick = () => {
-  const cl   = teacherClass;
-  const sec  = teacherSection;
+  const cl = teacherClass;
+  const sec = teacherSection;
   const date = dateInput.value;
   const header = `*Attendance Report*\nClass ${cl} Sec ${sec} - ${date}`;
-  const lines = students.filter(s => s.cls === cl && s.sec === sec)
-    .map((s, i) => `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`);
-  window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`, "_blank");
+  const lines = students
+    .filter((s) => s.cls === cl && s.sec === sec)
+    .map(
+      (s, i) =>
+        `${i + 1}. ${s.name} (Adm#: ${s.adm}): ${statusNames[attendanceData[date][s.adm]]}`
+    );
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`,
+    "_blank"
+  );
 };
 
 // =======================
 // 14) ANALYTICS LOGIC
 // =======================
-const analyticsTarget       = document.getElementById("analyticsTarget");
-const analyticsSectionSelect= document.getElementById("analyticsSectionSelect");
-const analyticsType         = document.getElementById("analyticsType");
-const analyticsDate         = document.getElementById("analyticsDate");
-const analyticsMonth        = document.getElementById("analyticsMonth");
-const semesterStartInput    = document.getElementById("semesterStart");
-const semesterEndInput      = document.getElementById("semesterEnd");
-const yearStartInput        = document.getElementById("yearStart");
-const analyticsSearch       = document.getElementById("analyticsSearch");
-const loadAnalyticsBtn      = document.getElementById("loadAnalytics");
-const resetAnalyticsBtn     = document.getElementById("resetAnalytics");
-const instructionsDiv       = document.getElementById("instructions");
-const analyticsContainer    = document.getElementById("analyticsContainer");
-const analyticsBody         = document.getElementById("analyticsBody");
-const graphsDiv             = document.getElementById("graphs");
-const barChartCanvas        = document.getElementById("barChart");
-const pieChartCanvas        = document.getElementById("pieChart");
-const downloadAnalyticsBtn  = document.getElementById("downloadAnalytics");
-const shareAnalyticsBtn     = document.getElementById("shareAnalytics");
+const analyticsTarget = document.getElementById("analyticsTarget");
+const analyticsSectionSelect = document.getElementById("analyticsSectionSelect");
+const analyticsType = document.getElementById("analyticsType");
+const analyticsDate = document.getElementById("analyticsDate");
+const analyticsMonth = document.getElementById("analyticsMonth");
+const semesterStartInput = document.getElementById("semesterStart");
+const semesterEndInput = document.getElementById("semesterEnd");
+const yearStartInput = document.getElementById("yearStart");
+const analyticsSearch = document.getElementById("analyticsSearch");
+const loadAnalyticsBtn = document.getElementById("loadAnalytics");
+const resetAnalyticsBtn = document.getElementById("resetAnalytics");
+const instructionsDiv = document.getElementById("instructions");
+const analyticsContainer = document.getElementById("analyticsContainer");
+const analyticsBody = document.getElementById("analyticsBody");
+const graphsDiv = document.getElementById("graphs");
+const barChartCanvas = document.getElementById("barChart");
+const pieChartCanvas = document.getElementById("pieChart");
+const downloadAnalyticsBtn = document.getElementById("downloadAnalytics");
+const shareAnalyticsBtn = document.getElementById("shareAnalytics");
 
 let lastAnalyticsStats = [];
 let lastAnalyticsRange = {};
@@ -1164,15 +1246,15 @@ loadAnalyticsBtn.onclick = () => {
   } else if (analyticsType.value === "month") {
     const [y, m] = analyticsMonth.value.split("-").map(Number);
     from = `${analyticsMonth.value}-01`;
-    to   = `${analyticsMonth.value}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+    to = `${analyticsMonth.value}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
   } else if (analyticsType.value === "semester") {
     const [sy, sm] = semesterStartInput.value.split("-").map(Number);
     const [ey, em] = semesterEndInput.value.split("-").map(Number);
     from = `${semesterStartInput.value}-01`;
-    to   = `${semesterEndInput.value}-${String(new Date(ey, em, 0).getDate()).padStart(2, "0")}`;
+    to = `${semesterEndInput.value}-${String(new Date(ey, em, 0).getDate()).padStart(2, "0")}`;
   } else if (analyticsType.value === "year") {
     from = `${yearStartInput.value}-01-01`;
-    to   = `${yearStartInput.value}-12-31`;
+    to = `${yearStartInput.value}-12-31`;
   } else {
     alert("Select period type");
     return;
@@ -1180,25 +1262,28 @@ loadAnalyticsBtn.onclick = () => {
 
   const cls = teacherClass;
   const sec = teacherSection;
-  let pool = students.filter(s => s.cls === cls && s.sec === sec);
+  let pool = students.filter((s) => s.cls === cls && s.sec === sec);
 
   if (analyticsTarget.value === "section") {
     const asel = analyticsSectionSelect.value;
-    pool = pool.filter(s => s.sec === asel);
+    pool = pool.filter((s) => s.sec === asel);
   }
   if (analyticsTarget.value === "student") {
     const q = analyticsSearch.value.trim().toLowerCase();
-    pool = pool.filter(s => s.adm === q || s.name.toLowerCase().includes(q));
+    pool = pool.filter((s) => s.adm === q || s.name.toLowerCase().includes(q));
   }
 
-  const stats = pool.map(s => ({ adm: s.adm, name: s.name, P:0, A:0, Lt:0, HD:0, L:0, total:0 }));
+  const stats = pool.map((s) => ({ adm: s.adm, name: s.name, P: 0, A: 0, Lt: 0, HD: 0, L: 0, total: 0 }));
   Object.entries(attendanceData).forEach(([d, rec]) => {
     if (d < from || d > to) return;
-    stats.forEach(st => {
-      if (rec[st.adm]) { st[rec[st.adm]]++; st.total++; }
+    stats.forEach((st) => {
+      if (rec[st.adm]) {
+        st[rec[st.adm]]++;
+        st.total++;
+      }
     });
   });
-  stats.forEach(st => {
+  stats.forEach((st) => {
     const totalFine = st.A * fineRates.A + st.Lt * fineRates.Lt + st.L * fineRates.L + st.HD * fineRates.HD;
     const paid = (paymentsData[st.adm] || []).reduce((a, p) => a + p.amount, 0);
     st.outstanding = totalFine - paid;
@@ -1214,22 +1299,43 @@ loadAnalyticsBtn.onclick = () => {
 function renderAnalytics(stats, from, to) {
   let filtered = stats;
   if (!analyticsFilterOptions.includes("all")) {
-    filtered = stats.filter(st => analyticsFilterOptions.some(opt => {
-      switch (opt) {
-        case "registered":   return true;
-        case "attendance":   return st.total > 0;
-        case "fine":         return st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0;
-        case "cleared":      return st.outstanding === 0;
-        case "debarred":     return st.status === "Debarred";
-        case "eligible":     return st.status === "Eligible";
-      }
-    }));
+    filtered = stats.filter((st) =>
+      analyticsFilterOptions.some((opt) => {
+        switch (opt) {
+          case "registered":
+            return true;
+          case "attendance":
+            return st.total > 0;
+          case "fine":
+            return st.A > 0 || st.Lt > 0 || st.L > 0 || st.HD > 0;
+          case "cleared":
+            return st.outstanding === 0;
+          case "debarred":
+            return st.status === "Debarred";
+          case "eligible":
+            return st.status === "Eligible";
+        }
+      })
+    );
   }
 
   const theadRow = document.querySelector("#analyticsTable thead tr");
   theadRow.innerHTML = [
-    "#", "Adm#", "Name", "P", "A", "Lt", "HD", "L", "Total", "%", "Outstanding", "Status"
-  ].map(h => `<th>${h}</th>`).join("");
+    "#",
+    "Adm#",
+    "Name",
+    "P",
+    "A",
+    "Lt",
+    "HD",
+    "L",
+    "Total",
+    "%",
+    "Outstanding",
+    "Status"
+  ]
+    .map((h) => `<th>${h}</th>`)
+    .join("");
 
   analyticsBody.innerHTML = "";
   filtered.forEach((st, i) => {
@@ -1264,12 +1370,14 @@ function renderAnalytics(stats, from, to) {
   window.barChartInstance = new Chart(barCtx, {
     type: "bar",
     data: {
-      labels: filtered.map(st => st.name),
-      datasets: [{
-        label: "% Present",
-        data: filtered.map(st => st.total ? (st.P / st.total) * 100 : 0),
-        backgroundColor: filtered.map(() => statusColors.P)
-      }]
+      labels: filtered.map((st) => st.name),
+      datasets: [
+        {
+          label: "% Present",
+          data: filtered.map((st) => (st.total ? (st.P / st.total) * 100 : 0)),
+          backgroundColor: filtered.map(() => statusColors.P)
+        }
+      ]
     },
     options: {
       scales: { y: { beginAtZero: true, max: 100 } }
@@ -1277,14 +1385,17 @@ function renderAnalytics(stats, from, to) {
   });
 
   // Pie Chart
-  const totals = filtered.reduce((acc, st) => {
-    acc.P  += st.P;
-    acc.A  += st.A;
-    acc.Lt += st.Lt;
-    acc.HD += st.HD;
-    acc.L  += st.L;
-    return acc;
-  }, { P:0, A:0, Lt:0, HD:0, L:0 });
+  const totals = filtered.reduce(
+    (acc, st) => {
+      acc.P += st.P;
+      acc.A += st.A;
+      acc.Lt += st.Lt;
+      acc.HD += st.HD;
+      acc.L += st.L;
+      return acc;
+    },
+    { P: 0, A: 0, Lt: 0, HD: 0, L: 0 }
+  );
 
   const pieCtx = pieChartCanvas.getContext("2d");
   if (window.pieChartInstance) window.pieChartInstance.destroy();
@@ -1292,23 +1403,30 @@ function renderAnalytics(stats, from, to) {
     type: "pie",
     data: {
       labels: Object.values(statusNames),
-      datasets: [{
-        data: Object.keys(statusNames).map(code => totals[code]),
-        backgroundColor: Object.keys(statusNames).map(code => statusColors[code])
-      }]
+      datasets: [
+        {
+          data: Object.keys(statusNames).map((code) => totals[code]),
+          backgroundColor: Object.keys(statusNames).map((code) => statusColors[code])
+        }
+      ]
     }
   });
 
   lastAnalyticsShare =
     `Attendance Analytics (${from} to ${to})\n` +
-    filtered.map((st, i) => {
-      const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
-      return `${i + 1}. ${st.adm} ${st.name}: ${pct}% / PKR ${st.outstanding}`;
-    }).join("\n");
+    filtered
+      .map((st, i) => {
+        const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
+        return `${i + 1}. ${st.adm} ${st.name}: ${pct}% / PKR ${st.outstanding}`;
+      })
+      .join("\n");
 }
 
 downloadAnalyticsBtn.onclick = async () => {
-  if (!lastAnalyticsStats.length) { alert("Load analytics first"); return; }
+  if (!lastAnalyticsStats.length) {
+    alert("Load analytics first");
+    return;
+  }
 
   const from = lastAnalyticsRange.from;
   const to = lastAnalyticsRange.to;
@@ -1316,9 +1434,16 @@ downloadAnalyticsBtn.onclick = async () => {
   const doc = new jspdf.jsPDF();
 
   if (analyticsDownloadMode === "combined") {
-    doc.setFontSize(18); doc.text("Attendance Analytics", 14, 16);
-    doc.setFontSize(10); doc.text(`Period: ${from} to ${to}`, 14, 24);
-    doc.setFontSize(12); doc.text(`${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`, 14, 32);
+    doc.setFontSize(18);
+    doc.text("Attendance Analytics", 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Period: ${from} to ${to}`, 14, 24);
+    doc.setFontSize(12);
+    doc.text(
+      `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`,
+      14,
+      32
+    );
 
     const tempTable = document.createElement("table");
     tempTable.innerHTML = `
@@ -1328,11 +1453,12 @@ downloadAnalyticsBtn.onclick = async () => {
         </tr>
       </thead>
       <tbody>
-        ${lastAnalyticsStats.map((st, i) => {
-          const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
-          return `
+        ${lastAnalyticsStats
+          .map((st, i) => {
+            const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
+            return `
             <tr>
-              <td>${i+1}</td>
+              <td>${i + 1}</td>
               <td>${st.adm}</td>
               <td>${st.name}</td>
               <td>${st.P}</td>
@@ -1345,7 +1471,8 @@ downloadAnalyticsBtn.onclick = async () => {
               <td>PKR ${st.outstanding}</td>
               <td>${st.status}</td>
             </tr>`;
-        }).join("")}
+          })
+          .join("")}
       </tbody>`;
     tempTable.id = "tempAnalyticsTable";
     document.body.appendChild(tempTable);
@@ -1357,12 +1484,11 @@ downloadAnalyticsBtn.onclick = async () => {
     doc.save(fileName);
     await sharePdf(blob, fileName, "Attendance Analytics");
   } else {
-    // Individual PDFs
     lastAnalyticsStats.forEach((st, i) => {
       if (i !== 0) doc.addPage();
       const pct = st.total ? ((st.P / st.total) * 100).toFixed(1) : "0.0";
       doc.setFontSize(14);
-      doc.text(`Attendance Receipt`, 14, 16);
+      doc.text("Attendance Receipt", 14, 16);
       doc.setFontSize(12);
       doc.text(`Student: ${st.name} (Adm#: ${st.adm})`, 14, 26);
       doc.text(`Present: ${st.P}`, 14, 36);
@@ -1374,14 +1500,14 @@ downloadAnalyticsBtn.onclick = async () => {
       doc.text(`% Present: ${pct}%`, 14, 84);
       doc.text(`Outstanding Fine: PKR ${st.outstanding}`, 14, 92);
 
-      doc.text(`Fine Rates:`, 14, 110);
+      doc.text("Fine Rates:", 14, 110);
       doc.text(`Absent: PKR ${fineRates.A}`, 14, 118);
       doc.text(`Late: PKR ${fineRates.Lt}`, 14, 126);
       doc.text(`Leave: PKR ${fineRates.L}`, 14, 134);
       doc.text(`Half-Day: PKR ${fineRates.HD}`, 14, 142);
       doc.text(`Eligibility %: ${eligibilityPct}%`, 14, 158);
 
-      doc.text(`HOD Signature: ______________`, 14, 180);
+      doc.text("HOD Signature: ______________", 14, 180);
       doc.text(`Generated on ${today}`, 14, 200);
     });
 
@@ -1393,9 +1519,9 @@ downloadAnalyticsBtn.onclick = async () => {
 };
 
 shareAnalyticsBtn.onclick = () => {
-  if (!lastAnalyticsShare) { 
-    alert("Load analytics first"); 
-    return; 
+  if (!lastAnalyticsShare) {
+    alert("Load analytics first");
+    return;
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(lastAnalyticsShare)}`, "_blank");
 };
@@ -1403,43 +1529,58 @@ shareAnalyticsBtn.onclick = () => {
 // =======================
 // 15) ATTENDANCE REGISTER LOGIC
 // =======================
-const registerMonthInput   = document.getElementById("registerMonth");
-const loadRegisterBtn      = document.getElementById("loadRegister");
+const registerMonthInput = document.getElementById("registerMonth");
+const loadRegisterBtn = document.getElementById("loadRegister");
 const registerTableWrapper = document.getElementById("registerTableWrapper");
-const registerHeaderRow    = document.getElementById("registerHeader");
-const registerBodyTbody    = document.getElementById("registerBody");
-const changeRegisterBtn    = document.getElementById("changeRegister");
-const saveRegisterBtn      = document.getElementById("saveRegister");
-const downloadRegisterBtn  = document.getElementById("downloadRegister");
-const shareRegisterBtn     = document.getElementById("shareRegister");
+const registerHeaderRow = document.getElementById("registerHeader");
+const registerBodyTbody = document.getElementById("registerBody");
+const changeRegisterBtn = document.getElementById("changeRegister");
+const saveRegisterBtn = document.getElementById("saveRegister");
+const downloadRegisterBtn = document.getElementById("downloadRegister");
+const shareRegisterBtn = document.getElementById("shareRegister");
 
 loadRegisterBtn.onclick = () => {
   const m = registerMonthInput.value;
-  if (!m) { alert("Pick month"); return; }
-  const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + "-")).sort();
-  if (!dateKeys.length) { alert("No attendance marked this month."); return; }
+  if (!m) {
+    alert("Pick month");
+    return;
+  }
+  const dateKeys = Object.keys(attendanceData)
+    .filter((d) => d.startsWith(m + "-"))
+    .sort();
+  if (!dateKeys.length) {
+    alert("No attendance marked this month.");
+    return;
+  }
 
   registerHeaderRow.innerHTML =
     `<th>#</th><th>Adm#</th><th>Name</th>` +
-    dateKeys.map(k => `<th>${k.split("-")[2]}</th>`).join("");
+    dateKeys.map((k) => `<th>${k.split("-")[2]}</th>`).join("");
 
   registerBodyTbody.innerHTML = "";
-  students.filter(s => s.cls === teacherClass && s.sec === teacherSection).forEach((s, i) => {
-    let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
-    dateKeys.forEach(key => {
-      const c = attendanceData[key][s.adm] || "";
-      const color = c === "P" ? "var(--success)"
-                 : c === "Lt" ? "var(--warning)"
-                 : c === "HD" ? "#FF9800"
-                 : c === "L" ? "var(--info)"
-                 : "var(--danger)";
-      const style = c ? `style="background:${color};color:#fff"` : "";
-      row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+  students
+    .filter((s) => s.cls === teacherClass && s.sec === teacherSection)
+    .forEach((s, i) => {
+      let row = `<td>${i + 1}</td><td>${s.adm}</td><td>${s.name}</td>`;
+      dateKeys.forEach((key) => {
+        const c = attendanceData[key][s.adm] || "";
+        const color =
+          c === "P"
+            ? "var(--success)"
+            : c === "Lt"
+            ? "var(--warning)"
+            : c === "HD"
+            ? "#FF9800"
+            : c === "L"
+            ? "var(--info)"
+            : "var(--danger)";
+        const style = c ? `style="background:${color};color:#fff"` : "";
+        row += `<td class="reg-cell" ${style}><span class="status-text">${c}</span></td>`;
+      });
+      const tr = document.createElement("tr");
+      tr.innerHTML = row;
+      registerBodyTbody.appendChild(tr);
     });
-    const tr = document.createElement("tr");
-    tr.innerHTML = row;
-    registerBodyTbody.appendChild(tr);
-  });
 
   registerTableWrapper.classList.remove("hidden");
   saveRegisterBtn.classList.remove("hidden");
@@ -1451,8 +1592,10 @@ loadRegisterBtn.onclick = () => {
 
 saveRegisterBtn.onclick = async () => {
   const m = registerMonthInput.value;
-  const dateKeys = Object.keys(attendanceData).filter(d => d.startsWith(m + "-")).sort();
-  Array.from(registerBodyTbody.children).forEach(tr => {
+  const dateKeys = Object.keys(attendanceData)
+    .filter((d) => d.startsWith(m + "-"))
+    .sort();
+  Array.from(registerBodyTbody.children).forEach((tr) => {
     const adm = tr.children[1].textContent;
     dateKeys.forEach((key, idx) => {
       const code = tr.children[3 + idx].querySelector(".status-text").textContent;
@@ -1491,9 +1634,16 @@ function bindRegisterActions() {
     const doc = new jspdf.jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const today = new Date().toISOString().split("T")[0];
-    doc.setFontSize(18); doc.text("Attendance Register", 14, 20);
-    doc.setFontSize(10); doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
-    doc.setFontSize(12); doc.text(`${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`, 14, 36);
+    doc.setFontSize(18);
+    doc.text("Attendance Register", 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
+    doc.setFontSize(12);
+    doc.text(
+      `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`,
+      14,
+      36
+    );
     doc.autoTable({ startY: 60, html: "#registerTable", tableWidth: "auto", styles: { fontSize: 10 } });
     const blob = doc.output("blob");
     doc.save("attendance_register.pdf");
@@ -1502,18 +1652,17 @@ function bindRegisterActions() {
 
   shareRegisterBtn.onclick = () => {
     const header = `Attendance Register\n${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
-    const rows = Array.from(registerBodyTbody.children).map(tr =>
-      Array.from(tr.children).map(td => td.querySelector(".status-text")?.textContent || td.textContent).join(" ")
+    const rows = Array.from(registerBodyTbody.children).map((tr) =>
+      Array.from(tr.children)
+        .map((td) => td.querySelector(".status-text")?.textContent || td.textContent)
+        .join(" ")
     );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank`);
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`,
+      "_blank"
+    );
   };
 }
-
-// =======================
-// 16) BACKUP / RESTORE / RESET
-// =======================
-// Removed because those buttons/inputs were not present in index.html.
-// If you need backup/restore, re-add matching HTML elements first.
 
 // =======================
 // 17) UTILITY: Generate Admission Number
@@ -1530,7 +1679,10 @@ async function genAdmNo() {
 // 18) SHARE PDF UTIL
 // =======================
 async function sharePdf(blob, fileName, title) {
-  if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })) {
+  if (
+    navigator.canShare &&
+    navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })
+  ) {
     try {
       await navigator.share({
         files: [new File([blob], fileName, { type: blob.type })],
