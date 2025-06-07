@@ -8,7 +8,6 @@ import {
   getDatabase,
   ref as dbRef,
   set as dbSet,
-  onValue,
   get as dbGet,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
@@ -20,13 +19,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY", // ← Replace with your actual API key
-  authDomain: "my-attendance-app.firebaseapp.com",
-  databaseURL: "https://my-attendance-app-default-rtdb.firebaseio.com",
-  projectId: "my-attendance-app",
-  storageBucket: "my-attendance-app.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef1234567890"
+  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
+  authDomain: "attandace-management.firebaseapp.com",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  projectId: "attandace-management",
+  storageBucket: "attandace-management.firebasestorage.app",
+  messagingSenderId: "222685278846",
+  appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
+  measurementId: "G-V2MY85R73B"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -1505,15 +1505,15 @@ function bindRegisterActions() {
     const rows = Array.from(registerBodyTbody.children).map(tr =>
       Array.from(tr.children).map(td => td.querySelector(".status-text")?.textContent || td.textContent).join(" ")
     );
-    window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(header + "\n" + rows.join("\n"))}`, "_blank`);
   };
 }
 
 // =======================
-// 16) (Backup/Restore/Reset Removed)
+// 16) BACKUP / RESTORE / RESET
 // =======================
-// The previous implementation referenced IDs that didn't exist in the HTML,
-// causing uncaught TypeError. Those sections have been removed.
+// Removed because those buttons/inputs were not present in index.html.
+// If you need backup/restore, re-add matching HTML elements first.
 
 // =======================
 // 17) UTILITY: Generate Admission Number
