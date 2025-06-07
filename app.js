@@ -7,6 +7,7 @@ import {
   getDatabase,
   ref as dbRef,
   set as dbSet,
+  get as dbGet,          // ← Added this import for “get”
   onValue,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
@@ -421,13 +422,13 @@ function updateCounters() {
   const cl  = teacherClass;
   const sec = teacherSection;
 
-  const sectionCountSpan   = $("sectionCount");
-  const classCountSpan     = $("classCount");
-  const schoolCountSpan    = $("schoolCount");
-  const attendanceCountSpan= $("attendanceCount");
-  const eligibleCountSpan  = $("eligibleCount");
-  const debarredCountSpan  = $("debarredCount");
-  const outstandingCountSpan = $("outstandingCount");
+  const sectionCountSpan    = $("sectionCount");
+  const classCountSpan      = $("classCount");
+  const schoolCountSpan     = $("schoolCount");
+  const attendanceCountSpan = $("attendanceCount");
+  const eligibleCountSpan   = $("eligibleCount");
+  const debarredCountSpan   = $("debarredCount");
+  const outstandingCountSpan= $("outstandingCount");
 
   const sectionStudents = students.filter(s => s.cls === cl && s.sec === sec);
   sectionCountSpan.dataset.target = sectionStudents.length;
@@ -489,9 +490,9 @@ function updateCounters() {
     else debarredCount++;
     if (outstanding > 0) outstandingCount++;
   });
-  eligibleCountSpan.dataset.target    = eligibleCount;
-  debarredCountSpan.dataset.target    = debarredCount;
-  outstandingCountSpan.dataset.target = outstandingCount;
+  eligibleCountSpan.dataset.target     = eligibleCount;
+  debarredCountSpan.dataset.target     = debarredCount;
+  outstandingCountSpan.dataset.target  = outstandingCount;
 
   animateCounters();
 }
@@ -888,7 +889,7 @@ saveAttendanceBtn.onclick = async () => {
   saveAttendanceBtn.classList.add("hidden");
   resetAttendanceBtn.classList.remove("hidden");
   downloadAttendancePDFBtn.classList.remove("hidden");
-  shareAttendanceBtn.classList.remove("hidden");
+  shareAttendanceBtn.classList.remove("visible"); 
   attendanceSummaryDiv.classList.remove("hidden");
   updateCounters();
 };
