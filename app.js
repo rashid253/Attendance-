@@ -1618,6 +1618,112 @@ saveRegisterBtn.onclick = async () => {
   downloadRegisterBtn.classList.remove("hidden");
   shareRegisterBtn.classList.remove("hidden");
   bindRegisterActions();
+  +  // ----------------------
++  // 9) BACKUP, RESTORE & RESET SECTION
++  // ----------------------
++  const chooseBackupFolderBtn = document.getElementById("chooseBackupFolder");
++  const restoreDataBtn        = document.getElementById("restoreData");
++  const restoreFileInput      = document.getElementById("restoreFile");
++  const resetDataBtn          = document.getElementById("resetData");
++  let backupHandle = null;
++
++  chooseBackupFolderBtn.onclick = async () => {
++    try {
++      backupHandle = await window.showDirectoryPicker();
++      alert("Backup folder selected.");
++    } catch (err) {
++      console.error(err);
++      alert("Folder selection canceled or not supported.");
++    }
++  };
++
++  restoreDataBtn.onclick = () => restoreFileInput.click();
++  restoreFileInput.onchange = async (e) => {
++    const file = e.target.files[0];
++    if (!file) return;
++    try {
++      const text = await file.text();
++      const data = JSON.parse(text);
++      // restore all your data structures
++      studentsBySchool       = data.studentsBySchool       || {};
++      attendanceDataBySchool = data.attendanceDataBySchool || {};
++      paymentsDataBySchool   = data.paymentsDataBySchool   || {};
++      lastAdmNoBySchool      = data.lastAdmNoBySchool      || {};
++      fineRates              = data.fineRates              || { A:50, Lt:20, L:10, HD:30 };
++      eligibilityPct         = data.eligibilityPct         || 75;
++      schools                = data.schools                || [];
++      currentSchool          = data.currentSchool          || null;
++      teacherClass           = data.teacherClass           || null;
++      teacherSection         = data.teacherSection          || null;
++
++      await Promise.all([
++        idbSet("studentsBySchool",       studentsBySchool),
++        idbSet("attendanceDataBySchool", attendanceDataBySchool),
++        idbSet("paymentsDataBySchool",   paymentsDataBySchool),
++        idbSet("lastAdmNoBySchool",      lastAdmNoBySchool),
++        idbSet("fineRates",              fineRates),
++        idbSet("eligibilityPct",         eligibilityPct),
++        idbSet("schools",                schools),
++        idbSet("currentSchool",          currentSchool),
++        idbSet("teacherClass",           teacherClass),
++        idbSet("teacherSection",         teacherSection),
++      ]);
++      await syncToFirebase();
++      await loadSetup();
++      alert("Data restored successfully.");
++    } catch (err) {
++      console.error(err);
++      alert("Failed to restore data. File may be invalid.");
++    }
++    restoreFileInput.value = "";
++  };
++
++  resetDataBtn.onclick = async () => {
++    if (!confirm("Factory reset will delete ALL data locally and in Firebase. Continue?")) return;
++    await idbClear();
++    // clear out all your in-memory structures
++    studentsBySchool       = {};
++    attendanceDataBySchool = {};
++    paymentsDataBySchool   = {};
++    lastAdmNoBySchool      = {};
++    fineRates              = { A:50, Lt:20, L:10, HD:30 };
++    eligibilityPct         = 75;
++    schools                = [];
++    currentSchool          = null;
++    teacherClass           = null;
++    teacherSection         = null;
++    await syncToFirebase();
++    await loadSetup();
++    alert("Factory reset completed.");
++  };
++
++  // Automatic backup every 5 minutes
++  setInterval(async () => {
++    if (!backupHandle) return;
++    try {
++      const backupData = {
++        studentsBySchool,
++        attendanceDataBySchool,
++        paymentsDataBySchool,
++        lastAdmNoBySchool,
++        fineRates,
++        eligibilityPct,
++        schools,
++        currentSchool,
++        teacherClass,
++        teacherSection,
++      };
++      const now = new Date();
++      const fileName = `backup_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"00")}-${String(now.getMinutes()).padStart(2,"00")}.json`;
++      const fileHandle = await backupHandle.getFileHandle(fileName, { create: true });
++      const writer = await fileHandle.createWritable();
++      await writer.write(JSON.stringify(backupData, null, 2));
++      await writer.close();
++      console.log("🗄️ Backup written to folder:", fileName);
++    } catch (err) {
++      console.error("Backup failed:", err);
++    }
++  }, 5 * 60 * 1000);
   updateCounters();
 };
 
