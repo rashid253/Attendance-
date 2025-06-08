@@ -1,8 +1,8 @@
 // app (27).js
 
-// =======================
-// IMPORTS & INITIAL SETUP
-// =======================
+// =======================================
+// 1) FIREBASE IMPORTS & INITIAL SETUP
+// =======================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
@@ -33,17 +33,20 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
 
-// IndexedDB helper (idb-keyval must be loaded in your HTML)
+// IndexedDB helper via idb-keyval (make sure idb-keyval is included in your HTML before this script)
 const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// =======================
-// GLOBAL STATE
-// =======================
+// =======================================
+// 2) GLOBAL STATE (AUTH + APP DATA)
+// =======================================
+let currentUser = null;
+let userProfile = null;
+
 let studentsBySchool = {};
 let attendanceDataBySchool = {};
 let paymentsDataBySchool = {};
 let lastAdmNoBySchool = {};
-let fineRates = { A:50, Lt:20, L:10, HD:30 };
+let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
 let eligibilityPct = 75;
 let schools = [];
 let currentSchool = null;
@@ -55,9 +58,9 @@ let attendanceData = {};
 let paymentsData = {};
 let lastAdmNo = 0;
 
-// =======================
-// ENSURE DATA STRUCTURES FOR A SCHOOL
-// =======================
+// =======================================
+// 3) UTILITY: ensureSchoolData & syncToFirebase
+// =======================================
 async function ensureSchoolData(school) {
   if (!school) return;
   if (!studentsBySchool[school]) {
@@ -78,9 +81,241 @@ async function ensureSchoolData(school) {
   }
 }
 
-// =======================
-// INITIALIZE LOCAL STATE
-// =======================
+async function syncToFirebase() {
+  const payload = {
+    studentsBySchool,
+    attendanceDataBySchool,
+    paymentsDataBySchool,
+    lastAdmNoBySchool,
+    fineRates,
+    eligibilityPct,
+    schools,
+    currentSchool,
+    teacherClass,
+    teacherSection
+  };
+  try {
+    await dbSet(dbRef(database, "appData"), payload);
+    console.log("✅ Synced data to Firebase");
+  } catch (err) {
+    console.error("Firebase sync failed:", err);
+  }
+}
+
+// =======================================
+// 4) DOMContentLoaded: SETUP AUTH UI & LISTENERS
+// =======================================
+window.addEventListener("DOMContentLoaded", () => {
+  // --- AUTH SCREENS (Login / Register) ---
+  const authScreen = document.getElementById("authScreen");
+  const mainApp = document.getElementById("mainApp");
+
+  const showLoginBtn = document.getElementById("showLogin");
+  const showRegisterBtn = document.getElementById("showRegister");
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+
+  const regEmail = document.getElementById("regEmail");
+  const regPassword = document.getElementById("regPassword");
+  const regRole = document.getElementById("regRole");
+  const regSchool = document.getElementById("regSchool");
+  const regClass = document.getElementById("regClass");
+  const regSection = document.getElementById("regSection");
+
+  // دکھائیں—لاگ ان/رجسٹر فارم (Start with Login visible)
+  function showLoginForm() {
+    loginForm.style.display = "flex";
+    registerForm.style.display = "none";
+  }
+  function showRegisterForm() {
+    loginForm.style.display = "none";
+    registerForm.style.display = "flex";
+  }
+
+  showLoginForm();
+  showLoginBtn.onclick = showLoginForm;
+  showRegisterBtn.onclick = showRegisterForm;
+
+  // جب Role تبدیل ہو تو متعلقہ فیلڈز شو/ہائڈ کریں
+  regRole.addEventListener("change", () => {
+    const role = regRole.value;
+    if (role === "admin") {
+      regSchool.style.display = "none";
+      regClass.style.display = "none";
+      regSection.style.display = "none";
+    } else if (role === "principal") {
+      regSchool.style.display = "block";
+      regClass.style.display = "none";
+      regSection.style.display = "none";
+      loadAllSchoolsInto(regSchool);
+    } else if (role === "teacher") {
+      regSchool.style.display = "block";
+      regClass.style.display = "block";
+      regSection.style.display = "block";
+      loadAllSchoolsInto(regSchool);
+      populateClassDropdown(regClass);
+    }
+  });
+
+  // 4.1) LOGIN SUBMIT
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  });
+
+  // 4.2) REGISTER SUBMIT
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = regEmail.value.trim();
+    const password = regPassword.value;
+    const role = regRole.value;
+    if (!role) {
+      alert("Please pick a role.");
+      return;
+    }
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = cred.user.uid;
+
+      let profile = { email, role };
+      if (role === "principal") {
+        const schoolName = regSchool.value;
+        profile.assignedSchools = {};
+        profile.assignedSchools[schoolName] = true;
+      } else if (role === "teacher") {
+        profile.assignedSchool = regSchool.value;
+        profile.assignedClass = regClass.value;
+        profile.assignedSection = regSection.value;
+      }
+      await dbSet(dbRef(database, `users/${uid}`), profile);
+      alert("Registration successful! Please login.");
+      showLoginForm();
+    } catch (err) {
+      alert("Registration failed: " + err.message);
+    }
+  });
+
+  // 4.3) AUTH STATE OBSERVER
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      const snap = await dbGet(dbRef(database, `users/${user.uid}`));
+      if (!snap.exists()) {
+        alert("No user profile found. Contact admin.");
+        return;
+      }
+      userProfile = snap.val();
+      authScreen.style.display = "none";
+      mainApp.style.display = "block";
+      await initializeAfterAuth();
+    } else {
+      currentUser = null;
+      userProfile = null;
+      authScreen.style.display = "flex";
+      mainApp.style.display = "none";
+    }
+  });
+
+  // 4.4) LOGOUT BUTTON
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.onclick = () => signOut(auth);
+  }
+});
+
+// =======================================
+// 5) HELPER: ڈراپ ڈاؤن میں اسکول لوڈ کریں
+// =======================================
+async function loadAllSchoolsInto(selectElement) {
+  const appDataSnap = await dbGet(dbRef(database, "appData/schools"));
+  selectElement.innerHTML = `<option disabled selected>-- Select School --</option>`;
+  if (appDataSnap.exists()) {
+    const schoolList = appDataSnap.val();
+    schoolList.forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      selectElement.appendChild(opt);
+    });
+  }
+}
+
+function populateClassDropdown(classSelect) {
+  const classOptions = [
+    "Play Group", "Nursery", "KG",
+    "Class One", "Class Two", "Class Three",
+    "Class Four", "Class Five", "Class Six",
+    "Class Seven", "Class Eight", "Class Nine",
+    "Class Ten"
+  ];
+  classSelect.innerHTML = `<option disabled selected>-- Select Class --</option>`;
+  classOptions.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    classSelect.appendChild(opt);
+  });
+}
+
+// =======================================
+// 6) initializeAfterAuth: لاگ ان کے بعد کا سارا سیٹ اپ
+// =======================================
+async function initializeAfterAuth() {
+  const setupSection = document.getElementById("teacher-setup");
+  const schoolInput = document.getElementById("schoolInput");
+  const schoolSelect = document.getElementById("schoolSelect");
+
+  // اگر Admin ہو: اسکول کا اندراج + لسٹ دکھائیں
+  if (userProfile.role === "admin") {
+    setupSection.style.display = "block";
+    schoolInput.style.display = "inline-block";
+  }
+  // اگر Principal ہو: صرف اُسے اس کے اسکول کی لسٹ دکھائیں
+  else if (userProfile.role === "principal") {
+    setupSection.style.display = "block";
+    schoolInput.style.display = "none";
+    schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+    Object.keys(userProfile.assignedSchools || {}).forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      schoolSelect.appendChild(opt);
+    });
+  }
+  // اگر Teacher ہو: سیدھا اپنا اسائنڈ اسکول، کلاس، سیکشن لوکل اسٹوریج میں رکھو
+  else if (userProfile.role === "teacher") {
+    setupSection.style.display = "none";
+    const assignedSchool = userProfile.assignedSchool;
+    const assignedClass = userProfile.assignedClass;
+    const assignedSection = userProfile.assignedSection;
+
+    await idbSet("currentSchool", assignedSchool);
+    await idbSet("teacherClass", assignedClass);
+    await idbSet("teacherSection", assignedSection);
+
+    await initLocalState();
+    await loadSetup();
+    return;
+  }
+
+  // اگر Admin یا Principal ہے تب بھی ڈیٹا انیشیلائز کریں
+  await initLocalState();
+  resetViews();    // سب سیکشنز کو ہائڈ یا شو کریں
+  await loadSetup();
+}
+
+// =======================================
+// 7) LOCAL STATE INIT: IndexedDB سے ڈیٹا لوڈ کریں
+// =======================================
 async function initLocalState() {
   studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
   attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
@@ -102,824 +337,686 @@ async function initLocalState() {
   }
 }
 
-// =======================
-// SYNC LOCAL STATE TO FIREBASE
-// =======================
-async function syncToFirebase() {
-  const payload = {
-    studentsBySchool,
-    attendanceDataBySchool,
-    paymentsDataBySchool,
-    lastAdmNoBySchool,
-    fineRates,
-    eligibilityPct,
-    schools,
-    currentSchool,
-    teacherClass,
-    teacherSection,
-  };
-  try {
-    await dbSet(dbRef(database, "appData"), payload);
-    console.log("✅ Synced data to Firebase");
-  } catch (err) {
-    console.error("Firebase sync failed:", err);
+// =======================================
+// 8) RESET / SHOW-HIDE VIEW سیکشنز
+// =======================================
+function resetViews() {
+  const sections = [
+    "financial-settings",
+    "animatedCounters",
+    "student-registration",
+    "attendance-section",
+    "analytics-section",
+    "register-section"
+  ];
+  sections.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
+}
+
+// =======================================
+// 9) loadSetup: اسکول/کلاس/سیکشن سیٹ اپ کریں
+// =======================================
+async function loadSetup() {
+  // IndexedDB سے تازہ ویلیوز لوڈ کریں
+  schools        = (await idbGet("schools")) || [];
+  currentSchool  = (await idbGet("currentSchool")) || null;
+  teacherClass   = (await idbGet("teacherClass")) || null;
+  teacherSection = (await idbGet("teacherSection")) || null;
+
+  const schoolSelect = document.getElementById("schoolSelect");
+  const schoolInput = document.getElementById("schoolInput");
+  const classSelect = document.getElementById("teacherClassSelect");
+  const sectionSelect = document.getElementById("teacherSectionSelect");
+  const setupText = document.getElementById("setupText");
+
+  // Populate اسکول کا ڈراپ ڈاؤن
+  if (userProfile.role === "admin") {
+    schoolInput.style.display = "inline-block";
+    schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+    schools.forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      schoolSelect.appendChild(opt);
+    });
+  } else if (userProfile.role === "principal") {
+    schoolInput.style.display = "none";
+    schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+    Object.keys(userProfile.assignedSchools || {}).forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      schoolSelect.appendChild(opt);
+    });
+  }
+
+  renderSchoolList();
+
+  // اگر سیٹ اپ مکمل ہے تو باقی فیچرز دکھائیں
+  if (currentSchool && teacherClass && teacherSection) {
+    await ensureSchoolData(currentSchool);
+    students = studentsBySchool[currentSchool];
+    attendanceData = attendanceDataBySchool[currentSchool];
+    paymentsData = paymentsDataBySchool[currentSchool];
+    lastAdmNo = lastAdmNoBySchool[currentSchool];
+
+    classSelect.value = teacherClass;
+    sectionSelect.value = teacherSection;
+    schoolSelect.value = currentSchool;
+
+    setupText.textContent =
+      `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
+    document.getElementById("setupForm").classList.add("hidden");
+    document.getElementById("setupDisplay").classList.remove("hidden");
+
+    resetViews();
+    // Show تمام سیکشنز
+    document.getElementById("financial-settings").classList.remove("hidden");
+    document.getElementById("animatedCounters").classList.remove("hidden");
+    document.getElementById("student-registration").classList.remove("hidden");
+    document.getElementById("attendance-section").classList.remove("hidden");
+    document.getElementById("analytics-section").classList.remove("hidden");
+    document.getElementById("register-section").classList.remove("hidden");
+
+    renderStudents();   // طالب علموں کی ٹیبل ریڈر کریں
+    updateCounters();   // کاؤنٹرز اپ ڈیٹ کریں
+  } else {
+    document.getElementById("setupForm").classList.remove("hidden");
+    document.getElementById("setupDisplay").classList.add("hidden");
+    resetViews();
   }
 }
 
-// =======================
-// DOMContentLoaded: MAIN INITIALIZATION
-// =======================
-window.addEventListener("DOMContentLoaded", async () => {
-  const $ = (id) => document.getElementById(id);
-
-  // Load local state from IndexedDB
-  await initLocalState();
-
-  // ----------------------
-  // RESET VIEWS BASED ON SETUP
-  // ----------------------
-  function resetViews() {
-    const setupDone = currentSchool && teacherClass && teacherSection;
-    const allSections = [
-      $("financial-settings"),
-      $("animatedCounters"),
-      $("student-registration"),
-      $("attendance-section"),
-      $("analytics-section"),
-      $("register-section"),
-      $("chooseBackupFolder"),
-      $("restoreData"),
-      $("resetData"),
-    ];
-    if (!setupDone) {
-      allSections.forEach(sec => sec && sec.classList.add("hidden"));
-    } else {
-      allSections.forEach(sec => sec && sec.classList.remove("hidden"));
-    }
-  }
-  resetViews();
-
-  // ----------------------
-  // ERUDA FOR DEBUGGING (OPTIONAL)
-  // ----------------------
-  const erudaScript = document.createElement("script");
-  erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
-
-  // ----------------------
-  // GENERATE NEW ADMISSION NUMBER (PER SCHOOL)
-  // ----------------------
-  async function genAdmNo() {
-    lastAdmNo++;
-    lastAdmNoBySchool[currentSchool] = lastAdmNo;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-    await syncToFirebase();
-    return String(lastAdmNo).padStart(4, "0");
-  }
-
-  // =======================
-  // 1) SETUP SECTION
-  // =======================
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
-
-  function renderSchoolList() {
-    schoolListDiv.innerHTML = "";
-    schools.forEach((sch, idx) => {
-      const row = document.createElement("div");
-      row.className = "row-inline";
-      row.innerHTML = `
-        <span>${sch}</span>
-        <button data-idx="${idx}" class="edit-school">✎</button>
-        <button data-idx="${idx}" class="delete-school">🗑</button>
-      `;
-      schoolListDiv.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const oldName = schools[idx];
-        const newName = prompt("Edit School Name:", oldName);
-        if (!newName?.trim()) return;
-        schools[idx] = newName.trim();
-        await idbSet("schools", schools);
-
-        // Migrate data under newName key
-        studentsBySchool[newName] = studentsBySchool[oldName] || [];
-        delete studentsBySchool[oldName];
-        await idbSet("studentsBySchool", studentsBySchool);
-
-        attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
-        delete attendanceDataBySchool[oldName];
-        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-
-        paymentsDataBySchool[newName] = paymentsDataBySchool[oldName] || {};
-        delete paymentsDataBySchool[oldName];
-        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-
-        lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName] || 0;
-        delete lastAdmNoBySchool[oldName];
-        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-        await syncToFirebase();
-        await loadSetup();
-      };
-    });
-    document.querySelectorAll(".delete-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1)[0];
-        await idbSet("schools", schools);
-
-        delete studentsBySchool[removed];
-        await idbSet("studentsBySchool", studentsBySchool);
-        delete attendanceDataBySchool[removed];
-        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-        delete paymentsDataBySchool[removed];
-        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-        delete lastAdmNoBySchool[removed];
-        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-        if (currentSchool === removed) {
-          currentSchool = null;
-          teacherClass = null;
-          teacherSection = null;
-          await idbSet("currentSchool", null);
-          await idbSet("teacherClass", null);
-          await idbSet("teacherSection", null);
-        }
-        await syncToFirebase();
-        await loadSetup();
-      };
-    });
-  }
-
-  let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
-    ].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      await ensureSchoolData(currentSchool);
-      students       = studentsBySchool[currentSchool];
-      attendanceData = attendanceDataBySchool[currentSchool];
-      paymentsData   = paymentsDataBySchool[currentSchool];
-      lastAdmNo      = lastAdmNoBySchool[currentSchool];
-
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      setupForm.classList.add("hidden");
-      setupDisplay.classList.remove("hidden");
-
-      resetViews();
-
-      // After setup completes, render students and counters
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-      }, 0);
-
-    } else {
-      setupForm.classList.remove("hidden");
-      setupDisplay.classList.add("hidden");
-      resetViews();
-    }
-  };
-
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
-        await idbSet("schools", schools);
-        await syncToFirebase();
+// =======================================
+// 10) renderSchoolList: اسکول ایڈیٹ/ڈیلیٹ کے لیے
+// =======================================
+function renderSchoolList() {
+  const listDiv = document.getElementById("schoolList");
+  listDiv.innerHTML = "";
+  schools.forEach((sch, idx) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "row-inline";
+    wrapper.innerHTML = `
+      <span>${sch}</span>
+      <button data-idx="${idx}" class="edit-school">✎</button>
+      <button data-idx="${idx}" class="delete-school">🗑</button>
+    `;
+    listDiv.appendChild(wrapper);
+  });
+  // Edit handlers
+  document.querySelectorAll(".edit-school").forEach((btn) => {
+    btn.onclick = async () => {
+      const idx = +btn.getAttribute("data-idx");
+      const oldName = schools[idx];
+      const newName = prompt("Rename school:", oldName);
+      if (!newName) return;
+      if (schools.includes(newName)) {
+        alert("School name already exists.");
+        return;
       }
-      schoolInput.value = "";
-      return loadSetup();
-    }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
+      schools[idx] = newName;
+      // Migrate data to new key
+      studentsBySchool[newName] = studentsBySchool[oldName] || [];
+      attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
+      paymentsDataBySchool[newName] = paymentsDataBySchool[oldName] || {};
+      lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName] || 0;
+      delete studentsBySchool[oldName];
+      delete attendanceDataBySchool[oldName];
+      delete paymentsDataBySchool[oldName];
+      delete lastAdmNoBySchool[oldName];
+
+      await idbSet("schools", schools);
+      await idbSet("studentsBySchool", studentsBySchool);
+      await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+      await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+      await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+      await syncToFirebase();
+      loadSetup();
+    };
+  });
+  // Delete handlers
+  document.querySelectorAll(".delete-school").forEach((btn) => {
+    btn.onclick = async () => {
+      const idx = +btn.getAttribute("data-idx");
+      const schName = schools[idx];
+      if (!confirm(`Delete "${schName}" and all its data?`)) return;
+      schools.splice(idx, 1);
+      delete studentsBySchool[schName];
+      delete attendanceDataBySchool[schName];
+      delete paymentsDataBySchool[schName];
+      delete lastAdmNoBySchool[schName];
+      if (currentSchool === schName) {
+        currentSchool = null;
+        teacherClass = null;
+        teacherSection = null;
+        await idbSet("currentSchool", null);
+        await idbSet("teacherClass", null);
+        await idbSet("teacherSection", null);
+      }
+      await idbSet("schools", schools);
+      await idbSet("studentsBySchool", studentsBySchool);
+      await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+      await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+      await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+      await syncToFirebase();
+      loadSetup();
+    };
+  });
+}
+
+// =======================================
+// 11) SETUP FORM HANDLERS (Create/select school, class, section)
+// =======================================
+const saveSetupBtn = document.getElementById("saveSetup");
+saveSetupBtn.onclick = async (e) => {
+  e.preventDefault();
+  const newSchool = document.getElementById("schoolInput").value.trim();
+  const schoolSelect = document.getElementById("schoolSelect");
+  const classSelect = document.getElementById("teacherClassSelect");
+  const sectionSelect = document.getElementById("teacherSectionSelect");
+
+  // اگر نیا اسکول لکھا گیا تو Admin ہی کر سکتا ہے
+  if (newSchool) {
+    if (userProfile.role !== "admin") {
+      alert("Only Admins can create a new school.");
       return;
     }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
-
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
-    setupForm.classList.remove("hidden");
-    setupDisplay.classList.add("hidden");
-    resetViews();
-  };
-
-  // ----------------------
-  // 2) FINANCIAL SETTINGS SECTION
-  // ----------------------
-  const formDiv             = $("financialForm");
-  const saveSettings        = $("saveSettings");
-  const fineAbsentInputComp     = $("fineAbsent");
-  const fineLateInputComp       = $("fineLate");
-  const fineLeaveInputComp      = $("fineLeave");
-  const fineHalfDayInputComp    = $("fineHalfDay");
-  const eligibilityPctInputComp = $("eligibilityPct");
-
-  const settingsCard = document.createElement("div");
-  const editSettings = document.createElement("button");
-  settingsCard.id = "settingsCard";
-  settingsCard.className = "card hidden";
-  editSettings.id = "editSettings";
-  editSettings.className = "btn no-print hidden";
-  editSettings.textContent = "Edit Settings";
-  formDiv.parentNode.appendChild(settingsCard);
-  formDiv.parentNode.appendChild(editSettings);
-
-  fineAbsentInputComp.value     = fineRates.A;
-  fineLateInputComp.value       = fineRates.Lt;
-  fineLeaveInputComp.value      = fineRates.L;
-  fineHalfDayInputComp.value    = fineRates.HD;
-  eligibilityPctInputComp.value = eligibilityPct;
-
-  saveSettings.onclick = async () => {
-    fineRates = {
-      A: Number(fineAbsentInputComp.value) || 0,
-      Lt: Number(fineLateInputComp.value) || 0,
-      L: Number(fineLeaveInputComp.value) || 0,
-      HD: Number(fineHalfDayInputComp.value) || 0,
-    };
-    eligibilityPct = Number(eligibilityPctInputComp.value) || 0;
-    await idbSet("fineRates", fineRates);
-    await idbSet("eligibilityPct", eligibilityPct);
-    await syncToFirebase();
-
-    settingsCard.innerHTML = `
-      <div class="card-content">
-        <p><strong>Fine – Absent:</strong> PKR ${fineRates.A}</p>
-        <p><strong>Fine – Late:</strong> PKR ${fineRates.Lt}</p>
-        <p><strong>Fine – Leave:</strong> PKR ${fineRates.L}</p>
-        <p><strong>Fine – Half-Day:</strong> PKR ${fineRates.HD}</p>
-        <p><strong>Eligibility % (≥):</strong> ${eligibilityPct}%</p>
-      </div>`;
-    formDiv.classList.add("hidden");
-    saveSettings.classList.add("hidden");
-    editSettings.classList.remove("hidden");
-    settingsCard.classList.remove("hidden");
-  };
-
-  editSettings.onclick = () => {
-    settingsCard.classList.add("hidden");
-    editSettings.classList.add("hidden");
-    formDiv.classList.remove("hidden");
-    saveSettings.classList.remove("hidden");
-  };
-
-  // ----------------------
-  // 3) COUNTERS SECTION
-  // ----------------------
-  const countersContainerComp = $("countersContainer");
-
-  function createCounterCardComp(id, title, spanId) {
-    const card = document.createElement("div");
-    card.className = "counter-card";
-    card.id = id;
-    card.innerHTML = `
-      <div class="card-content">
-        <p class="card-title">${title}</p>
-        <p class="card-number"><span id="${spanId}" data-target="0">0</span></p>
-      </div>`;
-    countersContainerComp.appendChild(card);
-    return card;
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await idbSet("schools", schools);
+      await syncToFirebase();
+    }
+    document.getElementById("schoolInput").value = "";
+    loadSetup();
+    return;
   }
-
-  // Create all seven cards so that their spans exist
-  const sectionCardComp     = createCounterCardComp("card-section", "Section",        "sectionCount");
-  const classCardComp       = createCounterCardComp("card-class",   "Class",          "classCount");
-  const schoolCardComp      = createCounterCardComp("card-school",  "School",         "schoolCount");
-  const attendanceCardComp  = createCounterCardComp("card-attendance", "Attendance", "attendanceCount");
-  const eligibleCardComp    = createCounterCardComp("card-eligible",   "Eligible",   "eligibleCount");
-  const debarredCardComp    = createCounterCardComp("card-debarred",   "Debarred",   "debarredCount");
-  const outstandingCardComp = createCounterCardComp("card-outstanding","Outstanding/Fine","outstandingCount");
-
-  const sectionCountSpanComp     = $("sectionCount");
-  const classCountSpanComp       = $("classCount");
-  const schoolCountSpanComp      = $("schoolCount");
-  const attendanceCountSpanComp  = $("attendanceCount");
-  const eligibleCountSpanComp    = $("eligibleCount");
-  const debarredCountSpanComp    = $("debarredCount");
-  const outstandingCountSpanComp = $("outstandingCount");
-
-  function animateCountersComp() {
-    document.querySelectorAll(".card-number span").forEach(span => {
-      const target = +span.dataset.target;
-      let count = 0;
-      const step = Math.max(1, target / 100);
-      (function upd() {
-        count += step;
-        span.textContent = count < target ? Math.ceil(count) : target;
-        if (count < target) requestAnimationFrame(upd);
-      })();
-    });
+  // اگر پہلے سے موجود اسکول منتخب کرنا ہے
+  const selSchool = schoolSelect.value;
+  const selClass = classSelect.value;
+  const selSection = sectionSelect.value;
+  if (!selSchool || !selClass || !selSection) {
+    alert("Please select a school, class, and section.");
+    return;
   }
+  currentSchool = selSchool;
+  teacherClass = selClass;
+  teacherSection = selSection;
+  await idbSet("currentSchool", currentSchool);
+  await idbSet("teacherClass", teacherClass);
+  await idbSet("teacherSection", teacherSection);
+  await syncToFirebase();
+  await loadSetup();
+};
 
-  function updateCountersComp() {
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
+const editSetupBtn = document.getElementById("editSetup");
+editSetupBtn.onclick = (e) => {
+  e.preventDefault();
+  document.getElementById("setupForm").classList.remove("hidden");
+  document.getElementById("setupDisplay").classList.add("hidden");
+  resetViews();
+};
 
-    // Section count
-    const sectionStudents = students.filter(s => s.cls === cl && s.sec === sec);
-    sectionCountSpanComp.dataset.target = sectionStudents.length;
+// =======================================
+// 12) FINANCIAL SETTINGS SECTION
+// =======================================
+const fineAbsentInput = document.getElementById("fineAbsent");
+const fineLateInput = document.getElementById("fineLate");
+const fineLeaveInput = document.getElementById("fineLeave");
+const fineHalfDayInput = document.getElementById("fineHalfDay");
+const eligibilityPctInput = document.getElementById("eligibilityPct");
+const saveSettingsBtn = document.getElementById("saveSettings");
 
-    // Class count
-    const classStudents = students.filter(s => s.cls === cl);
-    classCountSpanComp.dataset.target = classStudents.length;
+function loadFinancialSettings() {
+  fineAbsentInput.value = fineRates.A;
+  fineLateInput.value = fineRates.Lt;
+  fineLeaveInput.value = fineRates.L;
+  fineHalfDayInput.value = fineRates.HD;
+  eligibilityPctInput.value = eligibilityPct;
+}
 
-    // School total
-    schoolCountSpanComp.dataset.target = students.length;
-
-    // Attendance summary
-    let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
-    Object.entries(attendanceData).forEach(([date, rec]) => {
-      sectionStudents.forEach(s => {
-        const code = rec[s.adm];
-        if (!code) {
-          totalA++;
-        } else {
-          switch (code) {
-            case "P": totalP++; break;
-            case "A": totalA++; break;
-            case "Lt": totalLt++; break;
-            case "HD": totalHD++; break;
-            case "L": totalL++; break;
-          }
-        }
-      });
-    });
-    attendanceCountSpanComp.dataset.target = (totalP + totalA + totalLt + totalHD + totalL);
-
-    // Eligible, Debarred, Outstanding
-    let eligibleCount = 0, debarredCount = 0, outstandingCount = 0;
-    students.forEach(s => {
-      if (s.cls !== cl || s.sec !== sec) return;
-      let p=0, a=0, lt=0, hd=0, l=0, totalDays=0;
-      Object.values(attendanceData).forEach(rec => {
-        if (rec[s.adm]) {
-          totalDays++;
-          if (rec[s.adm] === "P") p++;
-        }
-      });
-      const pct = totalDays ? (p / totalDays) * 100 : 0;
-      Object.values(attendanceData).forEach(rec => {
-        if (rec[s.adm]) {
-          switch (rec[s.adm]) {
-            case "A": a++; break;
-            case "Lt": lt++; break;
-            case "HD": hd++; break;
-            case "L": l++; break;
-          }
-        }
-      });
-      const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-      const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
-      const outstanding = fineTotal - paid;
-      if (outstanding <= 0 && pct >= eligibilityPct) eligibleCount++;
-      else debarredCount++;
-      if (outstanding > 0) outstandingCount++;
-    });
-    eligibleCountSpanComp.dataset.target    = eligibleCount;
-    debarredCountSpanComp.dataset.target    = debarredCount;
-    outstandingCountSpanComp.dataset.target = outstandingCount;
-
-    animateCountersComp();
-  }
-
-  // Handlers for clicking on each counter card
-  sectionCardComp.onclick = () => {
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
-    const list = students
-      .filter(s => s.cls === cl && s.sec === sec)
-      .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
-      .join("\n");
-    alert(`Class ${cl} Section ${sec}:\n\n${list || "No students found."}`);
+saveSettingsBtn.onclick = async () => {
+  fineRates = {
+    A: Number(fineAbsentInput.value) || 0,
+    Lt: Number(fineLateInput.value) || 0,
+    L: Number(fineLeaveInput.value) || 0,
+    HD: Number(fineHalfDayInput.value) || 0
   };
+  eligibilityPct = Number(eligibilityPctInput.value) || 0;
+  await idbSet("fineRates", fineRates);
+  await idbSet("eligibilityPct", eligibilityPct);
+  await syncToFirebase();
+  renderFinancialCard();
+};
 
-  classCardComp.onclick = () => {
-    const cl = classSelect.value;
-    const list = students
-      .filter(s => s.cls === cl)
-      .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
-      .join("\n");
-    alert(`Class ${cl} (All Sections):\n\n${list || "No students found."}`);
-  };
+function renderFinancialCard() {
+  const settingsCard = document.getElementById("settingsCard");
+  settingsCard.innerHTML = `
+    <div class="card">
+      <p><strong>Fine/Absent:</strong> PKR ${fineRates.A}</p>
+      <p><strong>Fine/Late:</strong> PKR ${fineRates.Lt}</p>
+      <p><strong>Fine/Leave:</strong> PKR ${fineRates.L}</p>
+      <p><strong>Fine/Half-Day:</strong> PKR ${fineRates.HD}</p>
+      <p><strong>Eligibility %:</strong> ${eligibilityPct}%</p>
+    </div>`;
+}
 
-  schoolCardComp.onclick = () => {
-    const classes = [...new Set(students.map(s => s.cls))].sort();
-    let details = "";
-    classes.forEach(cl => {
-      const classStudents = students.filter(s => s.cls === cl);
-      details += `Class ${cl} (Total ${classStudents.length} students):\n`;
-      classStudents.forEach((s, idx) => {
-        details += `  ${idx + 1}. Adm#: ${s.adm}  Name: ${s.name}\n`;
-      });
-      details += "\n";
-    });
-    alert(`School Overview:\n\n${details || "No students in school."}`);
-  };
+// =======================================
+// 13) COUNTERS ( ڈیش بورڈ )
+// =======================================
+const countersContainer = document.getElementById("countersContainer");
 
-  attendanceCardComp.onclick = () => {
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
-    let totalP = 0, totalA = 0, totalLt = 0, totalHD = 0, totalL = 0;
-    Object.entries(attendanceData).forEach(([date, rec]) => {
-      students.filter(s => s.cls === cl && s.sec === sec).forEach(s => {
-        const code = rec[s.adm];
-        if (!code) {
-          totalA++;
-        } else {
-          switch (code) {
-            case "P": totalP++; break;
-            case "A": totalA++; break;
-            case "Lt": totalLt++; break;
-            case "HD": totalHD++; break;
-            case "L": totalL++; break;
-          }
-        }
-      });
-    });
-    alert(
-      `Attendance Summary for Class ${cl} Section ${sec}:\n\n` +
-      `Present   : ${totalP}\n` +
-      `Absent    : ${totalA}\n` +
-      `Late      : ${totalLt}\n` +
-      `Half-Day  : ${totalHD}\n` +
-      `Leave     : ${totalL}`
-    );
-  };
+function createCounterCard(id, title, spanId) {
+  const card = document.createElement("div");
+  card.className = "counter-card";
+  card.id = id;
+  card.innerHTML = `
+    <div class="card-content">
+      <p class="card-title">${title}</p>
+      <p class="card-number"><span id="${spanId}" data-target="0">0</span></p>
+    </div>`;
+  countersContainer.appendChild(card);
+}
 
-  eligibleCardComp.onclick = () => {
-    const list = students
-      .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let p=0, totalDays=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            totalDays++;
-            if (rec[s.adm] === "P") p++;
-          }
-        });
-        const pct = totalDays ? (p / totalDays) * 100 : 0;
-        let a=0, lt=0, l=0, hd=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            switch (rec[s.adm]) {
-              case "A": a++; break;
-              case "Lt": lt++; break;
-              case "HD": hd++; break;
-              case "L": l++; break;
-            }
-          }
-        });
-        const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-        const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
-        const outstanding = fineTotal - paid;
-        return outstanding <= 0 && pct >= eligibilityPct;
-      })
-      .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
-      .join("\n");
-    alert(`Eligible Students:\n\n${list || "No eligible students."}`);
-  };
+function setupCounters() {
+  countersContainer.innerHTML = "";
+  createCounterCard("card-section", "Section", "sectionCount");
+  createCounterCard("card-class", "Class", "classCount");
+  createCounterCard("card-school", "School", "schoolCount");
+  createCounterCard("card-attendance", "Attendance", "attendanceCount");
+  createCounterCard("card-eligible", "Eligible", "eligibleCount");
+  createCounterCard("card-debarred", "Debarred", "debarredCount");
+  createCounterCard("card-outstanding", "Outstanding/Fine", "outstandingCount");
+}
 
-  debarredCardComp.onclick = () => {
-    const list = students
-      .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let p=0, totalDays=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            totalDays++;
-            if (rec[s.adm] === "P") p++;
-          }
-        });
-        const pct = totalDays ? (p / totalDays) * 100 : 0;
-        let a=0, lt=0, l=0, hd=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            switch (rec[s.adm]) {
-              case "A": a++; break;
-              case "Lt": lt++; break;
-              case "HD": hd++; break;
-              case "L": l++; break;
-            }
-          }
-        });
-        const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-        const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
-        const outstanding = fineTotal - paid;
-        return outstanding > 0 || pct < eligibilityPct;
-      })
-      .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}`)
-      .join("\n");
-    alert(`Debarred Students:\n\n${list || "No debarred students."}`);
-  };
-
-  outstandingCardComp.onclick = () => {
-    const list = students
-      .filter(s => {
-        if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return false;
-        let a=0, lt=0, l=0, hd=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            switch (rec[s.adm]) {
-              case "A": a++; break;
-              case "Lt": lt++; break;
-              case "HD": hd++; break;
-              case "L": l++; break;
-            }
-          }
-        });
-        const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-        const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
-        return fineTotal - paid > 0;
-      })
-      .map((s, i) => {
-        let a=0, lt=0, l=0, hd=0;
-        Object.values(attendanceData).forEach(rec => {
-          if (rec[s.adm]) {
-            switch (rec[s.adm]) {
-              case "A": a++; break;
-              case "Lt": lt++; break;
-              case "HD": hd++; break;
-              case "L": l++; break;
-            }
-          }
-        });
-        const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
-        const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
-        const outstanding = fineTotal - paid;
-        return `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Outstanding: PKR ${outstanding}`;
-      })
-      .join("\n");
-    alert(`Students with Outstanding Fines:\n\n${list || "No outstanding fines."}`);
-  };
-
-  // =======================
-  // 4) STUDENT REGISTRATION SECTION
-  // =======================
-  const studentsBodyComp            = $("studentsBody");
-  const selectAllStudentsComp       = $("selectAllStudents");
-  const editSelectedBtnComp         = $("editSelected");
-  const doneEditingBtnComp          = $("doneEditing");
-  const deleteSelectedBtnComp       = $("deleteSelected");
-  const saveRegistrationBtnComp     = $("saveRegistration");
-  const editRegistrationBtnComp     = $("editRegistration");
-  const shareRegistrationBtnComp    = $("shareRegistration");
-  const downloadRegistrationBtnComp = $("downloadRegistrationPDF");
-
-  $("addStudent").onclick = async (e) => {
-    e.preventDefault();
-    const n   = $("studentName").value.trim();
-    const p   = $("parentName").value.trim();
-    const c   = $("parentContact").value.trim();
-    const o   = $("parentOccupation").value.trim();
-    const a   = $("parentAddress").value.trim();
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
-    if (!n || !p || !c || !o || !a) { alert("All fields required"); return; }
-    if (!/^\d{7,15}$/.test(c)) { alert("Contact must be 7–15 digits"); return; }
-    const adm = await genAdmNo();
-    students.push({ name: n, adm, parent: p, contact: c, occupation: o, address: a, cls: cl, sec });
-    studentsBySchool[currentSchool] = students;
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    renderStudents();
-    updateCountersComp();
-
-    // Clear form fields
-    $("studentName").value      = "";
-    $("parentName").value       = "";
-    $("parentContact").value    = "";
-    $("parentOccupation").value = "";
-    $("parentAddress").value    = "";
-  };
-
-  function renderStudents() {
-    const cl  = classSelect.value;
-    const sec = sectionSelect.value;
-    studentsBodyComp.innerHTML = "";
-    let idx = 0;
-    students.forEach((s, i) => {
-      if (s.cls !== cl || s.sec !== sec) return;
-      idx++;
-      const stats = { P:0, A:0, Lt:0, HD:0, L:0 };
-      Object.values(attendanceData).forEach(rec => { if (rec[s.adm]) stats[rec[s.adm]]++; });
-      const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
-      const fine  = stats.A*fineRates.A + stats.Lt*fineRates.Lt + stats.L*fineRates.L + stats.HD*fineRates.HD;
-      const paid  = (paymentsData[s.adm]||[]).reduce((a,p)=>a+p.amount, 0);
-      const out   = fine - paid;
-      const pct   = total ? (stats.P/total)*100 : 0;
-      const status = (out > 0 || pct < eligibilityPct) ? "Debarred" : "Eligible";
-
-      const tr = document.createElement("tr");
-      tr.dataset.index = i;
-      tr.innerHTML = `
-        <td><input type="checkbox" class="sel"></td>
-        <td>${idx}</td>
-        <td>${s.name}</td>
-        <td>${s.adm}</td>
-        <td>${s.parent}</td>
-        <td>${s.contact}</td>
-        <td>${s.occupation}</td>
-        <td>${s.address}</td>
-        <td>PKR ${out}</td>
-        <td>${status}</td>
-        <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
-      `;
-      studentsBodyComp.appendChild(tr);
-    });
-    selectAllStudentsComp.checked = false;
-    toggleButtonsComp();
-    document.querySelectorAll(".add-payment-btn").forEach(b => {
-      b.onclick = () => openPaymentModal(b.dataset.adm);
-    });
-  }
-
-  function toggleButtonsComp() {
-    const any = !!document.querySelector(".sel:checked");
-    editSelectedBtnComp.disabled   = !any;
-    deleteSelectedBtnComp.disabled = !any;
-  }
-
-  studentsBodyComp.addEventListener("change", e => {
-    if (e.target.classList.contains("sel")) toggleButtonsComp();
+function animateCounters() {
+  document.querySelectorAll(".card-number span").forEach((span) => {
+    const target = +span.dataset.target;
+    let count = 0;
+    const step = Math.max(1, target / 100);
+    (function upd() {
+      count += step;
+      span.textContent = count < target ? Math.ceil(count) : target;
+      if (count < target) requestAnimationFrame(upd);
+    })();
   });
+}
 
-  selectAllStudentsComp.onclick = () => {
-    document.querySelectorAll(".sel").forEach(c => c.checked = selectAllStudentsComp.checked);
-    toggleButtonsComp();
-  };
+function updateCounters() {
+  const cl = teacherClass;
+  const sec = teacherSection;
 
-  editSelectedBtnComp.onclick = () => {
-    document.querySelectorAll(".sel:checked").forEach(cb => {
-      const tr = cb.closest("tr"), i = +tr.dataset.index;
-      const s = students[i];
-      // Replace cells 2,4,5,6,7 with inputs
-      tr.cells[2].innerHTML = `<input value="${s.name}">`;
-      tr.cells[4].innerHTML = `<input value="${s.parent}">`;
-      tr.cells[5].innerHTML = `<input value="${s.contact}">`;
-      tr.cells[6].innerHTML = `<input value="${s.occupation}">`;
-      tr.cells[7].innerHTML = `<input value="${s.address}">`;
-    });
-    editSelectedBtnComp.classList.add("hidden");
-    deleteSelectedBtnComp.classList.add("hidden");
-    doneEditingBtnComp.classList.remove("hidden");
-  };
+  const sectionCountSpan = document.getElementById("sectionCount");
+  const classCountSpan = document.getElementById("classCount");
+  const schoolCountSpan = document.getElementById("schoolCount");
+  const attendanceCountSpan = document.getElementById("attendanceCount");
+  const eligibleCountSpan = document.getElementById("eligibleCount");
+  const debarredCountSpan = document.getElementById("debarredCount");
+  const outstandingCountSpan = document.getElementById("outstandingCount");
 
-  doneEditingBtnComp.onclick = async () => {
-    document.querySelectorAll("#studentsBody tr").forEach(tr => {
-      const inps = [...tr.querySelectorAll("input:not(.sel)")];
-      if (inps.length === 5) {
-        const [n, p, c, o, a] = inps.map(i => i.value.trim());
-        const adm = tr.children[3].textContent;
-        const idx = students.findIndex(x => x.adm === adm);
-        if (idx > -1) {
-          students[idx] = { ...students[idx], name: n, parent: p, contact: c, occupation: o, address: a };
+  // Section student count
+  const sectionStudents = students.filter((s) => s.cls === cl && s.sec === sec);
+  sectionCountSpan.dataset.target = sectionStudents.length;
+
+  // Class student count
+  const classStudents = students.filter((s) => s.cls === cl);
+  classCountSpan.dataset.target = classStudents.length;
+
+  // School total student count
+  schoolCountSpan.dataset.target = students.length;
+
+  // Attendance summary
+  let totalP = 0,
+    totalA = 0,
+    totalLt = 0,
+    totalHD = 0,
+    totalL = 0;
+  Object.entries(attendanceData).forEach(([date, rec]) => {
+    sectionStudents.forEach((s) => {
+      const code = rec[s.adm];
+      if (!code) {
+        totalA++;
+      } else {
+        switch (code) {
+          case "P":
+            totalP++;
+            break;
+          case "A":
+            totalA++;
+            break;
+          case "Lt":
+            totalLt++;
+            break;
+          case "HD":
+            totalHD++;
+            break;
+          case "L":
+            totalL++;
+            break;
         }
       }
     });
-    studentsBySchool[currentSchool] = students;
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    doneEditingBtnComp.classList.add("hidden");
-    editSelectedBtnComp.classList.remove("hidden");
-    deleteSelectedBtnComp.classList.remove("hidden");
-    saveRegistrationBtnComp.classList.remove("hidden");
-    renderStudents();
-    updateCountersComp();
-  };
+  });
+  const attendanceTotal = totalP + totalA + totalLt + totalHD + totalL;
+  attendanceCountSpan.dataset.target = attendanceTotal;
 
-  deleteSelectedBtnComp.onclick = async () => {
-    if (!confirm("Delete selected students?")) return;
-    const toDel = [...document.querySelectorAll(".sel:checked")].map(cb => +cb.closest("tr").dataset.index);
-    students = students.filter((_, i) => !toDel.includes(i));
-    studentsBySchool[currentSchool] = students;
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    renderStudents();
-    updateCountersComp();
-  };
-
-  saveRegistrationBtnComp.onclick = async () => {
-    if (!doneEditingBtnComp.classList.contains("hidden")) { alert("Finish editing before saving."); return; }
-    studentsBySchool[currentSchool] = students;
-    await idbSet("studentsBySchool", studentsBySchool);
-    await syncToFirebase();
-    // Hide row-inline controls and show share/download
-    $("student-registration").querySelector(".row-inline").classList.add("hidden");
-    editSelectedBtnComp.classList.add("hidden");
-    deleteSelectedBtnComp.classList.add("hidden");
-    selectAllStudentsComp.classList.add("hidden");
-    saveRegistrationBtnComp.classList.add("hidden");
-    editRegistrationBtnComp.classList.remove("hidden");
-    shareRegistrationBtnComp.classList.remove("hidden");
-    downloadRegistrationBtnComp.classList.remove("hidden");
-    renderStudents();
-    updateCountersComp();
-  };
-
-  editRegistrationBtnComp.onclick = () => {
-    $("student-registration").querySelector(".row-inline").classList.remove("hidden");
-    selectAllStudentsComp.classList.remove("hidden");
-    editSelectedBtnComp.classList.remove("hidden");
-    deleteSelectedBtnComp.classList.remove("hidden");
-    saveRegistrationBtnComp.classList.remove("hidden");
-    editRegistrationBtnComp.classList.add("hidden");
-    shareRegistrationBtnComp.classList.add("hidden");
-    downloadRegistrationBtnComp.classList.add("hidden");
-    renderStudents();
-    updateCountersComp();
-  };
-
-  shareRegistrationBtnComp.onclick = () => {
-    const header = `*Student Registration List*\n${setupText.textContent}\n\n`;
-    const lines = students
-      .filter(s => s.cls === classSelect.value && s.sec === sectionSelect.value)
-      .map((s, i) => `${i + 1}. Adm#: ${s.adm}  Name: ${s.name}  Parent: ${s.parent}`);
-    window.open("https://wa.me/?text=" + encodeURIComponent(header + lines.join("\n")), "_blank");
-  };
-
-  downloadRegistrationBtnComp.onclick = async () => {
-    const doc = new jspdf.jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toISOString().split("T")[0];
-
-    doc.setFontSize(18);
-    doc.text("Student Registration List", 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Date: ${today}`, pageWidth - 14, 20, { align: "right" });
-    doc.setFontSize(12);
-    doc.text(setupText.textContent, 14, 36);
-
-    const tempTable = document.createElement("table");
-    tempTable.innerHTML = `
-      <tr>
-        <th>#</th><th>Adm#</th><th>Name</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th>
-      </tr>`;
-    let idx = 0;
-    students.forEach((s) => {
-      if (s.cls !== classSelect.value || s.sec !== sectionSelect.value) return;
-      idx++;
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${idx}</td>
-        <td>${s.adm}</td>
-        <td>${s.name}</td>
-        <td>${s.parent}</td>
-        <td>${s.contact}</td>
-        <td>${s.occupation}</td>
-        <td>${s.address}</td>
-      `;
-      tempTable.appendChild(row);
+  // Eligible / Debarred / Outstanding counts
+  let eligibleCount = 0,
+    debarredCount = 0,
+    outstandingCount = 0;
+  students.forEach((s) => {
+    if (s.cls !== cl || s.sec !== sec) return;
+    let p = 0,
+      a = 0,
+      lt = 0,
+      hd = 0,
+      l = 0,
+      totalDays = 0;
+    Object.values(attendanceData).forEach((rec) => {
+      if (rec[s.adm]) {
+        totalDays++;
+        switch (rec[s.adm]) {
+          case "P":
+            p++;
+            break;
+          case "A":
+            a++;
+            break;
+          case "Lt":
+            lt++;
+            break;
+          case "HD":
+            hd++;
+            break;
+          case "L":
+            l++;
+            break;
+        }
+      }
     });
+    const fineTotal = a * fineRates.A + lt * fineRates.Lt + l * fineRates.L + hd * fineRates.HD;
+    const paid = (paymentsData[s.adm] || []).reduce((acc, pmt) => acc + pmt.amount, 0);
+    const outstanding = fineTotal - paid;
+    const pct = totalDays ? (p / totalDays) * 100 : 0;
+    const status = outstanding > 0 || pct < eligibilityPct ? "Debarred" : "Eligible";
 
-    doc.autoTable({ html: tempTable, startY: 50 });
-    const blob = doc.output("blob");
-    sharePdf(blob, "Student_Registration_List.pdf", "Student Registration List");
-  };
+    if (status === "Eligible") eligibleCount++;
+    else debarredCount++;
+    if (outstanding > 0) outstandingCount++;
+  });
+  eligibleCountSpan.dataset.target = eligibleCount;
+  debarredCountSpan.dataset.target = debarredCount;
+  outstandingCountSpan.dataset.target = outstandingCount;
 
-  // Placeholder for openPaymentModal
-  function openPaymentModal(adm) {
-    // Your payment modal code here
+  animateCounters();
+}
+
+// =======================================
+// 14) STUDENT REGISTRATION SECTION
+// =======================================
+const studentsBody = document.getElementById("studentsBody");
+const selectAllStudents = document.getElementById("selectAllStudents");
+const editSelectedBtn = document.getElementById("editSelected");
+const doneEditingBtn = document.getElementById("doneEditing");
+const deleteSelectedBtn = document.getElementById("deleteSelected");
+const addStudentBtn = document.getElementById("addStudent");
+const saveRegistrationBtn = document.getElementById("saveRegistration");
+const editRegistrationBtn = document.getElementById("editRegistration");
+const shareRegistrationBtn = document.getElementById("shareRegistration");
+const downloadRegistrationPDFBtn = document.getElementById("downloadRegistrationPDF");
+
+// 14.1) Add Student
+addStudentBtn.onclick = async (e) => {
+  e.preventDefault();
+  const n = document.getElementById("studentName").value.trim();
+  const p = document.getElementById("parentName").value.trim();
+  const c = document.getElementById("parentContact").value.trim();
+  const o = document.getElementById("parentOccupation").value.trim();
+  const a = document.getElementById("parentAddress").value.trim();
+  const cl = teacherClass;
+  const sec = teacherSection;
+  if (!n || !p || !c || !o || !a) {
+    alert("All fields required");
+    return;
   }
+  if (!/^\d{7,15}$/.test(c)) {
+    alert("Contact must be 7–15 digits");
+    return;
+  }
+  const adm = await genAdmNo();
+  students.push({
+    name: n,
+    adm,
+    parent: p,
+    contact: c,
+    occupation: o,
+    address: a,
+    cls: cl,
+    sec
+  });
+  studentsBySchool[currentSchool] = students;
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+  renderStudents();
+  updateCounters();
 
-  // Finally, run initial setup loader
-  await loadSetup();
+  // Clear form fields
+  document.getElementById("studentName").value = "";
+  document.getElementById("parentName").value = "";
+  document.getElementById("parentContact").value = "";
+  document.getElementById("parentOccupation").value = "";
+  document.getElementById("parentAddress").value = "";
+};
+
+// 14.2) Render Students Table
+function renderStudents() {
+  studentsBody.innerHTML = "";
+  let idx = 0;
+  students.forEach((s, i) => {
+    if (s.cls !== teacherClass || s.sec !== teacherSection) return;
+    idx++;
+    const stats = { P: 0, A: 0, Lt: 0, HD: 0, L: 0 };
+    Object.values(attendanceData).forEach((rec) => {
+      if (rec[s.adm]) stats[rec[s.adm]]++;
+    });
+    const total = stats.P + stats.A + stats.Lt + stats.HD + stats.L;
+    const fine =
+      stats.A * fineRates.A +
+      stats.Lt * fineRates.Lt +
+      stats.L * fineRates.L +
+      stats.HD * fineRates.HD;
+    const paid = (paymentsData[s.adm] || []).reduce((a, p) => a + p.amount, 0);
+    const out = fine - paid;
+    const pct = total ? (stats.P / total) * 100 : 0;
+    const status = out > 0 || pct < eligibilityPct ? "Debarred" : "Eligible";
+
+    const tr = document.createElement("tr");
+    tr.dataset.index = i;
+    tr.innerHTML = `
+      <td><input type="checkbox" class="sel" /></td>
+      <td>${idx}</td>
+      <td>${s.name}</td>
+      <td>${s.adm}</td>
+      <td>${s.parent}</td>
+      <td>${s.contact}</td>
+      <td>${s.occupation}</td>
+      <td>${s.address}</td>
+      <td>PKR ${out}</td>
+      <td>${status}</td>
+      <td><button class="add-payment-btn" data-adm="${s.adm}"><i class="fas fa-coins"></i></button></td>
+    `;
+    studentsBody.appendChild(tr);
+  });
+  selectAllStudents.checked = false;
+  toggleButtons();
+  document.querySelectorAll(".add-payment-btn").forEach((b) => {
+    b.onclick = () => openPaymentModal(b.dataset.adm);
+  });
+}
+
+function toggleButtons() {
+  const anyChecked = document.querySelectorAll(".sel:checked").length > 0;
+  editSelectedBtn.disabled = !anyChecked;
+  deleteSelectedBtn.disabled = !anyChecked;
+}
+
+studentsBody.addEventListener("change", (e) => {
+  if (e.target.classList.contains("sel")) toggleButtons();
 });
+
+selectAllStudents.onclick = () => {
+  document
+    .querySelectorAll(".sel")
+    .forEach((c) => (c.checked = selectAllStudents.checked));
+  toggleButtons();
+};
+
+// 14.3) Edit Selected
+editSelectedBtn.onclick = () => {
+  document.querySelectorAll(".sel:checked").forEach((cb) => {
+    const tr = cb.closest("tr");
+    const i = Number(tr.dataset.index);
+    const s = students[i];
+    // Replace relevant cells with input fields
+    tr.cells[2].innerHTML = `<input value="${s.name}" />`;
+    tr.cells[4].innerHTML = `<input value="${s.parent}" />`;
+    tr.cells[5].innerHTML = `<input value="${s.contact}" />`;
+    tr.cells[6].innerHTML = `<input value="${s.occupation}" />`;
+    tr.cells[7].innerHTML = `<input value="${s.address}" />`;
+  });
+  editSelectedBtn.classList.add("hidden");
+  deleteSelectedBtn.classList.add("hidden");
+  doneEditingBtn.classList.remove("hidden");
+};
+
+// 14.4) Done Editing
+doneEditingBtn.onclick = async () => {
+  document.querySelectorAll(".sel:checked").forEach((cb) => {
+    const tr = cb.closest("tr");
+    const i = Number(tr.dataset.index);
+    const inputs = tr.querySelectorAll("input");
+    students[i].name = inputs[0].value.trim();
+    students[i].parent = inputs[1].value.trim();
+    students[i].contact = inputs[2].value.trim();
+    students[i].occupation = inputs[3].value.trim();
+    students[i].address = inputs[4].value.trim();
+  });
+  studentsBySchool[currentSchool] = students;
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+  renderStudents();
+  updateCounters();
+  doneEditingBtn.classList.add("hidden");
+  editSelectedBtn.classList.remove("hidden");
+  deleteSelectedBtn.classList.remove("hidden");
+};
+
+// 14.5) Delete Selected
+deleteSelectedBtn.onclick = async () => {
+  if (!confirm("Delete selected students?")) return;
+  const toDelete = Array.from(
+    document.querySelectorAll(".sel:checked")
+  ).map((cb) => Number(cb.closest("tr").dataset.index));
+  students = students.filter((_, idx) => !toDelete.includes(idx));
+  studentsBySchool[currentSchool] = students;
+  await idbSet("studentsBySchool", studentsBySchool);
+  await syncToFirebase();
+  renderStudents();
+  updateCounters();
+};
+
+// 14.6) Save / Edit / Share / Download Registration
+saveRegistrationBtn.onclick = () => {
+  if (!doneEditingBtn.classList.contains("hidden")) {
+    alert("Finish editing before saving.");
+    return;
+  }
+  saveRegistrationBtn.classList.add("hidden");
+  editRegistrationBtn.classList.remove("hidden");
+  shareRegistrationBtn.classList.remove("hidden");
+  downloadRegistrationPDFBtn.classList.remove("hidden");
+};
+
+editRegistrationBtn.onclick = () => {
+  editRegistrationBtn.classList.add("hidden");
+  shareRegistrationBtn.classList.add("hidden");
+  downloadRegistrationPDFBtn.classList.add("hidden");
+  saveRegistrationBtn.classList.remove("hidden");
+};
+
+shareRegistrationBtn.onclick = () => {
+  const header = `Student Registration List\n${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
+  const lines = students
+    .filter((s) => s.cls === teacherClass && s.sec === teacherSection)
+    .map(
+      (s, i) =>
+        `${i + 1}. Adm#: ${s.adm} Name: ${s.name} Parent: ${s.parent}`
+    );
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(header + "\n\n" + lines.join("\n"))}`,
+    "_blank"
+  );
+};
+
+downloadRegistrationPDFBtn.onclick = () => {
+  const doc = new jspdf.jsPDF();
+  const w = doc.internal.pageSize.getWidth();
+  const today = new Date().toISOString().split("T")[0];
+  doc.setFontSize(18);
+  doc.text("Student Registration List", 14, 20);
+  doc.setFontSize(10);
+  doc.text(`Date: ${today}`, w - 14, 20, { align: "right" });
+  doc.setFontSize(12);
+  doc.text(`${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`, 14, 36);
+
+  // Build a temporary HTML table for jsPDF
+  const tempTable = document.createElement("table");
+  tempTable.innerHTML = `
+    <tr>
+      <th>#</th><th>Adm#</th><th>Name</th><th>Parent</th><th>Contact</th><th>Occupation</th><th>Address</th>
+    </tr>`;
+  let idx = 0;
+  students.forEach((s) => {
+    if (s.cls !== teacherClass || s.sec !== teacherSection) return;
+    idx++;
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${idx}</td>
+      <td>${s.adm}</td>
+      <td>${s.name}</td>
+      <td>${s.parent}</td>
+      <td>${s.contact}</td>
+      <td>${s.occupation}</td>
+      <td>${s.address}</td>
+    `;
+    tempTable.appendChild(row);
+  });
+
+  doc.autoTable({ html: tempTable, startY: 50 });
+  const blob = doc.output("blob");
+  sharePdf(blob, "Student_Registration_List.pdf", "Student Registration List");
+};
+
+// =======================================
+// 15) genAdmNo: نیا ایڈم نمبر بنانے کے لیے
+// =======================================
+async function genAdmNo() {
+  lastAdmNo++;
+  lastAdmNoBySchool[currentSchool] = lastAdmNo;
+  await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+  await syncToFirebase();
+  return String(lastAdmNo).padStart(4, "0");
+}
+
+// =======================================
+// 16) Placeholder for Payment Modal وغیرہ
+// =======================================
+function openPaymentModal(adm) {
+  // آپ اپنا موڈل کوڈ یہاں رکھیں
+}
+
+// =======================================
+// 17) When Authenticated, loadSetup is called
+// =======================================
+// (initializeAfterAuth handles that)
