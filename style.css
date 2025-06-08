@@ -1,237 +1,263 @@
 /* style.css */
 
-:root {
-  --primary: #2196F3;
-  --success: #4caf50;
-  --danger: #f44336;
-  --warning: #ffeb3b;
-  --info: #03a9f4;
-  --light: #f2f2f2;
-  --dark: #333;
-}
-
+/* Reset some defaults */
 * {
   box-sizing: border-box;
-  outline: none;
+  margin: 0;
+  padding: 0;
 }
 
+/* Body & Typography */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--light);
-  color: var(--dark);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+  line-height: 1.5;
 }
 
-header {
-  background: var(--primary);
-  color: #fff;
-  padding: 1em;
-  text-align: center;
-}
-
-h1, h2, h3 {
-  margin: 0 0 10px;
-}
-
-section {
-  background: #fff;
-  padding: 1em;
-  margin: 0 0 20px;
-  border-radius: 4px;
-}
-
-.row-inline > * {
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-input, select, button {
-  font-size: 1rem;
-  padding: 0.5em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  background: var(--primary);
-  color: #fff;
+/* Buttons */
+.btn {
+  background-color: #2196f3;
   border: none;
+  color: white;
+  padding: 0.6em 1.2em;
+  margin: 0.3em;
+  font-size: 1rem;
+  border-radius: 8px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn i {
+  margin-right: 0.4em;
+}
+
+.btn:hover {
+  background-color: #1976d2;
+}
+
+/* Inputs & Selects */
+input,
+select {
+  padding: 0.5em;
+  margin: 0.3em 0;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+}
+
+/* Headings */
+h1,
+h2,
+h3 {
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+}
+
+/* Header */
+.app-header {
+  background-color: #2196f3;
+  color: white;
+  padding: 1em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-header h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.header-buttons .btn {
+  background-color: transparent;
+  color: white;
+  font-size: 1.2rem;
+  padding: 0.3em 0.6em;
+}
+
+.header-buttons .btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Sections */
+section {
+  padding: 1em;
+  background-color: white;
+  margin: 0.5em 1em;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Flex Layout */
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: center;
+}
+
+/* Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5em;
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 0.6em;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+table th {
+  background-color: #f0f0f0;
+  font-weight: 600;
 }
 
 .table-wrapper {
   overflow-x: auto;
-}
-
-table {
-  table-layout: auto !important;
-  width: auto !important;
-  border-collapse: collapse;
   margin-top: 1em;
 }
 
-th, td {
-  padding: 2mm;
-  border: 1px solid #ddd;
-  text-align: left;
-  white-space: nowrap;
+.table-actions {
+  margin-top: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
 }
 
-.no-print {
-  /* hide in print */
-}
-
+/* Hidden utility */
 .hidden {
   display: none !important;
 }
 
-.card {
-  border: 1px solid #ccc;
-  padding: 1em;
-  margin-top: 1em;
-  border-radius: 4px;
+/* Print utility (reserved, no styles added) */
+.no-print {
+  /* Elements with this class will be hidden when printing (add print-specific rules if needed) */
 }
 
-.btn {
-  margin-top: 0.5em;
-}
-
-.counter-grid {
+/* Horizontal scroll row for counters */
+.scroll-row {
   display: flex;
+  overflow-x: auto;
   gap: 1em;
+  padding: 0.5em 0;
 }
 
+/* Counter Cards */
 .counter-card {
-  flex: 1;
-  text-align: center;
+  background-color: #fafafa;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  flex: 0 0 120px;
   padding: 1em;
-  background: #fff;
-  border-radius: 4px;
+  text-align: center;
+  margin-right: 0.5em;
+  min-width: 120px;
 }
 
-.counter-card .number {
-  font-size: 2rem;
-  display: block;
-}
-
-#analyticsFilterBtn {
-  float: right;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2em;
+.card-title {
+  font-size: 0.9rem;
+  margin: 0;
   color: #555;
 }
 
-/* Modal */
+.card-number {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0.3em;
+}
+
+/* Attendance Row */
+.attendance-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0.5em 0;
+}
+
+.attendance-header {
+  flex: 1 1 40%;
+  font-weight: 500;
+}
+
+.attendance-buttons {
+  flex: 1 1 60%;
+  display: flex;
+  gap: 0.3em;
+  flex-wrap: wrap;
+}
+
+/* Attendance Buttons */
+.att-btn {
+  flex: 1 1 50px;
+  padding: 0.5em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #fafafa;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.att-btn.selected {
+  color: white;
+}
+
+/* Modals */
 .modal {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  padding: 1em;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
 }
 
 .modal-content {
-  background: #fff;
-  padding: 1.5em;
-  border-radius: 6px;
-  width: 90%;
+  background-color: white;
+  border-radius: 8px;
+  padding: 1em;
+  width: 100%;
   max-width: 400px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: relative;
 }
 
 .modal-close {
   position: absolute;
-  top: 8px;
-  right: 12px;
+  top: 0.5em;
+  right: 0.5em;
+  font-size: 1.2rem;
   cursor: pointer;
-  font-size: 1.2em;
+  color: #777;
 }
 
-/* Attendance List Styling */
-.attendance-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--dark);
+.modal-close:hover {
+  color: #333;
 }
 
-.attendance-row .attendance-buttons {
+.modal-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 0.5em;
+  margin-top: 1em;
 }
-
-.attendance-row .attendance-buttons button {
-  flex: 1 1 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.5em;
-  font-size: 0.9rem;
-  border-radius: 4px;
-  background-color: rgba(3,169,244,0.2);
-  color: var(--info);
-  border: 1px solid rgba(3,169,244,0.5);
-}
-
-/* Updated styling for attendance row header */
-.attendance-header {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 0.5em;
-}
-
-/* Make the Mark Attendance list scrollable */
-#attendanceBody {
-  max-height: 400px;
-  overflow-y: auto;
-  overflow-x: auto;
-  border: 1px solid var(--light);
-  padding: 0.5em;
-  background: #fff;
-}
-
-/* Make the Attendance Report table scrollable horizontally */
-#attendanceSummary {
-  overflow-x: auto;
-  padding-bottom: 0.5em;
-}
-#attendanceSummary table {
-  min-width: 600px;
-}
-
-/* Make school list scrollable with fixed height */
-#schoolList {
-  max-height: 150px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 0.5em;
-  background: #fafafa;
-  border-radius: 4px;
-  margin-top: 0.5em;
-}
-
-/* Style each school row with full width and spaced buttons */
-#schoolList .row-inline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5em;
-}
-
-#schoolList .row-inline button {
-  margin-left: 0.25em;
-  flex-shrink: 0;
-}
-
