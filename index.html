@@ -106,6 +106,12 @@
         <button id="logoutBtn" class="btn">
           <i class="fas fa-sign-out-alt"></i> Logout
         </button>
+        <button id="backupData" class="no-print btn">
+          <i class="fas fa-database"></i> Backup Data
+        </button>
+        <button id="restoreData" class="no-print btn">
+          <i class="fas fa-recycle"></i> Restore Data
+        </button>
       </div>
     </header>
 
@@ -385,25 +391,19 @@
           <label><input type="checkbox" value="all" /> All Students</label>
           <fieldset>
             <legend>Download Mode</legend>
-            <label><input type="radio" name="downloadMode" value="combined" checked /> Combined PDF</label><br />
-            <label><input type="radio" name="downloadMode" value="individual" /> Individual PDFs</label>
+            <label><input type="radio" name="downloadMode" value="pdf" checked /> PDF</label>
+            <label><input type="radio" name="downloadMode" value="csv" /> CSV</label>
           </fieldset>
-          <button type="button" id="applyAnalyticsFilter" class="btn">Apply Filter</button>
         </form>
+        <div class="modal-actions">
+          <button id="applyFilters" class="btn"><i class="fas fa-check"></i> Apply</button>
+          <button id="closeFilterModal" class="btn"><i class="fas fa-times"></i> Close</button>
+        </div>
       </div>
     </div>
 
-    <script type="module" src="app.js"></script>
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("service-worker.js", { type: "module" })
-            .then((reg) => console.log("Service Worker registered:", reg))
-            .catch((err) => console.error("SW registration failed:", err));
-        });
-      }
-    </script>
   </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
