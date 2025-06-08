@@ -353,45 +353,20 @@
       </div>
     </section>
 
-    <!-- PAYMENT MODAL -->
-    <div id="paymentModal" class="modal hidden">
-      <div class="modal-content">
-        <span id="paymentModalClose" class="modal-close">&times;</span>
-        <h3>Payment for Adm# <span id="payAdm"></span></h3>
-        <label>Amount (PKR): <input id="paymentAmount" type="number" /></label>
-        <div class="modal-actions">
-          <button id="savePayment" class="btn">
-            <i class="fas fa-check"></i> Save
-          </button>
-          <button id="cancelPayment" class="btn">
-            <i class="fas fa-times"></i> Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ANALYTICS FILTER MODAL -->
-    <div id="analyticsFilterModal" class="modal hidden">
-      <div class="modal-content">
-        <span id="analyticsFilterClose" class="modal-close">&times;</span>
-        <h3>Filter Reports</h3>
-        <form id="analyticsFilterForm">
-          <label><input type="checkbox" value="registered" checked /> Registered Students</label><br />
-          <label><input type="checkbox" value="attendance" /> Attendance Records</label><br />
-          <label><input type="checkbox" value="fine" /> Fine Incurred</label><br />
-          <label><input type="checkbox" value="cleared" /> Cleared (No Dues)</label><br />
-          <label><input type="checkbox" value="debarred" /> Debarred</label><br />
-          <label><input type="checkbox" value="eligible" /> Eligible</label><br />
-          <label><input type="checkbox" value="all" /> All Students</label>
-          <fieldset>
-            <legend>Download Mode</legend>
-            <label><input type="radio" name="downloadMode" value="combined" checked /> Combined PDF</label><br />
-            <label><input type="radio" name="downloadMode" value="individual" /> Individual PDFs</label>
-          </fieldset>
-          <button type="button" id="applyAnalyticsFilter" class="btn">Apply Filter</button>
-        </form>
-      </div>
-    </div>
+    <!-- 8. BACKUP & RESTORE -->
+    <section id="backup-restore">
+      <h2><i class="fas fa-database"></i> Backup & Restore</h2>
+      <button id="chooseBackupFolder" class="btn">
+        <i class="fas fa-folder-open"></i> Choose Backup Folder
+      </button>
+      <button id="restoreData" class="btn">
+        <i class="fas fa-file-import"></i> Restore Data
+      </button>
+      <input type="file" id="restoreFile" accept=".json" style="display: none;" />
+      <button id="resetData" class="btn">
+        <i class="fas fa-trash-alt"></i> Factory Reset
+      </button>
+    </section>
 
     <script type="module" src="app.js"></script>
     <script>
