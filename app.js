@@ -275,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
 //    (called once user is logged in)
 // =============================================
 async function initializeAfterAuth() {
+  document.getElementById("teacher-setup").classList.remove("hidden");
   // 2A) Load local IndexedDB state
   await initLocalState();
 
