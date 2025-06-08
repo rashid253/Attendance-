@@ -266,6 +266,7 @@ async function sharePdf(blob, fileName, title) {
 // but actual “app logic” runs after auth finishes.
 // ---------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("teacher-setup").classList.remove("hidden");
   // Populate “Role → School/Class/Section” in Register form
   // (we’ll only call this when needed)
 });
