@@ -1,55 +1,297 @@
-// app.js (with per-school data segregation)
-// -------------------------------------------------------------------------------------------------
+// app.js
 
+// =======================
+// 1) IMPORTS & INITIAL SETUP
+// =======================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getDatabase,
   ref as dbRef,
   set as dbSet,
-  onValue,
+  get as dbGet
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// IndexedDB helpers (idb-keyval IIFE must be loaded in your HTML before this script)
-const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
-
-// Firebase configuration (replace with your actual config)
 const firebaseConfig = {
-  apiKey: "AIzaSyBsx…EpICEzA",
+  apiKey: "AIzaSyBsx5pWhYGh1bJ9gL2bmC68gVc6EpICEzA",
   authDomain: "attandace-management.firebaseapp.com",
+  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
   projectId: "attandace-management",
-  storageBucket: "attandace-management.appspot.com",
+  storageBucket: "attandace-management.firebasestorage.app",
   messagingSenderId: "222685278846",
   appId: "1:222685278846:web:aa3e37a42b76befb6f5e2f",
-  measurementId: "G-V2MY85R73B",
-  databaseURL: "https://attandace-management-default-rtdb.firebaseio.com",
+  measurementId: "G-V2MY85R73B"
 };
+
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const appDataRef = dbRef(database, "appData");
+const auth = getAuth(app);
 
-// ----------------------
-// Local application state (per-school mappings)
-// ----------------------
-let studentsBySchool       = {}; // { schoolName: [ { name, adm, parent, contact, occupation, address, cls, sec } ] }
-let attendanceDataBySchool = {}; // { schoolName: { "YYYY-MM-DD": { adm: "P"/"A"/... } } }
-let paymentsDataBySchool   = {}; // { schoolName: { adm: [ { date: "YYYY-MM-DD", amount: number }, ... ] } }
-let lastAdmNoBySchool      = {}; // { schoolName: numeric last admission number }
-let fineRates              = { A:50, Lt:20, L:10, HD:30 };
-let eligibilityPct         = 75;
-let schools                = [];    // array of school names (strings)
-let currentSchool          = null;  // selected school name
-let teacherClass           = null;  // selected class (e.g. "10")
-let teacherSection         = null;  // selected section (e.g. "A")
+// IndexedDB helper via idb-keyval
+const { get: idbGet, set: idbSet, clear: idbClear } = window.idbKeyval;
 
-// These variables hold the currently active school's data
-let students       = [];    // will reference studentsBySchool[currentSchool]
-let attendanceData = {};    // will reference attendanceDataBySchool[currentSchool]
-let paymentsData   = {};    // will reference paymentsDataBySchool[currentSchool]
-let lastAdmNo      = 0;     // will reference lastAdmNoBySchool[currentSchool]
+// =======================
+// 2) GLOBAL STATE FOR AUTH
+// =======================
+let currentUser = null;
+let userProfile = null;
 
-// ----------------------
-// Ensure data structures exist for a given school
-// ----------------------
+// =======================
+// 3) APPLICATION DATA STRUCTURES
+// =======================
+let studentsBySchool = {};
+let attendanceDataBySchool = {};
+let paymentsDataBySchool = {};
+let lastAdmNoBySchool = {};
+
+let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+let eligibilityPct = 75;
+
+let schools = [];
+let currentSchool = null;
+let teacherClass = null;
+let teacherSection = null;
+
+let students = [];
+let attendanceData = {};
+let paymentsData = {};
+let lastAdmNo = 0;
+
+// =======================
+// 4) AUTH UI & LOGIC
+// =======================
+window.addEventListener("DOMContentLoaded", () => {
+  const authScreen = document.getElementById("authScreen");
+  const mainApp = document.getElementById("mainApp");
+
+  const showLoginBtn = document.getElementById("showLogin");
+  const showRegisterBtn = document.getElementById("showRegister");
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+
+  const regEmail = document.getElementById("regEmail");
+  const regPassword = document.getElementById("regPassword");
+  const regRole = document.getElementById("regRole");
+  const regSchool = document.getElementById("regSchool");
+  const regClass = document.getElementById("regClass");
+  const regSection = document.getElementById("regSection");
+
+  // Show login by default
+  showLoginForm();
+  function showLoginForm() {
+    loginForm.style.display = "flex";
+    registerForm.style.display = "none";
+  }
+  function showRegisterForm() {
+    loginForm.style.display = "none";
+    registerForm.style.display = "flex";
+  }
+
+  showLoginBtn.onclick = showLoginForm;
+  showRegisterBtn.onclick = showRegisterForm;
+
+  // When “Role” changes in Register, show/hide related fields
+  regRole.addEventListener("change", () => {
+    const role = regRole.value;
+    if (role === "admin") {
+      regSchool.style.display = "none";
+      regClass.style.display = "none";
+      regSection.style.display = "none";
+    } else if (role === "principal") {
+      regSchool.style.display = "block";
+      regClass.style.display = "none";
+      regSection.style.display = "none";
+      loadAllSchoolsInto(regSchool);
+    } else if (role === "teacher") {
+      regSchool.style.display = "block";
+      regClass.style.display = "block";
+      regSection.style.display = "block";
+      loadAllSchoolsInto(regSchool);
+      populateClassDropdown(regClass);
+    }
+  });
+
+  // LOGIN SUBMIT
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  });
+
+  // REGISTER SUBMIT
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = regEmail.value.trim();
+    const password = regPassword.value;
+    const role = regRole.value;
+    if (!role) {
+      alert("Please pick a role.");
+      return;
+    }
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = cred.user.uid;
+
+      let profile = { email, role };
+      if (role === "principal") {
+        const schoolName = regSchool.value;
+        profile.assignedSchools = {};
+        profile.assignedSchools[schoolName] = true;
+      } else if (role === "teacher") {
+        profile.assignedSchool = regSchool.value;
+        profile.assignedClass = regClass.value;
+        profile.assignedSection = regSection.value;
+      }
+      await dbSet(dbRef(database, `users/${uid}`), profile);
+      alert("Registration successful! Please login.");
+      showLoginForm();
+    } catch (err) {
+      alert("Registration failed: " + err.message);
+    }
+  });
+
+  // OBSERVE AUTH STATE
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      const snap = await dbGet(dbRef(database, `users/${user.uid}`));
+      if (!snap.exists()) {
+        alert("No user profile found. Contact admin.");
+        return;
+      }
+      userProfile = snap.val();
+      authScreen.style.display = "none";
+      mainApp.style.display = "block";
+      initializeAfterAuth();
+    } else {
+      currentUser = null;
+      userProfile = null;
+      authScreen.style.display = "flex";
+      mainApp.style.display = "none";
+    }
+  });
+
+  // LOGOUT BUTTON
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.onclick = () => signOut(auth);
+  }
+});
+
+// =======================
+// 5) HELPER FUNCTIONS FOR DROPDOWNS
+// =======================
+async function loadAllSchoolsInto(selectElement) {
+  const appDataSnap = await dbGet(dbRef(database, "appData/schools"));
+  selectElement.innerHTML = `<option disabled selected>-- Select School --</option>`;
+  if (appDataSnap.exists()) {
+    const schoolList = appDataSnap.val();
+    schoolList.forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      selectElement.appendChild(opt);
+    });
+  }
+}
+
+function populateClassDropdown(classSelect) {
+  const classOptions = [
+    "Play Group", "Nursery", "KG",
+    "Class One", "Class Two", "Class Three",
+    "Class Four", "Class Five", "Class Six",
+    "Class Seven", "Class Eight", "Class Nine",
+    "Class Ten"
+  ];
+  classSelect.innerHTML = `<option disabled selected>-- Select Class --</option>`;
+  classOptions.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    classSelect.appendChild(opt);
+  });
+}
+
+// =======================
+// 6) INITIALIZATION AFTER AUTH
+// =======================
+async function initializeAfterAuth() {
+  const setupSection = document.getElementById("teacher-setup");
+  const schoolInput = document.getElementById("schoolInput");
+  const schoolSelect = document.getElementById("schoolSelect");
+
+  if (userProfile.role === "admin") {
+    setupSection.style.display = "block";
+    schoolInput.style.display = "inline-block";
+  } else if (userProfile.role === "principal") {
+    setupSection.style.display = "block";
+    schoolInput.style.display = "none";
+    schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+    Object.keys(userProfile.assignedSchools || {}).forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      schoolSelect.appendChild(opt);
+    });
+  } else if (userProfile.role === "teacher") {
+    setupSection.style.display = "none";
+    const assignedSchool = userProfile.assignedSchool;
+    const assignedClass = userProfile.assignedClass;
+    const assignedSection = userProfile.assignedSection;
+
+    await idbSet("currentSchool", assignedSchool);
+    await idbSet("teacherClass", assignedClass);
+    await idbSet("teacherSection", assignedSection);
+
+    await initLocalState();
+    await loadSetup();
+  }
+
+  if (userProfile.role !== "teacher") {
+    await initLocalState();
+    resetViews();
+    await loadSetup();
+  }
+}
+
+// =======================
+// 7) LOCAL STATE & FIREBASE SYNC
+// =======================
+async function initLocalState() {
+  studentsBySchool = (await idbGet("studentsBySchool")) || {};
+  attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
+  paymentsDataBySchool = (await idbGet("paymentsDataBySchool")) || {};
+  lastAdmNoBySchool = (await idbGet("lastAdmNoBySchool")) || {};
+  fineRates = (await idbGet("fineRates")) || fineRates;
+  eligibilityPct = (await idbGet("eligibilityPct")) || eligibilityPct;
+  schools = (await idbGet("schools")) || [];
+  currentSchool = (await idbGet("currentSchool")) || null;
+  teacherClass = (await idbGet("teacherClass")) || null;
+  teacherSection = (await idbGet("teacherSection")) || null;
+
+  if (currentSchool) {
+    await ensureSchoolData(currentSchool);
+    students = studentsBySchool[currentSchool];
+    attendanceData = attendanceDataBySchool[currentSchool];
+    paymentsData = paymentsDataBySchool[currentSchool];
+    lastAdmNo = lastAdmNoBySchool[currentSchool];
+  }
+}
+
 async function ensureSchoolData(school) {
   if (!school) return;
   if (!studentsBySchool[school]) {
@@ -70,33 +312,6 @@ async function ensureSchoolData(school) {
   }
 }
 
-// ----------------------
-// Initialize state from IndexedDB
-// ----------------------
-async function initLocalState() {
-  studentsBySchool       = (await idbGet("studentsBySchool"))       || {};
-  attendanceDataBySchool = (await idbGet("attendanceDataBySchool")) || {};
-  paymentsDataBySchool   = (await idbGet("paymentsDataBySchool"))   || {};
-  lastAdmNoBySchool      = (await idbGet("lastAdmNoBySchool"))      || {};
-  fineRates              = (await idbGet("fineRates"))              || fineRates;
-  eligibilityPct         = (await idbGet("eligibilityPct"))         || eligibilityPct;
-  schools                = (await idbGet("schools"))                || [];
-  currentSchool          = (await idbGet("currentSchool"))          || null;
-  teacherClass           = (await idbGet("teacherClass"))           || null;
-  teacherSection         = (await idbGet("teacherSection"))         || null;
-
-  if (currentSchool) {
-    await ensureSchoolData(currentSchool);
-    students       = studentsBySchool[currentSchool];
-    attendanceData = attendanceDataBySchool[currentSchool];
-    paymentsData   = paymentsDataBySchool[currentSchool];
-    lastAdmNo      = lastAdmNoBySchool[currentSchool];
-  }
-}
-
-// ----------------------
-// Sync local state (mappings) to Firebase
-// ----------------------
 async function syncToFirebase() {
   const payload = {
     studentsBySchool,
@@ -108,166 +323,134 @@ async function syncToFirebase() {
     schools,
     currentSchool,
     teacherClass,
-    teacherSection,
+    teacherSection
   };
   try {
-    await dbSet(appDataRef, payload);
+    await dbSet(dbRef(database, "appData"), payload);
     console.log("✅ Synced data to Firebase");
   } catch (err) {
     console.error("Firebase sync failed:", err);
   }
 }
 
-// ----------------------
-// Utility: Share PDF via Web Share API
-// ----------------------
-async function sharePdf(blob, fileName, title) {
-  if (
-    navigator.canShare &&
-    navigator.canShare({ files: [new File([blob], fileName, { type: "application/pdf" })] })
-  ) {
-    try {
-      await navigator.share({ title, files: [new File([blob], fileName, { type: "application/pdf" })] });
-    } catch (err) {
-      if (err.name !== "AbortError") console.error("Share failed", err);
-    }
+// =======================
+// 8) SETUP SECTION LOGIC
+// =======================
+function resetViews() {
+  const sections = [
+    "financial-settings",
+    "animatedCounters",
+    "student-registration",
+    "attendance-section",
+    "analytics-section",
+    "register-section"
+  ];
+  sections.forEach((id) => document.getElementById(id).classList.add("hidden"));
+}
+
+async function loadSetup() {
+  const savedSchools = (await idbGet("schools")) || [];
+  const savedCurrentSchool = (await idbGet("currentSchool")) || null;
+  const savedClass = (await idbGet("teacherClass")) || null;
+  const savedSection = (await idbGet("teacherSection")) || null;
+
+  schools = savedSchools;
+  currentSchool = savedCurrentSchool;
+  teacherClass = savedClass;
+  teacherSection = savedSection;
+
+  const schoolSelect = document.getElementById("schoolSelect");
+  const schoolInput = document.getElementById("schoolInput");
+
+  if (userProfile.role === "admin") {
+    schoolInput.style.display = "inline-block";
+    schoolSelect.innerHTML = `<option disabled selected>-- Select School --</option>`;
+    schools.forEach((sch) => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      schoolSelect.appendChild(opt);
+    });
+  } else if (userProfile.role === "principal") {
+    schoolInput.style.display = "none";
+  }
+
+  renderSchoolList();
+
+  if (currentSchool && teacherClass && teacherSection) {
+    await ensureSchoolData(currentSchool);
+    students = studentsBySchool[currentSchool];
+    attendanceData = attendanceDataBySchool[currentSchool];
+    paymentsData = paymentsDataBySchool[currentSchool];
+    lastAdmNo = lastAdmNoBySchool[currentSchool];
+
+    document.getElementById("setupText").textContent =
+      `${currentSchool} | Class: ${teacherClass} | Section: ${teacherSection}`;
+    document.getElementById("setupForm").classList.add("hidden");
+    document.getElementById("setupDisplay").classList.remove("hidden");
+
+    resetViews();
+    document.getElementById("financial-settings").classList.remove("hidden");
+    document.getElementById("animatedCounters").classList.remove("hidden");
+    document.getElementById("student-registration").classList.remove("hidden");
+    document.getElementById("attendance-section").classList.remove("hidden");
+    document.getElementById("analytics-section").classList.remove("hidden");
+    document.getElementById("register-section").classList.remove("hidden");
+
+    renderStudents();
+    updateCounters();
+  } else {
+    document.getElementById("setupForm").classList.remove("hidden");
+    document.getElementById("setupDisplay").classList.add("hidden");
+    resetViews();
   }
 }
 
-// ----------------------
-// DOMContentLoaded: Main Initialization
-// ----------------------
-window.addEventListener("DOMContentLoaded", async () => {
-  // Simplified selector
-  const $ = (id) => document.getElementById(id);
-  const show = (...els) => els.forEach(e => e && e.classList.remove("hidden"));
-  const hide = (...els) => els.forEach(e => e && e.classList.add("hidden"));
-
-  // Load local state from IndexedDB
-  await initLocalState();
-
-  // ----------------------
-  // Reset Views: Hide/Show all sections based on whether setup is complete
-  // ----------------------
-  function resetViews() {
-    // If setup is incomplete (i.e. currentSchool/class/section is null), hide everything except #teacher-setup section.
-    const setupDone = currentSchool && teacherClass && teacherSection;
-    const allSections = [
-      $("financial-settings"),
-      $("animatedCounters"),
-      $("student-registration"),
-      $("attendance-section"),
-      $("analytics-section"),
-      $("register-section"),
-      $("chooseBackupFolder"),
-      $("restoreData"),
-      $("resetData"),
-    ];
-    if (!setupDone) {
-      allSections.forEach(sec => sec && hide(sec));
-    } else {
-      allSections.forEach(sec => sec && show(sec));
-    }
-  }
-
-  // Immediately run resetViews() so that on first load, only Setup is visible if not done
-  resetViews();
-
-  // ----------------------
-  // Eruda for debugging (optional)
-  // ----------------------
-  const erudaScript = document.createElement("script");
-  erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
-  erudaScript.onload = () => eruda.init();
-  document.body.appendChild(erudaScript);
-
-  // ----------------------
-  // Generate new admission number (per school)
-  // ----------------------
-  async function genAdmNo() {
-    lastAdmNo++;
-    lastAdmNoBySchool[currentSchool] = lastAdmNo;
-    await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-    await syncToFirebase();
-    return String(lastAdmNo).padStart(4, "0");
-  }
-
-  // ----------------------
-  // 1. SETUP SECTION
-  // ----------------------
-  const setupForm      = $("setupForm");
-  const setupDisplay   = $("setupDisplay");
-  const schoolInput    = $("schoolInput");
-  const schoolSelect   = $("schoolSelect");
-  const classSelect    = $("teacherClassSelect");
-  const sectionSelect  = $("teacherSectionSelect");
-  const setupText      = $("setupText");
-  const saveSetupBtn   = $("saveSetup");
-  const editSetupBtn   = $("editSetup");
-  const schoolListDiv  = $("schoolList");
-
-  function renderSchoolList() {
-    schoolListDiv.innerHTML = "";
-    schools.forEach((sch, idx) => {
-      const row = document.createElement("div");
-      row.className = "row-inline";
-      row.innerHTML = `
-        <span>${sch}</span>
-        <div>
-          <button data-idx="${idx}" class="edit-school no-print"><i class="fas fa-edit"></i></button>
-          <button data-idx="${idx}" class="delete-school no-print"><i class="fas fa-trash"></i></button>
-        </div>`;
-      schoolListDiv.appendChild(row);
-    });
-    document.querySelectorAll(".edit-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        const newName = prompt("Edit School Name:", schools[idx]);
-        if (newName?.trim()) {
-          const oldName = schools[idx];
-          schools[idx] = newName.trim();
-          await idbSet("schools", schools);
-
-          // Rename mappings if necessary
-          studentsBySchool[newName] = studentsBySchool[oldName] || [];
-          delete studentsBySchool[oldName];
-          await idbSet("studentsBySchool", studentsBySchool);
-
-          attendanceDataBySchool[newName] = attendanceDataBySchool[oldName] || {};
-          delete attendanceDataBySchool[oldName];
-          await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-
-          paymentsDataBySchool[newName] = paymentsDataBySchool[oldName] || {};
-          delete paymentsDataBySchool[oldName];
-          await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-
-          lastAdmNoBySchool[newName] = lastAdmNoBySchool[oldName] || 0;
-          delete lastAdmNoBySchool[oldName];
-          await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-          await syncToFirebase();
-          await loadSetup();
+function renderSchoolList() {
+  const listDiv = document.getElementById("schoolList");
+  listDiv.innerHTML = "";
+  schools.forEach((sch, idx) => {
+    const wrapper = document.createElement("div");
+    wrapper.textContent = sch;
+    if (userProfile.role === "admin") {
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "✎";
+      editBtn.style.marginLeft = "0.5em";
+      editBtn.onclick = () => {
+        const newName = prompt("Rename school:", sch);
+        if (!newName) return;
+        if (schools.includes(newName)) {
+          alert("School name already exists.");
+          return;
         }
+        schools[idx] = newName;
+        studentsBySchool[newName] = studentsBySchool[sch] || [];
+        attendanceDataBySchool[newName] = attendanceDataBySchool[sch] || {};
+        paymentsDataBySchool[newName] = paymentsDataBySchool[sch] || {};
+        lastAdmNoBySchool[newName] = lastAdmNoBySchool[sch] || 0;
+        delete studentsBySchool[sch];
+        delete attendanceDataBySchool[sch];
+        delete paymentsDataBySchool[sch];
+        delete lastAdmNoBySchool[sch];
+        idbSet("schools", schools);
+        idbSet("studentsBySchool", studentsBySchool);
+        idbSet("attendanceDataBySchool", attendanceDataBySchool);
+        idbSet("paymentsDataBySchool", paymentsDataBySchool);
+        idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
+        syncToFirebase();
+        loadSetup();
       };
-    });
-    document.querySelectorAll(".delete-school").forEach(btn => {
-      btn.onclick = async () => {
-        const idx = +btn.dataset.idx;
-        if (!confirm(`Delete school "${schools[idx]}"?`)) return;
-        const removed = schools.splice(idx, 1)[0];
-        await idbSet("schools", schools);
-
-        // Remove mappings for this school
-        delete studentsBySchool[removed];
-        await idbSet("studentsBySchool", studentsBySchool);
-        delete attendanceDataBySchool[removed];
-        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
-        delete paymentsDataBySchool[removed];
-        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
-        delete lastAdmNoBySchool[removed];
-        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
-
-        if (currentSchool === removed) {
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.style.marginLeft = "0.5em";
+      delBtn.onclick = async () => {
+        if (!confirm(`Delete "${sch}" and all its data?`)) return;
+        schools.splice(idx, 1);
+        delete studentsBySchool[sch];
+        delete attendanceDataBySchool[sch];
+        delete paymentsDataBySchool[sch];
+        delete lastAdmNoBySchool[sch];
+        if (currentSchool === sch) {
           currentSchool = null;
           teacherClass = null;
           teacherSection = null;
@@ -275,93 +458,66 @@ window.addEventListener("DOMContentLoaded", async () => {
           await idbSet("teacherClass", null);
           await idbSet("teacherSection", null);
         }
-        await syncToFirebase();
-        await loadSetup();
-      };
-    });
-  }
-
-  let loadSetup = async () => {
-    schools        = (await idbGet("schools")) || [];
-    currentSchool  = await idbGet("currentSchool");
-    teacherClass   = await idbGet("teacherClass");
-    teacherSection = await idbGet("teacherSection");
-
-    // Populate school dropdown
-    schoolSelect.innerHTML = ['<option disabled selected>-- Select School --</option>',
-      ...schools.map(s => `<option value="${s}">${s}</option>` )
-    ].join("");
-    if (currentSchool) schoolSelect.value = currentSchool;
-
-    renderSchoolList();
-
-    if (currentSchool && teacherClass && teacherSection) {
-      await ensureSchoolData(currentSchool);
-      // Load current school's data into working variables
-      students       = studentsBySchool[currentSchool];
-      attendanceData = attendanceDataBySchool[currentSchool];
-      paymentsData   = paymentsDataBySchool[currentSchool];
-      lastAdmNo      = lastAdmNoBySchool[currentSchool];
-
-      classSelect.value = teacherClass;
-      sectionSelect.value = teacherSection;
-      setupText.textContent = `${currentSchool} 🏫 | Class: ${teacherClass} | Section: ${teacherSection}`;
-      hide(setupForm);
-      show(setupDisplay);
-
-      // Now that setup is done, show all other sections
-      resetViews();
-
-      // After setup completes, render students and counters
-      setTimeout(() => {
-        renderStudents();
-        updateCounters();
-      }, 0);
-
-    } else {
-      // Setup is not complete, hide other sections
-      show(setupForm);
-      hide(setupDisplay);
-      resetViews();
-    }
-  };
-
-  saveSetupBtn.onclick = async (e) => {
-    e.preventDefault();
-    const newSchool = schoolInput.value.trim();
-    if (newSchool) {
-      if (!schools.includes(newSchool)) {
-        schools.push(newSchool);
         await idbSet("schools", schools);
+        await idbSet("studentsBySchool", studentsBySchool);
+        await idbSet("attendanceDataBySchool", attendanceDataBySchool);
+        await idbSet("paymentsDataBySchool", paymentsDataBySchool);
+        await idbSet("lastAdmNoBySchool", lastAdmNoBySchool);
         await syncToFirebase();
-      }
-      schoolInput.value = "";
-      return loadSetup();
+        loadSetup();
+      };
+      wrapper.append(editBtn, delBtn);
     }
-    const selSchool  = schoolSelect.value;
-    const selClass   = classSelect.value;
-    const selSection = sectionSelect.value;
-    if (!selSchool || !selClass || !selSection) {
-      alert("Please select a school, class, and section.");
+    listDiv.appendChild(wrapper);
+  });
+}
+
+const saveSetupBtn = document.getElementById("saveSetup");
+saveSetupBtn.onclick = async (e) => {
+  e.preventDefault();
+  const newSchool = document.getElementById("schoolInput").value.trim();
+  const schoolSelect = document.getElementById("schoolSelect");
+  const classSelect = document.getElementById("teacherClassSelect");
+  const sectionSelect = document.getElementById("teacherSectionSelect");
+
+  if (newSchool) {
+    if (userProfile.role !== "admin") {
+      alert("Only Admins can create a new school.");
       return;
     }
-    currentSchool  = selSchool;
-    teacherClass   = selClass;
-    teacherSection = selSection;
-    await idbSet("currentSchool", currentSchool);
-    await idbSet("teacherClass", teacherClass);
-    await idbSet("teacherSection", teacherSection);
-    await syncToFirebase();
-    await loadSetup();
-  };
+    if (!schools.includes(newSchool)) {
+      schools.push(newSchool);
+      await idbSet("schools", schools);
+      await syncToFirebase();
+    }
+    document.getElementById("schoolInput").value = "";
+    loadSetup();
+    return;
+  }
+  const selSchool = schoolSelect.value;
+  const selClass = classSelect.value;
+  const selSection = sectionSelect.value;
+  if (!selSchool || !selClass || !selSection) {
+    alert("Please select a school, class, and section.");
+    return;
+  }
+  currentSchool = selSchool;
+  teacherClass = selClass;
+  teacherSection = selSection;
+  await idbSet("currentSchool", currentSchool);
+  await idbSet("teacherClass", teacherClass);
+  await idbSet("teacherSection", teacherSection);
+  await syncToFirebase();
+  await loadSetup();
+};
 
-  editSetupBtn.onclick = (e) => {
-    e.preventDefault();
-    show(setupForm);
-    hide(setupDisplay);
-    resetViews(); // hide other sections until Setup is saved again
-  };
-
+const editSetupBtn = document.getElementById("editSetup");
+editSetupBtn.onclick = (e) => {
+  e.preventDefault();
+  document.getElementById("setupForm").classList.remove("hidden");
+  document.getElementById("setupDisplay").classList.add("hidden");
+  resetViews();
+};
   // ----------------------
   // 2. FINANCIAL SETTINGS SECTION
   // ----------------------
