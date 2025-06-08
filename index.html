@@ -352,25 +352,8 @@
         </button>
       </div>
     </section>
-    
-<!-- 9. BACKUP, RESTORE & RESET SECTION -->
-<section id="backup-section" class="no-print" style="margin: 2em 0;">
-  <h2><i class="fas fa-database"></i> Backup & Restore</h2>
-  <div class="row-inline" style="gap: 0.5em; align-items: center;">
-    <button id="chooseBackupFolder" class="btn">
-      <i class="fas fa-folder-open"></i> Choose Backup Folder
-    </button>
-    <button id="restoreData" class="btn">
-      <i class="fas fa-upload"></i> Restore Data
-    </button>
-    <!-- hidden file input for restore -->
-    <input type="file" id="restoreFile" accept=".json" style="display:none;" />
-    <button id="resetData" class="btn">
-      <i class="fas fa-recycle"></i> Factory Reset
-    </button>
-  </div>
-</section>
-    <!-- PAYMENT MODAL -->
+
+    <!-- 8. PAYMENT MODAL -->
     <div id="paymentModal" class="modal hidden">
       <div class="modal-content">
         <span id="paymentModalClose" class="modal-close">&times;</span>
@@ -387,7 +370,24 @@
       </div>
     </div>
 
-    <!-- ANALYTICS FILTER MODAL -->
+    <!-- 9. BACKUP, RESTORE & RESET SECTION -->
+    <section id="backup-section" class="no-print" style="margin: 2em 0;">
+      <h2><i class="fas fa-database"></i> Backup & Restore</h2>
+      <div class="row-inline" style="gap: 0.5em; align-items: center;">
+        <button id="chooseBackupFolder" class="btn">
+          <i class="fas fa-folder-open"></i> Choose Backup Folder
+        </button>
+        <button id="restoreData" class="btn">
+          <i class="fas fa-upload"></i> Restore Data
+        </button>
+        <input type="file" id="restoreFile" accept=".json" style="display:none;" />
+        <button id="resetData" class="btn">
+          <i class="fas fa-recycle"></i> Factory Reset
+        </button>
+      </div>
+    </section>
+
+    <!-- 10. ANALYTICS FILTER MODAL -->
     <div id="analyticsFilterModal" class="modal hidden">
       <div class="modal-content">
         <span id="analyticsFilterClose" class="modal-close">&times;</span>
