@@ -858,12 +858,15 @@ doneEditingBtn.onclick = async () => {
   document.querySelectorAll(".sel:checked").forEach((cb) => {
     const tr = cb.closest("tr");
     const i = Number(tr.dataset.index);
-    const inputs = tr.querySelectorAll("input");
-    students[i].name = inputs[0].value.trim();
-    students[i].parent = inputs[1].value.trim();
-    students[i].contact = inputs[2].value.trim();
-    students[i].occupation = inputs[3].value.trim();
-    students[i].address = inputs[4].value.trim();
+    // Only grab text inputs — skip the checkbox
+const inputs = Array.from(tr.querySelectorAll("input"))
+  .filter((inp) => inp.type !== "checkbox");
+
+students[i].name       = inputs[0].value.trim();
+students[i].parent     = inputs[1].value.trim();
+students[i].contact    = inputs[2].value.trim();
+students[i].occupation = inputs[3].value.trim();
+students[i].address    = inputs[4].value.trim();
   });
   studentsBySchool[currentSchool] = students;
   await idbSet("studentsBySchool", studentsBySchool);
