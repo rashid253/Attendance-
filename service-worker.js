@@ -1,73 +1,76 @@
 // service-worker.js
 
-const CACHE_NAME = "attendance-app-cache-v1";
-const ASSETS_TO_CACHE = [
-  "/",                     // index.html
-  "/index.html",           // if served explicitly
-  "/style.css",
-  "/app.js",
-  "/manifest.json",
-  "/favicon.ico",
-  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
-  "https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js",
-  "https://cdn.jsdelivr.net/npm/chart.js"
+const CACHE_VERSION = 'v3';
+const CACHE_NAME = `attendance-app-${CACHE_VERSION}`;
+const PRECACHE = [
+  '/',               // serves index.html
+  '/index.html',
+  '/style.css',
+  '/app.js',
+  '/manifest.json',
+  '/offline.html',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", event => {
-  event.waitUntil(
+self.addEventListener('activate', e => {
+  e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys.filter(k => k !== CACHE_NAME)
+            .map(k => caches.delete(k))
       )
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener("fetch", event => {
-  const { request } = event;
-  // Only handle GET requests
-  if (request.method !== "GET") return;
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  const url  = new URL(req.url);
 
-  event.respondWith(
-    caches.match(request).then(cachedResponse => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(request)
-        .then(networkResponse => {
-          // Only cache same-origin requests
-          if (
-            networkResponse.status === 200 &&
-            request.url.startsWith(self.location.origin)
-          ) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
+  // 1) Handle HTML navigations (user typing URL, link clicks, pull-to-refresh)
+  if (req.mode === 'navigate' ||
+      (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          // update cached shell for next offline
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(req, copy));
+          return res;
         })
-        .catch(() => {
-          // If offline and asset not in cache, optionally return a fallback here
-          // e.g., return caches.match("/offline.html");
-          return new Response("", { status: 503, statusText: "Service Unavailable" });
-        });
-    })
-  );
+        .catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
+
+  // 2) For same-origin static assets: cache-first, then network, then offline.html
+  if (req.method === 'GET' && url.origin === location.origin) {
+    e.respondWith(
+      caches.match(req).then(cached => {
+        if (cached) return cached;
+        return fetch(req)
+          .then(res => {
+            if (!res.ok) throw new Error('Network error');
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(req, copy));
+            return res;
+          })
+          .catch(() => caches.match('/offline.html'));
+      })
+    );
+  }
+});
+
+// Optional: skipWaiting via postMessage
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
