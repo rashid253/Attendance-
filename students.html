@@ -1,640 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Student Portal - Attendance System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            min-height: 100vh;
-            padding: 15px;
-            color: #333;
-            line-height: 1.5;
-        }
-        
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-            padding: 20px 15px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .header h1 {
-            color: #2c3e50;
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-        
-        .header p {
-            color: #666;
-            font-size: 0.95rem;
-        }
-        
-        .school-badge {
-            display: inline-block;
-            background: #3498db;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-top: 12px;
-            font-weight: 500;
-        }
-        
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            margin-bottom: 25px;
-        }
-        
-        .card h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.4rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .form-group {
-            margin-bottom: 22px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 16px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
-            background: white;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #3498db 0%, #2ecc71 100%);
-            color: white;
-            border: none;
-            padding: 18px 25px;
-            font-size: 17px;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 8px;
-            touch-action: manipulation;
-        }
-        
-        .btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-            margin-top: 15px;
-        }
-        
-        .error-message {
-            background: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            border-left: 4px solid #c62828;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px 20px;
-            font-size: 16px;
-            color: #666;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            display: none;
-        }
-        
-        .debug-panel {
-            background: #f8f9fa;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            overflow-x: auto;
-            display: none;
-        }
-        
-        .debug-btn {
-            background: #34495e;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 15px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 18px;
-            margin-bottom: 25px;
-        }
-        
-        .info-item {
-            background: white;
-            padding: 18px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid #3498db;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 6px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .info-value {
-            font-size: 1.05rem;
-            color: #2c3e50;
-            word-break: break-word;
-        }
-        
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.5rem;
-            }
-            
-            .card {
-                padding: 20px 15px;
-            }
-            
-            .btn {
-                padding: 16px 20px;
-                font-size: 16px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Student Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  font-family: system-ui,sans-serif;
+  background:#f1f5f9;
+  margin:0;
+  padding:1rem;
+}
+.card{
+  max-width:420px;
+  margin:auto;
+  background:#fff;
+  border-radius:14px;
+  padding:1.5rem;
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+h2{margin-top:0}
+input,button{
+  width:100%;
+  padding:.75rem;
+  margin:.5rem 0;
+  border-radius:8px;
+  border:1px solid #cbd5e1;
+  font-size:1rem;
+}
+button{
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+button:active{transform:scale(.98)}
+.hidden{display:none}
+.error{color:#dc2626;margin-top:.5rem}
+.stat{
+  display:flex;
+  justify-content:space-between;
+  margin:.35rem 0;
+}
+.badge{
+  padding:.3rem .8rem;
+  border-radius:999px;
+  font-size:.85rem;
+}
+.badge.ok{background:#dcfce7;color:#166534}
+.badge.due{background:#fee2e2;color:#991b1b}
+</style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1><span>🎓</span> Student Portal</h1>
-            <p>Check your attendance, academic status, and personal information</p>
-            <div class="school-badge">
-                <span>🏫</span> <span id="currentSchoolName">Loading...</span>
-            </div>
-        </div>
-        
-        <!-- Error Message -->
-        <div class="error-message" id="errorMessage">
-            <span>❌</span> <span id="errorText"></span>
-        </div>
-        
-        <!-- Loading State -->
-        <div class="loading" id="loading">
-            <span style="font-size: 2rem; color: #3498db; display: block; margin-bottom: 15px;">⏳</span>
-            <p>Loading student information...</p>
-        </div>
-        
-        <!-- Login Section -->
-        <section class="card" id="loginSection">
-            <h2><span>🔐</span> Student Login</h2>
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="studentAdmission"><span>📋</span> Admission Number</label>
-                    <input type="text" id="studentAdmission" placeholder="Enter your admission number" />
-                </div>
-                
-                <div class="form-group">
-                    <label for="schoolSelect"><span>🏫</span> School</label>
-                    <select id="schoolSelect">
-                        <option value="">Select your school</option>
-                    </select>
-                </div>
-                
-                <button class="btn" id="loginBtn">
-                    <span>🚪</span> Access My Dashboard
-                </button>
-                
-                <button class="btn btn-secondary" id="debugBtn">
-                    <span>🐛</span> Show Debug Info
-                </button>
-                
-                <!-- Debug Panel -->
-                <div class="debug-panel" id="debugPanel">
-                    <strong>Debug Information:</strong><br>
-                    <div id="debugContent">No debug data available yet.</div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Student Dashboard (Initially Hidden) -->
-        <section class="card" id="studentDashboard" style="display: none;">
-            <h2><span>👤</span> Student Profile</h2>
-            
-            <div class="info-grid" id="studentInfoGrid">
-                <!-- Student info will be populated here -->
-            </div>
-            
-            <button class="btn btn-secondary" id="logoutBtn">
-                <span>🚪</span> Logout
-            </button>
-        </section>
-    </div>
 
-    <!-- Scripts -->
-    <script>
-        // ============================================
-        // CONSOLE DEBUGGING UTILITIES (Your "Counsel Code")
-        // ============================================
-        const ConsoleDebug = {
-            log: function(...args) {
-                console.log('%c[DEBUG]', 'color: #3498db; font-weight: bold;', ...args);
-                this.updateDebugPanel('[LOG]', args.join(' '));
-            },
-            
-            error: function(...args) {
-                console.error('%c[ERROR]', 'color: #e74c3c; font-weight: bold;', ...args);
-                this.updateDebugPanel('[ERROR]', args.join(' '));
-            },
-            
-            warn: function(...args) {
-                console.warn('%c[WARN]', 'color: #f39c12; font-weight: bold;', ...args);
-                this.updateDebugPanel('[WARN]', args.join(' '));
-            },
-            
-            info: function(...args) {
-                console.info('%c[INFO]', 'color: #2ecc71; font-weight: bold;', ...args);
-                this.updateDebugPanel('[INFO]', args.join(' '));
-            },
-            
-            table: function(data, columns) {
-                console.table(data, columns);
-                this.updateDebugPanel('[TABLE]', 'Check browser console for table view');
-            },
-            
-            updateDebugPanel: function(type, message) {
-                const debugPanel = document.getElementById('debugPanel');
-                const debugContent = document.getElementById('debugContent');
-                
-                if (debugPanel && debugContent) {
-                    const timestamp = new Date().toLocaleTimeString();
-                    debugContent.innerHTML = 
-                        `<span style="color: #7f8c8d;">${timestamp}</span> ` +
-                        `<span style="color: #3498db;">${type}</span> ` +
-                        `${message}<br>` + 
-                        debugContent.innerHTML;
-                    
-                    debugPanel.style.display = 'block';
-                }
-            },
-            
-            clear: function() {
-                const debugContent = document.getElementById('debugContent');
-                if (debugContent) {
-                    debugContent.innerHTML = 'Debug cleared.';
-                }
-            }
-        };
+<!-- LOGIN -->
+<div class="card" id="loginSection">
+  <h2>Student Login</h2>
+  <input id="schoolInput" placeholder="School Name">
+  <input id="admInput" placeholder="Admission No">
+  <button onclick="login()">Login</button>
+  <div id="errorMsg" class="error"></div>
+</div>
 
-        // ============================================
-        // MAIN APPLICATION CODE
-        // ============================================
-        const loginSection = document.getElementById('loginSection');
-        const studentDashboard = document.getElementById('studentDashboard');
-        const errorMessage = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        const loading = document.getElementById('loading');
-        const studentAdmissionInput = document.getElementById('studentAdmission');
-        const schoolSelect = document.getElementById('schoolSelect');
-        const loginBtn = document.getElementById('loginBtn');
-        const debugBtn = document.getElementById('debugBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const debugPanel = document.getElementById('debugPanel');
-        const currentSchoolName = document.getElementById('currentSchoolName');
+<!-- DASHBOARD -->
+<div class="card hidden" id="dashboard">
+  <h2 id="stName"></h2>
 
-        // Application state
-        let currentStudent = null;
-        let currentSchool = null;
-        let schools = [];
-        let studentsBySchool = {};
-        let attendanceDataBySchool = {};
-        let paymentsDataBySchool = {};
+  <div class="stat"><span>Admission</span><span id="stAdm"></span></div>
+  <div class="stat"><span>Class</span><span id="stClass"></span></div>
+  <div class="stat"><span>Section</span><span id="stSection"></span></div>
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', async () => {
-            ConsoleDebug.info('Student Portal initialized');
-            ConsoleDebug.info('Loading data from IndexedDB...');
-            
-            try {
-                showLoading();
-                await loadDataFromIndexedDB();
-                populateSchoolSelect();
-                hideLoading();
-                showSection(loginSection);
-                
-                // Check for URL parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                const admParam = urlParams.get('adm');
-                const schoolParam = urlParams.get('school');
-                
-                if (admParam && schoolParam) {
-                    ConsoleDebug.info('Found URL parameters:', { adm: admParam, school: schoolParam });
-                    studentAdmissionInput.value = admParam;
-                    schoolSelect.value = decodeURIComponent(schoolParam);
-                    loginBtn.click();
-                }
-            } catch (error) {
-                ConsoleDebug.error('Initialization failed:', error);
-                showError('Failed to load data. Please try again.');
-                hideLoading();
-            }
-        });
+  <hr>
 
-        // Load data from IndexedDB
-        async function loadDataFromIndexedDB() {
-            ConsoleDebug.info('Starting IndexedDB data load');
-            
-            try {
-                const { get } = window.idbKeyval || {};
-                
-                if (!get) {
-                    ConsoleDebug.error('idbKeyval not available');
-                    throw new Error('Database library not loaded');
-                }
-                
-                // Load all data with debugging
-                studentsBySchool = (await get('studentsBySchool')) || {};
-                attendanceDataBySchool = (await get('attendanceDataBySchool')) || {};
-                paymentsDataBySchool = (await get('paymentsDataBySchool')) || {};
-                schools = (await get('schools')) || [];
-                
-                ConsoleDebug.log('Loaded schools:', schools);
-                ConsoleDebug.log('Loaded studentsBySchool keys:', Object.keys(studentsBySchool));
-                ConsoleDebug.table(Object.entries(studentsBySchool).map(([school, students]) => ({
-                    School: school,
-                    'Student Count': Array.isArray(students) ? students.length : 0,
-                    'Data Type': typeof students
-                })));
-                
-                currentSchoolName.textContent = schools.length > 0 
-                    ? `${schools.length} Schools Available` 
-                    : 'No Schools Found';
-                    
-            } catch (error) {
-                ConsoleDebug.error('IndexedDB load error:', error);
-                throw error;
-            }
-        }
+  <div class="stat"><span>Present</span><span id="p"></span></div>
+  <div class="stat"><span>Absent</span><span id="a"></span></div>
+  <div class="stat"><span>Late</span><span id="l"></span></div>
+  <div class="stat"><span>Leave</span><span id="lv"></span></div>
+  <div class="stat"><span>Fine</span><span id="fine"></span></div>
 
-        // Populate school dropdown
-        function populateSchoolSelect() {
-            ConsoleDebug.info('Populating school dropdown');
-            
-            schoolSelect.innerHTML = '<option value="">Select your school</option>';
-            schools.forEach(school => {
-                const option = document.createElement('option');
-                option.value = school;
-                option.textContent = school;
-                schoolSelect.appendChild(option);
-            });
-            
-            ConsoleDebug.log(`Added ${schools.length} schools to dropdown`);
-        }
+  <div style="margin-top:1rem">
+    Status: <span id="statusBadge" class="badge"></span>
+  </div>
+</div>
 
-        // Show error message
-        function showError(message) {
-            ConsoleDebug.error('Showing error:', message);
-            errorText.textContent = message;
-            errorMessage.style.display = 'flex';
-            setTimeout(() => {
-                errorMessage.style.display = 'none';
-            }, 5000);
-        }
+<!-- DEBUG BUTTON -->
+<button onclick="debugDB()" style="margin:1rem auto;display:block">
+  DEBUG: Show Stored Data
+</button>
 
-        function showLoading() {
-            loading.style.display = 'block';
-            loginSection.style.display = 'none';
-            studentDashboard.style.display = 'none';
-        }
+<script>
+/* ---------- IndexedDB helpers ---------- */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open("schoolDB",1);
+    req.onupgradeneeded=function(e){
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains("studentsBySchool")){
+        db.createObjectStore("studentsBySchool",{keyPath:"id",autoIncrement:true});
+      }
+      if(!db.objectStoreNames.contains("attendanceDatabySchool")){
+        db.createObjectStore("attendanceDatabySchool",{keyPath:"id",autoIncrement:true});
+      }
+    }
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject("DB error");
+  });
+}
 
-        function hideLoading() {
-            loading.style.display = 'none';
-        }
+function readStoreAll(db,store){
+  return new Promise(resolve=>{
+    if(!db.objectStoreNames.contains(store)){
+      resolve([]);
+      return;
+    }
+    const tx=db.transaction(store,"readonly");
+    const os=tx.objectStore(store);
+    const rq=os.getAll();
+    rq.onsuccess=()=>resolve(rq.result);
+    rq.onerror=()=>resolve([]);
+  });
+}
 
-        function showSection(section) {
-            loginSection.style.display = section === loginSection ? 'block' : 'none';
-            studentDashboard.style.display = section === studentDashboard ? 'block' : 'none';
-        }
+/* ---------- LOGIN ---------- */
+async function login(){
+  const errorMsg=document.getElementById("errorMsg");
+  errorMsg.textContent="";
 
-        // Login button click handler
-        loginBtn.addEventListener('click', async () => {
-            const admissionNumber = studentAdmissionInput.value.trim();
-            const selectedSchool = schoolSelect.value;
-            
-            ConsoleDebug.info('Login attempt:', { admissionNumber, selectedSchool });
-            
-            if (!admissionNumber) {
-                showError('Please enter your admission number');
-                return;
-            }
-            
-            if (!selectedSchool) {
-                showError('Please select your school');
-                return;
-            }
-            
-            showLoading();
-            
-            try {
-                ConsoleDebug.info('Reloading IndexedDB data for login');
-                await loadDataFromIndexedDB();
-                
-                // CRITICAL DEBUGGING: Log exactly what we're searching through
-                const schoolStudents = studentsBySchool[selectedSchool];
-                ConsoleDebug.log(`Looking for students in school: "${selectedSchool}"`);
-                ConsoleDebug.log(`School students data type:`, typeof schoolStudents);
-                ConsoleDebug.log(`School students value:`, schoolStudents);
-                
-                if (!schoolStudents || !Array.isArray(schoolStudents)) {
-                    ConsoleDebug.error(`No student array found for school "${selectedSchool}"`);
-                    showError(`No students found in "${selectedSchool}". Check main app data.`);
-                    hideLoading();
-                    return;
-                }
-                
-                ConsoleDebug.log(`Searching through ${schoolStudents.length} students`);
-                ConsoleDebug.table(schoolStudents.map(s => ({ 
-                    'Adm#': s.adm, 
-                    'Name': s.name,
-                    'Class': s.cls,
-                    'Section': s.sec 
-                })));
-                
-                // Try different search methods
-                const student = schoolStudents.find(s => {
-                    ConsoleDebug.log(`Comparing: "${s.adm}" (${typeof s.adm}) with "${admissionNumber}" (${typeof admissionNumber})`);
-                    return String(s.adm) === String(admissionNumber);
-                });
-                
-                if (!student) {
-                    ConsoleDebug.warn(`Student not found. Admission: "${admissionNumber}"`);
-                    ConsoleDebug.log('Available admission numbers:', schoolStudents.map(s => s.adm));
-                    showError(`Student with admission "${admissionNumber}" not found in "${selectedSchool}".`);
-                    hideLoading();
-                    return;
-                }
-                
-                ConsoleDebug.info('Student found:', student);
-                currentStudent = student;
-                currentSchool = selectedSchool;
-                
-                await renderStudentDashboard();
-                
-                hideLoading();
-                showSection(studentDashboard);
-                
-                // Update URL
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('adm', admissionNumber);
-                newUrl.searchParams.set('school', selectedSchool);
-                window.history.pushState({}, '', newUrl);
-                
-            } catch (error) {
-                ConsoleDebug.error('Login error:', error);
-                showError('Error loading student data: ' + error.message);
-                hideLoading();
-            }
-        });
+  const school=schoolInput.value.trim();
+  const adm=admInput.value.trim();
 
-        // Debug button
-        debugBtn.addEventListener('click', () => {
-            debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
-            ConsoleDebug.log('Debug panel toggled');
-        });
+  if(!school||!adm){
+    errorMsg.textContent="Both fields are required";
+    return;
+  }
 
-        // Logout button
-        logoutBtn.addEventListener('click', () => {
-            ConsoleDebug.info('User logged out');
-            currentStudent = null;
-            currentSchool = null;
-            showSection(loginSection);
-            studentAdmissionInput.value = '';
-            schoolSelect.value = '';
-            window.history.pushState({}, '', window.location.pathname);
-        });
+  const db=await openDB();
+  const studentsRecords=await readStoreAll(db,"studentsBySchool");
+  const attendanceRecords=await readStoreAll(db,"attendanceDatabySchool");
 
-        // Render student dashboard
-        async function renderStudentDashboard() {
-            if (!currentStudent || !currentSchool) return;
-            
-            ConsoleDebug.info('Rendering dashboard for:', currentStudent.name);
-            
-            const student = currentStudent;
-            const school = currentSchool;
-            
-            // Render student info
-            const infoItems = [
-                { label: 'Full Name', value: student.name, icon: '👤' },
-                { label: 'Admission Number', value: student.adm, icon: '🔢' },
-                { label: 'Class', value: student.cls, icon: '🎓' },
-                { label: 'Section', value: student.sec, icon: '📚' },
-                { label: 'Parent Name', value: student.parent, icon: '👨‍👩‍👧‍👦' },
-                { label: 'Contact', value: student.contact, icon: '📱' },
-                { label: 'Occupation', value: student.occupation, icon: '💼' },
-                { label: 'Address', value: student.address, icon: '🏠' }
-            ];
-            
-            studentInfoGrid.innerHTML = infoItems.map(item => `
-                <div class="info-item">
-                    <div class="info-label">${item.icon} ${item.label}</div>
-                    <div class="info-value">${item.value || 'Not available'}</div>
-                </div>
-            `).join('');
-            
-            ConsoleDebug.info('Dashboard rendered successfully');
-        }
+  let student=null;
 
-        // Auto-refresh for mobile
-        setInterval(async () => {
-            if (currentStudent && currentSchool) {
-                ConsoleDebug.debug('Auto-refreshing data...');
-                await loadDataFromIndexedDB();
-                if (studentDashboard.style.display !== 'none') {
-                    await renderStudentDashboard();
-                }
-            }
-        }, 30000); // Every 30 seconds
+  // Find student by school + admissionNo
+  for(const s of studentsRecords){
+    if(s.school===school && String(s.admissionNo)===String(adm)){
+      student=s;
+      break;
+    }
+  }
 
-        // Touch event improvements for mobile
-        document.addEventListener('touchstart', function() {}, {passive: true});
-    </script>
+  if(!student){
+    errorMsg.textContent="Record not found";
+    return;
+  }
+
+  // Filter attendance for this student
+  const records=attendanceRecords.filter(r=>r.school===school && String(r.admissionNo)===String(adm));
+
+  loginSection.classList.add("hidden");
+  dashboard.classList.remove("hidden");
+
+  stName.textContent=student.name;
+  stAdm.textContent=student.admissionNo;
+  stClass.textContent=student.class;
+  stSection.textContent=student.section;
+
+  let P=0,A=0,L=0,LV=0,F=0;
+  records.forEach(r=>{
+    if(r.status==="Present")P++;
+    if(r.status==="Absent")A++;
+    if(r.status==="Late")L++;
+    if(r.status==="Leave")LV++;
+    F+=Number(r.fine||0);
+  });
+
+  p.textContent=P;
+  a.textContent=A;
+  l.textContent=L;
+  lv.textContent=LV;
+  fine.textContent=F;
+
+  const badge=statusBadge;
+  if(F===0){
+    badge.textContent="Cleared";
+    badge.className="badge ok";
+  }else{
+    badge.textContent="Due";
+    badge.className="badge due";
+  }
+}
+
+/* ---------- DEBUG ---------- */
+async function debugDB(){
+  const db=await openDB();
+  alert("Object Stores:\n\n"+[...db.objectStoreNames].join("\n"));
+  const students=await readStoreAll(db,"studentsBySchool");
+  console.log("STUDENTS:", students);
+  const attendance=await readStoreAll(db,"attendanceDatabySchool");
+  console.log("ATTENDANCE:", attendance);
+}
+</script>
 </body>
 </html>
