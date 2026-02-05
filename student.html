@@ -7,60 +7,67 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- Font Awesome -->
 <link rel="stylesheet"
- href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-<!-- idb-keyval -->
-<script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval.iife.min.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:system-ui,-apple-system,BlinkMacSystemFont;
-  background:#f1f5f9;
-  color:#0f172a;
+  font-family:system-ui;
+  background:#f1f5f9
 }
 header{
   background:#0f172a;
   color:#fff;
   padding:1rem;
-  text-align:center;
+  text-align:center
 }
-section{padding:1rem}
+section{
+  padding:1rem
+}
 input,button{
   width:100%;
-  padding:.75rem;
+  padding:.7rem;
   margin:.4rem 0;
-  border-radius:8px;
-  font-size:1rem;
+  border-radius:6px;
+  font-size:1rem
 }
-input{border:1px solid #cbd5e1}
+input{
+  border:1px solid #cbd5e1
+}
 button{
   border:none;
   background:#2563eb;
   color:#fff;
-  cursor:pointer;
+  cursor:pointer
 }
-button.secondary{background:#64748b}
 .card{
   background:#fff;
   padding:1rem;
   margin-bottom:1rem;
-  border-radius:10px;
-  box-shadow:0 4px 10px rgba(0,0,0,.08);
+  border-radius:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,.08)
 }
-.hidden{display:none}
-.error{color:#dc2626;font-size:.9rem}
+.hidden{
+  display:none
+}
+.error{
+  color:red
+}
 .badge{
-  padding:.25rem .6rem;
-  border-radius:999px;
-  font-size:.8rem;
+  padding:.3rem .7rem;
+  border-radius:20px;
+  font-size:.9rem
 }
-.badge.ok{background:#dcfce7;color:#166534}
-.badge.due{background:#fee2e2;color:#991b1b}
-.footer-btn{
-  margin-top:1rem;
+.ok{
+  background:#dcfce7;
+  color:#166534
+}
+.due{
+  background:#fee2e2;
+  color:#991b1b
 }
 </style>
 </head>
@@ -71,25 +78,18 @@ button.secondary{background:#64748b}
   <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
 </header>
 
-<!-- LOGIN -->
 <section id="loginSection">
-  <h3>Access Student Record</h3>
-
+  <h3>Access Your Record</h3>
   <input id="schoolInput" placeholder="School Name">
   <input id="admInput" placeholder="Admission Number">
-
-  <button id="loginBtn">
-    <i class="fas fa-arrow-right"></i> Continue
-  </button>
-
+  <button onclick="login()">Continue</button>
   <p class="error" id="errorMsg"></p>
 </section>
 
-<!-- DASHBOARD -->
 <section id="dashboard" class="hidden">
 
   <div class="card">
-    <h4><i class="fas fa-id-card"></i> Student Info</h4>
+    <h4>Student Info</h4>
     <p><b>Name:</b> <span id="stName"></span></p>
     <p><b>Admission #:</b> <span id="stAdm"></span></p>
     <p><b>Class:</b> <span id="stClass"></span></p>
@@ -97,34 +97,30 @@ button.secondary{background:#64748b}
   </div>
 
   <div class="card">
-    <h4><i class="fas fa-calendar-check"></i> Attendance Summary</h4>
-    <p>Present: <b><span id="p">0</span></b></p>
-    <p>Absent: <b><span id="a">0</span></b></p>
-    <p>Late: <b><span id="l">0</span></b></p>
-    <p>Leave: <b><span id="lv">0</span></b></p>
+    <h4>Attendance Summary</h4>
+    <p>Present: <span id="p"></span></p>
+    <p>Absent: <span id="a"></span></p>
+    <p>Late: <span id="l"></span></p>
+    <p>Leave: <span id="lv"></span></p>
   </div>
 
   <div class="card">
-    <h4><i class="fas fa-wallet"></i> Financial Status</h4>
-    <p>Total Fine: <b>PKR <span id="fine">0</span></b></p>
+    <h4>Financial</h4>
+    <p>Total Fine: <b><span id="fine"></span></b></p>
     <p>Status:
       <span id="statusBadge" class="badge"></span>
     </p>
   </div>
 
-  <button class="secondary footer-btn" onclick="location.reload()">
-    <i class="fas fa-sign-out-alt"></i> Logout
-  </button>
-
+  <button onclick="location.reload()">Logout</button>
 </section>
 
+<button onclick="debugDB()" style="margin:1rem">
+  DEBUG: Show Stored Keys
+</button>
+
 <script>
-const { get } = idbKeyval;
-
-const loginBtn = document.getElementById("loginBtn");
-const errorMsg = document.getElementById("errorMsg");
-
-loginBtn.addEventListener("click", login);
+const { get, keys } = idbKeyval;
 
 async function login(){
   errorMsg.textContent = "";
@@ -137,33 +133,47 @@ async function login(){
     return;
   }
 
-  // Read SAME data as Attendance App
-  const students = (await get("students")) || [];
-  const attendance = (await get("attendance")) || [];
+  const studentsBySchool = await get("studentsBySchool") || {};
+  const attendanceBySchool = await get("attendanceDatabySchool") || {};
 
-  const st = students.find(s =>
-    s.school === school &&
-    String(s.admissionNo) === String(adm)
-  );
+  let student = null;
+  let attendanceList = [];
 
-  if(!st){
+  if(studentsBySchool[school]){
+    for(const cls in studentsBySchool[school]){
+      for(const sec in studentsBySchool[school][cls]){
+        const arr = studentsBySchool[school][cls][sec] || [];
+        const st = arr.find(s =>
+          String(s.admissionNo) === String(adm)
+        );
+        if(st){
+          student = st;
+          attendanceList =
+            attendanceBySchool?.[school]?.[cls]?.[sec] || [];
+          break;
+        }
+      }
+      if(student) break;
+    }
+  }
+
+  if(!student){
     errorMsg.textContent = "Record not found";
     return;
   }
 
-  // Show dashboard
   loginSection.classList.add("hidden");
   dashboard.classList.remove("hidden");
 
-  stName.textContent = st.name;
-  stAdm.textContent = st.admissionNo;
-  stClass.textContent = st.class;
-  stSection.textContent = st.section;
+  stName.textContent = student.name;
+  stAdm.textContent = student.admissionNo;
+  stClass.textContent = student.class;
+  stSection.textContent = student.section;
 
   let P=0,A=0,L=0,LV=0,F=0;
 
-  attendance.forEach(r=>{
-    if(String(r.admissionNo) === String(st.admissionNo)){
+  attendanceList.forEach(r=>{
+    if(String(r.admissionNo) === String(student.admissionNo)){
       if(r.status==="Present") P++;
       if(r.status==="Absent") A++;
       if(r.status==="Late") L++;
@@ -187,23 +197,13 @@ async function login(){
     badge.className = "badge due";
   }
 }
-</script>
- 
-<button onclick="debugDB()" style="margin:1rem">
-  DEBUG: Show Stored Data
-</button>
 
-<script>
 async function debugDB(){
-  const keys = await idbKeyval.keys();
-  alert("Stored Keys:\n\n" + keys.join("\n"));
-  console.log("ALL KEYS:", keys);
-
-  for(const k of keys){
-    const val = await idbKeyval.get(k);
-    console.log("KEY:", k, val);
-  }
+  const k = await keys();
+  alert("Stored Keys:\n\n" + k.join("\n"));
+  console.log("ALL KEYS:", k);
 }
 </script>
+
 </body>
 </html>
