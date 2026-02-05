@@ -188,6 +188,22 @@ async function login(){
   }
 }
 </script>
+ 
+<button onclick="debugDB()" style="margin:1rem">
+  DEBUG: Show Stored Data
+</button>
 
+<script>
+async function debugDB(){
+  const keys = await idbKeyval.keys();
+  alert("Stored Keys:\n\n" + keys.join("\n"));
+  console.log("ALL KEYS:", keys);
+
+  for(const k of keys){
+    const val = await idbKeyval.get(k);
+    console.log("KEY:", k, val);
+  }
+}
+</script>
 </body>
 </html>
