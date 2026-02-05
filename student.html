@@ -4,204 +4,180 @@
 <meta charset="UTF-8">
 <title>Student Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f172a">
-<meta name="mobile-web-app-capable" content="yes">
 
-<link rel="stylesheet"
- href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
+<!-- ✅ idb-keyval MUST be loaded first (IIFE version, no modules) -->
 <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval.iife.min.js"></script>
 
 <style>
 body{
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background:#f3f4f6;
   margin:0;
-  font-family:system-ui;
-  background:#f1f5f9
-}
-header{
-  background:#0f172a;
-  color:#fff;
   padding:1rem;
-  text-align:center
-}
-section{
-  padding:1rem
-}
-input,button{
-  width:100%;
-  padding:.7rem;
-  margin:.4rem 0;
-  border-radius:6px;
-  font-size:1rem
-}
-input{
-  border:1px solid #cbd5e1
-}
-button{
-  border:none;
-  background:#2563eb;
-  color:#fff;
-  cursor:pointer
 }
 .card{
+  max-width:420px;
+  margin:auto;
   background:#fff;
-  padding:1rem;
-  margin-bottom:1rem;
+  border-radius:14px;
+  padding:1.5rem;
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+h2{margin-top:0}
+input,button{
+  width:100%;
+  padding:.75rem;
+  margin:.5rem 0;
   border-radius:8px;
-  box-shadow:0 2px 6px rgba(0,0,0,.08)
+  border:1px solid #ccc;
+  font-size:1rem;
 }
-.hidden{
-  display:none
+button{
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  cursor:pointer;
 }
-.error{
-  color:red
+button:active{transform:scale(.98)}
+.hidden{display:none}
+.error{color:#dc2626;margin-top:.5rem}
+.stat{
+  display:flex;
+  justify-content:space-between;
+  margin:.35rem 0;
 }
 .badge{
-  padding:.3rem .7rem;
-  border-radius:20px;
-  font-size:.9rem
+  padding:.3rem .8rem;
+  border-radius:999px;
+  font-size:.85rem;
 }
-.ok{
-  background:#dcfce7;
-  color:#166534
-}
-.due{
-  background:#fee2e2;
-  color:#991b1b
-}
+.badge.ok{background:#dcfce7;color:#166534}
+.badge.due{background:#fee2e2;color:#991b1b}
 </style>
 </head>
 
 <body>
 
-<header>
-  <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
-</header>
-
-<section id="loginSection">
-  <h3>Access Your Record</h3>
+<!-- LOGIN -->
+<div class="card" id="loginSection">
+  <h2>Student Login</h2>
   <input id="schoolInput" placeholder="School Name">
-  <input id="admInput" placeholder="Admission Number">
-  <button onclick="login()">Continue</button>
-  <p class="error" id="errorMsg"></p>
-</section>
+  <input id="admInput" placeholder="Admission No">
+  <button onclick="login()">Login</button>
+  <div id="errorMsg" class="error"></div>
+</div>
 
-<section id="dashboard" class="hidden">
+<!-- DASHBOARD -->
+<div class="card hidden" id="dashboard">
+  <h2 id="stName"></h2>
 
-  <div class="card">
-    <h4>Student Info</h4>
-    <p><b>Name:</b> <span id="stName"></span></p>
-    <p><b>Admission #:</b> <span id="stAdm"></span></p>
-    <p><b>Class:</b> <span id="stClass"></span></p>
-    <p><b>Section:</b> <span id="stSection"></span></p>
+  <div class="stat"><span>Admission</span><span id="stAdm"></span></div>
+  <div class="stat"><span>Class</span><span id="stClass"></span></div>
+  <div class="stat"><span>Section</span><span id="stSection"></span></div>
+
+  <hr>
+
+  <div class="stat"><span>Present</span><span id="p"></span></div>
+  <div class="stat"><span>Absent</span><span id="a"></span></div>
+  <div class="stat"><span>Late</span><span id="l"></span></div>
+  <div class="stat"><span>Leave</span><span id="lv"></span></div>
+  <div class="stat"><span>Fine</span><span id="fine"></span></div>
+
+  <div style="margin-top:1rem">
+    Status:
+    <span id="statusBadge" class="badge"></span>
   </div>
+</div>
 
-  <div class="card">
-    <h4>Attendance Summary</h4>
-    <p>Present: <span id="p"></span></p>
-    <p>Absent: <span id="a"></span></p>
-    <p>Late: <span id="l"></span></p>
-    <p>Leave: <span id="lv"></span></p>
-  </div>
-
-  <div class="card">
-    <h4>Financial</h4>
-    <p>Total Fine: <b><span id="fine"></span></b></p>
-    <p>Status:
-      <span id="statusBadge" class="badge"></span>
-    </p>
-  </div>
-
-  <button onclick="location.reload()">Logout</button>
-</section>
-
-<button onclick="debugDB()" style="margin:1rem">
+<!-- DEBUG BUTTON (OPTIONAL) -->
+<button onclick="debugDB()" style="margin:1rem auto;display:block">
   DEBUG: Show Stored Keys
 </button>
 
 <script>
-const { get, keys } = idbKeyval;
-
+/* ✅ SAFE ACCESS (no destructuring before load) */
 async function login(){
+  const errorMsg = document.getElementById("errorMsg");
   errorMsg.textContent = "";
 
-  const school = schoolInput.value.trim();
-  const adm = admInput.value.trim();
+  const school = document.getElementById("schoolInput").value.trim();
+  const adm = document.getElementById("admInput").value.trim();
 
   if(!school || !adm){
     errorMsg.textContent = "Both fields are required";
     return;
   }
 
-  const studentsBySchool = await get("studentsBySchool") || {};
-  const attendanceBySchool = await get("attendanceDatabySchool") || {};
+  const studentsBySchool =
+    await idbKeyval.get("studentsBySchool") || {};
 
-  let student = null;
-  let attendanceList = [];
+  const attendanceBySchool =
+    await idbKeyval.get("attendanceDatabySchool") || {};
+
+  let found = null;
+  let records = [];
 
   if(studentsBySchool[school]){
     for(const cls in studentsBySchool[school]){
       for(const sec in studentsBySchool[school][cls]){
-        const arr = studentsBySchool[school][cls][sec] || [];
-        const st = arr.find(s =>
-          String(s.admissionNo) === String(adm)
-        );
-        if(st){
-          student = st;
-          attendanceList =
-            attendanceBySchool?.[school]?.[cls]?.[sec] || [];
+        const list = studentsBySchool[school][cls][sec] || [];
+        const s = list.find(x => String(x.admissionNo) === String(adm));
+        if(s){
+          found = s;
+          records = attendanceBySchool?.[school]?.[cls]?.[sec] || [];
           break;
         }
       }
-      if(student) break;
+      if(found) break;
     }
   }
 
-  if(!student){
+  if(!found){
     errorMsg.textContent = "Record not found";
     return;
   }
 
-  loginSection.classList.add("hidden");
-  dashboard.classList.remove("hidden");
+  document.getElementById("loginSection").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
 
-  stName.textContent = student.name;
-  stAdm.textContent = student.admissionNo;
-  stClass.textContent = student.class;
-  stSection.textContent = student.section;
+  stName.textContent = found.name;
+  stAdm.textContent = found.admissionNo;
+  stClass.textContent = found.class;
+  stSection.textContent = found.section;
 
   let P=0,A=0,L=0,LV=0,F=0;
 
-  attendanceList.forEach(r=>{
-    if(String(r.admissionNo) === String(student.admissionNo)){
+  records.forEach(r=>{
+    if(String(r.admissionNo) === String(found.admissionNo)){
       if(r.status==="Present") P++;
       if(r.status==="Absent") A++;
       if(r.status==="Late") L++;
       if(r.status==="Leave") LV++;
-      F += Number(r.fine || 0);
+      F += Number(r.fine||0);
     }
   });
 
-  p.textContent = P;
-  a.textContent = A;
-  l.textContent = L;
-  lv.textContent = LV;
-  fine.textContent = F;
+  p.textContent=P;
+  a.textContent=A;
+  l.textContent=L;
+  lv.textContent=LV;
+  fine.textContent=F;
 
-  const badge = document.getElementById("statusBadge");
-  if(F === 0){
-    badge.textContent = "Cleared";
-    badge.className = "badge ok";
+  const badge=document.getElementById("statusBadge");
+  if(F===0){
+    badge.textContent="Cleared";
+    badge.className="badge ok";
   }else{
-    badge.textContent = "Due";
-    badge.className = "badge due";
+    badge.textContent="Due";
+    badge.className="badge due";
   }
 }
 
+/* ✅ DEBUG — NO keys() ERROR */
 async function debugDB(){
-  const k = await keys();
-  alert("Stored Keys:\n\n" + k.join("\n"));
-  console.log("ALL KEYS:", k);
+  const keys = await idbKeyval.keys();
+  alert("Stored Keys:\n\n"+keys.join("\n"));
+  console.log("DB KEYS:", keys);
 }
 </script>
 
