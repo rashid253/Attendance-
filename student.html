@@ -5,13 +5,10 @@
 <title>Student Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- ✅ idb-keyval MUST be loaded first (IIFE version, no modules) -->
-<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval.iife.min.js"></script>
-
 <style>
 body{
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background:#f3f4f6;
+  background: #f1f5f9;
   margin:0;
   padding:1rem;
 }
@@ -29,7 +26,7 @@ input,button{
   padding:.75rem;
   margin:.5rem 0;
   border-radius:8px;
-  border:1px solid #ccc;
+  border:1px solid #cbd5e1;
   font-size:1rem;
 }
 button{
@@ -55,7 +52,6 @@ button:active{transform:scale(.98)}
 .badge.due{background:#fee2e2;color:#991b1b}
 </style>
 </head>
-
 <body>
 
 <!-- LOGIN -->
@@ -84,77 +80,99 @@ button:active{transform:scale(.98)}
   <div class="stat"><span>Fine</span><span id="fine"></span></div>
 
   <div style="margin-top:1rem">
-    Status:
-    <span id="statusBadge" class="badge"></span>
+    Status: <span id="statusBadge" class="badge"></span>
   </div>
 </div>
 
-<!-- DEBUG BUTTON (OPTIONAL) -->
+<!-- DEBUG BUTTON -->
 <button onclick="debugDB()" style="margin:1rem auto;display:block">
-  DEBUG: Show Stored Keys
+  DEBUG: Show Stored Data
 </button>
 
 <script>
-/* ✅ SAFE ACCESS (no destructuring before load) */
+/* ---------- IndexedDB helpers ---------- */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open("schoolDB",1);
+    req.onupgradeneeded=function(e){
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains("studentsBySchool")){
+        db.createObjectStore("studentsBySchool",{keyPath:"id",autoIncrement:true});
+      }
+      if(!db.objectStoreNames.contains("attendanceDatabySchool")){
+        db.createObjectStore("attendanceDatabySchool",{keyPath:"id",autoIncrement:true});
+      }
+    }
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject("DB error");
+  });
+}
+
+function readStoreAll(db,store){
+  return new Promise(resolve=>{
+    if(!db.objectStoreNames.contains(store)){
+      resolve([]);
+      return;
+    }
+    const tx=db.transaction(store,"readonly");
+    const os=tx.objectStore(store);
+    const rq=os.getAll();
+    rq.onsuccess=()=>resolve(rq.result);
+    rq.onerror=()=>resolve([]);
+  });
+}
+
+/* ---------- LOGIN ---------- */
 async function login(){
-  const errorMsg = document.getElementById("errorMsg");
-  errorMsg.textContent = "";
+  const errorMsg=document.getElementById("errorMsg");
+  errorMsg.textContent="";
 
-  const school = document.getElementById("schoolInput").value.trim();
-  const adm = document.getElementById("admInput").value.trim();
+  const school=schoolInput.value.trim();
+  const adm=admInput.value.trim();
 
-  if(!school || !adm){
-    errorMsg.textContent = "Both fields are required";
+  if(!school||!adm){
+    errorMsg.textContent="Both fields are required";
     return;
   }
 
-  const studentsBySchool =
-    await idbKeyval.get("studentsBySchool") || {};
+  const db=await openDB();
+  const studentsRecords=await readStoreAll(db,"studentsBySchool");
+  const attendanceRecords=await readStoreAll(db,"attendanceDatabySchool");
 
-  const attendanceBySchool =
-    await idbKeyval.get("attendanceDatabySchool") || {};
+  let student=null;
+  let records=[];
 
-  let found = null;
-  let records = [];
-
-  if(studentsBySchool[school]){
-    for(const cls in studentsBySchool[school]){
-      for(const sec in studentsBySchool[school][cls]){
-        const list = studentsBySchool[school][cls][sec] || [];
-        const s = list.find(x => String(x.admissionNo) === String(adm));
-        if(s){
-          found = s;
-          records = attendanceBySchool?.[school]?.[cls]?.[sec] || [];
-          break;
-        }
-      }
-      if(found) break;
+  // Loop through nested structure
+  for(const s of studentsRecords){
+    if(s.school===school && String(s.admissionNo)===String(adm)){
+      student=s;
+      break;
     }
   }
 
-  if(!found){
-    errorMsg.textContent = "Record not found";
+  if(!student){
+    errorMsg.textContent="Record not found";
     return;
   }
 
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
+  // Attendance
+  records=attendanceRecords.filter(r=>r.school===school && String(r.admissionNo)===String(adm));
 
-  stName.textContent = found.name;
-  stAdm.textContent = found.admissionNo;
-  stClass.textContent = found.class;
-  stSection.textContent = found.section;
+  loginSection.classList.add("hidden");
+  dashboard.classList.remove("hidden");
+
+  stName.textContent=student.name;
+  stAdm.textContent=student.admissionNo;
+  stClass.textContent=student.class;
+  stSection.textContent=student.section;
 
   let P=0,A=0,L=0,LV=0,F=0;
-
   records.forEach(r=>{
-    if(String(r.admissionNo) === String(found.admissionNo)){
-      if(r.status==="Present") P++;
-      if(r.status==="Absent") A++;
-      if(r.status==="Late") L++;
-      if(r.status==="Leave") LV++;
-      F += Number(r.fine||0);
-    }
+    if(r.status==="Present")P++;
+    if(r.status==="Absent")A++;
+    if(r.status==="Late")L++;
+    if(r.status==="Leave")LV++;
+    F+=Number(r.fine||0);
   });
 
   p.textContent=P;
@@ -163,7 +181,7 @@ async function login(){
   lv.textContent=LV;
   fine.textContent=F;
 
-  const badge=document.getElementById("statusBadge");
+  const badge=statusBadge;
   if(F===0){
     badge.textContent="Cleared";
     badge.className="badge ok";
@@ -173,13 +191,15 @@ async function login(){
   }
 }
 
-/* ✅ DEBUG — NO keys() ERROR */
+/* ---------- DEBUG ---------- */
 async function debugDB(){
-  const keys = await idbKeyval.keys();
-  alert("Stored Keys:\n\n"+keys.join("\n"));
-  console.log("DB KEYS:", keys);
+  const db=await openDB();
+  alert("Object Stores:\n\n"+[...db.objectStoreNames].join("\n"));
+  const students=await readStoreAll(db,"studentsBySchool");
+  console.log("STUDENTS:", students);
+  const attendance=await readStoreAll(db,"attendanceDatabySchool");
+  console.log("ATTENDANCE:", attendance);
 }
 </script>
-
 </body>
 </html>
