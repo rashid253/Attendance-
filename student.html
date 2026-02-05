@@ -4,12 +4,9 @@
 <meta charset="UTF-8">
 <title>Student Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- PWA basics -->
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
@@ -31,26 +28,26 @@ button{border:none;background:#2563eb;color:#fff}
   <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
 </header>
 
-<section id="login">
+<section id="loginSection">
   <h3>Access Your Record</h3>
-  <input id="school" placeholder="School Name">
-  <input id="adm" placeholder="Admission Number">
-  <button onclick="login()">Continue</button>
-  <p class="error" id="err"></p>
+  <input id="schoolInput" placeholder="School Name">
+  <input id="admInput" placeholder="Admission Number">
+  <button id="loginBtn">Continue</button>
+  <p class="error" id="errorMsg"></p>
 </section>
 
-<section id="dash" class="hidden">
+<section id="dashboard" class="hidden">
 
   <div class="card">
-    <h4><i class="fas fa-id-card"></i> Student Info</h4>
-    <p><b>Name:</b> <span id="name"></span></p>
-    <p><b>Admission #:</b> <span id="admNo"></span></p>
-    <p><b>Class:</b> <span id="cls"></span></p>
-    <p><b>Section:</b> <span id="sec"></span></p>
+    <h4>Student Info</h4>
+    <p><b>Name:</b> <span id="stName"></span></p>
+    <p><b>Admission #:</b> <span id="stAdm"></span></p>
+    <p><b>Class:</b> <span id="stClass"></span></p>
+    <p><b>Section:</b> <span id="stSection"></span></p>
   </div>
 
   <div class="card">
-    <h4><i class="fas fa-calendar-check"></i> Attendance</h4>
+    <h4>Attendance Summary</h4>
     <p>Present: <span id="p"></span></p>
     <p>Absent: <span id="a"></span></p>
     <p>Late: <span id="l"></span></p>
@@ -58,74 +55,92 @@ button{border:none;background:#2563eb;color:#fff}
   </div>
 
   <div class="card">
-    <h4><i class="fas fa-wallet"></i> Financial</h4>
+    <h4>Financial</h4>
     <p>Total Fine: <b><span id="fine"></span></b></p>
     <p>Status: <b><span id="status"></span></b></p>
   </div>
 
-  <button onclick="location.reload()">
-    <i class="fas fa-sign-out-alt"></i> Logout
-  </button>
+  <button onclick="location.reload()">Logout</button>
 </section>
 
 <script>
+const loginBtn = document.getElementById("loginBtn");
+const errorMsg = document.getElementById("errorMsg");
+
+loginBtn.addEventListener("click", login);
+
 function openDB(){
-  return new Promise((res,rej)=>{
-    const r=indexedDB.open("attendanceDB");
-    r.onerror=()=>rej();
-    r.onsuccess=()=>res(r.result);
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open("attendanceDB");
+    req.onerror = () => reject("DB error");
+    req.onsuccess = () => resolve(req.result);
   });
 }
 
-function getAll(db,store){
-  return new Promise(res=>{
-    const tx=db.transaction(store,"readonly");
-    const st=tx.objectStore(store);
-    const rq=st.getAll();
-    rq.onsuccess=()=>res(rq.result||[]);
+function getAll(db, store){
+  return new Promise(resolve=>{
+    if(!db.objectStoreNames.contains(store)){
+      resolve([]);
+      return;
+    }
+    const tx = db.transaction(store,"readonly");
+    const os = tx.objectStore(store);
+    const rq = os.getAll();
+    rq.onsuccess = () => resolve(rq.result || []);
   });
 }
 
 async function login(){
-  err.textContent="";
-  const schoolName=school.value.trim();
-  const admNo=adm.value.trim();
-  if(!schoolName||!admNo){err.textContent="Both fields required";return;}
+  errorMsg.textContent = "";
 
-  const db=await openDB();
-  const students=await getAll(db,"students");
+  const school = document.getElementById("schoolInput").value.trim();
+  const adm = document.getElementById("admInput").value.trim();
 
-  const st=students.find(s=>s.school===schoolName && String(s.admissionNo)===admNo);
-  if(!st){err.textContent="Record not found";return;}
+  if(!school || !adm){
+    errorMsg.textContent = "Both fields are required";
+    return;
+  }
 
-  loginSection=false;
-  login.classList.add("hidden");
-  dash.classList.remove("hidden");
+  const db = await openDB();
+  const students = await getAll(db,"students");
 
-  name.textContent=st.name;
-  admNo.textContent=st.admissionNo;
-  cls.textContent=st.class;
-  sec.textContent=st.section;
+  const st = students.find(s =>
+    s.school === school && String(s.admissionNo) === adm
+  );
 
-  const att=await getAll(db,"attendance");
+  if(!st){
+    errorMsg.textContent = "Record not found";
+    return;
+  }
 
-  let pC=0,aC=0,lC=0,lvC=0,f=0;
-  att.forEach(r=>{
-    if(r.admissionNo===st.admissionNo){
-      if(r.status==="Present")pC++;
-      if(r.status==="Absent")aC++;
-      if(r.status==="Late")lC++;
-      if(r.status==="Leave")lvC++;
-      f+=Number(r.fine||0);
+  document.getElementById("loginSection").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  stName.textContent = st.name;
+  stAdm.textContent = st.admissionNo;
+  stClass.textContent = st.class;
+  stSection.textContent = st.section;
+
+  const attendance = await getAll(db,"attendance");
+
+  let P=0,A=0,L=0,LV=0,F=0;
+
+  attendance.forEach(r=>{
+    if(r.admissionNo === st.admissionNo){
+      if(r.status==="Present")P++;
+      if(r.status==="Absent")A++;
+      if(r.status==="Late")L++;
+      if(r.status==="Leave")LV++;
+      F += Number(r.fine||0);
     }
   });
 
-  p.textContent=pC;
-  a.textContent=aC;
-  l.textContent=lC;
-  lv.textContent=lvC;
-  fine.textContent=f;
-  status.textContent=f===0?"Cleared":"Due";
+  p.textContent=P;
+  a.textContent=A;
+  l.textContent=L;
+  lv.textContent=LV;
+  fine.textContent=F;
+  status.textContent = F===0 ? "Cleared" : "Due";
 }
 </script>
 
