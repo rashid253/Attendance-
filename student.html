@@ -1,148 +1,1420 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Student Portal</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f172a">
-<meta name="mobile-web-app-capable" content="yes">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-<style>
-body{margin:0;font-family:system-ui;background:#f1f5f9}
-header{background:#0f172a;color:#fff;padding:1rem;text-align:center}
-section{padding:1rem}
-input,button{width:100%;padding:.7rem;margin:.4rem 0;border-radius:6px;font-size:1rem}
-input{border:1px solid #cbd5e1}
-button{border:none;background:#2563eb;color:#fff}
-.card{background:#fff;padding:1rem;margin-bottom:1rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
-.hidden{display:none}
-.error{color:red}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Portal - Attendance Management</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- idb-keyval (IIFE) -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
+  
+  <!-- Add Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    .header h1 {
+      color: #2196F3;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+    
+    .school-badge {
+      display: inline-block;
+      background: #2196F3;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    
+    .login-section {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .login-section h2 {
+      color: #2196F3;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+    
+    .login-form {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .form-group {
+      margin-bottom: 25px;
+      text-align: left;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #2196F3;
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 20px rgba(33, 150, 243, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+      margin-top: 15px;
+    }
+    
+    .btn-secondary:hover {
+      box-shadow: 0 7px 20px rgba(117, 117, 117, 0.3);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+    }
+    
+    .btn-warning {
+      background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+    }
+    
+    .student-dashboard {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      display: none;
+    }
+    
+    .student-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .student-identity {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .student-avatar {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: white;
+    }
+    
+    .student-basic-info h2 {
+      color: #2196F3;
+      margin-bottom: 5px;
+    }
+    
+    .student-basic-info p {
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .student-basic-info .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .status-eligible {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+    
+    .status-debarred {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .info-item {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      border-left: 4px solid #2196F3;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .info-value {
+      font-size: 1.1rem;
+      color: #333;
+    }
+    
+    .charts-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+    
+    .chart-card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+    
+    .chart-card h3 {
+      color: #2196F3;
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+    }
+    
+    .chart-container {
+      height: 300px;
+      position: relative;
+    }
+    
+    .attendance-table {
+      overflow-x: auto;
+      margin-bottom: 40px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      background: #2196F3;
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    tr:hover {
+      background: #f5f9ff;
+    }
+    
+    .status-present { color: #4CAF50; font-weight: 600; }
+    .status-absent { color: #F44336; font-weight: 600; }
+    .status-late { color: #FF9800; font-weight: 600; }
+    .status-leave { color: #2196F3; font-weight: 600; }
+    .status-halfday { color: #9C27B0; font-weight: 600; }
+    
+    .fine-section {
+      background: #FFF3E0;
+      padding: 25px;
+      border-radius: 10px;
+      margin-bottom: 40px;
+    }
+    
+    .fine-section h3 {
+      color: #FF9800;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .qr-section {
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 10px;
+      margin-bottom: 40px;
+    }
+    
+    .qr-code-container {
+      display: inline-block;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      margin: 20px 0;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    
+    .qr-code-container:hover {
+      transform: scale(1.05);
+    }
+    
+    .qr-code {
+      width: 200px;
+      height: 200px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #666;
+      border: 2px dashed #2196F3;
+    }
+    
+    .logout-btn {
+      text-align: center;
+      margin-top: 30px;
+    }
+    
+    .error-message {
+      background: #FFEBEE;
+      color: #C62828;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #666;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    }
+    
+    .loading i {
+      font-size: 2rem;
+      color: #2196F3;
+      margin-bottom: 20px;
+    }
+    
+    .print-btn {
+      background: #757575;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .print-btn:hover {
+      background: #616161;
+    }
+    
+    .date-filter {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    
+    .date-filter input {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 5px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+      
+      .header h1 {
+        font-size: 1.8rem;
+      }
+      
+      .login-section,
+      .student-dashboard {
+        padding: 20px;
+      }
+      
+      .student-header {
+        flex-direction: column;
+        gap: 20px;
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .charts-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-container {
+        height: 250px;
+      }
+      
+      .student-identity {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+    
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      
+      body {
+        background: white !important;
+        padding: 0 !important;
+      }
+      
+      .container {
+        max-width: 100% !important;
+        box-shadow: none !important;
+      }
+      
+      .student-dashboard {
+        box-shadow: none !important;
+        padding: 20px !important;
+      }
+      
+      .btn {
+        display: none !important;
+      }
+    }
+  </style>
 </head>
-
 <body>
-
-<header>
-  <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
-</header>
-
-<section id="loginSection">
-  <h3>Access Your Record</h3>
-  <input id="schoolInput" placeholder="School Name">
-  <input id="admInput" placeholder="Admission Number">
-  <button id="loginBtn">Continue</button>
-  <p class="error" id="errorMsg"></p>
-</section>
-
-<section id="dashboard" class="hidden">
-
-  <div class="card">
-    <h4>Student Info</h4>
-    <p><b>Name:</b> <span id="stName"></span></p>
-    <p><b>Admission #:</b> <span id="stAdm"></span></p>
-    <p><b>Class:</b> <span id="stClass"></span></p>
-    <p><b>Section:</b> <span id="stSection"></span></p>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1><i class="fas fa-user-graduate"></i> Student Portal</h1>
+      <p>Check your attendance, academic status, and personal information</p>
+      <div class="school-badge">
+        <i class="fas fa-school"></i> <span id="currentSchoolName">Attendance Management System</span>
+      </div>
+    </div>
+    
+    <!-- Error Message -->
+    <div class="error-message" id="errorMessage">
+      <i class="fas fa-exclamation-circle"></i> <span id="errorText"></span>
+    </div>
+    
+    <!-- Loading State -->
+    <div class="loading" id="loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Loading student information...</p>
+    </div>
+    
+    <!-- Login Section -->
+    <section class="login-section" id="loginSection">
+      <h2>Student Login</h2>
+      <div class="login-form">
+        <div class="form-group">
+          <label for="studentAdmission"><i class="fas fa-id-card"></i> Admission Number</label>
+          <input type="text" id="studentAdmission" placeholder="Enter your admission number (e.g., 0001)" />
+        </div>
+        
+        <div class="form-group">
+          <label for="schoolSelect"><i class="fas fa-school"></i> School</label>
+          <select id="schoolSelect">
+            <option value="">Select your school</option>
+            <!-- Schools will be populated dynamically -->
+          </select>
+        </div>
+        
+        <button class="btn" id="loginBtn">
+          <i class="fas fa-sign-in-alt"></i> Access My Dashboard
+        </button>
+        
+        <button class="btn btn-secondary" id="qrLoginBtn">
+          <i class="fas fa-qrcode"></i> Scan QR Code
+        </button>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 0.9rem;">
+          <i class="fas fa-info-circle"></i> Contact your school administrator if you don't have your details.
+        </p>
+      </div>
+    </section>
+    
+    <!-- Student Dashboard -->
+    <section class="student-dashboard" id="studentDashboard">
+      <!-- Student Header -->
+      <div class="student-header">
+        <div class="student-identity">
+          <div class="student-avatar" id="studentAvatar">
+            <!-- Initial will be placed here -->
+          </div>
+          <div class="student-basic-info">
+            <h2 id="studentName"></h2>
+            <p>
+              <i class="fas fa-id-card"></i> Adm#: <strong id="studentAdm"></strong>
+              | <i class="fas fa-graduation-cap"></i> Class: <span id="studentClass"></span> - <span id="studentSection"></span>
+              <span class="status" id="studentStatus"></span>
+            </p>
+            <p><i class="fas fa-school"></i> <span id="schoolName"></span></p>
+          </div>
+        </div>
+        <button class="btn btn-secondary no-print" id="printBtn">
+          <i class="fas fa-print"></i> Print Report
+        </button>
+      </div>
+      
+      <!-- Student Information Grid -->
+      <div class="info-grid" id="studentInfoGrid">
+        <!-- Student info will be populated here -->
+      </div>
+      
+      <!-- Charts Section -->
+      <div class="charts-container">
+        <div class="chart-card">
+          <h3><i class="fas fa-chart-pie"></i> Attendance Distribution</h3>
+          <div class="chart-container">
+            <canvas id="attendanceChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-card">
+          <h3><i class="fas fa-chart-line"></i> Monthly Attendance Trend</h3>
+          <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Attendance Records -->
+      <div class="attendance-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="color: #2196F3;">
+            <i class="fas fa-calendar-check"></i> Attendance Records
+          </h2>
+          <div class="date-filter">
+            <input type="month" id="monthFilter" class="no-print" onchange="filterByMonth()">
+            <button class="btn btn-secondary no-print" onclick="resetFilter()">
+              <i class="fas fa-redo"></i> Reset
+            </button>
+          </div>
+        </div>
+        <div class="attendance-table">
+          <table id="attendanceTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Status</th>
+                <th>Fine (PKR)</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceBody">
+              <!-- Attendance records will be populated here -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align: right; font-weight: bold;">Total Days:</td>
+                <td colspan="2" id="totalDays">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Fine Details -->
+      <div class="fine-section" id="fineSection">
+        <!-- Fine details will be populated here -->
+      </div>
+      
+      <!-- QR Code Section -->
+      <div class="qr-section no-print">
+        <h3><i class="fas fa-qrcode"></i> Your Personal Access Code</h3>
+        <p>Scan this QR code to quickly access your dashboard anytime</p>
+        <div class="qr-code-container" id="qrCodeContainer" title="Click to copy your personal link">
+          <div class="qr-code" id="qrCode">
+            <i class="fas fa-qrcode fa-5x" style="color: #2196F3;"></i>
+          </div>
+        </div>
+        <p style="color: #666; font-size: 0.9rem; margin-top: 10px;">
+          Admission: <strong id="qrAdmNumber"></strong> | School: <span id="qrSchoolName"></span>
+        </p>
+        <p style="color: #999; font-size: 0.8rem; margin-top: 5px;">
+          <i class="fas fa-info-circle"></i> Click on QR code to copy your personal link
+        </p>
+      </div>
+      
+      <!-- Logout Button -->
+      <div class="logout-btn no-print">
+        <button class="btn btn-secondary" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Logout & Return to Login
+        </button>
+      </div>
+    </section>
   </div>
 
-  <div class="card">
-    <h4>Attendance Summary</h4>
-    <p>Present: <span id="p"></span></p>
-    <p>Absent: <span id="a"></span></p>
-    <p>Late: <span id="l"></span></p>
-    <p>Leave: <span id="lv"></span></p>
-  </div>
+  <script>
+    // DOM Elements
+    const loginSection = document.getElementById('loginSection');
+    const studentDashboard = document.getElementById('studentDashboard');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const loading = document.getElementById('loading');
+    const studentAdmissionInput = document.getElementById('studentAdmission');
+    const schoolSelect = document.getElementById('schoolSelect');
+    const loginBtn = document.getElementById('loginBtn');
+    const qrLoginBtn = document.getElementById('qrLoginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const printBtn = document.getElementById('printBtn');
+    const studentName = document.getElementById('studentName');
+    const studentAdm = document.getElementById('studentAdm');
+    const studentClass = document.getElementById('studentClass');
+    const studentSection = document.getElementById('studentSection');
+    const studentStatus = document.getElementById('studentStatus');
+    const schoolName = document.getElementById('schoolName');
+    const studentAvatar = document.getElementById('studentAvatar');
+    const studentInfoGrid = document.getElementById('studentInfoGrid');
+    const attendanceBody = document.getElementById('attendanceBody');
+    const fineSection = document.getElementById('fineSection');
+    const qrCodeContainer = document.getElementById('qrCodeContainer');
+    const qrAdmNumber = document.getElementById('qrAdmNumber');
+    const qrSchoolName = document.getElementById('qrSchoolName');
+    const currentSchoolName = document.getElementById('currentSchoolName');
+    const totalDays = document.getElementById('totalDays');
 
-  <div class="card">
-    <h4>Financial</h4>
-    <p>Total Fine: <b><span id="fine"></span></b></p>
-    <p>Status: <b><span id="status"></span></b></p>
-  </div>
+    // Chart instances
+    let attendanceChart = null;
+    let trendChart = null;
 
-  <button onclick="location.reload()">Logout</button>
-</section>
+    // State
+    let currentStudent = null;
+    let currentSchool = null;
+    let schools = [];
+    let studentsBySchool = {};
+    let attendanceDataBySchool = {};
+    let paymentsDataBySchool = {};
+    let fineRates = { A: 50, Lt: 20, L: 10, HD: 30 };
+    let eligibilityPct = 75;
+    let allAttendanceRecords = [];
 
-<script>
-const loginBtn = document.getElementById("loginBtn");
-const errorMsg = document.getElementById("errorMsg");
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        showLoading();
+        await loadDataFromIndexedDB();
+        populateSchoolSelect();
+        hideLoading();
+        showSection(loginSection);
+        
+        // Check for admission number in URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const admParam = urlParams.get('adm');
+        const schoolParam = urlParams.get('school');
+        
+        if (admParam && schoolParam) {
+          studentAdmissionInput.value = admParam;
+          schoolSelect.value = decodeURIComponent(schoolParam);
+          loginBtn.click();
+        }
+      } catch (error) {
+        showError('Failed to load data. Please try again.');
+        hideLoading();
+        console.error('Initialization error:', error);
+      }
+    });
 
-loginBtn.addEventListener("click", login);
-
-function openDB(){
-  return new Promise((resolve,reject)=>{
-    const req = indexedDB.open("attendanceDB");
-    req.onerror = () => reject("DB error");
-    req.onsuccess = () => resolve(req.result);
-  });
-}
-
-function getAll(db, store){
-  return new Promise(resolve=>{
-    if(!db.objectStoreNames.contains(store)){
-      resolve([]);
-      return;
+    // Load data from IndexedDB using ALL your stored keys
+    async function loadDataFromIndexedDB() {
+      const { get } = window.idbKeyval;
+      
+      // Load all stored keys
+      studentsBySchool = (await get('studentsBySchool')) || {};
+      attendanceDataBySchool = (await get('attendanceDataBySchool')) || {};
+      paymentsDataBySchool = (await get('paymentsDataBySchool')) || {};
+      lastAdmNoBySchool = (await get('lastAdmNoBySchool')) || {};
+      fineRates = (await get('fineRates')) || { A: 50, Lt: 20, L: 10, HD: 30 };
+      eligibilityPct = (await get('eligibilityPct')) || 75;
+      schools = (await get('schools')) || [];
+      
+      console.log('Loaded schools:', schools);
+      console.log('Loaded studentsBySchool keys:', Object.keys(studentsBySchool));
     }
-    const tx = db.transaction(store,"readonly");
-    const os = tx.objectStore(store);
-    const rq = os.getAll();
-    rq.onsuccess = () => resolve(rq.result || []);
-  });
-}
 
-async function login(){
-  errorMsg.textContent = "";
-
-  const school = document.getElementById("schoolInput").value.trim();
-  const adm = document.getElementById("admInput").value.trim();
-
-  if(!school || !adm){
-    errorMsg.textContent = "Both fields are required";
-    return;
-  }
-
-  const db = await openDB();
-  const students = await getAll(db,"students");
-
-  const st = students.find(s =>
-    s.school === school && String(s.admissionNo) === adm
-  );
-
-  if(!st){
-    errorMsg.textContent = "Record not found";
-    return;
-  }
-
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-
-  stName.textContent = st.name;
-  stAdm.textContent = st.admissionNo;
-  stClass.textContent = st.class;
-  stSection.textContent = st.section;
-
-  const attendance = await getAll(db,"attendance");
-
-  let P=0,A=0,L=0,LV=0,F=0;
-
-  attendance.forEach(r=>{
-    if(r.admissionNo === st.admissionNo){
-      if(r.status==="Present")P++;
-      if(r.status==="Absent")A++;
-      if(r.status==="Late")L++;
-      if(r.status==="Leave")LV++;
-      F += Number(r.fine||0);
+    // Populate school dropdown
+    function populateSchoolSelect() {
+      schoolSelect.innerHTML = '<option value="">Select your school</option>';
+      schools.forEach(school => {
+        const option = document.createElement('option');
+        option.value = school;
+        option.textContent = school;
+        schoolSelect.appendChild(option);
+      });
+      
+      // Update header with school count
+      if (schools.length > 0) {
+        currentSchoolName.textContent = `${schools.length} Schools Registered`;
+      }
     }
-  });
 
-  p.textContent=P;
-  a.textContent=A;
-  l.textContent=L;
-  lv.textContent=LV;
-  fine.textContent=F;
-  status.textContent = F===0 ? "Cleared" : "Due";
-}
-</script>
+    // Show error message
+    function showError(message) {
+      errorText.textContent = message;
+      errorMessage.style.display = 'flex';
+      setTimeout(() => {
+        errorMessage.style.display = 'none';
+      }, 5000);
+    }
 
+    // Show loading state
+    function showLoading() {
+      loading.style.display = 'block';
+      loginSection.style.display = 'none';
+      studentDashboard.style.display = 'none';
+    }
+
+    // Hide loading state
+    function hideLoading() {
+      loading.style.display = 'none';
+    }
+
+    // Show a specific section
+    function showSection(section) {
+      loginSection.style.display = section === loginSection ? 'block' : 'none';
+      studentDashboard.style.display = section === studentDashboard ? 'block' : 'none';
+    }
+
+    // Login button click handler
+    loginBtn.addEventListener('click', async () => {
+      const admissionNumber = studentAdmissionInput.value.trim();
+      const selectedSchool = schoolSelect.value;
+      
+      if (!admissionNumber) {
+        showError('Please enter your admission number');
+        return;
+      }
+      
+      if (!selectedSchool) {
+        showError('Please select your school');
+        return;
+      }
+      
+      showLoading();
+      
+      try {
+        await loadDataFromIndexedDB();
+        
+        // Find student
+        const students = studentsBySchool[selectedSchool] || [];
+        const student = students.find(s => s.adm === admissionNumber);
+        
+        if (!student) {
+          showError(`Student with admission number "${admissionNumber}" not found in "${selectedSchool}".`);
+          hideLoading();
+          return;
+        }
+        
+        currentStudent = student;
+        currentSchool = selectedSchool;
+        
+        await renderStudentDashboard();
+        
+        hideLoading();
+        showSection(studentDashboard);
+        
+        // Update URL with student parameters for bookmarking
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('adm', admissionNumber);
+        newUrl.searchParams.set('school', selectedSchool);
+        window.history.pushState({}, '', newUrl);
+        
+      } catch (error) {
+        showError('Error loading student data: ' + error.message);
+        hideLoading();
+        console.error('Login error:', error);
+      }
+    });
+
+    // QR Login button handler
+    qrLoginBtn.addEventListener('click', () => {
+      // In a real implementation, this would open camera for QR scanning
+      // For now, we'll simulate QR code data entry
+      const qrData = prompt('Enter QR code data (format: school:admission)\nExample: My School:0001');
+      if (qrData) {
+        const parts = qrData.split(':');
+        if (parts.length === 2) {
+          const [school, adm] = parts.map(p => p.trim());
+          schoolSelect.value = school;
+          studentAdmissionInput.value = adm;
+          loginBtn.click();
+        } else {
+          showError('Invalid QR code format. Please use: school:admission');
+        }
+      }
+    });
+
+    // Logout button handler
+    logoutBtn.addEventListener('click', () => {
+      currentStudent = null;
+      currentSchool = null;
+      if (attendanceChart) attendanceChart.destroy();
+      if (trendChart) trendChart.destroy();
+      showSection(loginSection);
+      
+      // Clear URL parameters
+      window.history.pushState({}, '', window.location.pathname);
+    });
+
+    // Print button handler
+    printBtn.addEventListener('click', () => {
+      window.print();
+    });
+
+    // Filter by month
+    window.filterByMonth = function() {
+      const monthFilter = document.getElementById('monthFilter').value;
+      if (!monthFilter) {
+        renderAttendanceRecords(allAttendanceRecords);
+        return;
+      }
+      
+      const filteredRecords = allAttendanceRecords.filter(record => 
+        record.date.startsWith(monthFilter)
+      );
+      
+      renderAttendanceRecords(filteredRecords);
+    };
+
+    // Reset filter
+    window.resetFilter = function() {
+      document.getElementById('monthFilter').value = '';
+      renderAttendanceRecords(allAttendanceRecords);
+    };
+
+    // Render student dashboard
+    async function renderStudentDashboard() {
+      if (!currentStudent || !currentSchool) return;
+      
+      // Load latest data
+      await loadDataFromIndexedDB();
+      
+      const student = currentStudent;
+      const school = currentSchool;
+      
+      // Calculate statistics
+      const attendanceData = attendanceDataBySchool[school] || {};
+      const payments = paymentsDataBySchool[school]?.[student.adm] || [];
+      
+      let present = 0, absent = 0, late = 0, halfDay = 0, leave = 0, totalDaysCount = 0;
+      allAttendanceRecords = [];
+      
+      Object.entries(attendanceData).forEach(([date, records]) => {
+        const status = records[student.adm];
+        if (status) {
+          totalDaysCount++;
+          switch (status) {
+            case 'P': present++; break;
+            case 'A': absent++; break;
+            case 'Lt': late++; break;
+            case 'HD': halfDay++; break;
+            case 'L': leave++; break;
+          }
+          
+          // Calculate fine for this day
+          let fine = 0;
+          switch (status) {
+            case 'A': fine = fineRates.A; break;
+            case 'Lt': fine = fineRates.Lt; break;
+            case 'L': fine = fineRates.L; break;
+            case 'HD': fine = fineRates.HD; break;
+          }
+          
+          allAttendanceRecords.push({
+            date,
+            status,
+            statusText: getStatusText(status),
+            fine,
+            day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
+          });
+        }
+      });
+      
+      // Sort attendance records by date (newest first)
+      allAttendanceRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Calculate fine
+      const fineTotal = absent * fineRates.A + late * fineRates.Lt + leave * fineRates.L + halfDay * fineRates.HD;
+      const paid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+      const outstanding = fineTotal - paid;
+      
+      // Calculate attendance percentage
+      const attendancePct = totalDaysCount ? (present / totalDaysCount) * 100 : 0;
+      
+      // Determine status
+      const status = (outstanding > 0 || attendancePct < eligibilityPct) ? 'Debarred' : 'Eligible';
+      
+      // 1. Render header information
+      renderStudentHeader(student, school, attendancePct, status);
+      
+      // 2. Render student information grid
+      renderStudentInfo(student, attendancePct, status, fineTotal, paid, outstanding);
+      
+      // 3. Render charts
+      renderCharts(present, absent, late, halfDay, leave, attendancePct);
+      
+      // 4. Render attendance records
+      renderAttendanceRecords(allAttendanceRecords);
+      
+      // 5. Render fine details
+      renderFineDetails(fineTotal, paid, outstanding);
+      
+      // 6. Generate QR code representation
+      generateQRCode(student.adm, school);
+      
+      // Update total days
+      totalDays.textContent = totalDaysCount;
+    }
+
+    // Render student header
+    function renderStudentHeader(student, school, attendancePct, status) {
+      studentName.textContent = student.name;
+      studentAdm.textContent = student.adm;
+      studentClass.textContent = student.cls;
+      studentSection.textContent = student.sec;
+      schoolName.textContent = school;
+      
+      // Set status
+      studentStatus.textContent = status;
+      studentStatus.className = `status status-${status.toLowerCase()}`;
+      
+      // Set avatar with initials
+      const initials = student.name.split(' ').map(n => n[0]).join('').toUpperCase();
+      studentAvatar.innerHTML = `<span style="font-size: 2.5rem; font-weight: bold;">${initials}</span>`;
+    }
+
+    // Render student information grid
+    function renderStudentInfo(student, attendancePct, status, fineTotal, paid, outstanding) {
+      const infoItems = [
+        { 
+          label: 'Personal Information', 
+          icon: 'fas fa-user',
+          items: [
+            { label: 'Full Name', value: student.name },
+            { label: 'Father Name', value: student.parent },
+            { label: 'Contact', value: student.contact },
+            { label: 'Address', value: student.address }
+          ]
+        },
+        { 
+          label: 'Academic Information', 
+          icon: 'fas fa-graduation-cap',
+          items: [
+            { label: 'Class', value: student.cls },
+            { label: 'Section', value: student.sec },
+            { label: 'School', value: currentSchool },
+            { label: 'Attendance %', value: `${attendancePct.toFixed(1)}%` }
+          ]
+        },
+        { 
+          label: 'Financial Status', 
+          icon: 'fas fa-coins',
+          items: [
+            { label: 'Total Fine', value: `PKR ${fineTotal}` },
+            { label: 'Amount Paid', value: `PKR ${paid}` },
+            { label: 'Outstanding', value: `PKR ${outstanding}` },
+            { label: 'Payment Status', value: outstanding > 0 ? 'Pending' : 'Cleared' }
+          ]
+        },
+        { 
+          label: 'Eligibility Criteria', 
+          icon: 'fas fa-flag',
+          items: [
+            { label: 'Required %', value: `${eligibilityPct}%` },
+            { label: 'Your %', value: `${attendancePct.toFixed(1)}%` },
+            { label: 'Fine Status', value: outstanding > 0 ? 'Has Dues' : 'No Dues' },
+            { label: 'Overall Status', value: status }
+          ]
+        }
+      ];
+      
+      studentInfoGrid.innerHTML = infoItems.map(section => `
+        <div class="info-item">
+          <div class="info-label">
+            <i class="${section.icon}"></i> ${section.label}
+          </div>
+          ${section.items.map(item => `
+            <div style="margin-top: 10px;">
+              <div style="font-size: 0.85rem; color: #777;">${item.label}</div>
+              <div class="info-value">${item.value}</div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    // Render charts
+    function renderCharts(present, absent, late, halfDay, leave, attendancePct) {
+      // Destroy existing charts
+      if (attendanceChart) attendanceChart.destroy();
+      if (trendChart) trendChart.destroy();
+      
+      // Attendance Distribution Chart
+      const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+      attendanceChart = new Chart(attendanceCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Present', 'Absent', 'Late', 'Half Day', 'Leave'],
+          datasets: [{
+            data: [present, absent, late, halfDay, leave],
+            backgroundColor: [
+              '#4CAF50', // Green for Present
+              '#F44336', // Red for Absent
+              '#FF9800', // Orange for Late
+              '#9C27B0', // Purple for Half Day
+              '#2196F3'  // Blue for Leave
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                usePointStyle: true
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.parsed;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                  return `${label}: ${value} days (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      // Monthly Trend Chart (simplified - in real app, group by month)
+      const trendCtx = document.getElementById('trendChart').getContext('2d');
+      
+      // Group attendance by month for trend
+      const monthlyData = {};
+      allAttendanceRecords.forEach(record => {
+        const month = record.date.substring(0, 7); // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { present: 0, total: 0 };
+        }
+        monthlyData[month].total++;
+        if (record.status === 'P') monthlyData[month].present++;
+      });
+      
+      const months = Object.keys(monthlyData).sort();
+      const percentages = months.map(month => {
+        const data = monthlyData[month];
+        return data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;
+      });
+      
+      trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Monthly Attendance %',
+            data: percentages,
+            borderColor: '#2196F3',
+            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+          }, {
+            label: 'Eligibility Threshold',
+            data: months.map(() => eligibilityPct),
+            borderColor: '#4CAF50',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  if (context.datasetIndex === 0) {
+                    return `Attendance: ${context.parsed.y}%`;
+                  }
+                  return `Required: ${context.parsed.y}%`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Render attendance records
+    function renderAttendanceRecords(records) {
+      if (records.length === 0) {
+        attendanceBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+              <i class="fas fa-calendar-times fa-2x"></i>
+              <p style="margin-top: 10px;">No attendance records found</p>
+            </td>
+          </tr>
+        `;
+        totalDays.textContent = '0';
+        return;
+      }
+      
+      attendanceBody.innerHTML = records.map(record => `
+        <tr>
+          <td>${formatDate(record.date)}</td>
+          <td>${record.day}</td>
+          <td class="status-${getStatusClass(record.status)}">
+            <i class="fas ${getStatusIcon(record.status)}"></i> ${record.statusText}
+          </td>
+          <td>${record.fine > 0 ? `PKR ${record.fine}` : '-'}</td>
+          <td>${getStatusRemarks(record.status)}</td>
+        </tr>
+      `).join('');
+      
+      totalDays.textContent = records.length;
+    }
+
+    // Render fine details
+    function renderFineDetails(total, paid, outstanding) {
+      fineSection.innerHTML = `
+        <h3><i class="fas fa-money-bill-wave"></i> Financial Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+          <div class="info-item" style="border-left-color: #4CAF50;">
+            <div class="info-label"><i class="fas fa-calculator"></i> Fine Breakdown</div>
+            <div style="margin-top: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Absent (PKR ${fineRates.A} × days):</span>
+                <strong>PKR ${total}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Late (PKR ${fineRates.Lt} × days):</span>
+                <strong>Included</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Leave (PKR ${fineRates.L} × days):</span>
+                <strong>Included</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>Half Day (PKR ${fineRates.HD} × days):</span>
+                <strong>Included</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-item" style="border-left-color: #2196F3;">
+            <div class="info-label"><i class="fas fa-credit-card"></i> Payment Details</div>
+            <div style="margin-top: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Total Fine:</span>
+                <strong style="color: #F44336;">PKR ${total}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Amount Paid:</span>
+                <strong style="color: #4CAF50;">PKR ${paid}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Outstanding:</span>
+                <strong style="color: ${outstanding > 0 ? '#FF9800' : '#4CAF50'};">PKR ${outstanding}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>Status:</span>
+                <strong style="color: ${outstanding > 0 ? '#F44336' : '#4CAF50'}">
+                  ${outstanding > 0 ? 'Pending Payment' : 'All Clear ✓'}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${outstanding > 0 ? `
+          <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #FFF3E0 0%, #FFECB3 100%); 
+                  border-radius: 8px; border-left: 4px solid #FF9800;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-exclamation-triangle fa-2x" style="color: #FF9800;"></i>
+              <div>
+                <h4 style="color: #856404; margin: 0 0 5px 0;">Payment Due</h4>
+                <p style="color: #856404; margin: 0;">
+                  You have an outstanding balance of <strong>PKR ${outstanding}</strong>. 
+                  Please contact the school administration office for payment details.
+                </p>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); 
+                  border-radius: 8px; border-left: 4px solid #4CAF50;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-check-circle fa-2x" style="color: #4CAF50;"></i>
+              <div>
+                <h4 style="color: #2E7D32; margin: 0 0 5px 0;">No Pending Dues</h4>
+                <p style="color: #2E7D32; margin: 0;">
+                  All your payments are clear. Keep up the good attendance record!
+                </p>
+              </div>
+            </div>
+          </div>
+        `}
+      `;
+    }
+
+    // Generate QR code representation
+    function generateQRCode(adm, school) {
+      qrAdmNumber.textContent = adm;
+      qrSchoolName.textContent = school;
+      
+      const qrData = `${school}:${adm}`;
+      const personalLink = `${window.location.origin}${window.location.pathname}?adm=${adm}&school=${encodeURIComponent(school)}`;
+      
+      // Create QR code visual
+      qrCodeContainer.innerHTML = `
+        <div class="qr-code">
+          <div style="text-align: center;">
+            <i class="fas fa-qrcode fa-5x" style="color: #2196F3;"></i>
+            <div style="margin-top: 10px; font-size: 12px; color: #666; word-break: break-all; padding: 10px;">
+              <div style="font-weight: bold;">${adm}</div>
+              <div style="font-size: 10px; margin-top: 5px;">${school}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Make QR code clickable to copy personal link
+      qrCodeContainer.onclick = () => {
+        navigator.clipboard.writeText(personalLink)
+          .then(() => {
+            const originalTitle = qrCodeContainer.title;
+            qrCodeContainer.title = 'Link copied to clipboard!';
+            qrCodeContainer.style.boxShadow = '0 0 0 3px #4CAF50';
+            
+            setTimeout(() => {
+              qrCodeContainer.title = originalTitle;
+              qrCodeContainer.style.boxShadow = '';
+            }, 2000);
+            
+            alert('Your personal dashboard link has been copied to clipboard!\n\nYou can bookmark this link for quick access.');
+          })
+          .catch(() => {
+            prompt('Copy this link to access your dashboard:', personalLink);
+          });
+      };
+    }
+
+    // Helper functions
+    function getStatusText(code) {
+      const statusMap = {
+        'P': 'Present',
+        'A': 'Absent',
+        'Lt': 'Late',
+        'HD': 'Half Day',
+        'L': 'Leave'
+      };
+      return statusMap[code] || 'Unknown';
+    }
+
+    function getStatusClass(code) {
+      const classMap = {
+        'P': 'present',
+        'A': 'absent',
+        'Lt': 'late',
+        'HD': 'halfday',
+        'L': 'leave'
+      };
+      return classMap[code] || '';
+    }
+
+    function getStatusIcon(code) {
+      const iconMap = {
+        'P': 'fa-check-circle',
+        'A': 'fa-times-circle',
+        'Lt': 'fa-clock',
+        'HD': 'fa-sun',
+        'L': 'fa-umbrella-beach'
+      };
+      return iconMap[code] || 'fa-question-circle';
+    }
+
+    function getStatusRemarks(code) {
+      const remarksMap = {
+        'P': 'Regular attendance marked',
+        'A': 'Absent - fine applies',
+        'Lt': 'Arrived late to school',
+        'HD': 'Attended half day only',
+        'L': 'Approved leave'
+      };
+      return remarksMap[code] || '';
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        logoutBtn.click();
+      }
+      
+      if (e.ctrlKey && e.key === 'Enter' && loginSection.style.display !== 'none') {
+        e.preventDefault();
+        loginBtn.click();
+      }
+      
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        printBtn.click();
+      }
+      
+      if (e.key === 'Escape' && studentDashboard.style.display !== 'none') {
+        logoutBtn.click();
+      }
+    });
+
+    // Auto-refresh data every 5 minutes
+    setInterval(async () => {
+      if (currentStudent && currentSchool) {
+        console.log('Auto-refreshing student data...');
+        await loadDataFromIndexedDB();
+        await renderStudentDashboard();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+  </script>
 </body>
 </html>
