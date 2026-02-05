@@ -7,8 +7,8 @@
 
 <style>
 body{
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f1f5f9;
+  font-family: system-ui,sans-serif;
+  background:#f1f5f9;
   margin:0;
   padding:1rem;
 }
@@ -140,9 +140,8 @@ async function login(){
   const attendanceRecords=await readStoreAll(db,"attendanceDatabySchool");
 
   let student=null;
-  let records=[];
 
-  // Loop through nested structure
+  // Find student by school + admissionNo
   for(const s of studentsRecords){
     if(s.school===school && String(s.admissionNo)===String(adm)){
       student=s;
@@ -155,8 +154,8 @@ async function login(){
     return;
   }
 
-  // Attendance
-  records=attendanceRecords.filter(r=>r.school===school && String(r.admissionNo)===String(adm));
+  // Filter attendance for this student
+  const records=attendanceRecords.filter(r=>r.school===school && String(r.admissionNo)===String(adm));
 
   loginSection.classList.add("hidden");
   dashboard.classList.remove("hidden");
