@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- PWA basics -->
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+body{margin:0;font-family:system-ui;background:#f1f5f9}
+header{background:#0f172a;color:#fff;padding:1rem;text-align:center}
+section{padding:1rem}
+input,button{width:100%;padding:.7rem;margin:.4rem 0;border-radius:6px;font-size:1rem}
+input{border:1px solid #cbd5e1}
+button{border:none;background:#2563eb;color:#fff}
+.card{background:#fff;padding:1rem;margin-bottom:1rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.hidden{display:none}
+.error{color:red}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
+</header>
+
+<section id="login">
+  <h3>Access Your Record</h3>
+  <input id="school" placeholder="School Name">
+  <input id="adm" placeholder="Admission Number">
+  <button onclick="login()">Continue</button>
+  <p class="error" id="err"></p>
+</section>
+
+<section id="dash" class="hidden">
+
+  <div class="card">
+    <h4><i class="fas fa-id-card"></i> Student Info</h4>
+    <p><b>Name:</b> <span id="name"></span></p>
+    <p><b>Admission #:</b> <span id="admNo"></span></p>
+    <p><b>Class:</b> <span id="cls"></span></p>
+    <p><b>Section:</b> <span id="sec"></span></p>
+  </div>
+
+  <div class="card">
+    <h4><i class="fas fa-calendar-check"></i> Attendance</h4>
+    <p>Present: <span id="p"></span></p>
+    <p>Absent: <span id="a"></span></p>
+    <p>Late: <span id="l"></span></p>
+    <p>Leave: <span id="lv"></span></p>
+  </div>
+
+  <div class="card">
+    <h4><i class="fas fa-wallet"></i> Financial</h4>
+    <p>Total Fine: <b><span id="fine"></span></b></p>
+    <p>Status: <b><span id="status"></span></b></p>
+  </div>
+
+  <button onclick="location.reload()">
+    <i class="fas fa-sign-out-alt"></i> Logout
+  </button>
+</section>
+
+<script>
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open("attendanceDB");
+    r.onerror=()=>rej();
+    r.onsuccess=()=>res(r.result);
+  });
+}
+
+function getAll(db,store){
+  return new Promise(res=>{
+    const tx=db.transaction(store,"readonly");
+    const st=tx.objectStore(store);
+    const rq=st.getAll();
+    rq.onsuccess=()=>res(rq.result||[]);
+  });
+}
+
+async function login(){
+  err.textContent="";
+  const schoolName=school.value.trim();
+  const admNo=adm.value.trim();
+  if(!schoolName||!admNo){err.textContent="Both fields required";return;}
+
+  const db=await openDB();
+  const students=await getAll(db,"students");
+
+  const st=students.find(s=>s.school===schoolName && String(s.admissionNo)===admNo);
+  if(!st){err.textContent="Record not found";return;}
+
+  loginSection=false;
+  login.classList.add("hidden");
+  dash.classList.remove("hidden");
+
+  name.textContent=st.name;
+  admNo.textContent=st.admissionNo;
+  cls.textContent=st.class;
+  sec.textContent=st.section;
+
+  const att=await getAll(db,"attendance");
+
+  let pC=0,aC=0,lC=0,lvC=0,f=0;
+  att.forEach(r=>{
+    if(r.admissionNo===st.admissionNo){
+      if(r.status==="Present")pC++;
+      if(r.status==="Absent")aC++;
+      if(r.status==="Late")lC++;
+      if(r.status==="Leave")lvC++;
+      f+=Number(r.fine||0);
+    }
+  });
+
+  p.textContent=pC;
+  a.textContent=aC;
+  l.textContent=lC;
+  lv.textContent=lvC;
+  fine.textContent=f;
+  status.textContent=f===0?"Cleared":"Due";
+}
+</script>
+
+</body>
+</html>
