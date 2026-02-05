@@ -7,18 +7,61 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="mobile-web-app-capable" content="yes">
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Font Awesome -->
+<link rel="stylesheet"
+ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+<!-- idb-keyval -->
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@3/dist/idb-keyval-iife.min.js"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f1f5f9}
-header{background:#0f172a;color:#fff;padding:1rem;text-align:center}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont;
+  background:#f1f5f9;
+  color:#0f172a;
+}
+header{
+  background:#0f172a;
+  color:#fff;
+  padding:1rem;
+  text-align:center;
+}
 section{padding:1rem}
-input,button{width:100%;padding:.7rem;margin:.4rem 0;border-radius:6px;font-size:1rem}
+input,button{
+  width:100%;
+  padding:.75rem;
+  margin:.4rem 0;
+  border-radius:8px;
+  font-size:1rem;
+}
 input{border:1px solid #cbd5e1}
-button{border:none;background:#2563eb;color:#fff}
-.card{background:#fff;padding:1rem;margin-bottom:1rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+button{
+  border:none;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+}
+button.secondary{background:#64748b}
+.card{
+  background:#fff;
+  padding:1rem;
+  margin-bottom:1rem;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
 .hidden{display:none}
-.error{color:red}
+.error{color:#dc2626;font-size:.9rem}
+.badge{
+  padding:.25rem .6rem;
+  border-radius:999px;
+  font-size:.8rem;
+}
+.badge.ok{background:#dcfce7;color:#166534}
+.badge.due{background:#fee2e2;color:#991b1b}
+.footer-btn{
+  margin-top:1rem;
+}
 </style>
 </head>
 
@@ -28,18 +71,25 @@ button{border:none;background:#2563eb;color:#fff}
   <h2><i class="fas fa-user-graduate"></i> Student Portal</h2>
 </header>
 
+<!-- LOGIN -->
 <section id="loginSection">
-  <h3>Access Your Record</h3>
+  <h3>Access Student Record</h3>
+
   <input id="schoolInput" placeholder="School Name">
   <input id="admInput" placeholder="Admission Number">
-  <button id="loginBtn">Continue</button>
+
+  <button id="loginBtn">
+    <i class="fas fa-arrow-right"></i> Continue
+  </button>
+
   <p class="error" id="errorMsg"></p>
 </section>
 
+<!-- DASHBOARD -->
 <section id="dashboard" class="hidden">
 
   <div class="card">
-    <h4>Student Info</h4>
+    <h4><i class="fas fa-id-card"></i> Student Info</h4>
     <p><b>Name:</b> <span id="stName"></span></p>
     <p><b>Admission #:</b> <span id="stAdm"></span></p>
     <p><b>Class:</b> <span id="stClass"></span></p>
@@ -47,65 +97,53 @@ button{border:none;background:#2563eb;color:#fff}
   </div>
 
   <div class="card">
-    <h4>Attendance Summary</h4>
-    <p>Present: <span id="p"></span></p>
-    <p>Absent: <span id="a"></span></p>
-    <p>Late: <span id="l"></span></p>
-    <p>Leave: <span id="lv"></span></p>
+    <h4><i class="fas fa-calendar-check"></i> Attendance Summary</h4>
+    <p>Present: <b><span id="p">0</span></b></p>
+    <p>Absent: <b><span id="a">0</span></b></p>
+    <p>Late: <b><span id="l">0</span></b></p>
+    <p>Leave: <b><span id="lv">0</span></b></p>
   </div>
 
   <div class="card">
-    <h4>Financial</h4>
-    <p>Total Fine: <b><span id="fine"></span></b></p>
-    <p>Status: <b><span id="status"></span></b></p>
+    <h4><i class="fas fa-wallet"></i> Financial Status</h4>
+    <p>Total Fine: <b>PKR <span id="fine">0</span></b></p>
+    <p>Status:
+      <span id="statusBadge" class="badge"></span>
+    </p>
   </div>
 
-  <button onclick="location.reload()">Logout</button>
+  <button class="secondary footer-btn" onclick="location.reload()">
+    <i class="fas fa-sign-out-alt"></i> Logout
+  </button>
+
 </section>
 
 <script>
+const { get } = idbKeyval;
+
 const loginBtn = document.getElementById("loginBtn");
 const errorMsg = document.getElementById("errorMsg");
 
 loginBtn.addEventListener("click", login);
 
-function openDB(){
-  return new Promise((resolve,reject)=>{
-    const req = indexedDB.open("attendanceDB");
-    req.onerror = () => reject("DB error");
-    req.onsuccess = () => resolve(req.result);
-  });
-}
-
-function getAll(db, store){
-  return new Promise(resolve=>{
-    if(!db.objectStoreNames.contains(store)){
-      resolve([]);
-      return;
-    }
-    const tx = db.transaction(store,"readonly");
-    const os = tx.objectStore(store);
-    const rq = os.getAll();
-    rq.onsuccess = () => resolve(rq.result || []);
-  });
-}
-
 async function login(){
   errorMsg.textContent = "";
 
-  const school = document.getElementById("schoolInput").value.trim();
-  const adm = document.getElementById("admInput").value.trim();
+  const school = schoolInput.value.trim();
+  const adm = admInput.value.trim();
 
   if(!school || !adm){
     errorMsg.textContent = "Both fields are required";
     return;
   }
 
-  const db = await openDB();
-  const students = await getAll(db,"students");
+  // Read SAME data as Attendance App
+  const students = (await get("students")) || [];
+  const attendance = (await get("attendance")) || [];
 
   const st = students.find(s =>
-    s.school === school && String(s.admissionNo) === adm
+    s.school === school &&
+    String(s.admissionNo) === String(adm)
   );
 
   if(!st){
@@ -113,34 +151,41 @@ async function login(){
     return;
   }
 
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
+  // Show dashboard
+  loginSection.classList.add("hidden");
+  dashboard.classList.remove("hidden");
 
   stName.textContent = st.name;
   stAdm.textContent = st.admissionNo;
   stClass.textContent = st.class;
   stSection.textContent = st.section;
 
-  const attendance = await getAll(db,"attendance");
-
   let P=0,A=0,L=0,LV=0,F=0;
 
   attendance.forEach(r=>{
-    if(r.admissionNo === st.admissionNo){
-      if(r.status==="Present")P++;
-      if(r.status==="Absent")A++;
-      if(r.status==="Late")L++;
-      if(r.status==="Leave")LV++;
-      F += Number(r.fine||0);
+    if(String(r.admissionNo) === String(st.admissionNo)){
+      if(r.status==="Present") P++;
+      if(r.status==="Absent") A++;
+      if(r.status==="Late") L++;
+      if(r.status==="Leave") LV++;
+      F += Number(r.fine || 0);
     }
   });
 
-  p.textContent=P;
-  a.textContent=A;
-  l.textContent=L;
-  lv.textContent=LV;
-  fine.textContent=F;
-  status.textContent = F===0 ? "Cleared" : "Due";
+  p.textContent = P;
+  a.textContent = A;
+  l.textContent = L;
+  lv.textContent = LV;
+  fine.textContent = F;
+
+  const badge = document.getElementById("statusBadge");
+  if(F === 0){
+    badge.textContent = "Cleared";
+    badge.className = "badge ok";
+  }else{
+    badge.textContent = "Due";
+    badge.className = "badge due";
+  }
 }
 </script>
 
