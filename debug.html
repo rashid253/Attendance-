@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Students & Attendance DB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+  font-family: system-ui, Arial;
+  background:#f4f6f8;
+  padding:20px;
+}
+h2{margin-top:0}
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:#fff;
+  font-size:14px;
+  cursor:pointer;
+}
+button:hover{background:#1e4fd8}
+pre{
+  background:#0f172a;
+  color:#e5e7eb;
+  padding:12px;
+  border-radius:8px;
+  overflow:auto;
+  margin-top:16px;
+}
+.section{
+  background:#fff;
+  padding:16px;
+  border-radius:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+  margin-bottom:16px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Student Attendance IndexedDB</h2>
+
+<div class="section">
+  <button onclick="addDemoData()">Add Demo Data</button>
+  <button onclick="dumpDB()">Dump IndexDB</button>
+</div>
+
+<div class="section">
+  <h3>Output</h3>
+  <pre id="output">Click "Dump IndexDB"</pre>
+</div>
+
+<script>
+/* =======================
+   IndexedDB CONFIG
+======================= */
+const DB_NAME = "schoolDB";
+const DB_VERSION = 1;
+
+/* =======================
+   OPEN DATABASE
+======================= */
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = e => {
+      const db = e.target.result;
+
+      if(!db.objectStoreNames.contains("studentsBySchool")){
+        db.createObjectStore("studentsBySchool", { keyPath:"id", autoIncrement:true });
+      }
+
+      if(!db.objectStoreNames.contains("attandaceDatabySchool")){
+        db.createObjectStore("attandaceDatabySchool", { keyPath:"id", autoIncrement:true });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/* =======================
+   ADD DEMO DATA
+======================= */
+async function addDemoData(){
+  const db = await openDB();
+  const tx = db.transaction(
+    ["studentsBySchool","attandaceDatabySchool"],
+    "readwrite"
+  );
+
+  tx.objectStore("studentsBySchool").add({
+    schoolId:"SCH-01",
+    name:"Ali",
+    class:"5th"
+  });
+
+  tx.objectStore("attandaceDatabySchool").add({
+    schoolId:"SCH-01",
+    student:"Ali",
+    date:new Date().toISOString().slice(0,10),
+    status:"Present"
+  });
+
+  tx.oncomplete = ()=> alert("Demo data added successfully");
+}
+
+/* =======================
+   READ ALL RECORDS
+======================= */
+function getAll(store){
+  return new Promise(resolve=>{
+    const request = store.getAll();
+    request.onsuccess = ()=> resolve(request.result || []);
+  });
+}
+
+/* =======================
+   DUMP DATABASE
+======================= */
+async function dumpDB(){
+  const db = await openDB();
+  const tx = db.transaction(
+    ["studentsBySchool","attandaceDatabySchool"],
+    "readonly"
+  );
+
+  const students = await getAll(tx.objectStore("studentsBySchool"));
+  const attendance = await getAll(tx.objectStore("attandaceDatabySchool"));
+
+  const data = {
+    studentsBySchool: students,
+    attandaceDatabySchool: attendance
+  };
+
+  document.getElementById("output").textContent =
+    JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>
